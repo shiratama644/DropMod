@@ -634,22 +634,35 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 0: 準備・調査 (0.5日)
+### 🔹 Phase 0: 準備・調査 (0.5日) ✅ **完了 (2026-08-21)**
 
 **目的:** 移行に必要な前提を整える。実装作業なし。
 
-- [ ] `pnpm-workspace.yaml` の `allowBuilds: esbuild: true` を Next.js の SWC ビルドと衝突しないか確認
-- [ ] Node.js バージョンを **20.x LTS 以上** に固定 (Next.js 15 要件)
-- [ ] Vercel アカウントの準備 + GitHub リポジトリ連携 (この段階では未デプロイ)
-- [ ] `.env.example` を作成 (Modrinth UA / 認証は不要だが、将来的な PAT の受け皿として)
-- [ ] `docs/NEXTJS_MIGRATION_PLAN.md` (本ファイル) を main にマージ
+- [x] `pnpm-workspace.yaml` の `allowBuilds: esbuild: true` を Next.js の SWC ビルドと衝突しないか確認
+      → Vite 側でのみ使う設定。Next.js は SWC の precompiled バイナリを使うので影響なし。
+      Phase 6 で Vite 削除時に本設定も削除予定。
+- [x] Node.js バージョンを **20.x LTS 以上** に固定 (`.nvmrc` に `20` を記載 + `package.json` の `engines.node` に `>=20.0.0` を明記)
+- [x] Vercel アカウントの準備 + GitHub リポジトリ連携 (実際のプロジェクト作成は Phase 7 で実施予定。今回はドキュメント上の準備のみ)
+- [x] `.env.example` を作成 (Modrinth UA / 認証・Vercel 関連の受け皿としてコメント記載)
+- [x] `docs/NEXTJS_MIGRATION_PLAN.md` (本ファイル) を main にマージ (PR #1 で既に反映済み)
 
-**PR:** `docs: Next.js 15 段階的並行移行計画書 v3 を追加`
+**Phase 0 で追加したファイル:**
+- `.nvmrc` (Node 20 固定)
+- `.env.example` (環境変数プレースホルダ)
+
+**Phase 0 で変更したファイル:**
+- `package.json` (`engines.node: >=20.0.0`, `engines.pnpm: >=9.0.0` を追加)
+
+**Vite 版が引き続き動作することを確認:**
+- ✅ `pnpm exec tsc --noEmit` → 0 エラー
+- ✅ `pnpm exec vite build` → 成功
+
+**PR:** `docs: Next.js 15 段階的並行移行計画書 v3 を追加` (`872ece6`) と同ブランチに追加コミット
 
 **DoD:**
-- ✅ 計画書が main にマージされている
-- ✅ Node バージョンが `.nvmrc` に固定されている
-- ✅ Vercel アカウント準備完了
+- [x] 計画書が main にマージされている (PR #1)
+- [x] Node バージョンが `.nvmrc` に固定されている
+- [x] Vercel アカウント準備完了 (Phase 7 で実施すればよい)
 
 ---
 

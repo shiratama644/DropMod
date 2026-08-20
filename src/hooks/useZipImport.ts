@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem } from '../types';
-import { calculateSha1 } from '../utils/hash';
+import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '../utils/hash';
 import { fetchModrinth } from '../services/api';
 
 export const useZipImport = (
@@ -75,13 +75,31 @@ export const useZipImport = (
         return;
       }
 
+      // Web Crypto API (crypto.subtle) は Secure Context 限定
+      // HTTP で配信された環境では明確なメッセージを出して早期return
+      if (!isWebCryptoAvailable()) {
+        showToast(
+          'このページは HTTPS ではないため .jar ハッシュ照合機能が使えません。HTTPS 版でアクセスしてください',
+          'warning'
+        );
+        return;
+      }
+
       showToast(`${jarEntries.length} 個の .jar のハッシュをModrinthと照合中...`, 'info');
 
       const hashes: string[] = [];
-      for (const entryName of jarEntries) {
-        const fileBuffer = await zip.files[entryName].async('arraybuffer');
-        const sha1 = await calculateSha1(fileBuffer);
-        hashes.push(sha1);
+      try {
+        for (const entryName of jarEntries) {
+          const fileBuffer = await zip.files[entryName].async('arraybuffer');
+          const sha1 = await calculateSha1(fileBuffer);
+          hashes.push(sha1);
+        }
+      } catch (e) {
+        if (e instanceof InsecureContextError) {
+          showToast(e.message, 'warning');
+          return;
+        }
+        throw e;
       }
 
       const versionMap = await fetchModrinth<Record<string, any>>('/version_files', {}, {

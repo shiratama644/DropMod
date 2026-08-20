@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Profile, ModrinthProject, ModrinthVersion } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { downloadAsBlob } from '../utils/download';
 
 interface ModDetailModalProps {
   isOpen: boolean;
@@ -252,15 +253,18 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
           </button>
           <div className="flex items-center gap-2">
             {latestFile && (
-              <a
-                href={latestFile.url}
-                download={latestFile.filename}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={async () => {
+                  const r = await downloadAsBlob(latestFile.url, latestFile.filename);
+                  if (!r.ok && r.error !== 'Aborted') {
+                    console.warn('[DropMod] jar direct download failed:', r);
+                  }
+                }}
                 className="btn-hover-effect px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <i className="fa-solid fa-download"></i> .jar 直DL
-              </a>
+              </button>
             )}
             {isAdded ? (
               <button

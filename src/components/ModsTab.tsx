@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Profile, ModItem, ModrinthVersion } from '../types';
 import { CustomDropdown } from './CustomDropdown';
 import { fetchStableModVersion } from '../services/api';
+import { downloadAsBlob } from '../utils/download';
 
 interface ModsTabProps {
   profile: Profile;
@@ -26,27 +27,87 @@ export const ModsTab: React.FC<ModsTabProps> = ({
 }) => {
   const [modVersionsMap, setModVersionsMap] = useState<Map<string, ModrinthVersion[]>>(new Map());
 
+  // mcVersion / loader が変わったら、対応バージョン集合が変わるので全キャッシュ破棄
+  useEffect(() => {
+    setModVersionsMap(new Map());
+  }, [profile.mcVersion, profile.loader]);
+
+  // Mod ID セットの安定シグネチャ (deps安定化 — 配列参照ではなく内容で判定)
+  const modIdsSignature = profile.mods.map((m) => m.id).join(',');
+
   useEffect(() => {
     let active = true;
-    const loadVersions = async () => {
-      const newMap = new Map<string, ModrinthVersion[]>();
-      for (const mod of profile.mods) {
-        try {
-          const versionRes = await fetchStableModVersion(mod.id, profile);
-          if (versionRes && active) {
-            newMap.set(mod.id, versionRes.allVersions);
-          }
-        } catch (e) {}
+    // 既に取得済みの id は再フェッチしない (差分取得のみ)
+    const missingMods = profile.mods.filter((mod) => mod.id && !modVersionsMap.has(mod.id));
+    if (missingMods.length === 0) {
+      // 削除された Mod のエントリを掃除して終了
+      const currentIds = new Set(profile.mods.map((m) => m.id));
+      let needsClean = false;
+      modVersionsMap.forEach((_v, k) => {
+        if (!currentIds.has(k)) needsClean = true;
+      });
+      if (needsClean) {
+        const cleaned = new Map<string, ModrinthVersion[]>();
+        modVersionsMap.forEach((v, k) => {
+          if (currentIds.has(k)) cleaned.set(k, v);
+        });
+        setModVersionsMap(cleaned);
       }
-      if (active) setModVersionsMap(newMap);
+      return;
+    }
+
+    const loadVersions = async () => {
+      // 並列取得 (直列 N 呼び出しから並列に変更)
+      const results = await Promise.all(
+        missingMods.map(async (mod) => {
+          try {
+            const versionRes = await fetchStableModVersion(mod.id, profile);
+            return { id: mod.id, versions: versionRes?.allVersions };
+          } catch {
+            return { id: mod.id, versions: undefined };
+          }
+        })
+      );
+      if (!active) return;
+      setModVersionsMap((prev) => {
+        const next = new Map(prev);
+        // 追加分を書き込み
+        results.forEach(({ id, versions }) => {
+          if (versions && versions.length > 0) next.set(id, versions);
+        });
+        // 削除された Mod のエントリを掃除
+        const currentIds = new Set(profile.mods.map((m) => m.id));
+        Array.from(next.keys()).forEach((k) => {
+          if (!currentIds.has(k)) next.delete(k);
+        });
+        return next;
+      });
     };
+
     if (profile.mods.length > 0) {
       loadVersions();
     }
     return () => {
       active = false;
     };
-  }, [profile.mods, profile.mcVersion, profile.loader]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modIdsSignature, profile.mcVersion, profile.loader]);
+
+  // ---------------------------------------------------------------
+  // .jar 直接ダウンロードハンドラ (H-4対応)
+  //
+  // <a href={cdnUrl} download="foo.jar"> は cross-origin では
+  // download 属性が無視されるので、fetch → Blob → 一時 <a> の
+  // 経路にすることでファイル名を確実に有効化する。
+  // ---------------------------------------------------------------
+  const handleDirectJarDownload = useCallback(async (mod: ModItem) => {
+    if (!mod.fileUrl) return;
+    const filename = mod.filename || `${mod.slug || mod.id}.jar`;
+    const result = await downloadAsBlob(mod.fileUrl, filename);
+    if (!result.ok && result.error !== 'Aborted') {
+      console.warn('[DropMod] jar direct download failed:', result);
+    }
+  }, []);
 
   return (
     <section id="tab-mods" className="space-y-4 sm:space-y-6">
@@ -172,16 +233,14 @@ export const ModsTab: React.FC<ModsTabProps> = ({
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {mod.fileUrl && (
-                              <a
-                                href={mod.fileUrl}
-                                download={mod.filename || 'mod.jar'}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => handleDirectJarDownload(mod)}
                                 className="p-2 theme-text-blue hover:opacity-80 hover:bg-blue-500/10 rounded-xl transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 title=".jar を直接ダウンロード"
                               >
                                 <i className="fa-solid fa-download text-sm"></i>
-                              </a>
+                              </button>
                             )}
                             <button
                               onClick={(e) => onToggleMod(mod.id, e)}
@@ -243,16 +302,14 @@ export const ModsTab: React.FC<ModsTabProps> = ({
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {mod.fileUrl && (
-                          <a
-                            href={mod.fileUrl}
-                            download={mod.filename || 'mod.jar'}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleDirectJarDownload(mod)}
                             className="p-2 theme-text-blue active:bg-blue-500/10 rounded-xl transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                             title=".jar を直接ダウンロード"
                           >
                             <i className="fa-solid fa-download text-sm"></i>
-                          </a>
+                          </button>
                         )}
                         <button
                           onClick={(e) => onToggleMod(mod.id, e)}

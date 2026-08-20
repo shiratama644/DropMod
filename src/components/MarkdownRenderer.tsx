@@ -139,19 +139,47 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
               {children}
             </td>
           ),
-          // コードブロック & インラインコード
-          code: ({ node, inline, className, children, ...props }: any) => {
-            if (inline) {
+          // ------------------------------------------------------------------
+          // コードブロック & インラインコード (react-markdown v9 対応)
+          //
+          // v9 で `inline` プロップは廃止されたため、
+          //   - `<pre><code>...</code></pre>` の <code> はブロック用
+          //   - それ以外の <code> はインライン用
+          // という HTML 意味論で判定する。
+          //
+          // 実装: `<pre>` コンポーネントをオーバーライドしてブロックスタイルを
+          //       与え、`<code>` は基本インライン扱い、ただし親が `<pre>` の
+          //       場合はスタイル無しで通してブロック側の <pre> にゆだねる。
+          // Ref: https://github.com/remarkjs/react-markdown/issues/834
+          // ------------------------------------------------------------------
+          pre: ({ node, children, ...props }: any) => (
+            <pre
+              className="my-3 p-3.5 rounded-xl bg-slate-900/90 text-emerald-400 font-mono text-xs overflow-x-auto border border-slate-700/50"
+              {...props}
+            >
+              {children}
+            </pre>
+          ),
+          code: ({ node, className, children, ...props }: any) => {
+            // ブロックコードは className="language-xxx" が付与されるか、
+            // 親要素が <pre> であることが多い。
+            // どちらでもない場合はインラインとしてスタイリングする。
+            const isBlock = /^language-/.test(className || '');
+            if (isBlock) {
+              // <pre> 側のスタイルがあるので、<code> 自体はそのまま出力
               return (
-                <code className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono text-xs border border-slate-700/40" {...props}>
+                <code className={className} {...props}>
                   {children}
                 </code>
               );
             }
             return (
-              <pre className="my-3 p-3.5 rounded-xl bg-slate-900/90 text-emerald-400 font-mono text-xs overflow-x-auto border border-slate-700/50">
-                <code {...props}>{children}</code>
-              </pre>
+              <code
+                className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono text-xs border border-slate-700/40"
+                {...props}
+              >
+                {children}
+              </code>
             );
           },
           // 引用

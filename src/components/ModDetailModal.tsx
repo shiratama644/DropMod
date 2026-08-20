@@ -31,7 +31,9 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
   const [versions, setVersions] = useState<ModrinthVersion[]>([]);
   const [targetVersion, setTargetVersion] = useState<ModrinthVersion | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
+  // 対応バージョン一覧は「デフォルトで展開状態」で表示。
+  // モーダルを開いた瞬間から全件が見え、明示的に折りたたむこともできる。
+  const [isVersionsExpanded, setIsVersionsExpanded] = useState(true);
   const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------
@@ -53,13 +55,15 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
       setVersions([]);
       setTargetVersion(null);
       setLoading(false);
-      setIsVersionsExpanded(false);
+      // 次回オープン時もデフォルトで展開状態にリセット
+      setIsVersionsExpanded(true);
       setSelectedGalleryImg(null);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    setIsVersionsExpanded(false);
+    // モーダルを別のMod用に開き直したときも展開状態でスタート
+    setIsVersionsExpanded(true);
     setSelectedGalleryImg(null);
     setProject(null);
     setVersions([]);

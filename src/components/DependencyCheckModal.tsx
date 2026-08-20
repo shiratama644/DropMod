@@ -428,10 +428,15 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                   return (
                     <div
                       key={key}
-                      className="glass-card p-3 rounded-2xl border-l-4 border-l-red-500 border-red-500/30 bg-red-500/5 space-y-2"
+                      className="glass-card p-3 rounded-2xl border-l-4 border-l-red-500 border-red-500/30 bg-red-500/5"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-start gap-2.5 min-w-0">
+                      {/*
+                        アクションボタンは常に右端のコンパクトなアイコンボタンにして
+                        「何が競合しているか」の情報部分の視認性を優先する。
+                        (以前は sm 未満で全幅の派手なボタンだったため情報が埋もれていた)
+                      */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
                           <div className="w-7 h-7 rounded-lg bg-red-500/20 theme-text-red flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                             <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
                           </div>
@@ -456,10 +461,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                               runCheck();
                             }
                           }}
-                          className="w-full sm:w-auto px-3 py-1.5 text-xs font-bold rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 hover:bg-red-500/30 active:bg-red-500/40 transition shrink-0 flex items-center justify-center gap-1"
+                          title={`${c.sourceMod.title} を削除`}
+                          aria-label={`${c.sourceMod.title} を削除`}
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-red hover:bg-red-500/15 active:bg-red-500/25 border border-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                         >
                           <i className="fa-solid fa-trash-can text-[11px]" aria-hidden="true" />
-                          <span>{c.sourceMod.title} を削除</span>
+                          <span className="hidden sm:inline">削除</span>
                         </button>
                       </div>
                     </div>
@@ -474,10 +481,10 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                   return (
                     <div
                       key={key}
-                      className="glass-card p-3 rounded-2xl border-l-4 border-l-amber-500 border-amber-500/30 bg-amber-500/5 space-y-2"
+                      className="glass-card p-3 rounded-2xl border-l-4 border-l-amber-500 border-amber-500/30 bg-amber-500/5"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
                             <img
                               src={pInfo.icon_url}
@@ -508,10 +515,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             await onToggleMod(m.targetProjectId, e);
                             runCheck();
                           }}
-                          className="btn-hover-effect w-full sm:w-auto px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow shrink-0 flex items-center justify-center gap-1"
+                          title={`${title} を追加`}
+                          aria-label={`${title} を追加`}
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-amber hover:bg-amber-500/15 active:bg-amber-500/25 border border-amber-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                         >
                           <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
-                          <span>追加する</span>
+                          <span className="hidden sm:inline">追加</span>
                         </button>
                       </div>
                     </div>
@@ -526,10 +535,10 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                   return (
                     <div
                       key={key}
-                      className="glass-card p-3 rounded-2xl border-l-4 border-l-blue-500 border-blue-500/30 bg-blue-500/5 space-y-2"
+                      className="glass-card p-3 rounded-2xl border-l-4 border-l-blue-500 border-blue-500/30 bg-blue-500/5"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
                             <img
                               src={pInfo.icon_url}
@@ -560,10 +569,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             await onToggleMod(o.targetProjectId, e);
                             runCheck();
                           }}
-                          className="btn-hover-effect w-full sm:w-auto px-3.5 py-1.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition shadow shrink-0 flex items-center justify-center gap-1"
+                          title={`${title} を追加`}
+                          aria-label={`${title} を追加`}
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-blue hover:bg-blue-500/15 active:bg-blue-500/25 border border-blue-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                         >
                           <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
-                          <span>追加する</span>
+                          <span className="hidden sm:inline">追加</span>
                         </button>
                       </div>
                     </div>

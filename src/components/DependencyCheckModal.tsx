@@ -617,8 +617,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                               </span>
                             </div>
                             <p className="text-xs font-semibold theme-text-secondary mt-0.5 leading-tight break-words">
-                              「<span className="font-bold theme-text-brand">{c.sourceMod.title}</span>」と「
-                              <span className="font-bold theme-text-amber">{c.targetMod.title}</span>」は併用できません。
+                              <span className="font-bold theme-text-amber">{c.targetMod.title}</span>
                             </p>
                           </div>
                         </div>

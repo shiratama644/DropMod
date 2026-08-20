@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
-import { Profile, Mod } from '../types';
+import { Profile, ModItem } from '../types';
 
 // ==========================================
 // 定数
@@ -34,7 +34,7 @@ const INITIAL_STATE: ZipProgressState = {
 // ==========================================
 
 /** Modのファイル名を決定する */
-const getModFileName = (mod: Mod): string => {
+const getModFileName = (mod: ModItem): string => {
   if (mod.filename) return mod.filename;
   const version = mod.selectedVersionNumber ? `-${mod.selectedVersionNumber}` : '';
   const identifier = mod.slug || mod.id;
@@ -74,7 +74,7 @@ const generateReadmeText = (profile: Profile): string => {
     .join('\n');
 
   return [
-    'CraftForge Mod Profile Export',
+    'DropMod Mod Profile Export',
     '==============================',
     `Profile Name: ${profile.name}`,
     `Minecraft Version: ${profile.mcVersion}`,

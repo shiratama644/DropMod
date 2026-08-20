@@ -140,6 +140,8 @@ export const App: React.FC = () => {
 
   const handleResetData = () => {
     if (confirm('全てのプロファイルと設定を初期化しますか？')) {
+      localStorage.removeItem('dropmod_state_v2');
+      // 旧キーの残骸も念のため削除
       localStorage.removeItem('craftforge_state_v2');
       window.location.reload();
     }

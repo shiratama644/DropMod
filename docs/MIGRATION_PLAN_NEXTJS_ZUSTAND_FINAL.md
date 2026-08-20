@@ -7,7 +7,7 @@
 > **検証:** 全章 `web_search` で Next.js 15 / Zustand 5 公式ドocsを参照（推測なし）  
 > **ユーザ決定反映:**  
 > - Q1: **Home 初期24件 + Mods一覧 初期表示 + Mod詳細ページ をSSR、検索/フィルタ/無限スクロールはCSR**。全ページISR(revalidate:60)は見送り、SSR/CSR責務分離  
-> - Q2: **localStorage → IndexedDB 移行**。`craftforge_state_v2` を初回に自動移行、以降はIndexedDBを正とし localStorage依存を排除。バージョン管理で将来スキーマ変更に対応  
+> - Q2: **localStorage → IndexedDB 移行**。`dropmod_state_v2` を初回に自動移行、以降はIndexedDBを正とし localStorage依存を排除。バージョン管理で将来スキーマ変更に対応  
 > - Q3: **Vercelで動作確認するが Vercel固有SDK/APIに依存しないポータブル実装**。標準 Next.js / Web標準APIのみ  
 > - Q4: **URLルーティングに完全移行** (`/` `/mods` `/settings` `/mod/[id]`)
 
@@ -64,7 +64,7 @@
 - 4002行、最大 `DependencyCheckModal.tsx` 606行。`App.tsx` が全hooksを束ねるハブ。
 - ルーティングなし（`activeTab` 疑似タブ + GSAPフェード）
 - `server/index.ts` Honoが `api.modrinth.com/v2` プロキシ、`src/services/api.ts` が2段フォールバック＋メモリ `apiCache`
-- 状態は `useState + localStorage: craftforge_state_v2` に分散、props drilling
+- 状態は `useState + localStorage: dropmod_state_v2` に分散、props drilling
 
 ---
 
@@ -109,7 +109,7 @@
 - **App Router一択**（Pages Router不使用） [3](https://nextjs.org/docs/app/guides/migrating/from-vite)
 - **Strangler Fig**: Phase 1で旧コンポーネントを `"use client"` でそのまま動かし、Phase 4でSSR島を徐々に切り出し
 - **URLが正**: `activeTab` stateは廃止し `usePathname()` + `next/link` に置換。GSAPタブアニメは `template.tsx` または `usePathname` 変化で再現
-- **IndexedDBが正**: 移行後は `localStorage` に書き込まない。`localStorage` は初回移行時のみ読み、成功後に `removeItem('craftforge_state_v2')`（または保持して冗長化するかは後述）
+- **IndexedDBが正**: 移行後は `localStorage` に書き込まない。`localStorage` は初回移行時のみ読み、成功後に `removeItem('dropmod_state_v2')`（または保持して冗長化するかは後述）
 
 ### 非目標
 - Vercel Analytics / Speed Insights / Edge Config 等への依存
@@ -149,7 +149,7 @@ app.all('/api/modrinth/*', async c=> fetch(MODRINTH_BASE + path + query, {header
 ```ts
 export const runtime = 'nodejs'
 export async function GET() {
-  return Response.json({ status: 'ok', service: 'CraftForge Next API' })
+  return Response.json({ status: 'ok', service: 'DropMod Next API' })
 }
 ```
 
@@ -160,7 +160,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const runtime = 'nodejs' // Vercel/Nodeどちらでも動作する標準
 
 const MODRINTH_API_BASE = 'https://api.modrinth.com/v2'
-const USER_AGENT = 'CraftForge/1.1.0 (https://github.com/craftforge/craftforge-mod-manager)'
+const USER_AGENT = 'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)'
 
 async function proxy(req: NextRequest, params: { path?: string[] }) {
   const path = params.path ? `/${params.path.join('/')}` : ''
@@ -219,7 +219,7 @@ import { get, set, del, createStore } from 'idb-keyval'
 import type { StateStorage } from 'zustand/middleware'
 
 // DB名とStore名を明示し、他アプリと衝突しないようにする
-const idbStore = createStore('craftforge-db', 'craftforge-store')
+const idbStore = createStore('dropmod-db', 'dropmod-store')
 
 export const indexedDBStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -242,18 +242,18 @@ export const indexedDBStorage: StateStorage = {
 
 ### 7.3 自動移行 (localStorage → IndexedDB) 設計
 
-**要件**: 既存 `craftforge_state_v2` を初回に自動移行し、以降はIndexedDBを正とする。
+**要件**: 既存 `dropmod_state_v2` を初回に自動移行し、以降はIndexedDBを正とする。
 
 **`lib/migrateFromLocalStorage.ts`**
 ```ts
 import { get as idbGet, set as idbSet } from 'idb-keyval'
 import { createStore } from 'idb-keyval'
 
-const LEGACY_KEY = 'craftforge_state_v2' // 旧
-const NEW_PROFILE_KEY = 'craftforge-profile' // 新 (IndexedDB側キー)
-const NEW_UI_KEY = 'craftforge-ui'
+const LEGACY_KEY = 'dropmod_state_v2' // 旧
+const NEW_PROFILE_KEY = 'dropmod-profile' // 新 (IndexedDB側キー)
+const NEW_UI_KEY = 'dropmod-ui'
 
-const idbStore = createStore('craftforge-db', 'craftforge-store')
+const idbStore = createStore('dropmod-db', 'dropmod-store')
 
 export async function migrateLocalStorageToIndexedDB(): Promise<void> {
   if (typeof window === 'undefined') return // SSRでは何もしない
@@ -299,10 +299,10 @@ export async function migrateLocalStorageToIndexedDB(): Promise<void> {
     // 移行成功後に旧キーを削除（ロールバック用に一時保持するならコメントアウト）
     // localStorage.removeItem(LEGACY_KEY)
     // 安全のため、移行済みフラグを残す
-    localStorage.setItem('craftforge_migrated_to_idb', 'true')
-    console.info('[CraftForge] Migrated localStorage → IndexedDB')
+    localStorage.setItem('dropmod_migrated_to_idb', 'true')
+    console.info('[DropMod] Migrated localStorage → IndexedDB')
   } catch (e) {
-    console.error('[CraftForge] Migration failed', e)
+    console.error('[DropMod] Migration failed', e)
   }
 }
 ```
@@ -418,7 +418,7 @@ export const useProfileStore = create<ProfileState>()(
       },
     }),
     {
-      name: 'craftforge-profile', // ★新キー (IndexedDB内キー)
+      name: 'dropmod-profile', // ★新キー (IndexedDB内キー)
       storage: createJSONStorage(()=> indexedDBStorage), // async IndexedDB
       skipHydration: true, // SSRではhydrateせず、Clientで手動rehydrate [4](https://zustand.docs.pmnd.rs/reference/integrations/persisting-store-data)
       partialize: (s)=> ({ profiles: s.profiles, currentProfileId: s.currentProfileId }),
@@ -478,7 +478,7 @@ export const useUIStore = create<UIState>()(
       toggleTheme:()=>set({theme: get().theme==='dark'?'light':'dark'}),
     }),
     {
-      name: 'craftforge-ui',
+      name: 'dropmod-ui',
       storage: createJSONStorage(()=> indexedDBStorage),
       skipHydration: true,
       partialize:(s)=>({theme:s.theme}),
@@ -613,7 +613,7 @@ export async function generateMetadata({params}:{params: Promise<{id:string}>}){
   const project = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/modrinth/project/${id}`, { next:{ revalidate:3600, tags:[`project:${id}`] }}).then(r=>r.json()).catch(()=>null)
   if(!project) return {}
   return {
-    title: `${project.title} | CraftForge`,
+    title: `${project.title} | DropMod`,
     description: project.description,
     openGraph: { images: [project.icon_url] },
   }
@@ -703,7 +703,7 @@ const pathname = usePathname()
 |---|---|---|---|---|
 | **0: 準備** | 1-2日 | 型エラー洗い出し、ブランチ作成 | `git checkout -b migrate/nextjs-zustand` | `pnpm tsc --noEmit` 0エラー |
 | **1: Next基盤** | 2-3日 | `next.config.ts` / `app/layout.tsx` / `providers.tsx` で旧UIを `"use client"` のまま起動 | `pnpm dev` (next dev) で現行と同等表示 | `curl localhost:3000/api/health` 200 |
-| **2: Zustand+IDB** | 3-4日 | `stores/*` + `lib/indexedDBStorage.ts` + `lib/migrateFromLocalStorage.ts` 実装。`App.tsx` の `useProfiles` を `useProfileStore` に置換。`craftforge_state_v2` を持つブラウザで移行テスト | IndexedDB (DevTools → Application → IndexedDB → craftforge-db) に `craftforge-profile` が保存される | 旧データが消えず、新規追加がIDBに書かれる |
+| **2: Zustand+IDB** | 3-4日 | `stores/*` + `lib/indexedDBStorage.ts` + `lib/migrateFromLocalStorage.ts` 実装。`App.tsx` の `useProfiles` を `useProfileStore` に置換。`dropmod_state_v2` を持つブラウザで移行テスト | IndexedDB (DevTools → Application → IndexedDB → dropmod-db) に `dropmod-profile` が保存される | 旧データが消えず、新規追加がIDBに書かれる |
 | **3: Hono→Route Handlers** | 1-2日 | `app/api/modrinth/[...path]/route.ts` 実装、`server/index.ts` 削除、`lib/api.ts` 修正。Vercel固有API未使用を `grep -r vercel` で確認 | `pnpm build` 成功、`/api/modrinth/search` がModrinthと同等JSONを返す | `diff <(curl Hono) <(curl Next)` |
 | **4: App Router本格化** | 3-5日 | `app/page.tsx` SSR(初期24件)、`app/mods/page.tsx` `force-dynamic`、`app/mod/[id]/page.tsx` SSR+OGP、`/settings` 分離。`activeTab` → `usePathname` 置換 | URLで `/` `/mods` `/mod/xxx` `/settings` が各々SSR HTMLを返す (`view-source` で確認) | Lighthouse SEO向上 |
 | **5: フック解体** | 2-3日 | `useModSearch` 分割、`useDependencyCheck` はClientのまま、`useZip*` は `stores/zipStore` に。`Mod` 型不整合修正 | 無限スクロール・依存チェック・ZIP入出力がIDB永続化後も動作 | E2E: 検索→追加→依存→ZIP出力→別ブラウザでZIP再インポート |
@@ -790,8 +790,8 @@ export default nextConfig
 - [ ] `pnpm build` が型エラー0で成功
 - [ ] `grep -r "from.*vercel\|@vercel" app lib` が0件（ポータブル担保）
 - [ ] `curl /api/health` 200、`curl /api/modrinth/search` がModrinthと同等
-- [ ] 旧 `craftforge_state_v2` を持つブラウザで初回起動時に IndexedDB `craftforge-db/craftforge-store` に自動移行され、2回目以降はIDBが正として動作
-- [ ] DevTools → Application → IndexedDB → `craftforge-db` に `craftforge-profile` / `craftforge-ui` が存在
+- [ ] 旧 `dropmod_state_v2` を持つブラウザで初回起動時に IndexedDB `dropmod-db/dropmod-store` に自動移行され、2回目以降はIDBが正として動作
+- [ ] DevTools → Application → IndexedDB → `dropmod-db` に `dropmod-profile` / `dropmod-ui` が存在
 - [ ] `localStorage` への新規書き込みがない（`localStorage` は移行時のみ読み）
 - [ ] `/` の `view-source` に初期24件の `ModCard` HTMLが含まれる（SSR確認）
 - [ ] `/mod/[id]` の `view-source` にOGP `og:title` が含まれる

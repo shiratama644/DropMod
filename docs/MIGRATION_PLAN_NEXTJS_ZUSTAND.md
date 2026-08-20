@@ -2,7 +2,7 @@
 
 > **作成日:** 2026-08-20 (JST)  
 > **対象コミット:** `8b8f4da` / `arena/01a01f07-dropmod` branch  
-> **現行構成:** Vite 6 + Hono 4 + React 18 + TypeScript 5.7 (SPA, 全CSR, `localStorage: craftforge_state_v2`)  
+> **現行構成:** Vite 6 + Hono 4 + React 18 + TypeScript 5.7 (SPA, 全CSR, `localStorage: dropmod_state_v2`)  
 > **目標構成:** Next.js 15 (App Router) + React 19 対応 + TypeScript + Zustand 5 + Tailwind 4 + Route Handlers  
 > **検証方法:** 本計画はすべて `web_search` で **Next.js 15 / Zustand 5 の最新公式ドキュメント**を都度参照して作成（推測なし）
 
@@ -96,8 +96,8 @@
 └─────────────────────────────────────────────────────────┘
          │
          ▼
-  外部: api.modrinth.com/v2 (User-Agent: CraftForge/1.1.0)
-  永続化: localStorage (Zustand persist, key: craftforge_state_v2 互換 or 新key + migrate)
+  外部: api.modrinth.com/v2 (User-Agent: DropMod/1.1.0)
+  永続化: localStorage (Zustand persist, key: dropmod_state_v2 互換 or 新key + migrate)
 ```
 
 ### ディレクトリ目標像 (Next.js推奨構成 [3](https://nextjs.org/docs/app/guides/migrating/from-vite))
@@ -140,7 +140,7 @@
 ### 方針
 - **App Router一択**: Pages Routerは新規では非推奨 [4](https://render.com/articles/how-to-deploy-next-js-applications-with-ssr-and-api-routes)。`app/` ディレクトリに集約。
 - **段階移行 (Strangler Fig)**: 一度に全置換せず、Phase 0で Next.js 基盤を立ち上げ、既存コンポーネントを `"use client"` でそのまま動かしつつ、徐々にServer化・Zustand化。
-- **互換維持**: `craftforge_state_v2` の localStorage 形式はZustand `persist.migrate` で吸収し、既存ユーザのデータを失わない。
+- **互換維持**: `dropmod_state_v2` の localStorage 形式はZustand `persist.migrate` で吸収し、既存ユーザのデータを失わない。
 - **型安全最優先**: `typescript.ignoreBuildErrors: false` を維持。
 
 ### 非目標 (今回はやらない)
@@ -191,7 +191,7 @@ app.all('/api/modrinth/*', async c=>{
 #### `app/api/health/route.ts`
 ```ts
 export async function GET() {
-  return Response.json({ status: 'ok', service: 'CraftForge Next API' })
+  return Response.json({ status: 'ok', service: 'DropMod Next API' })
 }
 ```
 
@@ -200,7 +200,7 @@ export async function GET() {
 import { NextRequest, NextResponse } from 'next/server'
 
 const MODRINTH_API_BASE = 'https://api.modrinth.com/v2'
-const USER_AGENT = 'CraftForge/1.1.0 (https://github.com/craftforge/craftforge-mod-manager)'
+const USER_AGENT = 'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)'
 
 async function proxy(req: NextRequest, params: { path?: string[] }) {
   const path = params.path ? `/${params.path.join('/')}` : ''
@@ -291,7 +291,7 @@ export async function fetchModrinth<T>(endpoint:string, params:Record<string,any
 ### 7.2 ストア分割方針
 | ストア | 責務 | persist | hydration戦略 |
 |---|---|---|---|
-| `profileStore` | `profiles`, `currentProfileId`, `currentProfile` (getter), CRUD + `handleToggleMod` 等 | `name: 'craftforge_state_v2'` (互換) or `'craftforge-profile'` + `migrate` | `skipHydration: true`, `createJSONStorage(()=>localStorage)` [5](https://zustand.docs.pmnd.rs/reference/integrations/persisting-store-data) |
+| `profileStore` | `profiles`, `currentProfileId`, `currentProfile` (getter), CRUD + `handleToggleMod` 等 | `name: 'dropmod_state_v2'` (互換) or `'dropmod-profile'` + `migrate` | `skipHydration: true`, `createJSONStorage(()=>localStorage)` [5](https://zustand.docs.pmnd.rs/reference/integrations/persisting-store-data) |
 | `uiStore` | `theme: 'dark'|'light'`, `activeTab` (※App RouterではURLが正なので `activeTab` はRouterに移譲しつつ互換のため残す), `hasHydrated` | 同上 (themeのみ) | 同上。`theme` は `document.documentElement.classList` 同期を `useEffect` で行う |
 | `toastStore` | `toasts: Toast[]`, `showToast`, `dismissToast` | しない (一時的) | そのまま |
 | `modSearchStore` (Client側のみ) | `hits`, `isLoading`, `hasMore`, `searchInput` 等 (一部Serverに移管するため縮小) | しない or sessionStorage | - |
@@ -398,7 +398,7 @@ export const useProfileStore = create<ProfileState>()(
       },
     }),
     {
-      name: 'craftforge_state_v2', // 既存keyを維持して互換性を保つ
+      name: 'dropmod_state_v2', // 既存keyを維持して互換性を保つ
       storage: createJSONStorage(()=> localStorage),
       // Next.js SSRでは localStorage が存在しないため、初期renderではhydrationをスキップ
       skipHydration: true,
@@ -447,7 +447,7 @@ export const useUIStore = create<UIState>()(
       toggleTheme: ()=> set({theme: get().theme==='dark'?'light':'dark'}),
     }),
     {
-      name: 'craftforge_ui',
+      name: 'dropmod_ui',
       storage: createJSONStorage(()=> localStorage),
       skipHydration: true,
       partialize: (s)=> ({theme: s.theme}),
@@ -595,7 +595,7 @@ export function HomeClient({initialHits}:{initialHits:any[]}){
 1. `stores/profileStore.ts`, `uiStore.ts`, `toastStore.ts` 作成 (上記スケルトン)。
 2. `app/providers.tsx` (ZustandHydration, ThemeProvider) を `app/layout.tsx` に組み込み。
 3. `src/App.tsx` の `useProfiles` → `useProfileStore` に置換。`src/components/Header` 等の props drilling を `useProfileStore` 直接購読に段階的に置換。
-4. `localStorage` マイグレーションテスト: 既存 `craftforge_state_v2` を持つブラウザでリロードし、データが引き継がれるか確認。
+4. `localStorage` マイグレーションテスト: 既存 `dropmod_state_v2` を持つブラウザでリロードし、データが引き継がれるか確認。
 
 ### Phase 3: Hono → Route Handlers 置換 (1-2日)
 1. `app/api/modrinth/[...path]/route.ts` 実装。
@@ -767,7 +767,7 @@ export async function getProject(id:string, opts?:{revalidate?:number}){
 ### 移行完了の定義 (DoD)
 - [ ] `pnpm dev` / `pnpm build` / `pnpm start` が全て成功し、`next build` で型エラー0
 - [ ] `app/api/modrinth/[...path]/route.ts` がHonoと同等のプロキシを返し、`curl /api/health` が200
-- [ ] 既存 `craftforge_state_v2` を持つブラウザでリロードしてもプロファイルが消えない
+- [ ] 既存 `dropmod_state_v2` を持つブラウザでリロードしてもプロファイルが消えない
 - [ ] `theme` 切替がリロード後も維持され、SSR初回とCSRでチラつかない
 - [ ] Homeの初期24件がSSRでHTMLに含まれている (`view-source` で確認)
 - [ ] 無限スクロール・検索・モーダル・依存チェック・ZIP入出力が現行と同等に動作
@@ -811,9 +811,9 @@ export async function getProject(id:string, opts?:{revalidate?:number}){
 - **C.** 全ページSSR + ISR (検索結果も `revalidate:60` でキャッシュ)
 - **D.** 現行通り完全CSRのまま、Next.jsはルーティングとAPIのためだけに使う
 
-### Q2. Zustandの永続化キー `craftforge_state_v2` をどうしますか？
+### Q2. Zustandの永続化キー `dropmod_state_v2` をどうしますか？
 - **A.** そのまま維持し `migrate` で互換 (既存ユーザのデータを完全保持・推奨)
-- **B.** 新キー `craftforge_v3` にし、初回起動時に旧キーを自動移行
+- **B.** 新キー `dropmod_v3` にし、初回起動時に旧キーを自動移行
 - **C.** 旧データは破棄しクリーンな新キーで開始
 
 ### Q3. デプロイ先はどこを想定していますか？

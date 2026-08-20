@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Profile, DependencyCheckData, Mod } from '../types';
+import { Profile, DependencyCheckData, ModItem } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
 
 interface DependencyCheckModalProps {
@@ -105,10 +105,10 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
         if (m.slug) installedProjectSet.add(m.slug);
       });
 
-      const missingRequired: Array<{ sourceMod: Mod; targetProjectId: string }> = [];
-      const conflicts: Array<{ sourceMod: Mod; targetMod: Mod | { title: string; id: string } }> = [];
-      const optionalAvailable: Array<{ sourceMod: Mod; targetProjectId: string }> = [];
-      const verifiedOK: Array<{ sourceMod: Mod; message: string }> = [];
+      const missingRequired: Array<{ sourceMod: ModItem; targetProjectId: string }> = [];
+      const conflicts: Array<{ sourceMod: ModItem; targetMod: ModItem | { title: string; id: string } }> = [];
+      const optionalAvailable: Array<{ sourceMod: ModItem; targetProjectId: string }> = [];
+      const verifiedOK: Array<{ sourceMod: ModItem; message: string }> = [];
       const missingProjectIds = new Set<string>();
 
       for (const mod of profile.mods) {
@@ -249,8 +249,25 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     if (!data?.missingRequired || isFixing) return;
     setIsFixing(true);
     try {
-      for (const item of data.missingRequired) {
-        await onToggleMod(item.targetProjectId, { stopPropagation: () => {} } as React.MouseEvent, true);
+      // 1. 重複する targetProjectId を除去 (複数のsourceModが同じライブラリに依存するケース対策)
+      // 2. 既にプロファイルに存在するMod (id or slug で照合) はスキップ
+      //    → onToggleMod はトグル動作のため、追加済みのものに対して呼ぶと削除されてしまう
+      const installedIds = new Set<string>();
+      profile.mods.forEach((m) => {
+        if (m.id) installedIds.add(m.id);
+        if (m.slug) installedIds.add(m.slug);
+      });
+
+      const uniqueTargets = Array.from(
+        new Set(data.missingRequired.map((item) => item.targetProjectId))
+      ).filter((targetId) => !installedIds.has(targetId));
+
+      for (const targetProjectId of uniqueTargets) {
+        await onToggleMod(
+          targetProjectId,
+          { stopPropagation: () => {} } as React.MouseEvent,
+          true
+        );
       }
       await runCheck();
       onRefresh();

@@ -84,13 +84,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             >
               <input
                 type="file"
-                accept=".zip"
+                accept=".zip,.mrpack,application/zip"
                 className="absolute inset-0 opacity-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500"
                 onChange={onImportZip}
               />
               <i className="fa-solid fa-cloud-arrow-up text-2xl sm:text-3xl theme-text-brand mb-1.5"></i>
               <p className="text-xs font-bold">ZIPプロファイル / .mrpack インポート</p>
-              <p className="text-xs theme-text-muted mt-0.5">タップまたはファイルをドロップ (.zip)</p>
+              <p className="text-xs theme-text-muted mt-0.5">タップまたはファイルをドロップ (.zip / .mrpack)</p>
             </div>
 
             <div className="glass-card p-4 sm:p-5 rounded-2xl flex flex-col justify-between space-y-3">

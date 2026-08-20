@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 const app = new Hono();
 const MODRINTH_API_BASE = 'https://api.modrinth.com/v2';
 
-app.get('/api/health', (c) => c.json({ status: 'ok', service: 'CraftForge Hono API' }));
+app.get('/api/health', (c) => c.json({ status: 'ok', service: 'DropMod Hono API' }));
 
 // Modrinth API への万能プロキシハンドラ
 app.all('/api/modrinth/*', async (c) => {
@@ -13,7 +13,7 @@ app.all('/api/modrinth/*', async (c) => {
 
   try {
     const headers: Record<string, string> = {
-      'User-Agent': 'CraftForge/1.1.0 (https://github.com/craftforge/craftforge-mod-manager; contact@craftforge.app)'
+      'User-Agent': 'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)'
     };
 
     if (c.req.header('Content-Type')) {

@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <h1 className="font-extrabold text-base sm:text-lg tracking-wider flex items-center gap-1.5 leading-none">
-                CraftForge
+                DropMod
               </h1>
               <p className="text-xs theme-text-muted mt-0.5">Minecraft Mod Profile Manager</p>
             </div>
@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <i className="fa-solid fa-file-import text-sm" aria-hidden="true" />
                 <input
                   type="file"
-                  accept=".zip"
+                  accept=".zip,.mrpack,application/zip"
                   className="hidden"
                   onChange={handleFileImport}
                 />
@@ -184,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>ZIP読込</span>
               <input
                 type="file"
-                accept=".zip"
+                accept=".zip,.mrpack,application/zip"
                 className="hidden"
                 onChange={handleFileImport}
               />

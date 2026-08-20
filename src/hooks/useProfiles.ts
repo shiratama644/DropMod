@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Profile, ModItem, ThemeMode } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
 
@@ -19,9 +19,43 @@ export const useProfiles = (
     }
   ]);
 
-  // LocalStorage から復元
+  // ------------------------------------------------------------------
+  // 最新state参照用 Ref (stale closure 対策)
+  // handleToggleMod のような非同期処理の中では、レンダー時点の profiles
+  // をキャプチャした値ではなく、常に最新の値を参照する必要がある。
+  // AutoFix や連続操作で古い state を見て「未追加」判定してしまい、
+  // 追加⇔削除トグルが暴発するのを防ぐ。
+  // ------------------------------------------------------------------
+  const profilesRef = useRef<Profile[]>(profiles);
+  const currentProfileIdRef = useRef<string>(currentProfileId);
   useEffect(() => {
-    const saved = localStorage.getItem('craftforge_state_v2');
+    profilesRef.current = profiles;
+  }, [profiles]);
+  useEffect(() => {
+    currentProfileIdRef.current = currentProfileId;
+  }, [currentProfileId]);
+
+  // LocalStorage から復元 (旧キー `craftforge_state_v2` からの自動移行を含む)
+  useEffect(() => {
+    const STORAGE_KEY = 'dropmod_state_v2';
+    const LEGACY_KEY = 'craftforge_state_v2';
+
+    let saved = localStorage.getItem(STORAGE_KEY);
+
+    // 新キーが無ければ旧キーから読み取り、成功したら新キーへコピーして旧キーを削除
+    if (!saved) {
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) {
+        try {
+          localStorage.setItem(STORAGE_KEY, legacy);
+          localStorage.removeItem(LEGACY_KEY);
+          saved = legacy;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -37,7 +71,7 @@ export const useProfiles = (
   // LocalStorage へ保存
   useEffect(() => {
     localStorage.setItem(
-      'craftforge_state_v2',
+      'dropmod_state_v2',
       JSON.stringify({ theme, currentProfileId, profiles })
     );
   }, [theme, currentProfileId, profiles]);
@@ -103,31 +137,47 @@ export const useProfiles = (
   const handleToggleMod = async (projectId: string, e?: React.MouseEvent, silent = false) => {
     if (e && e.stopPropagation) e.stopPropagation();
 
-    const existsIndex = currentProfile.mods.findIndex((m) => m.id === projectId || m.slug === projectId);
+    // --- Ref 経由で常に最新の profiles / currentProfileId を読む (stale closure 対策) ---
+    const latestProfileId = currentProfileIdRef.current;
+    const latestProfile =
+      profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
+    if (!latestProfile) return;
+
+    const existsIndex = latestProfile.mods.findIndex(
+      (m) => m.id === projectId || m.slug === projectId
+    );
 
     if (existsIndex >= 0) {
-      const removed = currentProfile.mods[existsIndex];
+      // --- 削除 ---
+      const removed = latestProfile.mods[existsIndex];
       setProfiles((prev) =>
         prev.map((p) =>
-          p.id === currentProfileId
+          p.id === latestProfileId
             ? { ...p, mods: p.mods.filter((m) => m.id !== projectId && m.slug !== projectId) }
             : p
         )
       );
       if (!silent) showToast(`「${removed.title || 'Mod'}」を削除しました`, 'info');
     } else {
+      // --- 追加 ---
       if (!silent) showToast('ModrinthからMod情報を取得中...', 'info');
       try {
         const project = await fetchModrinth<any>(`/project/${projectId}`);
-        const versionRes = await fetchStableModVersion(projectId, currentProfile);
+        const versionRes = await fetchStableModVersion(projectId, latestProfile);
 
-        if (!versionRes || !versionRes.targetVersion || !versionRes.targetVersion.files || versionRes.targetVersion.files.length === 0) {
+        if (
+          !versionRes ||
+          !versionRes.targetVersion ||
+          !versionRes.targetVersion.files ||
+          versionRes.targetVersion.files.length === 0
+        ) {
           if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
           return;
         }
 
         const targetVersion = versionRes.targetVersion;
-        const primaryFile = targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
+        const primaryFile =
+          targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
 
         const modObj: ModItem = {
           id: project.id,
@@ -147,10 +197,32 @@ export const useProfiles = (
           filename: primaryFile.filename
         };
 
+        // --- functional updater 内で「まだ追加されていないか」を再チェック ---
+        // API 呼び出し中に別経路で追加されていた場合は二重追加しない。
+        // またプロファイルが切り替わっていた場合は現在プロファイルに追加する
+        // (currentProfileIdRef を再度参照)。
+        let alreadyAdded = false;
         setProfiles((prev) =>
-          prev.map((p) => (p.id === currentProfileId ? { ...p, mods: [...p.mods, modObj] } : p))
+          prev.map((p) => {
+            if (p.id !== currentProfileIdRef.current) return p;
+            const dup = p.mods.some(
+              (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+            );
+            if (dup) {
+              alreadyAdded = true;
+              return p;
+            }
+            return { ...p, mods: [...p.mods, modObj] };
+          })
         );
-        if (!silent) showToast(`「${project.title}」を追加しました！`, 'success');
+
+        if (!silent) {
+          if (alreadyAdded) {
+            showToast(`「${project.title}」は既に追加されています`, 'info');
+          } else {
+            showToast(`「${project.title}」を追加しました！`, 'success');
+          }
+        }
       } catch (err) {
         if (!silent) showToast('Modの追加に失敗しました', 'warning');
       }
@@ -158,7 +230,11 @@ export const useProfiles = (
   };
 
   const handleUpdateModVersion = async (projectId: string, versionId: string) => {
-    const mod = currentProfile.mods.find((m) => m.id === projectId || m.slug === projectId);
+    // Ref 経由で最新state参照 (stale closure対策)
+    const latestProfileId = currentProfileIdRef.current;
+    const latestProfile =
+      profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
+    const mod = latestProfile?.mods.find((m) => m.id === projectId || m.slug === projectId);
     if (!mod) return;
 
     try {
@@ -168,7 +244,7 @@ export const useProfiles = (
 
         setProfiles((prev) =>
           prev.map((p) =>
-            p.id === currentProfileId
+            p.id === currentProfileIdRef.current
               ? {
                   ...p,
                   mods: p.mods.map((m) =>

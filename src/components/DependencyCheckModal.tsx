@@ -616,9 +616,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                                 Incompatible
                               </span>
                             </div>
-                            <p className="text-xs font-semibold theme-text-secondary mt-0.5 leading-tight break-words">
-                              <span className="font-bold theme-text-amber">{c.targetMod.title}</span>
-                            </p>
+                            <div className="text-xs font-bold theme-text-primary truncate mt-0.5">
+                              {c.sourceMod.title}
+                            </div>
+                            <div className="text-[11px] theme-text-muted truncate">
+                              {`「${c.targetMod.title}」と併用できません`}
+                            </div>
                           </div>
                         </div>
                         <button
@@ -684,7 +687,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             </div>
                             <div className="text-xs font-bold theme-text-primary truncate mt-0.5">{title}</div>
                             <div className="text-[11px] theme-text-muted truncate">
-                              「{m.sourceMod.title}」の動作に必要
+                              {`「${m.sourceMod.title}」の動作に必要`}
                             </div>
                           </div>
                         </div>
@@ -746,7 +749,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             </div>
                             <div className="text-xs font-bold theme-text-primary truncate mt-0.5">{title}</div>
                             <div className="text-[11px] theme-text-muted truncate">
-                              「{o.sourceMod.title}」と連携機能あり
+                              {`「${o.sourceMod.title}」と連携機能あり`}
                             </div>
                           </div>
                         </div>

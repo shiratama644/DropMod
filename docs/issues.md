@@ -5,7 +5,24 @@
 > **調査手法:** `tsc --noEmit` / `vite build` / 全ソース目視レビュー / Modrinth API 公式仕様照合 / react-markdown v9 破壊的変更確認 / セキュリティ観点静的解析
 > **総件数:** 32件 (Critical: 4 / High: 7 / Medium: 11 / Low: 10)
 >
-> **修正済み (2026-08-21 更新):** C-1, C-2, C-3, C-4, H-3, H-5, L-4, L-5 (8件)
+> ## ✅ 修正完了ステータス (2026-08-21 更新)
+>
+> **全 32 件の修正が完了しました。**
+>
+> - 🔴 Critical: **4/4** ✅
+> - 🟠 High: **7/7** ✅
+> - 🟡 Medium: **11/11** ✅
+> - 🟢 Low: **10/10** ✅
+>
+> **検証:**
+> - `pnpm exec tsc --noEmit` → **エラー 0 件**
+> - `pnpm exec vite build` → **成功**
+>
+> **主な副次改善:**
+> - `useModalA11y` 共通フックの新設で全モーダルのa11y統一
+> - `ConfirmDialog` + `useConfirm` フックで `window.confirm()` を全廃
+> - `services/api.ts` 全書き換え (LRU/TTL + 429 リトライ + キー安定化)
+> - `downloadAsBlob` ヘルパーで クロスオリジン .jar DL を確実に
 
 **重大度定義**
 - 🔴 **Critical**: 本番でユーザー影響を確実に引き起こす。修正必須。

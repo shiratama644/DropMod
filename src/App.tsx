@@ -9,6 +9,7 @@ import { useModSearch } from './hooks/useModSearch';
 import { useDependencyCheck } from './hooks/useDependencyCheck';
 import { useZipExport } from './hooks/useZipExport';
 import { useZipImport } from './hooks/useZipImport';
+import { useConfirm } from './hooks/useConfirm';
 
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -21,6 +22,7 @@ import { EditProfileModal } from './components/EditProfileModal';
 import { ModDetailModal } from './components/ModDetailModal';
 import { DependencyCheckModal } from './components/DependencyCheckModal';
 import { ZipProgressModal } from './components/ZipProgressModal';
+import { ConfirmDialog } from './components/ConfirmDialog';
 
 export const App: React.FC = () => {
   const [theme, setThemeState] = useState<ThemeMode>('dark');
@@ -28,6 +30,9 @@ export const App: React.FC = () => {
 
   // Toasts
   const { toasts, showToast, dismissToast } = useToasts();
+
+  // Custom Confirm (window.confirm 置換)
+  const { confirm, dialogProps: confirmDialogProps } = useConfirm();
 
   // Profiles
   const {
@@ -44,7 +49,7 @@ export const App: React.FC = () => {
     handleToggleMod,
     handleUpdateModVersion,
     handleRemoveAllMods
-  } = useProfiles(theme, setThemeState, showToast);
+  } = useProfiles(theme, setThemeState, showToast, confirm);
 
   // Mod Search
   const {
@@ -138,13 +143,20 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleResetData = () => {
-    if (confirm('全てのプロファイルと設定を初期化しますか？')) {
-      localStorage.removeItem('dropmod_state_v2');
-      // 旧キーの残骸も念のため削除
-      localStorage.removeItem('craftforge_state_v2');
-      window.location.reload();
-    }
+  const handleResetData = async () => {
+    const ok = await confirm({
+      title: 'データを初期化しますか？',
+      message:
+        '全てのプロファイルと設定が消去され、この操作は取り消せません。\n本当に初期化しますか？',
+      confirmLabel: '初期化する',
+      cancelLabel: 'キャンセル',
+      danger: true
+    });
+    if (!ok) return;
+    localStorage.removeItem('dropmod_state_v2');
+    // 旧キーの残骸も念のため削除
+    localStorage.removeItem('craftforge_state_v2');
+    window.location.reload();
   };
 
   return (
@@ -282,6 +294,9 @@ export const App: React.FC = () => {
         statusCount={zipStatusCount}
         detailText={zipDetailText}
       />
+
+      {/* window.confirm() 置換用 (プロファイル削除・全Mod削除・データ初期化で使用) */}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 };

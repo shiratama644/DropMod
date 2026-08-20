@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Profile, ModItem, ThemeMode } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
+import type { ConfirmDialogOptions } from '../components/ConfirmDialog';
+
+type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
 export const useProfiles = (
   theme: ThemeMode,
   setThemeState: (theme: ThemeMode) => void,
-  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void
+  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void,
+  confirmDialog: ConfirmFn
 ) => {
   const [currentProfileId, setCurrentProfileId] = useState<string>('default-profile');
   const [profiles, setProfiles] = useState<Profile[]>([
@@ -131,20 +135,26 @@ export const useProfiles = (
     showToast('プロファイルを更新しました', 'success');
   };
 
-  const handleDeleteProfile = (id: string) => {
+  const handleDeleteProfile = async (id: string) => {
     if (profiles.length <= 1) {
       showToast('最低1つのプロファイルが必要です', 'warning');
       return;
     }
     const target = profiles.find((p) => p.id === id);
-    if (confirm(`プロファイル「${target?.name}」を削除しますか？`)) {
-      setProfiles((prev) => prev.filter((p) => p.id !== id));
-      if (currentProfileId === id) {
-        const remaining = profiles.filter((p) => p.id !== id);
-        setCurrentProfileId(remaining[0].id);
-      }
-      showToast('プロファイルを削除しました', 'info');
+    const ok = await confirmDialog({
+      title: 'プロファイルを削除しますか？',
+      message: `「${target?.name || '(名称未設定)'}」を削除します。\nこの操作は取り消せません。`,
+      confirmLabel: '削除する',
+      cancelLabel: 'キャンセル',
+      danger: true
+    });
+    if (!ok) return;
+    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    if (currentProfileIdRef.current === id) {
+      const remaining = profilesRef.current.filter((p) => p.id !== id);
+      if (remaining[0]) setCurrentProfileId(remaining[0].id);
     }
+    showToast('プロファイルを削除しました', 'info');
   };
 
   const handleToggleMod = async (projectId: string, e?: React.MouseEvent, silent = false) => {
@@ -283,14 +293,20 @@ export const useProfiles = (
     }
   };
 
-  const handleRemoveAllMods = () => {
+  const handleRemoveAllMods = async () => {
     if (currentProfile.mods.length === 0) return;
-    if (confirm(`プロファイル「${currentProfile.name}」のModをすべて削除しますか？`)) {
-      setProfiles((prev) =>
-        prev.map((p) => (p.id === currentProfileId ? { ...p, mods: [] } : p))
-      );
-      showToast('すべてのModを削除しました', 'info');
-    }
+    const ok = await confirmDialog({
+      title: '全てのModを削除しますか？',
+      message: `プロファイル「${currentProfile.name}」から ${currentProfile.mods.length} 個のModを全て削除します。\nこの操作は取り消せません。`,
+      confirmLabel: 'すべて削除',
+      cancelLabel: 'キャンセル',
+      danger: true
+    });
+    if (!ok) return;
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === currentProfileIdRef.current ? { ...p, mods: [] } : p))
+    );
+    showToast('すべてのModを削除しました', 'info');
   };
 
   return {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ModrinthHit, Profile } from '../types';
 
 interface ModCardProps {
@@ -22,6 +22,10 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onOpenDetail, on
     (hit.categories && hit.categories[0]) ||
     'mod';
 
+  // 画像読み込み失敗時にプレースホルダーへ差し替え (L-10)
+  const [iconFailed, setIconFailed] = useState<boolean>(false);
+  const showIcon = hit.icon_url && !iconFailed;
+
   return (
     <div
       className="mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition"
@@ -30,17 +34,19 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onOpenDetail, on
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {hit.icon_url ? (
+            {showIcon ? (
               <img
                 src={hit.icon_url}
                 alt={hit.title}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-800/80 p-0.5 shadow-md shrink-0"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
+                onError={() => setIconFailed(true)}
+                loading="lazy"
               />
             ) : (
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-bold text-base sm:text-lg shadow-md shrink-0">
+              <div
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-bold text-base sm:text-lg shadow-md shrink-0"
+                aria-hidden="true"
+              >
                 <i className="fa-solid fa-cube"></i>
               </div>
             )}

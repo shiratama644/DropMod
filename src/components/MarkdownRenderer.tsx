@@ -8,22 +8,63 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-// iframe やスタイルタグを安全に許可するカスタムサニタイズ設定
+// -----------------------------------------------------------------------
+// カスタムサニタイズ設定 (L-8 対応強化)
+//
+// 変更点:
+//   - iframe / img / a などは許可するが、CSS injection や
+//     overlay attack を防ぐため `style` 属性は全タグで削除。
+//   - iframe.src はホワイトリスト検証をコンポーネント側で追加で実施。
+//     (rehype-sanitize は URL のプロトコルは http/https に既に制限)
+// -----------------------------------------------------------------------
 const sanitizeSchema = {
   ...defaultSchema,
   tagNames: [
     ...(defaultSchema.tagNames || []),
-    'iframe', 'div', 'span', 'details', 'summary', 'video', 'source', 'picture', 'center', 'font'
+    'iframe',
+    'div',
+    'span',
+    'details',
+    'summary',
+    'video',
+    'source',
+    'picture',
+    'center',
+    'font'
   ],
   attributes: {
     ...defaultSchema.attributes,
-    iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title', 'className', 'style'],
-    div: ['className', 'style', 'align'],
-    span: ['className', 'style'],
-    img: ['src', 'alt', 'title', 'width', 'height', 'className', 'style', 'loading'],
+    iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title', 'className'],
+    div: ['className', 'align'],
+    span: ['className'],
+    img: ['src', 'alt', 'title', 'width', 'height', 'className', 'loading'],
     a: ['href', 'title', 'target', 'rel', 'className']
   }
 };
+
+// iframe embed を許可する動画プラットフォームのホスト allowlist
+const ALLOWED_IFRAME_HOSTS = new Set<string>([
+  'www.youtube.com',
+  'youtube.com',
+  'www.youtube-nocookie.com',
+  'youtube-nocookie.com',
+  'player.vimeo.com',
+  'vimeo.com',
+  'player.twitch.tv',
+  'clips.twitch.tv',
+  'streamable.com'
+]);
+
+function isAllowedIframeSrc(src: string | undefined): boolean {
+  if (!src) return false;
+  try {
+    const u = new URL(src);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    return ALLOWED_IFRAME_HOSTS.has(u.host);
+  } catch {
+    return false;
+  }
+}
 
 function getYouTubeVideoId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -63,7 +104,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
               <a
                 href={href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="theme-text-brand font-semibold underline hover:opacity-80 transition inline-flex items-center gap-1"
                 {...props}
               >
@@ -72,8 +113,17 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
               </a>
             );
           },
-          // iframe タグのスタイリング
+          // iframe タグのスタイリング (src はホワイトリストのみ許可)
           iframe: ({ node, src, title, ...props }) => {
+            if (!isAllowedIframeSrc(src)) {
+              return (
+                <div className="my-3 p-3 text-xs rounded-xl border border-red-500/40 bg-red-500/10 theme-text-red">
+                  <i className="fa-solid fa-shield-halved mr-1.5" aria-hidden="true" />
+                  <span>安全上の理由により埋め込みをブロックしました: </span>
+                  <code className="font-mono break-all">{String(src || '(no src)')}</code>
+                </div>
+              );
+            }
             return (
               <div className="my-4 aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-slate-700/50 bg-slate-900">
                 <iframe

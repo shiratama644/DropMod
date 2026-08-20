@@ -193,6 +193,28 @@ export const useZipExport = (
       let processedCount = 0;
       let currentIndex = 0;
 
+      // ファイル名重複解消のための使用済み名 Set (L-6)
+      // 同じ filename の Mod が複数ある場合、後発は "name-2.jar", "name-3.jar" と
+      // サフィックスを付けて衝突を防ぐ (JSZip の暗黙上書き対策)
+      const usedFileNames = new Set<string>();
+      const dedupeFileName = (name: string): string => {
+        if (!usedFileNames.has(name)) {
+          usedFileNames.add(name);
+          return name;
+        }
+        const dotIdx = name.lastIndexOf('.');
+        const base = dotIdx > 0 ? name.slice(0, dotIdx) : name;
+        const ext = dotIdx > 0 ? name.slice(dotIdx) : '';
+        let counter = 2;
+        let candidate = `${base}-${counter}${ext}`;
+        while (usedFileNames.has(candidate)) {
+          counter++;
+          candidate = `${base}-${counter}${ext}`;
+        }
+        usedFileNames.add(candidate);
+        return candidate;
+      };
+
       // ワーカー定義
       const worker = async () => {
         while (currentIndex < totalMods) {
@@ -208,7 +230,8 @@ export const useZipExport = (
           if (mod.fileUrl) {
             const blob = await downloadModFile(mod.fileUrl, signal);
             if (blob) {
-              modsFolder?.file(getModFileName(mod), blob);
+              const uniqueName = dedupeFileName(getModFileName(mod));
+              modsFolder?.file(uniqueName, blob);
               successCount++;
             } else {
               failCount++;

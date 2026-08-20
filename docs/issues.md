@@ -573,3 +573,42 @@
 - 実際の Mod 追加は最新プロファイルを基準に行われる
 - 追加成功後、600ms デバウンスで自動的に依存関係が再チェックされ画面更新
 - 同じボタンの連打・別ボタンの並行押しも安全に処理される
+
+---
+
+# 🔥 第3.5波: 修正した第3波の中で新たに埋め込んでしまった重大バグ
+
+第3波の修正 (`DependencyCheckModal` に `handleAddDependencyMod` /
+`handleRemoveConflictingMod` を追加) の際、**両 `useCallback` を
+`if (!isOpen) return null;` の後ろに配置**してしまい、Rules of Hooks
+違反 (React error #310 "Rendered more hooks than during the previous
+render") を新規混入させた。
+
+これは第2波の C2-1 (ModDetailModal) で修正した内容と全く同じ種類の
+過ち。以後、モーダル系コンポーネントに関数を追加する際は必ず「早期
+リターンの前に」配置する原則を守る。
+
+### C3.5-1. DependencyCheckModal — 早期return後の useCallback (React error #310)
+- **症状:** モーダルを開いた瞬間 (isOpen: false → true) に minified
+  error #310 が throw され、依存関係モーダル自体がクラッシュ・
+  ErrorBoundary の Error画面が表示される。dev モードでは "Rendered
+  more hooks than during the previous render" と警告が出る。
+  production build (vite preview) で顕在化。
+- **原因:** `handleAddDependencyMod` / `handleRemoveConflictingMod`
+  の 2 つの useCallback を `if (!isOpen) return null;` の**後ろ**に
+  書いていた。isOpen=false の初回レンダーではフックが呼ばれず、
+  isOpen=true になるとフックが 2 つ増える → React が違反検知。
+- **修正:** 両 useCallback を早期リターンより前に移動 (すべてのフック
+  呼び出しが完了してから `if (!isOpen) return null;`)。
+  加えて、同種のミスを再発防止するため機械的走査を全モーダルで実施
+  (残存 0 件確認)。
+
+## 📊 集計サマリ (第1波 + 第2波 + 第3波 + 第3.5波)
+
+| 波 | Critical | High | Medium | Low | 計 |
+|---|---|---|---|---|---|
+| 第1波 | 4 | 7 | 11 | 10 | 32 |
+| 第2波 | 4 | 8 | 10 | 6 | 28 |
+| 第3波 | 4 | 3 | 3 | 0 | 10 |
+| **第3.5波** | **1** | 0 | 0 | 0 | **1** |
+| **合計** | **13** | **18** | **24** | **16** | **71** |

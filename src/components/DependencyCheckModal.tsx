@@ -314,7 +314,16 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
 
-  if (!isOpen) return null;
+  // ---------------------------------------------------------------------
+  // ⚠️ Rules of Hooks 遵守:
+  //   すべてのフック呼び出し (useCallback を含む) は、下の
+  //   `if (!isOpen) return null;` 早期リターンよりも前に完了させる必要
+  //   がある。以前 useCallback を return 後に置いていたため、isOpen が
+  //   false→true になった瞬間に React が「フック呼び出し数の変化」を
+  //   検知し、minified error #310 (Rendered more hooks than during
+  //   the previous render) を throw してモーダルがクラッシュしていた。
+  //   → useCallback は早期リターンより前に配置。
+  // ---------------------------------------------------------------------
 
   // ------------------------------------------------------------------
   // 追加専用ハンドラ ("追加ボタンが反応しない" バグ修正)
@@ -325,7 +334,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   //
   // このヘルパーは:
   //   1. 現時点で本当に未追加かをチェック → 既にあれば削除ではなく "追加済み" を通知
-  //   2. actionInFlightRef で同一 targetProjectId の並列クリックをロック
+  //   2. actionInFlight state で同一 targetProjectId の並列クリックをロック
   //   3. onClick 内での runCheck() を廃止し、profile 変化検知で自動再チェック
   //      (race condition の元凶を根絶)
   // ------------------------------------------------------------------
@@ -398,6 +407,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     },
     [profile.mods, onToggleMod, lockAction, unlockAction]
   );
+
+  // すべてのフック呼び出しを終えてから早期リターン (Rules of Hooks 遵守)
+  if (!isOpen) return null;
 
   const handleAutoFix = async () => {
     if (!data?.missingRequired || isFixing) return;

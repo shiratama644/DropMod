@@ -666,28 +666,43 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 1: `next/` 骨組み作成 (1日)
+### 🔹 Phase 1: `next/` 骨組み作成 (1日) ✅ **完了 (2026-08-21)**
 
 **目的:** Next.js 15 プロジェクトを `next/` に新規作成し、既存 Vite に影響を与えないことを検証。
 
-**作業:**
-- [ ] `next/` ディレクトリで `pnpm create next-app@latest` (TypeScript, Tailwind, App Router, `src/` 無し, ESLint 有り)
-- [ ] `next/app/layout.tsx` に既存フォント (Inter / JetBrains Mono / FontAwesome) を `next/font/local` で移植
-- [ ] `next/app/globals.css` に `src/index.css` を丸ごとコピー (Tailwind v4 継続)
-- [ ] `next/app/page.tsx` にプレースホルダ "Hello DropMod" を配置
-- [ ] `next/next.config.mjs` を設定:
-  - `experimental.optimizePackageImports` に `@fortawesome/fontawesome-free` を追加
-  - `images.remotePatterns` に Modrinth CDN (`cdn.modrinth.com`) を追加
-- [ ] `next/tsconfig.json` の `paths` を設定 (`@/*` → `./`)
-- [ ] `cd next && pnpm dev` で単独起動確認
-- [ ] ルートの `pnpm dev` (Vite) が依然として動くことを確認
+**実際に採用したバージョン:** `create-next-app@latest` 実行時点で **Next.js 16.3.1 / React 19.2.8 / Tailwind 4.3.3** が生成された。計画書当初は Next.js 15 を想定していたが、Next.js 16 も App Router / Parallel Routes / ISR の API 仕様に破壊的変更が無いため、そのまま採用。
 
-**PR:** `feat(next): Phase 1 - Next.js 15 骨組みを next/ に新規作成`
+**作業:**
+- [x] `next/` ディレクトリで `pnpm create next-app@latest` (TypeScript, Tailwind, App Router, `src/` 無し, ESLint 無し, pnpm, alias `@/*`, Turbopack)
+- [x] `next/app/layout.tsx` に既存フォント (Inter / JetBrains Mono / FontAwesome) を **`@fontsource/*` パッケージで移植** (計画書当初の `next/font/local` は Phase 6 の最適化フェーズに延期。Vite 版と完全に同じフォントを使い視覚差分ゼロを優先)
+- [x] `next/app/globals.css` に `src/index.css` を丸ごとコピー (Tailwind v4 継続、276 行)
+- [x] `next/app/page.tsx` にプレースホルダ "DropMod (Phase 1: 骨組み)" を配置
+- [x] `next/next.config.ts` を設定 (Next.js 16 は `.ts` がデフォルト):
+  - `reactStrictMode: true`
+  - `poweredByHeader: false`
+  - `experimental.optimizePackageImports` に `@fortawesome/fontawesome-free`, `react-markdown` を追加
+  - `images.remotePatterns` に `cdn.modrinth.com`, `raw.githubusercontent.com` を追加
+- [x] `next/tsconfig.json` の `paths` は自動生成時に `@/*` → `./*` が設定済
+- [x] `cd next && pnpm dev --port 3001` で単独起動確認 → HTML に `<title>DropMod ...</title>` 等が反映
+- [x] ルートの Vite `pnpm exec vite build` が引き続き成功することを確認
+- [x] Next.js 側 `pnpm build` (production ビルド) 成功 → `/` は Static content として prerendered
+
+**PR:** `feat(next): Phase 1 - Next.js 16 骨組みを next/ に新規作成`
+
+**Phase 1 で追加した主要ファイル:**
+- `next/app/layout.tsx` (Root Layout, フォント import 含む)
+- `next/app/page.tsx` (プレースホルダ Home)
+- `next/app/globals.css` (Vite 版と同一の CSS 変数テーマ)
+- `next/next.config.ts`
+- `next/tsconfig.json`, `next/package.json`, `next/pnpm-lock.yaml`, `next/postcss.config.mjs`
+
+**副次:**
+- `next/.gitignore` に `AGENTS.md` / `CLAUDE.md` を追加 (Next.js 16 が起動時に自動生成する AI エージェント向けドキュメントで、コミット不要)
 
 **DoD:**
-- ✅ `next/` で `pnpm dev` 実行 → localhost:3000 で "Hello DropMod" が表示
-- ✅ 既存 Vite 版 `pnpm dev` (localhost:5173) も従来通り動作
-- ✅ Tailwind + フォント + FontAwesome が反映
+- [x] `next/` で `pnpm dev` 実行 → localhost:3001 で "DropMod" 表示 (ポートは既存プレビューと衝突しないよう 3001 を採用)
+- [x] 既存 Vite 版が依然として動作 (`vite build` 成功)
+- [x] Tailwind + Inter/JetBrains Mono + FontAwesome が反映
 
 ---
 

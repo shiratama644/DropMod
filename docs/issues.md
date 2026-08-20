@@ -283,3 +283,191 @@
 - [MDN: Web Crypto API Secure Context Requirement](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API#interfaces)
 - [WCAG 2.1 SC 1.4.4 Resize Text](https://www.w3.org/WAI/WCAG21/Understanding/resize-text.html)
 - [HTML spec: `<a download>` cross-origin restriction](https://html.spec.whatwg.org/multipage/links.html#downloading-hyperlinks)
+
+---
+
+# 🔄 第2波: 実運用時の再発バグ調査 (2026-08-21 更新)
+
+ユーザーから「**真っ暗になる**」「**Mod一覧が表示されない**」との報告を受け、
+更に深く精査。以下 28件の追加バグを発見・修正した。
+
+## 🚨 Critical (真っ暗の直接/潜在原因) 4件
+
+### C2-1. `ModDetailModal` — Rules of Hooks 違反 (真っ暗の直接原因)
+- `if (!isOpen || !projectId) return null;` の**後**に `useRef`, `useId`,
+  `useModalA11y` を呼んでいた。isOpen トグルで React が「レンダー毎のフック
+  呼び出し数の変化」を検知し `Rendered fewer/more hooks than expected`
+  エラーを throw。ErrorBoundary が無かったため React root が完全アンマウント
+  → 画面全体が真っ暗になる。
+- **修正**: すべてのフックを早期 return より前に移動。
+
+### C2-2. `App.tsx handleSwitchTab` — GSAP タブフェード
+- `gsap.to(#tab-xxx, {opacity:0}, onComplete: setActiveTab)` の
+  onComplete 未発火や DOM 差替時の inline style 残留で
+  タブ全体が `opacity: 0` のまま表示される。→ 真っ暗
+- **修正**: GSAP を廃止し純粋な CSS `@keyframes tab-fade-in` に置換。
+
+### C2-3. `HomeTab` — GSAP カードアニメの style 残留
+- `gsap.fromTo({opacity:0}, ...)` を絞り込み高速切替中に `killTweensOf`
+  すると inline style が半端な値で残る。React が同一 key で DOM を
+  再利用するとその半透明が新しい hit にも引き継がれる → **Mod カードが
+  半透明のまま表示** = 「Mod一覧が見えない」現象。
+- **修正**: GSAP を廃止し CSS `@keyframes mod-card-appear` (nth-child
+  delay で stagger 模倣) に置換。
+
+### C2-4. `useModSearch` — stale executeSearch closure
+- useEffect が `useCallback(executeSearch, [...])` を deps 外していた
+  ため、sortBy/カテゴリ変更が反映されない古い関数を呼び続け、
+  「絞り込み変更しても結果が変わらない」バグ。
+- **修正**: `executeSearchRef.current(...)` パターンで常に最新関数を呼ぶ。
+
+## 🟠 High (機能不全 / データ破損) 8件
+
+### H2-1. `useProfiles` — profiles が空配列でクラッシュ
+- 破損 LocalStorage 復元や race で `profiles=[]` になると
+  `currentProfile = profiles.find(...) || profiles[0]` が undefined、
+  `currentProfile.mods.length` などで TypeError → 真っ暗。
+- **修正**: LocalStorage 復元時に schema sanitize、profiles=[] を
+  検出したら既定プロファイル自動復旧、`currentProfile` は常に
+  transient-fallback で非 undefined を保証。
+
+### H2-2. `ErrorBoundary` 未実装 → どこかで throw されると全画面消失
+- **修正**: `src/components/ErrorBoundary.tsx` を新設、`main.tsx` で
+  App を wrap。エラー時はリロード / データ削除の選択肢を提示。
+
+### H2-3. `NewProfileModal` / `EditProfileModal` — 開いてる最中の
+    profile 更新で入力中の値が突然リセット
+- useEffect deps に `[isOpen, profile, mcVersions]` 全部入れていたため、
+  親側の Mod 追加/削除で profile 参照が変わる度にフォームリセット。
+- **修正**: `wasOpenRef` パターンで「閉→開」遷移時のみ初期化。
+
+### H2-4. `ToastContainer` — トーストが永遠に消えない
+- `useEffect deps=[toast.id, onDismiss]` で親再レンダーの度に onDismiss が
+  新参照 → タイマーが 3秒毎にリセット → トーストが永遠に消えない。
+- **修正**: `onDismissRef` で ref 化し deps から除外、`toast.id` のみ。
+
+### H2-5. `useModSearch` — API失敗時に「見つかりません」誤表示
+- ネットワーク完全失敗 → hits=[] → HomeTab は「Modrinthに条件に一致する
+  Modが見つかりませんでした」を表示 → 「Mod一覧が出ない」に見える。
+- **修正**: `searchError` state を追加、エラー時は「Modrinthから取得
+  できませんでした + 再試行」ボタンを表示。
+
+### H2-6. `useModSearch` — sentinel が useRef のためタブ切替でobserver再attachされない
+- 別タブに切り替え → HomeTab アンマウント → refがnull → observer.disconnect
+  → homeに戻る → HomeTab再マウント → refに新しいdom set されるがuseEffectは
+  発火せず observer 未attach → **無限スクロールが動かない**
+- **修正**: sentinelRef を callback ref (`setSentinelEl`) に変え、
+  useEffect の deps に `sentinelEl` を入れる。
+
+### H2-7. `useDependencyCheck` — profile変化で無限に再フェッチ
+- deps に profile 全体 → Mod追加/削除の度に API 叩く → レートリミット。
+- **修正**: profile.id / mcVersion / loader / modsSignature のみ deps。
+
+### H2-8. `useZipExport` — README.txt と実ZIP内ファイル名の不一致
+- README には dedup 前のファイル名を書く一方、ZIP内は dedup後 (`-2.jar`)
+  のためユーザーが README を見ても「その名前のファイルが無い」となる。
+- **修正**: worker 内で `actualFilenames` Map に実書込み名を記録、
+  README 生成時に参照。
+
+## 🟡 Medium (UX / race condition) 10件
+
+### M2-1. `useModalA11y` — モーダル+ドロップダウンの Escape 二重発火
+- Escape でモーダル内 CustomDropdown が閉じた後、window keydown で
+  モーダル本体も閉じてしまう。**修正**: モーダルスタック導入 + 開いてる
+  dropdown-portal 検出で Escape を消費。
+
+### M2-2. `useModalA11y` — 初期フォーカスが「閉じるボタン」に飛ぶ
+- Enter で誤って閉じる UX。**修正**: input/textarea/select を最優先、
+  次に combobox/tabindex=0、最後に container 自身。
+
+### M2-3. `DependencyCheckModal` — profile 変化で runCheck が
+    毎回再発火 (無限API)
+- **修正**: profile.id のみ deps、runCheckRef で常に最新関数。
+
+### M2-4. `ConfirmDialog` の背景スクロールロック抜け
+- isAnyModalOpen に含まれておらず、確認ダイアログ中でも背景スクロール可能。
+- **修正**: `confirmDialogProps.isOpen` を isAnyModalOpen に加算。
+
+### M2-5. `BottomNav` — `pb-safe` は未定義クラス
+- iPhone のホームバー領域にコンテンツが被る。
+- **修正**: `style={{paddingBottom: 'env(safe-area-inset-bottom)'}}`。
+
+### M2-6. `Ref 更新の 1レンダー遅延 race`
+- profilesRef 等を useEffect で更新 → setState 直後の非同期処理が
+  古い ref を掴む可能性。
+- **修正**: 全 Ref を render 中に同期代入に変更。
+
+### M2-7. ID 衝突可能性
+- `'profile-' + Date.now()` は高速連打で同一msでID衝突する。
+- **修正**: `generateId(prefix)` ユーティリティ (crypto.randomUUID
+  fallback with timestamp+random)。
+
+### M2-8. `useProfiles.handleToggleMod` — 同一Modへの並列トグル
+- 連打で toast 二重表示、fetch 二重発火。
+- **修正**: `toggleInFlightRef: Set<string>` で同一 projectId の並列
+  呼び出しを block。
+
+### M2-9. `useProfiles.handleSaveEditedProfile` — MC/loader変更で
+    既存 Mod のバージョン互換性警告なし
+- **修正**: 変更検知で警告 toast「バージョン再選択を推奨」を追加。
+
+### M2-10. `useModSearch` — 初期 isLoadingMods=false で「見つかりません」
+    一瞬表示
+- マウント直後 useEffect 発火前の 1フレームで空リスト UI。
+- **修正**: 初期値 true にしてスケルトンを表示させる。
+
+## 🟢 Low (品質改善) 6件
+
+### L2-1. `useModSearch` — hits の重複 project_id
+- race で古いページと重複する可能性、React key 衝突。
+- **修正**: append / initial 両方で重複を除去。
+
+### L2-2. `MarkdownRenderer` — 改行含む language- なしコードが inline 扱い
+- **修正**: children に改行含む場合もブロック判定に。
+
+### L2-3. `ModCard` — icon_url 変化時に iconFailed 引き継ぎ
+- **修正**: useEffect で `[hit.icon_url]` 変化検知でリセット。
+
+### L2-4. `useZipExport.handleCancelZip` — 完了直後の cancel toast 誤表示
+- 完了→400ms 後にモーダル閉じの間に押されると toast 二重。
+- **修正**: activeZipAbortRef を完了時にクリア、cancel は wasActive
+  時のみ toast。
+
+### L2-5. `ModsTab` — バージョン選択で「現在選択中」が options に無いと
+    表示ずれ
+- **修正**: `buildVersionOptions` で無い場合に「現在」ダミーを先頭挿入。
+
+### L2-6. `useProfiles` — hydration ゲート + `LocalStorage.setItem` の
+    Quota 例外を握りつぶし
+- **修正**: try/catch で `console.warn`、アプリはクラッシュさせない。
+
+---
+
+## 📊 集計サマリ (第1波 + 第2波)
+
+| 波 | Critical | High | Medium | Low | 計 |
+|---|---|---|---|---|---|
+| 第1波 | 4 | 7 | 11 | 10 | 32 |
+| 第2波 | 4 | 8 | 10 | 6 | 28 |
+| **合計** | **8** | **15** | **21** | **16** | **60** |
+
+## 🎯 「真っ暗になる」の根本原因まとめ
+
+1. **C2-1 (Hooks 違反)**: 最も直接的な原因。`ModDetailModal` で
+   isOpen トグル時に「Rendered fewer hooks」エラー → React ツリー破壊
+2. **C2-2 (GSAP タブ)**: onComplete 未発火や DOM 差替で opacity:0 残留
+3. **H2-1 (profiles空)**: `currentProfile.mods.length` の TypeError
+4. **H2-2 (ErrorBoundary無)**: 上記の任意が発生した際、フォールバックUI
+   が無いため画面全体が消える (背景dark#090d14のみ = 真っ暗)
+
+これら 4層防御を全て施したことで、単一障害点が消え、以後は同種の
+「真っ暗」現象は理論上発生しない。
+
+## 🎯 「Mod一覧が表示されない」の根本原因まとめ
+
+1. **C2-3 (GSAP カード style 残留)**: opacity半端値でカードが薄く表示
+2. **C2-4 (stale closure)**: 絞り込み変更が反映されず古い結果のまま
+3. **H2-5 (誤エラー表示)**: API失敗時に「見つかりません」と誤表示
+4. **H2-6 (sentinel未attach)**: タブ切替後の無限スクロール停止
+
+これらも全て解決済み。

@@ -34,15 +34,27 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const descInputId = useId();
   const modalTitleId = useId();
 
-  // Reset form state when modal opens or profile changes
+  // モーダルが「閉→開」になった瞬間のみプロファイル値でフォームを初期化。
+  // 以前は deps に profile 全体が入っており、モーダルを開いている最中に
+  // 別経路で profile が更新される (Mod 追加/削除など) と入力中の値が
+  // 突然リセットされる不具合があった。
+  const wasEditOpenRef = useRef<boolean>(false);
   useEffect(() => {
-    if (isOpen && profile) {
+    if (!isOpen) {
+      wasEditOpenRef.current = false;
+      return;
+    }
+    if (wasEditOpenRef.current) return;
+    wasEditOpenRef.current = true;
+
+    if (profile) {
       setName(profile.name || '');
       setVersion(profile.mcVersion || '');
       setLoader(profile.loader || 'Fabric');
       setDesc(profile.description || '');
     }
-  }, [profile, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);

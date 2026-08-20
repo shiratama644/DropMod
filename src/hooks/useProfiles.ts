@@ -49,6 +49,59 @@ export const useProfiles = (
   // ------------------------------------------------------------------
   const [hasHydrated, setHasHydrated] = useState<boolean>(false);
 
+  // -------------------------------------------------------------------
+  // 破損 LocalStorage への防御
+  //
+  // - profiles が配列でない / 空配列 の場合はデフォルトへフォールバック
+  // - 各 profile が必要フィールドを欠く場合は補完
+  // - currentProfileId が存在しないプロファイルを指す場合は先頭に戻す
+  // これにより、外部要因で壊れたデータでもアプリ全体クラッシュしない。
+  // -------------------------------------------------------------------
+  const sanitizeLoadedState = (raw: any): {
+    theme?: ThemeMode;
+    currentProfileId?: string;
+    profiles?: Profile[];
+  } | null => {
+    if (!raw || typeof raw !== 'object') return null;
+
+    let normalizedProfiles: Profile[] | undefined;
+    if (Array.isArray(raw.profiles)) {
+      normalizedProfiles = raw.profiles
+        .filter((p: any) => p && typeof p === 'object' && typeof p.id === 'string')
+        .map((p: any) => ({
+          id: String(p.id),
+          name: typeof p.name === 'string' ? p.name : '(名称未設定)',
+          mcVersion: typeof p.mcVersion === 'string' ? p.mcVersion : '1.20.1',
+          loader: typeof p.loader === 'string' ? p.loader : 'Fabric',
+          description: typeof p.description === 'string' ? p.description : '',
+          mods: Array.isArray(p.mods)
+            ? p.mods.filter((m: any) => m && typeof m === 'object' && typeof m.id === 'string')
+            : []
+        }));
+      if (normalizedProfiles && normalizedProfiles.length === 0) {
+        normalizedProfiles = undefined;
+      }
+    }
+
+    let normalizedTheme: ThemeMode | undefined;
+    if (raw.theme === 'dark' || raw.theme === 'light') normalizedTheme = raw.theme;
+
+    let normalizedCurrentId: string | undefined;
+    if (typeof raw.currentProfileId === 'string') {
+      if (normalizedProfiles && normalizedProfiles.some((p) => p.id === raw.currentProfileId)) {
+        normalizedCurrentId = raw.currentProfileId;
+      } else if (normalizedProfiles && normalizedProfiles[0]) {
+        normalizedCurrentId = normalizedProfiles[0].id;
+      }
+    }
+
+    return {
+      theme: normalizedTheme,
+      currentProfileId: normalizedCurrentId,
+      profiles: normalizedProfiles
+    };
+  };
+
   // LocalStorage から復元 (旧キー `craftforge_state_v2` からの自動移行を含む)
   useEffect(() => {
     const STORAGE_KEY = 'dropmod_state_v2';
@@ -73,11 +126,18 @@ export const useProfiles = (
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.theme) setThemeState(parsed.theme);
-        if (parsed.currentProfileId) setCurrentProfileId(parsed.currentProfileId);
-        if (parsed.profiles) setProfiles(parsed.profiles);
+        const sanitized = sanitizeLoadedState(parsed);
+        if (sanitized) {
+          if (sanitized.theme) setThemeState(sanitized.theme);
+          if (sanitized.profiles && sanitized.profiles.length > 0) {
+            setProfiles(sanitized.profiles);
+          }
+          if (sanitized.currentProfileId) {
+            setCurrentProfileId(sanitized.currentProfileId);
+          }
+        }
       } catch (e) {
-        console.error(e);
+        console.error('[DropMod] LocalStorage の復元に失敗、デフォルトで続行:', e);
       }
     }
     // 復元完了 → 以降は保存 useEffect が動く
@@ -87,13 +147,55 @@ export const useProfiles = (
   // LocalStorage へ保存 (hydration完了後のみ)
   useEffect(() => {
     if (!hasHydrated) return;
-    localStorage.setItem(
-      'dropmod_state_v2',
-      JSON.stringify({ theme, currentProfileId, profiles })
-    );
+    try {
+      localStorage.setItem(
+        'dropmod_state_v2',
+        JSON.stringify({ theme, currentProfileId, profiles })
+      );
+    } catch (e) {
+      // QuotaExceededError 等: 保存できなくてもアプリはクラッシュさせない
+      console.warn('[DropMod] LocalStorage への保存に失敗:', e);
+    }
   }, [hasHydrated, theme, currentProfileId, profiles]);
 
-  const currentProfile = profiles.find((p) => p.id === currentProfileId) || profiles[0];
+  // ---------------------------------------------------------------------
+  // profiles が空配列になった場合の安全弁
+  //
+  // 通常は handleDeleteProfile で「最低1件」を保証しているが、
+  // 破損 LocalStorage や外部要因で 0 件になった場合、下の
+  //   currentProfile = profiles.find(...) || profiles[0]
+  // が undefined になり、その後 currentProfile.mods.length などで
+  // アプリ全体が TypeError → 真っ暗になる。
+  // ここでフォールバックのデフォルトプロファイルを自動生成して復旧する。
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    if (!hasHydrated) return;
+    if (profiles.length === 0) {
+      const fallbackProfile: Profile = {
+        id: 'default-profile-recovered-' + Date.now(),
+        name: '既定プロファイル',
+        mcVersion: '1.20.1',
+        loader: 'Fabric',
+        description: 'データ復旧により自動生成されたプロファイル',
+        mods: []
+      };
+      setProfiles([fallbackProfile]);
+      setCurrentProfileId(fallbackProfile.id);
+      showToast('プロファイルが失われたため既定を復旧しました', 'warning');
+    }
+  }, [profiles.length, hasHydrated, showToast]);
+
+  // 常に非 undefined を保証: find が失敗しても最低限のフォールバックを返す
+  const currentProfile: Profile =
+    profiles.find((p) => p.id === currentProfileId) ||
+    profiles[0] || {
+      id: 'transient-fallback',
+      name: '既定プロファイル',
+      mcVersion: '1.20.1',
+      loader: 'Fabric',
+      description: '',
+      mods: []
+    };
 
   const handleSwitchProfile = (id: string) => {
     setCurrentProfileId(id);
@@ -129,8 +231,10 @@ export const useProfiles = (
   };
 
   const handleSaveEditedProfile = (name: string, mcVersion: string, loader: string, description: string) => {
+    // 最新の currentProfileId を参照 (stale closure対策)
+    const targetId = currentProfileIdRef.current;
     setProfiles((prev) =>
-      prev.map((p) => (p.id === currentProfileId ? { ...p, name, mcVersion, loader, description } : p))
+      prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
     );
     showToast('プロファイルを更新しました', 'success');
   };
@@ -185,8 +289,19 @@ export const useProfiles = (
       // --- 追加 ---
       if (!silent) showToast('ModrinthからMod情報を取得中...', 'info');
       try {
-        const project = await fetchModrinth<any>(`/project/${projectId}`);
-        const versionRes = await fetchStableModVersion(projectId, latestProfile);
+        // Modrinth /project の取得は先に開始 (project ID は不変)
+        const projectPromise = fetchModrinth<any>(`/project/${projectId}`);
+
+        // 「追加時点で見えているプロファイル」ではなく、
+        // fetch 完了時点で最新のプロファイルを基準に version を選ぶ
+        // (fetch中にユーザーが mcVersion/loader を変えたケースを吸収)
+        const project = await projectPromise;
+
+        const profileAtVersionFetch =
+          profilesRef.current.find((p) => p.id === currentProfileIdRef.current) ||
+          latestProfile;
+
+        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch);
 
         if (
           !versionRes ||
@@ -222,8 +337,6 @@ export const useProfiles = (
 
         // --- functional updater 内で「まだ追加されていないか」を再チェック ---
         // API 呼び出し中に別経路で追加されていた場合は二重追加しない。
-        // またプロファイルが切り替わっていた場合は現在プロファイルに追加する
-        // (currentProfileIdRef を再度参照)。
         let alreadyAdded = false;
         setProfiles((prev) =>
           prev.map((p) => {

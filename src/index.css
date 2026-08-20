@@ -234,3 +234,43 @@ code, input, textarea {
     pointer-events: none;
     border-radius: 0 0.75rem 0.75rem 0;
 }
+/* -------------------------------------------------------------------
+ * タブ切替フェードイン (GSAP を廃止した後の代替演出)
+ * `#tab-home/#tab-mods/#tab-settings` がマウントされた瞬間に短くフェード。
+ * ----------------------------------------------------------------- */
+@keyframes tab-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+#tab-home, #tab-mods, #tab-settings {
+    animation: tab-fade-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    #tab-home, #tab-mods, #tab-settings {
+        animation: none;
+    }
+}
+
+/* Mod カード出現アニメーション (GSAP 廃止の代替)
+ * .mod-card-item に付与するだけで自動フェード。stagger を模した delay 用に
+ * :nth-child で少しずつずらして視覚的リズムを出す。
+ */
+@keyframes mod-card-appear {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+.mod-card-item {
+    animation: mod-card-appear 0.28s ease-out both;
+}
+.mod-card-item:nth-child(2)  { animation-delay: 0.03s; }
+.mod-card-item:nth-child(3)  { animation-delay: 0.06s; }
+.mod-card-item:nth-child(4)  { animation-delay: 0.09s; }
+.mod-card-item:nth-child(5)  { animation-delay: 0.12s; }
+.mod-card-item:nth-child(6)  { animation-delay: 0.15s; }
+.mod-card-item:nth-child(7)  { animation-delay: 0.18s; }
+.mod-card-item:nth-child(8)  { animation-delay: 0.21s; }
+.mod-card-item:nth-child(9)  { animation-delay: 0.24s; }
+.mod-card-item:nth-child(n+10) { animation-delay: 0.27s; }
+@media (prefers-reduced-motion: reduce) {
+    .mod-card-item { animation: none; }
+}

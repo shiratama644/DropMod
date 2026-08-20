@@ -151,11 +151,16 @@ export const useZipExport = (
   }, []);
 
   const handleCancelZip = useCallback(() => {
+    const wasActive = activeZipAbortRef.current !== null;
     if (activeZipAbortRef.current) {
       activeZipAbortRef.current.abort();
+      activeZipAbortRef.current = null;
     }
     updateZipState({ isOpen: false });
-    showToast('ZIPエクスポートをキャンセルしました', 'info');
+    // 完了直後のモーダル閉じで toast が二重表示されるのを回避
+    if (wasActive) {
+      showToast('ZIPエクスポートをキャンセルしました', 'info');
+    }
   }, [showToast, updateZipState]);
 
   const handleDownloadZip = async () => {

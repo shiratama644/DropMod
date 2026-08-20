@@ -34,26 +34,60 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
   const [isVersionsExpanded, setIsVersionsExpanded] = useState(false);
   const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
 
+  // ---------------------------------------------------------------------
+  // ⚠️ Rules of Hooks: 早期リターン (下の `if (!isOpen ...) return null`)
+  //    より前で、すべてのフック呼び出しを終わらせておく必要がある。
+  //    以前は useRef/useId/useModalA11y を return 後に置いていたため、
+  //    isOpen トグルで React が「レンダー毎のフック数変化」を検知して
+  //    アプリ全体をクラッシュさせていた (真っ暗の原因)。
+  // ---------------------------------------------------------------------
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalA11y(isOpen, onClose, dialogRef);
+
   useEffect(() => {
-    if (isOpen && projectId) {
-      setLoading(true);
+    if (!isOpen || !projectId) {
+      // モーダルが閉じたら以前のデータを完全にクリア
+      // (次に別のModで開いた際に前回情報がチラつくのを防ぐ)
+      setProject(null);
+      setVersions([]);
+      setTargetVersion(null);
+      setLoading(false);
       setIsVersionsExpanded(false);
       setSelectedGalleryImg(null);
-      Promise.all([
-        fetchModrinth<ModrinthProject>(`/project/${projectId}`),
-        fetchStableModVersion(projectId, profile)
-      ])
-        .then(([pData, verRes]) => {
-          setProject(pData);
-          if (verRes) {
-            setVersions(verRes.allVersions);
-            setTargetVersion(verRes.targetVersion);
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
+      return;
     }
-  }, [isOpen, projectId, profile]);
+    let cancelled = false;
+    setLoading(true);
+    setIsVersionsExpanded(false);
+    setSelectedGalleryImg(null);
+    setProject(null);
+    setVersions([]);
+    setTargetVersion(null);
+    Promise.all([
+      fetchModrinth<ModrinthProject>(`/project/${projectId}`),
+      fetchStableModVersion(projectId, profile)
+    ])
+      .then(([pData, verRes]) => {
+        if (cancelled) return;
+        setProject(pData);
+        if (verRes) {
+          setVersions(verRes.allVersions);
+          setTargetVersion(verRes.targetVersion);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) console.error('[DropMod] Mod detail fetch failed:', e);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // profile 全体ではなく loader/mcVersion のみを見て不要な再フェッチを避ける
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, projectId, profile.mcVersion, profile.loader]);
 
   if (!isOpen || !projectId) return null;
 
@@ -68,11 +102,6 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
 
   // 初期状態（折りたたみ時）は0件、展開時にすべてのバージョンを表示
   const displayedVersions = isVersionsExpanded ? versions : [];
-
-  // a11y: role/aria + Escape + フォーカストラップ
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const titleId = useId();
-  useModalA11y(isOpen, onClose, dialogRef);
 
   return (
     <div

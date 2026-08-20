@@ -218,17 +218,25 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     }
   }, [profile]);
 
+  // runCheck を Ref に固定して、profile が変わっても useEffect が
+  // 再発火しないようにする (isOpen トグルとプロファイル切替のみで走らせる)
+  const runCheckRef = useRef(runCheck);
   useEffect(() => {
+    runCheckRef.current = runCheck;
+  }, [runCheck]);
+
+  // isOpen 遷移 + プロファイル本体切替 (id) のときだけ実行。
+  // profile.mods の変化 (Mod追加/削除) では自動再実行しない
+  // → ユーザーが自分で「再検証」ボタンを押すか、AutoFix 経由で明示呼び出しする。
+  useEffect(() => {
+    if (!isOpen) return;
     let isCancelled = false;
-
-    if (isOpen) {
-      runCheck(() => isCancelled);
-    }
-
+    runCheckRef.current(() => isCancelled);
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, profile, runCheck]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, profile.id]);
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);

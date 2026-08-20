@@ -180,6 +180,10 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     } else if (e.key === 'Escape') {
       if (isOpen) {
         e.preventDefault();
+        // モーダル内でこのドロップダウンが Escape で閉じたとき、親モーダル
+        // (useModalA11y) にまで Escape が伝播すると親モーダルも閉じてしまう。
+        // ここで伝播を止めて「まずドロップダウンだけを閉じる」動作にする。
+        e.stopPropagation();
         handleClose(true);
       }
     } else if (e.key === 'ArrowDown') {

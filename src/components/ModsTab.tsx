@@ -27,10 +27,11 @@ export const ModsTab: React.FC<ModsTabProps> = ({
 }) => {
   const [modVersionsMap, setModVersionsMap] = useState<Map<string, ModrinthVersion[]>>(new Map());
 
-  // mcVersion / loader が変わったら、対応バージョン集合が変わるので全キャッシュ破棄
+  // プロファイルID / mcVersion / loader が変わったら対応バージョン集合を全破棄
+  // (旧プロファイル分の versions が新プロファイルの表示に混じるのを防ぐ)
   useEffect(() => {
     setModVersionsMap(new Map());
-  }, [profile.mcVersion, profile.loader]);
+  }, [profile.id, profile.mcVersion, profile.loader]);
 
   // Mod ID セットの安定シグネチャ (deps安定化 — 配列参照ではなく内容で判定)
   const modIdsSignature = profile.mods.map((m) => m.id).join(',');

@@ -22,33 +22,49 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
 
 const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, onDismiss }) => {
   const elRef = useRef<HTMLDivElement>(null);
+  // onDismiss は親で毎レンダー新規参照になる可能性があるため Ref に固定
+  // (これを deps に入れると 3秒タイマーが毎レンダーでリセットされ、
+  //  トーストが延々と消えなくなる不具合があった)
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
-    if (elRef.current) {
+    const el = elRef.current;
+    if (el) {
+      gsap.killTweensOf(el);
       gsap.fromTo(
-        elRef.current,
+        el,
         { opacity: 0, x: 40, scale: 0.9 },
         { opacity: 1, x: 0, scale: 1, duration: 0.3, ease: 'back.out(1.5)' }
       );
     }
 
     const timer = setTimeout(() => {
-      if (elRef.current) {
-        gsap.to(elRef.current, {
+      const cur = elRef.current;
+      if (cur) {
+        gsap.killTweensOf(cur);
+        gsap.to(cur, {
           opacity: 0,
           x: 30,
           scale: 0.9,
           duration: 0.25,
           ease: 'power2.in',
-          onComplete: onDismiss
+          onComplete: () => onDismissRef.current()
         });
       } else {
-        onDismiss();
+        onDismissRef.current();
       }
     }, 3000);
 
-    return () => clearTimeout(timer);
-  }, [toast.id, onDismiss]);
+    return () => {
+      clearTimeout(timer);
+      if (el) gsap.killTweensOf(el);
+    };
+    // toast.id が変わる度のみ、タイマーとアニメを再初期化する
+    // (親再レンダーでのタイマーリセットを防ぐため onDismiss を deps から除外)
+  }, [toast.id]);
 
   let bgClass = 'glass-panel border-slate-500/40';
   let icon = 'fa-circle-info theme-text-blue';

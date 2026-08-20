@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 // - モーダル内にフォーカスを閉じ込める (M-8, WCAG 2.1 SC 2.4.3)
 // - モーダルを開いたときに最初の focusable 要素へ自動フォーカス
 // - モーダルを閉じたときに以前のフォーカスに戻す
+// - モーダルが重なっているとき、最も上のモーダルだけが Escape を消費 (スタック)
 //
 // 使い方:
 //   const modalRef = useRef<HTMLDivElement>(null);
@@ -24,20 +25,43 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',');
 
+// モーダルスタック (グローバル)。同一フックインスタンスIDを LIFO で積む。
+// 最上位 (末尾) のモーダルだけが Escape を処理する。
+const modalStack: string[] = [];
+let uidCounter = 0;
+
 export function useModalA11y(
   isOpen: boolean,
   onClose: () => void,
   containerRef: React.RefObject<HTMLElement | null>
 ): void {
   const previousActiveElement = useRef<HTMLElement | null>(null);
+  const uidRef = useRef<string>(`modal-${++uidCounter}`);
+
+  // モーダルスタックへの登録
+  useEffect(() => {
+    if (!isOpen) return;
+    const uid = uidRef.current;
+    modalStack.push(uid);
+    return () => {
+      const idx = modalStack.lastIndexOf(uid);
+      if (idx >= 0) modalStack.splice(idx, 1);
+    };
+  }, [isOpen]);
 
   // Escape キー & Tab フォーカストラップ
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // スタック最上位のモーダルだけが処理する
+      if (modalStack[modalStack.length - 1] !== uidRef.current) return;
+
       if (e.key === 'Escape') {
-        e.stopPropagation();
+        // モーダル内で開かれている CustomDropdown 等の子ポータル UI が
+        // 先に Escape を消費できるよう、開いていれば無視する。
+        const openDropdownPortal = document.querySelector('.custom-dropdown-menu-portal');
+        if (openDropdownPortal) return;
         onClose();
         return;
       }
@@ -49,7 +73,7 @@ export function useModalA11y(
       const focusables = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
       ).filter(
-        (el) => !el.hasAttribute('disabled') && el.offsetParent !== null // 表示中のみ
+        (el) => !el.hasAttribute('disabled') && (el as HTMLElement).offsetParent !== null
       );
       if (focusables.length === 0) return;
 
@@ -58,13 +82,11 @@ export function useModalA11y(
       const active = document.activeElement as HTMLElement | null;
 
       if (e.shiftKey) {
-        // Shift+Tab: 先頭ならラップして末尾へ
         if (active === first || !container.contains(active)) {
           e.preventDefault();
           last.focus();
         }
       } else {
-        // Tab: 末尾ならラップして先頭へ
         if (active === last || !container.contains(active)) {
           e.preventDefault();
           first.focus();
@@ -76,28 +98,53 @@ export function useModalA11y(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, containerRef]);
 
-  // オープン時: 初回 focusable にフォーカス移動 / クローズ時: 元に戻す
+  // オープン時: 最初の focusable にフォーカス / クローズ時: 元に戻す
+  //
+  // ⚠️ 「最初の focusable」が「閉じるボタン」だと Enter で閉じ動作が起きて
+  //    しまうため、ボタンは意図的にスキップし、input/textarea/select や
+  //    tabindex=0 の要素を優先する。存在しなければコンテナ自体を仮フォーカス。
   useEffect(() => {
     if (!isOpen) return;
     previousActiveElement.current = document.activeElement as HTMLElement | null;
 
-    // レンダー直後にフォーカスを移すため次フレームで実行
     const raf = requestAnimationFrame(() => {
       const container = containerRef.current;
       if (!container) return;
-      const focusable = container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      focusable?.focus();
+      // 入力系を最優先
+      const input = container.querySelector<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])'
+      );
+      if (input) {
+        input.focus();
+        return;
+      }
+      // 次に role=combobox など tabindex=0 要素
+      const combobox = container.querySelector<HTMLElement>(
+        '[role="combobox"], [tabindex="0"]:not(button)'
+      );
+      if (combobox) {
+        combobox.focus();
+        return;
+      }
+      // フォールバック: コンテナ自身にフォーカス (tabindexを一時付与)
+      if (!container.hasAttribute('tabindex')) {
+        container.setAttribute('tabindex', '-1');
+      }
+      try {
+        container.focus({ preventScroll: true });
+      } catch {
+        /* noop */
+      }
     });
 
     return () => {
       cancelAnimationFrame(raf);
-      // 閉じたら元の要素にフォーカスを戻す
       const prev = previousActiveElement.current;
       if (prev && typeof prev.focus === 'function') {
         try {
           prev.focus();
         } catch {
-          // 削除済み要素などは無視
+          /* noop */
         }
       }
     };

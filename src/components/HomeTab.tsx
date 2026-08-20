@@ -1,5 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import React from 'react';
 import { Profile, ModrinthHit } from '../types';
 import { ModCard } from './ModCard';
 import { CustomDropdown } from './CustomDropdown';
@@ -21,6 +20,8 @@ interface HomeTabProps {
   hits: ModrinthHit[];
   isLoading: boolean;
   hasMore: boolean;
+  searchError: string | null;
+  onRetrySearch: () => void;
   onOpenModDetail: (id: string) => void;
   onToggleMod: (id: string, e: React.MouseEvent) => void;
   // React 18.3 の Ref 型と useRef<T | null>() の互換のため React.Ref<T> を使う
@@ -51,43 +52,23 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   hits = [],
   isLoading,
   hasMore,
+  searchError,
+  onRetrySearch,
   onOpenModDetail,
   onToggleMod,
   sentinelRef,
 }) => {
-  const gridRef = useRef<HTMLDivElement>(null);
-  const prevCountRef = useRef<number>(0);
+  // GSAP でカードにフェード/ズームを付与していた実装は削除。
+  // 以下の理由:
+  //   - killTweensOf は inline style を残したままトゥイーンだけ止めるため、
+  //     絞り込み高速切替時にカードが半透明のまま残る不具合があった。
+  //   - React が key で DOM を再利用すると GSAP 書き込みの opacity が
+  //     新しい hit にも引き継がれてしまう。
+  // → 純粋な CSS animation `mod-card-appear` に置換 (index.css)。
 
   const safeHits = Array.isArray(hits) ? hits : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const modCount = profile?.mods?.length || 0;
-
-  // Animate newly added card elements smoothly with GSAP cleanup
-  useEffect(() => {
-    if (!gridRef.current || safeHits.length === 0) {
-      prevCountRef.current = 0;
-      return;
-    }
-
-    const cards = gridRef.current.querySelectorAll('.mod-card-item');
-    if (cards.length > prevCountRef.current) {
-      const newCards = Array.from(cards).slice(prevCountRef.current);
-      gsap.killTweensOf(newCards);
-      gsap.fromTo(
-        newCards,
-        { opacity: 0, y: 20, scale: 0.97 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.3, stagger: 0.03, ease: 'power2.out' }
-      );
-    }
-    prevCountRef.current = safeHits.length;
-
-    return () => {
-      if (gridRef.current) {
-        const cards = gridRef.current.querySelectorAll('.mod-card-item');
-        gsap.killTweensOf(cards);
-      }
-    };
-  }, [safeHits]);
 
   return (
     <section id="tab-home" className="space-y-4 sm:space-y-6">
@@ -247,7 +228,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       </div>
 
       {/* Mod Grid */}
-      <div ref={gridRef} id="mod-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div id="mod-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {isLoading && safeHits.length === 0 ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={`initial-skeleton-${i}`} className="glass-card rounded-2xl p-4 space-y-3 animate-pulse">
@@ -266,10 +247,30 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           ))
         ) : safeHits.length === 0 ? (
-          <div className="col-span-full py-12 text-center theme-text-muted">
-            <i className="fa-solid fa-magnifying-glass text-2xl mb-2 block" aria-hidden="true" />
-            <p className="text-xs sm:text-sm">Modrinthに条件に一致するModが見つかりませんでした。</p>
-          </div>
+          searchError ? (
+            <div className="col-span-full py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 theme-text-amber flex items-center justify-center mx-auto text-2xl mb-3">
+                <i className="fa-solid fa-triangle-exclamation" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-bold mb-1">Modrinthから取得できませんでした</p>
+              <p className="text-xs theme-text-muted mb-4 max-w-sm mx-auto break-words">
+                {searchError}
+              </p>
+              <button
+                type="button"
+                onClick={onRetrySearch}
+                className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-rotate-right mr-1.5" aria-hidden="true" />
+                再試行
+              </button>
+            </div>
+          ) : (
+            <div className="col-span-full py-12 text-center theme-text-muted">
+              <i className="fa-solid fa-magnifying-glass text-2xl mb-2 block" aria-hidden="true" />
+              <p className="text-xs sm:text-sm">Modrinthに条件に一致するModが見つかりませんでした。</p>
+            </div>
+          )
         ) : (
           <>
             {safeHits.map((hit) => (

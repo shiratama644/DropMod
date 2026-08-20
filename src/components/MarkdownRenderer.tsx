@@ -212,9 +212,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           ),
           code: ({ node, className, children, ...props }: any) => {
             // ブロックコードは className="language-xxx" が付与されるか、
-            // 親要素が <pre> であることが多い。
+            // 中身に改行を含むことが多い。
             // どちらでもない場合はインラインとしてスタイリングする。
-            const isBlock = /^language-/.test(className || '');
+            const childStr = React.Children.toArray(children).join('');
+            const hasNewline = typeof childStr === 'string' && childStr.includes('\n');
+            const isBlock = /^language-/.test(className || '') || hasNewline;
             if (isBlock) {
               // <pre> 側のスタイルがあるので、<code> 自体はそのまま出力
               return (

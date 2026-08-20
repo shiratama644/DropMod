@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import gsap from 'gsap';
 import { ThemeMode, TabName } from './types';
 import { CATEGORIES } from './constants/categories';
 
@@ -63,6 +62,8 @@ export const App: React.FC = () => {
     hits,
     isLoadingMods,
     hasMoreMods,
+    searchError,
+    retrySearch,
     sentinelRef
   } = useModSearch(currentProfile, activeTab, showToast);
 
@@ -103,12 +104,15 @@ export const App: React.FC = () => {
   }, [theme]);
 
   // モーダルオープン時の背景スクロールロック
+  // (ConfirmDialog もカウントしないと、確認ダイアログ表示中に背景が
+  //  スクロール可能になり、ダイアログの touch/pointer 対象がずれる)
   const isAnyModalOpen =
     isNewProfileModalOpen ||
     isEditProfileModalOpen ||
     isModDetailModalOpen ||
     isDepCheckModalOpen ||
-    isZipModalOpen;
+    isZipModalOpen ||
+    Boolean(confirmDialogProps.isOpen);
 
   useEffect(() => {
     if (isAnyModalOpen) {
@@ -124,23 +128,21 @@ export const App: React.FC = () => {
     };
   }, [isAnyModalOpen]);
 
+  // ---------------------------------------------------------------------
+  // タブ切替
+  //
+  // 以前は GSAP で `document.getElementById('tab-xxx')` に opacity:0 を
+  // 書き込んでから setActiveTab() していた。しかしこのアプローチは以下の
+  // 深刻な不具合を持っていた:
+  //   - onComplete が発火しないと画面が opacity:0 のまま残る (真っ暗)
+  //   - 同じ id を持つ要素が React 差し替えで残ると inline style が残留
+  //   - タブ切替中に別要因で再レンダーされると DOM 参照が古い
+  // → シンプルに state 切替のみ。フェード演出は CSS animation 側で担当。
+  // ---------------------------------------------------------------------
   const handleSwitchTab = (tab: TabName) => {
     if (activeTab === tab) return;
-    const currEl = document.getElementById(`tab-${activeTab}`);
-    if (currEl) {
-      gsap.to(currEl, {
-        opacity: 0,
-        y: -15,
-        duration: 0.18,
-        ease: 'power2.in',
-        onComplete: () => {
-          setActiveTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-    } else {
-      setActiveTab(tab);
-    }
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleResetData = async () => {
@@ -199,6 +201,8 @@ export const App: React.FC = () => {
             hits={hits}
             isLoading={isLoadingMods}
             hasMore={hasMoreMods}
+            searchError={searchError}
+            onRetrySearch={retrySearch}
             onOpenModDetail={(id) => {
               setDetailProjectId(id);
               setIsModDetailModalOpen(true);

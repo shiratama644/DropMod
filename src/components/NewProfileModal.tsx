@@ -28,27 +28,40 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const [loader, setLoader] = useState('Fabric');
   const [desc, setDesc] = useState('');
 
+  // ⚠️ 「モーダルが開いた瞬間のみ」フォームをリセットする。
+  //     以前は deps に mcVersions / initialImportData を含めており、
+  //     mcVersions のAPI非同期完了や親の再レンダーで initialImportData の
+  //     参照が新しくなった際に、開いたままのモーダルで入力中の値が
+  //     突然リセットされる不具合があった。
+  const wasOpenRef = useRef<boolean>(false);
   useEffect(() => {
-    if (isOpen) {
-      if (initialImportData) {
-        setName(initialImportData.name);
-        if (initialImportData.mcVersion && mcVersions.includes(initialImportData.mcVersion)) {
-          setVersion(initialImportData.mcVersion);
-        } else if (mcVersions.length > 0) {
-          setVersion(mcVersions[0]);
-        }
-        if (initialImportData.loader) {
-          setLoader(initialImportData.loader);
-        }
-        setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
-      } else {
-        setName('');
-        if (mcVersions.length > 0) setVersion(mcVersions[0]);
-        setLoader('Fabric');
-        setDesc('');
-      }
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      return;
     }
-  }, [isOpen, initialImportData, mcVersions]);
+    // 既に開いていた (open→openの再レンダー) 場合はスキップ
+    if (wasOpenRef.current) return;
+    wasOpenRef.current = true;
+
+    if (initialImportData) {
+      setName(initialImportData.name);
+      if (initialImportData.mcVersion && mcVersions.includes(initialImportData.mcVersion)) {
+        setVersion(initialImportData.mcVersion);
+      } else if (mcVersions.length > 0) {
+        setVersion(mcVersions[0]);
+      }
+      if (initialImportData.loader) {
+        setLoader(initialImportData.loader);
+      }
+      setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
+    } else {
+      setName('');
+      if (mcVersions.length > 0) setVersion(mcVersions[0]);
+      setLoader('Fabric');
+      setDesc('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // a11y: role/aria + Escape + フォーカストラップ
   const dialogRef = useRef<HTMLDivElement>(null);

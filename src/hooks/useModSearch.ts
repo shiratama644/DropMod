@@ -15,9 +15,15 @@ export const useModSearch = (
   const [isLoadingMods, setIsLoadingMods] = useState<boolean>(false);
   const [hasMoreMods, setHasMoreMods] = useState<boolean>(true);
   const [searchOffset, setSearchOffset] = useState<number>(0);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const searchLimit = 24;
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // sentinel は callback ref にして「マウント/アンマウント」を明確に検知
+  // useRef だと HomeTab の切替再マウントで observer が再attach されない不具合を防ぐ
+  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    setSentinelEl(node);
+  }, []);
 
   // ------------------------------------------------------------------
   // レースコンディション対策 (H-7)
@@ -29,6 +35,15 @@ export const useModSearch = (
   const activeAbortRef = useRef<AbortController | null>(null);
   const requestSeqRef = useRef<number>(0);
   const isLoadingRef = useRef<boolean>(false);
+
+  // ------------------------------------------------------------------
+  // stale closure 対策 (バグA):
+  //   各 useEffect が古い executeSearch を掴んで古い state (sortBy 等)
+  //   で検索を発射しないよう、常に最新の関数を Ref に保持し、useEffect
+  //   側では ref 経由で呼び出す。
+  //   → useEffect の deps に executeSearch を含めなくてよく、無限ループを
+  //     避けつつ最新パラメータで確実に発火できる。
+  // ------------------------------------------------------------------
 
   useEffect(() => {
     fetchLatestMinecraftVersions().then((versions) => {
@@ -54,6 +69,7 @@ export const useModSearch = (
 
       isLoadingRef.current = true;
       setIsLoadingMods(true);
+      setSearchError(null);
 
       let indexParam = 'downloads';
       if (sortBy === 'relevance') indexParam = 'relevance';
@@ -86,15 +102,32 @@ export const useModSearch = (
         isLoadingRef.current = false;
         setIsLoadingMods(false);
 
-        if (data.hits) {
+        if (data && Array.isArray(data.hits)) {
           setHasMoreMods(data.hits.length >= searchLimit);
           setSearchOffset(offset + data.hits.length);
           if (append) {
-            setHits((prev) => [...prev, ...data.hits]);
+            // 重複 project_id を除外して積み増し
+            //   (万一 race で古いページと重複してもReact key 衝突を防ぐ)
+            setHits((prev) => {
+              const existingIds = new Set(prev.map((h) => h.project_id));
+              const uniqueNew = data.hits.filter(
+                (h) => h && h.project_id && !existingIds.has(h.project_id)
+              );
+              return [...prev, ...uniqueNew];
+            });
           } else {
-            setHits(data.hits);
+            // 初期取得側でも念のため重複を除去 (プロキシ経由が同じ結果を返す可能性)
+            const seen = new Set<string>();
+            const uniq = data.hits.filter((h) => {
+              if (!h || !h.project_id) return false;
+              if (seen.has(h.project_id)) return false;
+              seen.add(h.project_id);
+              return true;
+            });
+            setHits(uniq);
           }
         } else {
+          if (!append) setHits([]);
           setHasMoreMods(false);
         }
       } catch (e: any) {
@@ -104,10 +137,15 @@ export const useModSearch = (
         if (mySeq !== requestSeqRef.current) return;
         isLoadingRef.current = false;
         setIsLoadingMods(false);
+        // append=false 時は空リストにしてスケルトンを解除 + エラー状態を保持
+        if (!append) {
+          setHits([]);
+          setHasMoreMods(false);
+        }
+        setSearchError(e?.message || 'Modrinthからのデータ取得に失敗しました');
         showToast('Modrinthからのデータ取得に失敗しました', 'warning');
       }
     },
-    // isLoadingMods は Ref で見るので deps から外して useCallback を安定化
     [
       sortBy,
       currentProfile.mcVersion,
@@ -118,12 +156,17 @@ export const useModSearch = (
     ]
   );
 
+  // 常に最新の executeSearch を Ref に保持
+  const executeSearchRef = useRef(executeSearch);
+  useEffect(() => {
+    executeSearchRef.current = executeSearch;
+  }, [executeSearch]);
+
   // 絞り込み変更時: 即時に新規検索 (offset=0 / append=false)
   useEffect(() => {
     setSearchOffset(0);
     setHasMoreMods(true);
-    executeSearch(false, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    executeSearchRef.current(false, 0);
   }, [currentProfile.mcVersion, currentProfile.loader, selectedCategory, sortBy]);
 
   // 検索文字列変更: 350ms debounce
@@ -138,16 +181,14 @@ export const useModSearch = (
     const timer = setTimeout(() => {
       setSearchOffset(0);
       setHasMoreMods(true);
-      executeSearch(false, 0);
+      executeSearchRef.current(false, 0);
     }, 350);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  // 無限スクロール
+  // 無限スクロール (sentinel は callback ref なのでマウント/切替を確実に検知)
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinelEl) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -157,15 +198,15 @@ export const useModSearch = (
           !isLoadingRef.current &&
           activeTab === 'home'
         ) {
-          executeSearch(true, searchOffset);
+          executeSearchRef.current(true, searchOffset);
         }
       },
       { rootMargin: '800px 0px', threshold: 0.01 }
     );
 
-    observer.observe(sentinel);
+    observer.observe(sentinelEl);
     return () => observer.disconnect();
-  }, [hasMoreMods, activeTab, searchOffset, executeSearch]);
+  }, [sentinelEl, hasMoreMods, activeTab, searchOffset]);
 
   // アンマウント時: 未完了のリクエストを中断
   useEffect(() => {
@@ -174,6 +215,13 @@ export const useModSearch = (
         activeAbortRef.current.abort();
       }
     };
+  }, []);
+
+  // 手動で検索を再試行するためのハンドラ
+  const retrySearch = useCallback(() => {
+    setSearchOffset(0);
+    setHasMoreMods(true);
+    executeSearchRef.current(false, 0);
   }, []);
 
   return {
@@ -187,6 +235,8 @@ export const useModSearch = (
     hits,
     isLoadingMods,
     hasMoreMods,
+    searchError,
+    retrySearch,
     sentinelRef
   };
 };

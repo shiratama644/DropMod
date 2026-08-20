@@ -41,6 +41,43 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   const [data, setData] = useState<DependencyCheckData | null>(null);
   const [isFixing, setIsFixing] = useState(false);
 
+  // ------------------------------------------------------------------
+  // 追加/削除ボタンの同時押し防止 (バグ: 追加ボタンが反応しない現象の対策)
+  //
+  // 問題の連鎖:
+  //   1. onToggleMod はトグル動作 (追加/削除の切替) のため、
+  //      「追加ボタン → 既に installed → 削除される → runCheck → missing に
+  //      戻る → ボタンまた表示」を繰り返して見た目上「無反応」になる
+  //   2. 追加ボタン押下直後の runCheck が profile 更新の反映前に走り、
+  //      同じ項目を missing 判定 → 一覧の同じ場所に別要素が並び、
+  //      次のクリックが「別の項目」の click として処理される
+  //   3. 上記中に data が再セット → 一覧全体が再描画 → ボタン DOM が差替
+  //
+  // 対策:
+  //   - actionInFlight state で同一 targetProjectId のクリックをロック +
+  //     ボタン UI 側で disabled 表示 (視覚フィードバック)
+  //   - runCheck は Ref 経由で最新関数を呼び、profile 変化を待ってから走らせる
+  // ------------------------------------------------------------------
+  const [actionInFlight, setActionInFlight] = useState<Set<string>>(() => new Set());
+  const actionInFlightRef = useRef<Set<string>>(actionInFlight);
+  actionInFlightRef.current = actionInFlight;
+  const lockAction = useCallback((id: string) => {
+    setActionInFlight((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+  const unlockAction = useCallback((id: string) => {
+    setActionInFlight((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   const runCheck = useCallback(async (isCancelled?: () => boolean) => {
     const checkCancelled = () => (isCancelled ? isCancelled() : false);
 
@@ -224,9 +261,21 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   const runCheckRef = useRef(runCheck);
   runCheckRef.current = runCheck;
 
-  // isOpen 遷移 + プロファイル本体切替 (id) のときだけ実行。
-  // profile.mods の変化 (Mod追加/削除) では自動再実行しない
-  // → ユーザーが自分で「再検証」ボタンを押すか、AutoFix 経由で明示呼び出しする。
+  // ------------------------------------------------------------------
+  // 再検証トリガ
+  //
+  // (1) isOpen 遷移 / プロファイル本体切替 (id) → 即時に走らせる
+  // (2) プロファイル内 mods の構成が変化 (追加/削除/バージョン変更) →
+  //     短いデバウンス後に自動再検証。ユーザーが「追加」を押した後、
+  //     runCheck をボタン onClick 内で明示的に呼ぶと race condition
+  //     ("反応しない" 現象) の原因になるため、profile 変化検知で
+  //     まとめて更新する方式に統一。
+  // ------------------------------------------------------------------
+  const modsSignature = profile.mods
+    .map((m) => `${m.id || m.slug || '?'}@${m.selectedVersionId || 'latest'}`)
+    .join(',');
+
+  // (1) 初回オープン / プロファイル本体切替 → 即時
   useEffect(() => {
     if (!isOpen) return;
     let isCancelled = false;
@@ -237,11 +286,118 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, profile.id]);
 
+  // (2) mods 配列の変化 → 600ms デバウンスで再チェック
+  //     デバウンスすることで連続追加/削除中に API を叩きすぎない
+  const isFirstModsSignatureRun = useRef<boolean>(true);
+  useEffect(() => {
+    if (!isOpen) {
+      isFirstModsSignatureRun.current = true;
+      return;
+    }
+    // 初回オープン時は (1) のuseEffectで走らせるのでスキップ
+    if (isFirstModsSignatureRun.current) {
+      isFirstModsSignatureRun.current = false;
+      return;
+    }
+    let isCancelled = false;
+    const timer = setTimeout(() => {
+      runCheckRef.current(() => isCancelled);
+    }, 600);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, modsSignature]);
+
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
 
   if (!isOpen) return null;
+
+  // ------------------------------------------------------------------
+  // 追加専用ハンドラ ("追加ボタンが反応しない" バグ修正)
+  //
+  // onToggleMod はトグル動作 (追加⇔削除) のため、既に追加済みの Mod に
+  // 対して押すと逆に「削除」されてしまう。runCheck による自動再検証で
+  // 「missing → 消えた → また missing」を繰り返し、見た目上「無反応」に。
+  //
+  // このヘルパーは:
+  //   1. 現時点で本当に未追加かをチェック → 既にあれば削除ではなく "追加済み" を通知
+  //   2. actionInFlightRef で同一 targetProjectId の並列クリックをロック
+  //   3. onClick 内での runCheck() を廃止し、profile 変化検知で自動再チェック
+  //      (race condition の元凶を根絶)
+  // ------------------------------------------------------------------
+  const handleAddDependencyMod = useCallback(
+    async (targetProjectId: string, e: React.MouseEvent) => {
+      if (actionInFlightRef.current.has(targetProjectId)) return;
+      // 既に installed なら onToggleMod を呼ばずに data 側から消すだけ
+      const alreadyInstalled = profile.mods.some(
+        (m) => m.id === targetProjectId || m.slug === targetProjectId
+      );
+      if (alreadyInstalled) {
+        // すでに入っているのに missing 判定が残っているのは runCheck 未反映の可能性
+        // → data を暫定的に修正して即座に UI から消す (トグル暴発を回避)
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            missingRequired: prev.missingRequired.filter(
+              (m) => m.targetProjectId !== targetProjectId
+            ),
+            optionalAvailable: prev.optionalAvailable.filter(
+              (o) => o.targetProjectId !== targetProjectId
+            )
+          };
+        });
+        return;
+      }
+      lockAction(targetProjectId);
+      try {
+        await onToggleMod(targetProjectId, e);
+        // runCheck は modsSignature 変化検知の useEffect (600ms デバウンス)
+        // で自動的に走るため、ここで明示的に呼ばない
+      } finally {
+        unlockAction(targetProjectId);
+      }
+    },
+    [profile.mods, onToggleMod, lockAction, unlockAction]
+  );
+
+  // ------------------------------------------------------------------
+  // 削除専用ハンドラ (競合 Mod の削除)
+  // 同様に、既に削除済みなら何もしない (UI 側の即時反映)
+  // ------------------------------------------------------------------
+  const handleRemoveConflictingMod = useCallback(
+    async (sourceModId: string, e: React.MouseEvent) => {
+      if (actionInFlightRef.current.has(sourceModId)) return;
+      const stillExists = profile.mods.some(
+        (m) => m.id === sourceModId || m.slug === sourceModId
+      );
+      if (!stillExists) {
+        // 既に消えていたら data からも消す
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            conflicts: prev.conflicts.filter(
+              (c) => c.sourceMod.id !== sourceModId && c.sourceMod.slug !== sourceModId
+            )
+          };
+        });
+        return;
+      }
+      lockAction(sourceModId);
+      try {
+        await onToggleMod(sourceModId, e);
+        // runCheck は自動 (modsSignature 検知) に任せる
+      } finally {
+        unlockAction(sourceModId);
+      }
+    },
+    [profile.mods, onToggleMod, lockAction, unlockAction]
+  );
 
   const handleAutoFix = async () => {
     if (!data?.missingRequired || isFixing) return;
@@ -249,7 +405,6 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     try {
       // 1. 重複する targetProjectId を除去 (複数のsourceModが同じライブラリに依存するケース対策)
       // 2. 既にプロファイルに存在するMod (id or slug で照合) はスキップ
-      //    → onToggleMod はトグル動作のため、追加済みのものに対して呼ぶと削除されてしまう
       const installedIds = new Set<string>();
       profile.mods.forEach((m) => {
         if (m.id) installedIds.add(m.id);
@@ -267,7 +422,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           true
         );
       }
-      await runCheck();
+      // AutoFix は明示的な一括操作なので、profile 変化検知の自動 runCheck
+      // ではなく即時再検証を走らせる (progress UI を再表示するため)
+      await runCheckRef.current();
       onRefresh();
     } catch {
       setStatusText('Auto-Fix処理中にエラーが発生しました');
@@ -455,17 +612,28 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             if (c.sourceMod.id) {
-                              await onToggleMod(c.sourceMod.id, e);
-                              runCheck();
+                              // 削除専用ハンドラ (トグル暴発回避 + 自動 runCheck に任せる)
+                              void handleRemoveConflictingMod(c.sourceMod.id, e);
                             }
                           }}
+                          disabled={
+                            isFixing ||
+                            (c.sourceMod.id ? actionInFlight.has(c.sourceMod.id) : false)
+                          }
                           title={`${c.sourceMod.title} を削除`}
                           aria-label={`${c.sourceMod.title} を削除`}
-                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-red hover:bg-red-500/15 active:bg-red-500/25 border border-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-red hover:bg-red-500/15 active:bg-red-500/25 border border-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <i className="fa-solid fa-trash-can text-[11px]" aria-hidden="true" />
+                          {c.sourceMod.id && actionInFlight.has(c.sourceMod.id) ? (
+                            <i
+                              className="fa-solid fa-spinner fa-spin text-[11px]"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <i className="fa-solid fa-trash-can text-[11px]" aria-hidden="true" />
+                          )}
                           <span className="hidden sm:inline">削除</span>
                         </button>
                       </div>
@@ -511,15 +679,23 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={async (e) => {
-                            await onToggleMod(m.targetProjectId, e);
-                            runCheck();
+                          onClick={(e) => {
+                            // 追加専用ハンドラ (トグル暴発回避 + 自動 runCheck に任せる)
+                            void handleAddDependencyMod(m.targetProjectId, e);
                           }}
+                          disabled={isFixing || actionInFlight.has(m.targetProjectId)}
                           title={`${title} を追加`}
                           aria-label={`${title} を追加`}
-                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-amber hover:bg-amber-500/15 active:bg-amber-500/25 border border-amber-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-amber hover:bg-amber-500/15 active:bg-amber-500/25 border border-amber-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                          {actionInFlight.has(m.targetProjectId) ? (
+                            <i
+                              className="fa-solid fa-spinner fa-spin text-[11px]"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                          )}
                           <span className="hidden sm:inline">追加</span>
                         </button>
                       </div>
@@ -565,15 +741,23 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={async (e) => {
-                            await onToggleMod(o.targetProjectId, e);
-                            runCheck();
+                          onClick={(e) => {
+                            // 追加専用ハンドラ (トグル暴発回避 + 自動 runCheck に任せる)
+                            void handleAddDependencyMod(o.targetProjectId, e);
                           }}
+                          disabled={isFixing || actionInFlight.has(o.targetProjectId)}
                           title={`${title} を追加`}
                           aria-label={`${title} を追加`}
-                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-blue hover:bg-blue-500/15 active:bg-blue-500/25 border border-blue-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-blue hover:bg-blue-500/15 active:bg-blue-500/25 border border-blue-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                          {actionInFlight.has(o.targetProjectId) ? (
+                            <i
+                              className="fa-solid fa-spinner fa-spin text-[11px]"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                          )}
                           <span className="hidden sm:inline">追加</span>
                         </button>
                       </div>
@@ -618,7 +802,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => runCheck()}
+              onClick={() => runCheckRef.current()}
               className="px-3 py-1.5 rounded-xl theme-sub-box hover:text-amber-500 text-xs font-semibold transition flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <i className="fa-solid fa-rotate-right text-[11px]" aria-hidden="true" />

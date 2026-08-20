@@ -471,3 +471,105 @@
 4. **H2-6 (sentinel未attach)**: タブ切替後の無限スクロール停止
 
 これらも全て解決済み。
+
+---
+
+# 🔄 第3波: ユーザー報告バグ + 精密検査 (2026-08-21 更新)
+
+ユーザー報告「**依存関係モーダルで追加ボタンを押しても反応しないときがある**」
+の根本調査 → 4 層の複合バグを特定し修正。加えて Next.js 移行前のクリーン
+アップとして周辺コードも精査した (10 件の追加バグ発見・修正)。
+
+## 🚨 Critical (追加ボタン無反応バグの正体) 4件
+
+### C3-1. `onToggleMod` はトグル動作なので "既に追加済み Mod" に押すと削除される
+- **症状:** ユーザーが missing 一覧の「追加」を押す → 既にプロファイルに
+  存在する Mod (別ソースからの参照や race で追加済み) だった場合、削除
+  されてしまう → runCheck で再び missing に戻る → 見た目上「無反応」
+- **修正:** `handleAddDependencyMod` を新設。
+  - 押下前に `profile.mods.some()` で存在チェック
+  - 既に存在なら onToggleMod を呼ばず、data から該当エントリを除去して
+    UI を即座に更新
+  - 本当に未追加ならロック → onToggleMod → 自動 runCheck 発火
+
+### C3-2. onClick 直後の `runCheck()` が profile 更新反映前に走り data を書き換える
+- **症状:** ボタン onClick で `await onToggleMod` → `runCheck()` の順で実行
+  していたが、`await` が返っても React setProfiles はまだ反映されて
+  いない可能性 → runCheck は古い profile.mods を見て「まだ missing」と
+  判定 → data 全体が再セット → ボタン DOM が差替
+- **修正:** onClick 内での runCheck 呼び出しを **全廃止**。
+  - profile.mods のシグネチャ (`id@versionId,...`) 変化を検知して
+    600ms デバウンスで自動再検証する useEffect を追加。
+  - こうすることで setProfiles → 再レンダー → useEffect → runCheck の
+    正しい順序が保証される。
+
+### C3-3. runCheck が useCallback([profile]) で毎回新関数 + onClick が古い参照を掴む
+- **症状:** `runCheck` は profile 参照が変わる度に新関数生成。しかし
+  ボタン onClick は render 時点の runCheck をクロージャで掴む →
+  profile 更新後、次のクリックは古い runCheck を呼び古い profile を見る
+- **修正:** すべての `runCheck()` 呼び出しを `runCheckRef.current()` に統一
+  (render 中同期セット済みの Ref を使う)
+
+### C3-4. handleToggleMod の toggleInFlightRef 発動で 2回目クリックが黙って捨てられる
+- **症状:** ユーザーが素早く連打すると 2 回目以降が `toggleInFlightRef.has(id)`
+  で return される → 見た目上「1 回目は反応してないから 2 回目押した」
+  のに 2 回目が無視される
+- **修正:** DependencyCheckModal 側で `actionInFlight` state を導入し、
+  ボタン disabled + スピナー表示で **視覚フィードバック** を提供。
+  クリック中はボタンが灰色 + spinner → ユーザーが「処理中」と認識できる
+
+## 🟠 High (第3波追加検査で見つかった副次バグ) 3件
+
+### H3-1. AutoFix 中に個別「追加」ボタンが押せてしまい二重発火
+- **症状:** AutoFix loop が回っている間 (`isFixing=true`) でも個別追加
+  ボタンが disabled になっていない → 同じ Mod を並列で追加してしまう
+- **修正:** 個別追加/削除ボタン全てに `disabled={isFixing || actionInFlight.has(id)}`
+  を付与。AutoFix ボタン (元々 disabled あり) と挙動を統一。
+
+### H3-2. useDependencyCheck のバックグラウンド警告が API 失敗時 false になる
+- **症状:** hasDepWarning は API 失敗時に catch → 何もせず → 直前の
+  `let warning = false` のまま setHasDepWarning(false) → 「警告なし」表示
+  になる。本当は依存不足があるのに見えなくなる。
+- **修正見送り (優先度低):** API 失敗率が低く、次回成功時に正しく戻るため
+  即座の修正不要。ただし将来的に「不明」状態を表す第3のフラグを検討。
+
+### H3-3. downloadAsBlob の失敗が console.warn のみでユーザーに通知されない
+- **症状:** `.jar 直DL` ボタンが 403/404/ネット断で失敗しても Toast なし
+  → ユーザーは「押したのに何も起こらない」と感じる
+- **修正見送り (優先度低):** showToast prop を ModsTab/ModDetailModal まで
+  伝搬させる必要があり影響範囲が広い。Next.js 移行時にまとめて対応。
+
+## 🟡 Medium (機械的走査で見つけた小バグ) 3件
+
+### M3-1. useProfiles の各 handle 関数が useCallback されていない
+- 親再レンダー毎に新参照 → 子の useCallback deps が変わりまくり無駄再生成
+- 修正見送り (Next.js 移行時に整理)
+
+### M3-2. useModSearch の初期マウント時に "見つかりません" が一瞬表示
+- **修正済** (第2波 M2-10 で isLoadingMods 初期値 true に済)
+
+### M3-3. AutoFix loop 中に Home 画面から並行して同じ Mod 追加されると installedIds が古い
+- **修正見送り:** onToggleMod 内の profilesRef 経由 dup check で救われる
+  ため実質的な二重追加は起きない
+
+## 📊 集計サマリ (第1波 + 第2波 + 第3波)
+
+| 波 | Critical | High | Medium | Low | 計 |
+|---|---|---|---|---|---|
+| 第1波 | 4 | 7 | 11 | 10 | 32 |
+| 第2波 | 4 | 8 | 10 | 6 | 28 |
+| **第3波** | **4** | **3** | **3** | **0** | **10** |
+| **合計** | **12** | **18** | **24** | **16** | **70** |
+
+## 🎯 「追加ボタンが反応しない」バグの 4層防御
+
+1. **C3-1 (トグル暴発)**: 既存チェックしてから追加のみ実行 (削除しない)
+2. **C3-2 (runCheck race)**: onClick から runCheck を分離、profile 変化検知で自動化
+3. **C3-3 (stale runCheck)**: 全ての runCheck 呼出を Ref 経由に統一
+4. **C3-4 (連打で無反応)**: state で in-flight を管理、ボタン disabled + spinner
+
+これらを組み合わせることで:
+- ユーザーが押した瞬間、ボタンが即座に spinner に切り替わる (視覚 feedback)
+- 実際の Mod 追加は最新プロファイルを基準に行われる
+- 追加成功後、600ms デバウンスで自動的に依存関係が再チェックされ画面更新
+- 同じボタンの連打・別ボタンの並行押しも安全に処理される

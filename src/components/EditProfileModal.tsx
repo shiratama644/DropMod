@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useId } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useId } from 'react';
 import { Profile } from '../types';
 import { CustomDropdown } from './CustomDropdown';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -43,19 +44,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   }, [profile, isOpen]);
 
-  // Handle Escape key to close modal
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // a11y: Escape + フォーカストラップ (共通フックに統一)
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(isOpen, onClose, dialogRef);
 
   // Safely construct version options with defensive array fallback
   const versionOptions = useMemo(() => {
@@ -80,13 +71,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={modalTitleId}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={modalTitleId}
+        className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
           <h3 id={modalTitleId} className="font-bold text-base sm:text-lg flex items-center gap-2">
             <i className="fa-solid fa-pen-to-square theme-text-brand" aria-hidden="true" />

@@ -22,7 +22,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const chevronRef = useRef<HTMLIElement>(null);
+  const chevronRef = useRef<HTMLElement>(null);
 
   const listboxId = useId();
   const safeOptions = Array.isArray(options) ? options : [];
@@ -100,32 +100,52 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     }
   }, [isOpen]);
 
-  // Close dropdown on outside click, window resize, or container scroll
+  // Close dropdown on outside click / touch, window resize, or container scroll
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        triggerRef.current &&
-        !triggerRef.current.contains(target) &&
-        menuRef.current &&
-        !menuRef.current.contains(target)
-      ) {
+    const isEventInsideTriggerOrMenu = (target: Node | null): boolean => {
+      if (!target) return false;
+      if (triggerRef.current && triggerRef.current.contains(target)) return true;
+      if (menuRef.current && menuRef.current.contains(target)) return true;
+      return false;
+    };
+
+    const handleOutsidePointer = (e: MouseEvent | TouchEvent) => {
+      const target = (e.target as Node) || null;
+      if (!isEventInsideTriggerOrMenu(target)) {
         handleClose(true);
       }
     };
 
-    const handleWindowChange = () => handleClose(true);
+    // ---------------------------------------------------------------
+    // scroll ハンドラ (M-4)
+    //
+    // 従来は capture-phase の全 scroll でメニューを即閉じていたため、
+    // メニュー自身 (overflow-y:auto / max-height:240px) を上下スクロール
+    // した瞬間に閉じてしまう不具合があった。
+    // → scroll イベントの target がメニュー内部の要素の場合は無視する。
+    // ---------------------------------------------------------------
+    const handleScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (menuRef.current && target && menuRef.current.contains(target)) {
+        return; // メニュー内スクロールは閉じない
+      }
+      handleClose(true);
+    };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('resize', handleWindowChange);
-    window.addEventListener('scroll', handleWindowChange, true);
+    const handleResize = () => handleClose(true);
+
+    document.addEventListener('mousedown', handleOutsidePointer);
+    document.addEventListener('touchstart', handleOutsidePointer, { passive: true });
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('resize', handleWindowChange);
-      window.removeEventListener('scroll', handleWindowChange, true);
+      document.removeEventListener('mousedown', handleOutsidePointer);
+      document.removeEventListener('touchstart', handleOutsidePointer);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen, handleClose]);
 

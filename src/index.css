@@ -58,10 +58,21 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-base);
     color: var(--text-primary);
-    user-select: none;
+    /* テキスト全体の選択を禁止していた `user-select: none` は廃止。
+       Mod タイトルや説明文をコピー可能にするため。
+       クリック要素側 (button/.tab-btn/.custom-dropdown-*) で個別に無効化する。 */
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.3s ease, color 0.3s ease;
     overflow-x: hidden;
+}
+
+/* インタラクティブ要素はダブルタップでの範囲選択を無効化 */
+button,
+[role="button"],
+.tab-btn,
+label {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 code, input, textarea {

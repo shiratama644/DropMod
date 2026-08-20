@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Profile, DependencyCheckData, ModItem } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface DependencyCheckModalProps {
   isOpen: boolean;
@@ -229,19 +230,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     };
   }, [isOpen, profile, runCheck]);
 
-  // Handle Escape key to close modal
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // a11y: Escape + フォーカストラップ (共通フックに統一)
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalA11y(isOpen, onClose, dialogRef);
 
   if (!isOpen) return null;
 
@@ -310,13 +301,19 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="dependency-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="modal-card glass-panel w-full max-w-2xl rounded-3xl p-4 sm:p-6 border shadow-2xl relative flex flex-col max-h-[88vh] sm:max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dependency-modal-title"
+        className="modal-card glass-panel w-full max-w-2xl rounded-3xl p-4 sm:p-6 border shadow-2xl relative flex flex-col max-h-[88vh] sm:max-h-[90vh]"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">

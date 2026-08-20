@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import { ModItem } from '../types';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface NewProfileModalProps {
   isOpen: boolean;
@@ -49,6 +50,11 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     }
   }, [isOpen, initialImportData, mcVersions]);
 
+  // a11y: role/aria + Escape + フォーカストラップ
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalA11y(isOpen, onClose, dialogRef);
+
   if (!isOpen) return null;
 
   const versionOptions = mcVersions.map((v) => ({
@@ -76,11 +82,15 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
-          <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
+          <h3 id={titleId} className="font-bold text-base sm:text-lg flex items-center gap-2">
             <i className="fa-solid fa-folder-plus theme-text-brand"></i>
             {initialImportData ? 'ZIPからプロファイル作成' : '新規プロファイル作成'}
           </h3>

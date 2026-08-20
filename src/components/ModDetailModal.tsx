@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import { Profile, ModrinthProject, ModrinthVersion } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { downloadAsBlob } from '../utils/download';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface ModDetailModalProps {
   isOpen: boolean;
@@ -68,6 +69,11 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
   // 初期状態（折りたたみ時）は0件、展開時にすべてのバージョンを表示
   const displayedVersions = isVersionsExpanded ? versions : [];
 
+  // a11y: role/aria + Escape + フォーカストラップ
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useModalA11y(isOpen, onClose, dialogRef);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
@@ -80,6 +86,10 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -98,7 +108,7 @@ export const ModDetailModal: React.FC<ModDetailModalProps> = ({
               )}
             </div>
             <div className="min-w-0">
-              <h3 className="font-extrabold text-base sm:text-xl truncate">
+              <h3 id={titleId} className="font-extrabold text-base sm:text-xl truncate">
                 {loading ? '読み込み中...' : project?.title}
               </h3>
               <p className="text-xs theme-text-muted truncate">

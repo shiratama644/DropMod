@@ -28,9 +28,13 @@ export const useZipImport = (
         const text = await mrpackFile.async('string');
         const mrpackData = JSON.parse(text);
         const mcVer = mrpackData.dependencies?.minecraft || '1.20.1';
+        // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
+        //   fabric-loader / forge / neoforge / quilt-loader
+        // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
         let loader = 'Fabric';
         if (mrpackData.dependencies?.forge) loader = 'Forge';
         if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
+        if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
 
         const importedMods: ModItem[] = [];
         if (mrpackData.files) {

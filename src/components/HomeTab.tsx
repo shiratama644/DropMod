@@ -23,7 +23,8 @@ interface HomeTabProps {
   hasMore: boolean;
   onOpenModDetail: (id: string) => void;
   onToggleMod: (id: string, e: React.MouseEvent) => void;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
+  // React 18.3 の Ref 型と useRef<T | null>() の互換のため React.Ref<T> を使う
+  sentinelRef: React.Ref<HTMLDivElement>;
 }
 
 const SORT_OPTIONS = [

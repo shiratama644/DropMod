@@ -35,6 +35,16 @@ export const useProfiles = (
     currentProfileIdRef.current = currentProfileId;
   }, [currentProfileId]);
 
+  // ------------------------------------------------------------------
+  // Hydration ゲート (M-6)
+  //
+  // 復元 useEffect と保存 useEffect が同時にマウントで走ると、復元完了前
+  // に「初期state (デフォルトプロファイル1個)」を localStorage へ書き
+  // 戻してしまうレースが発生し得る。hasHydrated が true になるまで
+  // 保存側は動作させない。
+  // ------------------------------------------------------------------
+  const [hasHydrated, setHasHydrated] = useState<boolean>(false);
+
   // LocalStorage から復元 (旧キー `craftforge_state_v2` からの自動移行を含む)
   useEffect(() => {
     const STORAGE_KEY = 'dropmod_state_v2';
@@ -66,15 +76,18 @@ export const useProfiles = (
         console.error(e);
       }
     }
+    // 復元完了 → 以降は保存 useEffect が動く
+    setHasHydrated(true);
   }, [setThemeState]);
 
-  // LocalStorage へ保存
+  // LocalStorage へ保存 (hydration完了後のみ)
   useEffect(() => {
+    if (!hasHydrated) return;
     localStorage.setItem(
       'dropmod_state_v2',
       JSON.stringify({ theme, currentProfileId, profiles })
     );
-  }, [theme, currentProfileId, profiles]);
+  }, [hasHydrated, theme, currentProfileId, profiles]);
 
   const currentProfile = profiles.find((p) => p.id === currentProfileId) || profiles[0];
 

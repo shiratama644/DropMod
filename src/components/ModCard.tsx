@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModrinthHit, Profile } from '../types';
 
 interface ModCardProps {
@@ -24,6 +24,11 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onOpenDetail, on
 
   // 画像読み込み失敗時にプレースホルダーへ差し替え (L-10)
   const [iconFailed, setIconFailed] = useState<boolean>(false);
+  // icon_url が変わったら失敗フラグをリセット (プロジェクトIDが同じで
+  // icon だけ差し替わったケースで古い fallback が残るのを防ぐ)
+  useEffect(() => {
+    setIconFailed(false);
+  }, [hit.icon_url]);
   const showIcon = hit.icon_url && !iconFailed;
 
   return (

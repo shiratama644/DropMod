@@ -110,6 +110,38 @@ export const ModsTab: React.FC<ModsTabProps> = ({
     }
   }, []);
 
+  // ---------------------------------------------------------------
+  // バージョンドロップダウンのオプション生成 (共通ヘルパ)
+  //
+  // 現在選択中の selectedVersionId が API から取得した versions リスト
+  // に含まれない場合 (mrpack由来など)、そのまま先頭に「現在のバージョン」
+  // としてダミーオプションを追加してユーザー選択が失われないようにする。
+  // ---------------------------------------------------------------
+  const buildVersionOptions = useCallback(
+    (mod: ModItem, availableVersions: ModrinthVersion[]) => {
+      const opts = availableVersions.map((v) => ({
+        label: `${v.version_number} [${v.version_type === 'release' ? 'Stable' : v.version_type}]`,
+        value: v.id
+      }));
+      const currentId = mod.selectedVersionId || '';
+      const hasCurrent = opts.some((o) => o.value === currentId);
+      if (currentId && !hasCurrent) {
+        opts.unshift({
+          label: `${mod.selectedVersionNumber || 'カスタム'} [現在]`,
+          value: currentId
+        });
+      }
+      if (opts.length === 0) {
+        opts.push({
+          label: mod.selectedVersionNumber || '最新安定版',
+          value: currentId || 'latest'
+        });
+      }
+      return opts;
+    },
+    []
+  );
+
   return (
     <section id="tab-mods" className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-panel p-4 sm:p-5 rounded-2xl">
@@ -177,18 +209,7 @@ export const ModsTab: React.FC<ModsTabProps> = ({
                 <tbody className="divide-y divide-slate-500/10 text-sm">
                   {profile.mods.map((mod) => {
                     const availableVersions = modVersionsMap.get(mod.id) || [];
-                    const versionOptions =
-                      availableVersions.length > 0
-                        ? availableVersions.map((v) => ({
-                            label: `${v.version_number} [${v.version_type === 'release' ? 'Stable' : v.version_type}]`,
-                            value: v.id
-                          }))
-                        : [
-                            {
-                              label: mod.selectedVersionNumber || '最新安定版',
-                              value: mod.selectedVersionId || 'latest'
-                            }
-                          ];
+                    const versionOptions = buildVersionOptions(mod, availableVersions);
 
                     return (
                       <tr key={mod.id} className="hover:bg-slate-500/5 transition">
@@ -263,18 +284,7 @@ export const ModsTab: React.FC<ModsTabProps> = ({
             <div className="block md:hidden p-3 space-y-3">
               {profile.mods.map((mod) => {
                 const availableVersions = modVersionsMap.get(mod.id) || [];
-                const versionOptions =
-                  availableVersions.length > 0
-                    ? availableVersions.map((v) => ({
-                        label: `${v.version_number} [${v.version_type === 'release' ? 'Stable' : v.version_type}]`,
-                        value: v.id
-                      }))
-                    : [
-                        {
-                          label: mod.selectedVersionNumber || '最新安定版',
-                          value: mod.selectedVersionId || 'latest'
-                        }
-                      ];
+                const versionOptions = buildVersionOptions(mod, availableVersions);
 
                 return (
                   <div key={mod.id} className="glass-card p-3.5 rounded-2xl flex flex-col gap-2.5 border">

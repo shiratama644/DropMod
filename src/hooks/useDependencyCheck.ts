@@ -10,10 +10,10 @@ export const useDependencyCheck = (currentProfile: Profile) => {
   const [hasDepWarning, setHasDepWarning] = useState<boolean>(false);
 
   // 最新 profile を常に参照するための Ref (非同期処理内 stale closure 対策)
+  // render 中に同期でセットすることで、setState 直後に発火する非同期処理が
+  // 1レンダー遅れの古い profile を掴む race を防ぐ。
   const profileRef = useRef<Profile>(currentProfile);
-  useEffect(() => {
-    profileRef.current = currentProfile;
-  }, [currentProfile]);
+  profileRef.current = currentProfile;
 
   const runBackgroundDepCheck = useCallback(async () => {
     const profile = profileRef.current;

@@ -220,10 +220,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
   // runCheck を Ref に固定して、profile が変わっても useEffect が
   // 再発火しないようにする (isOpen トグルとプロファイル切替のみで走らせる)
+  // render 中に同期セットで race を防ぐ
   const runCheckRef = useRef(runCheck);
-  useEffect(() => {
-    runCheckRef.current = runCheck;
-  }, [runCheck]);
+  runCheckRef.current = runCheck;
 
   // isOpen 遷移 + プロファイル本体切替 (id) のときだけ実行。
   // profile.mods の変化 (Mod追加/削除) では自動再実行しない

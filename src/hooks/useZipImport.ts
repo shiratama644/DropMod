@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { Profile, ModItem } from '../types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '../utils/hash';
 import { fetchModrinth } from '../services/api';
+import { generateId } from '../utils/id';
 
 export const useZipImport = (
   setProfiles: React.Dispatch<React.SetStateAction<Profile[]>>,
@@ -44,7 +45,7 @@ export const useZipImport = (
             const filename = pathParts[pathParts.length - 1];
 
             importedMods.push({
-              id: 'mrpack-' + Math.random().toString(36).substring(2, 9),
+              id: generateId('mrpack'),
               title: filename.replace('.jar', ''),
               description: 'Imported from .mrpack',
               fileUrl: downloadUrl,
@@ -55,7 +56,7 @@ export const useZipImport = (
         }
 
         const newProfile: Profile = {
-          id: 'mrpack-' + Date.now(),
+          id: generateId('mrpack'),
           name: (mrpackData.name || 'Modrinth Pack') + ' (インポート)',
           mcVersion: mcVer,
           loader: loader,

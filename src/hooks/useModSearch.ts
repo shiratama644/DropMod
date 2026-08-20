@@ -12,7 +12,9 @@ export const useModSearch = (
   const [sortBy, setSortBy] = useState<string>('popular');
   const [searchInput, setSearchInput] = useState<string>('');
   const [hits, setHits] = useState<ModrinthHit[]>([]);
-  const [isLoadingMods, setIsLoadingMods] = useState<boolean>(false);
+  // 初期値 true にして「マウント直後の1瞬に『見つかりません』が出る」現象を回避
+  // (最初の絞り込みuseEffect が発火するまではスケルトンを見せる)
+  const [isLoadingMods, setIsLoadingMods] = useState<boolean>(true);
   const [hasMoreMods, setHasMoreMods] = useState<boolean>(true);
   const [searchOffset, setSearchOffset] = useState<number>(0);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -156,11 +158,9 @@ export const useModSearch = (
     ]
   );
 
-  // 常に最新の executeSearch を Ref に保持
+  // 常に最新の executeSearch を Ref に保持 (render中に同期セット)
   const executeSearchRef = useRef(executeSearch);
-  useEffect(() => {
-    executeSearchRef.current = executeSearch;
-  }, [executeSearch]);
+  executeSearchRef.current = executeSearch;
 
   // 絞り込み変更時: 即時に新規検索 (offset=0 / append=false)
   useEffect(() => {

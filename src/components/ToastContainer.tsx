@@ -25,10 +25,9 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
   // onDismiss は親で毎レンダー新規参照になる可能性があるため Ref に固定
   // (これを deps に入れると 3秒タイマーが毎レンダーでリセットされ、
   //  トーストが延々と消えなくなる不具合があった)
+  // render 中同期セットで race を最小化
   const onDismissRef = useRef(onDismiss);
-  useEffect(() => {
-    onDismissRef.current = onDismiss;
-  }, [onDismiss]);
+  onDismissRef.current = onDismiss;
 
   useEffect(() => {
     const el = elRef.current;

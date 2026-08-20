@@ -40,7 +40,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     <nav
       id="bottom-nav"
       aria-label="メインナビゲーション"
-      className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="max-w-md mx-auto grid grid-cols-3 h-16">
         {NAV_ITEMS.map((item) => {

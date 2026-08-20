@@ -62,15 +62,20 @@ const generateExportDataJson = (profile: Profile): string => {
   return JSON.stringify(exportData, null, 2);
 };
 
-/** README.txt のコンテンツを生成する */
-const generateReadmeText = (profile: Profile): string => {
+/**
+ * README.txt のコンテンツを生成する。
+ * 実ZIP内のファイル名 (dedup 後) を渡してもらうことで、README と
+ * 実ファイル名の不一致を防ぐ。
+ */
+const generateReadmeText = (
+  profile: Profile,
+  actualFilenames: Map<string, string>
+): string => {
   const modsList = profile.mods
-    .map(
-      (mod) =>
-        `- ${mod.title} (${mod.selectedVersionNumber || 'Stable'}) -> ${getModFileName(
-          mod
-        )}\n  Source: ${mod.fileUrl || 'N/A'}`
-    )
+    .map((mod) => {
+      const actualName = actualFilenames.get(mod.id) || getModFileName(mod);
+      return `- ${mod.title} (${mod.selectedVersionNumber || 'Stable'}) -> ${actualName}\n  Source: ${mod.fileUrl || 'N/A'}`;
+    })
     .join('\n');
 
   return [
@@ -188,9 +193,9 @@ export const useZipExport = (
       const zip = new JSZip();
       const modsFolder = zip.folder('mods');
 
-      // テキスト・JSONメタデータの追加
+      // テキスト・JSONメタデータの追加 (profile.json は先、README.txt は
+      // 全 Mod の実ファイル名 (dedup後) が確定してから最後に書く)
       zip.file('profile.json', generateExportDataJson(currentProfile));
-      zip.file('README.txt', generateReadmeText(currentProfile));
 
       // 進行状態の集約変数
       let successCount = 0;
@@ -202,6 +207,8 @@ export const useZipExport = (
       // 同じ filename の Mod が複数ある場合、後発は "name-2.jar", "name-3.jar" と
       // サフィックスを付けて衝突を防ぐ (JSZip の暗黙上書き対策)
       const usedFileNames = new Set<string>();
+      // Mod ID → 実際に ZIP へ書き込んだファイル名 のマップ (README生成用)
+      const actualFilenames = new Map<string, string>();
       const dedupeFileName = (name: string): string => {
         if (!usedFileNames.has(name)) {
           usedFileNames.add(name);
@@ -237,6 +244,7 @@ export const useZipExport = (
             if (blob) {
               const uniqueName = dedupeFileName(getModFileName(mod));
               modsFolder?.file(uniqueName, blob);
+              actualFilenames.set(mod.id, uniqueName);
               successCount++;
             } else {
               failCount++;
@@ -264,6 +272,9 @@ export const useZipExport = (
 
       if (signal.aborted) throw new Error('Aborted');
 
+      // README を実ファイル名 (dedup後) で最後に追加
+      zip.file('README.txt', generateReadmeText(currentProfile, actualFilenames));
+
       // 圧縮フェーズ (90〜100%)
       updateZipState({
         progress: 90,
@@ -286,6 +297,12 @@ export const useZipExport = (
 
       // Blobのダウンロード開始
       triggerBlobDownload(zipBlob, generateZipFileName(currentProfile));
+
+      // 完了と同時に abort 用 controller をクリアして
+      // 完了直後の cancel トーストが誤って出るのを防ぐ
+      if (activeZipAbortRef.current === abortController) {
+        activeZipAbortRef.current = null;
+      }
 
       // 完了通知とモーダル閉じる処理
       setTimeout(() => {

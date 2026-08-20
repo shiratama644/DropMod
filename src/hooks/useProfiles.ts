@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Profile, ModItem, ThemeMode } from '../types';
 import { fetchModrinth, fetchStableModVersion } from '../services/api';
 import type { ConfirmDialogOptions } from '../components/ConfirmDialog';
+import { generateId } from '../utils/id';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
@@ -25,19 +26,24 @@ export const useProfiles = (
 
   // ------------------------------------------------------------------
   // 最新state参照用 Ref (stale closure 対策)
+  //
   // handleToggleMod のような非同期処理の中では、レンダー時点の profiles
   // をキャプチャした値ではなく、常に最新の値を参照する必要がある。
   // AutoFix や連続操作で古い state を見て「未追加」判定してしまい、
   // 追加⇔削除トグルが暴発するのを防ぐ。
+  //
+  // ⚠️ ref の更新は useEffect ではなく render 中に同期で行う
+  //    (useEffect は render 後に非同期で走るため、同じレンダーサイクル内で
+  //     発火した非同期処理が古い ref を掴む race を防ぐ)。
   // ------------------------------------------------------------------
   const profilesRef = useRef<Profile[]>(profiles);
   const currentProfileIdRef = useRef<string>(currentProfileId);
-  useEffect(() => {
-    profilesRef.current = profiles;
-  }, [profiles]);
-  useEffect(() => {
-    currentProfileIdRef.current = currentProfileId;
-  }, [currentProfileId]);
+  profilesRef.current = profiles;
+  currentProfileIdRef.current = currentProfileId;
+
+  // handleToggleMod の並列呼び出し防止用 (同一 projectId への連打で
+  // 重複トグルが起きないようにする)
+  const toggleInFlightRef = useRef<Set<string>>(new Set());
 
   // ------------------------------------------------------------------
   // Hydration ゲート (M-6)
@@ -172,7 +178,7 @@ export const useProfiles = (
     if (!hasHydrated) return;
     if (profiles.length === 0) {
       const fallbackProfile: Profile = {
-        id: 'default-profile-recovered-' + Date.now(),
+        id: generateId('default-profile-recovered'),
         name: '既定プロファイル',
         mcVersion: '1.20.1',
         loader: 'Fabric',
@@ -210,7 +216,7 @@ export const useProfiles = (
     description: string,
     mods: ModItem[] = []
   ) => {
-    const newId = 'profile-' + Date.now();
+    const newId = generateId('profile');
     const newProfile: Profile = { id: newId, name, mcVersion, loader, description, mods };
     setProfiles((prev) => [...prev, newProfile]);
     setCurrentProfileId(newId);
@@ -218,7 +224,7 @@ export const useProfiles = (
   };
 
   const handleDuplicateProfile = () => {
-    const newId = 'profile-' + Date.now();
+    const newId = generateId('profile');
     const duplicated: Profile = {
       ...currentProfile,
       id: newId,
@@ -233,10 +239,21 @@ export const useProfiles = (
   const handleSaveEditedProfile = (name: string, mcVersion: string, loader: string, description: string) => {
     // 最新の currentProfileId を参照 (stale closure対策)
     const targetId = currentProfileIdRef.current;
+    const before = profilesRef.current.find((p) => p.id === targetId);
+    const compatChanged =
+      before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
+
     setProfiles((prev) =>
       prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
     );
     showToast('プロファイルを更新しました', 'success');
+    if (compatChanged) {
+      // 既存Modのバージョン互換性が保証されなくなる旨を明示的に警告
+      showToast(
+        'MC/ローダーを変更しました。「選択中のMod」タブでバージョン再選択を推奨',
+        'warning'
+      );
+    }
   };
 
   const handleDeleteProfile = async (id: string) => {
@@ -264,15 +281,20 @@ export const useProfiles = (
   const handleToggleMod = async (projectId: string, e?: React.MouseEvent, silent = false) => {
     if (e && e.stopPropagation) e.stopPropagation();
 
-    // --- Ref 経由で常に最新の profiles / currentProfileId を読む (stale closure 対策) ---
-    const latestProfileId = currentProfileIdRef.current;
-    const latestProfile =
-      profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
-    if (!latestProfile) return;
+    // 同一 projectId への並列トグル呼び出しを防止 (連打・重複クリック対策)
+    if (toggleInFlightRef.current.has(projectId)) return;
+    toggleInFlightRef.current.add(projectId);
 
-    const existsIndex = latestProfile.mods.findIndex(
-      (m) => m.id === projectId || m.slug === projectId
-    );
+    try {
+      // --- Ref 経由で常に最新の profiles / currentProfileId を読む (stale closure 対策) ---
+      const latestProfileId = currentProfileIdRef.current;
+      const latestProfile =
+        profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
+      if (!latestProfile) return;
+
+      const existsIndex = latestProfile.mods.findIndex(
+        (m) => m.id === projectId || m.slug === projectId
+      );
 
     if (existsIndex >= 0) {
       // --- 削除 ---
@@ -362,6 +384,9 @@ export const useProfiles = (
       } catch (err) {
         if (!silent) showToast('Modの追加に失敗しました', 'warning');
       }
+    }
+    } finally {
+      toggleInFlightRef.current.delete(projectId);
     }
   };
 

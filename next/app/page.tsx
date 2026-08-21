@@ -1,61 +1,65 @@
 // ============================================================================
-// Home ページ プレースホルダ (Phase 2 版)
+// Home ページ (Phase 3 版)
 //
-// Phase 3 で ISR + 実データ (Modrinth 検索結果) に差し替えます。
-// 現段階は Phase 2 で移植した AppShell / Toast / Confirm / Header /
-// BottomNav / モーダル群のうち、Server Component で描画可能な部分を
-// 使い、Vite 版と同じ視覚テーマ (glass-panel / theme-* クラス) が
-// 反映されていることを確認するためのショーケースです。
+// Server Component として初期 24 件を Modrinth /search から SSR 取得 →
+// Client Component (<HomeInteractive />) にハイドレート。
+//
+// ISR: 90 分毎に再生成 (docs/NEXTJS_MIGRATION_PLAN.md §7 参照)。
+//
+// プロファイル状態はブラウザの LocalStorage 由来のため、SSR 段階では
+// デフォルトプロファイル (1.20.1 / Fabric) で検索を実行する。Phase 5 で
+// AppShell 内の useProfiles Client Context と統合すると、Client 側で
+// プロファイル切替後に再フェッチが走る形になる。
 // ============================================================================
 
-export default function HomePage() {
+import type { Profile } from '@/types';
+import { fetchLatestMinecraftVersions, fetchModrinthSearch } from '@/lib/modrinth/server';
+import { HomeInteractive } from '@/components/HomeInteractive';
+
+// 90分毎に ISR 再生成 (fetch のキャッシュ TTL は個別に指定済)
+export const revalidate = 5400;
+
+// 初期表示用のデフォルトプロファイル (Vite 版 useProfiles と同値)
+const DEFAULT_PROFILE: Profile = {
+  id: 'default-profile',
+  name: '1.20.1 Fabric 軽量化・ユーティリティ',
+  mcVersion: '1.20.1',
+  loader: 'Fabric',
+  description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
+  mods: []
+};
+
+const SEARCH_LIMIT = 24;
+
+export default async function HomePage() {
+  // 初期 24 件 + Minecraft バージョン一覧を並列で取得
+  // どちらか片方が失敗してもページ全体が落ちないよう try/catch でフォールバック
+  const [searchResult, mcVersions] = await Promise.all([
+    fetchModrinthSearch({
+      query: '',
+      mcVersion: DEFAULT_PROFILE.mcVersion,
+      loader: DEFAULT_PROFILE.loader,
+      category: 'All',
+      sortBy: 'popular',
+      offset: 0,
+      limit: SEARCH_LIMIT
+    }).catch((e) => {
+      console.warn('[DropMod] Home SSR search failed:', e);
+      return { hits: [], total_hits: 0, offset: 0, limit: SEARCH_LIMIT };
+    }),
+    fetchLatestMinecraftVersions().catch(() => [])
+  ]);
+
+  const initialHasMore = searchResult.hits.length >= SEARCH_LIMIT;
+
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-1 w-full">
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 border border-emerald-500/20 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="logo-icon w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black shadow-lg ring-1 ring-white/30">
-            <i className="fa-solid fa-cube text-xl" aria-hidden />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">DropMod</h1>
-            <p className="text-xs theme-text-muted">
-              Phase 2 完了 — 共通コンポーネント移植済み
-            </p>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-500/20 pt-4 space-y-2">
-          <p className="text-sm theme-text-secondary leading-relaxed">
-            Phase 2 では以下を移植しました:
-          </p>
-          <ul className="text-xs theme-text-muted list-disc pl-5 space-y-1 font-mono">
-            <li>types.ts / constants / utils</li>
-            <li>hooks: useToasts / useConfirm / useModalA11y</li>
-            <li>Header / BottomNav / Toast / Confirm / モーダル群 10 個</li>
-            <li>lib/modrinth/client.ts (旧 services/api.ts)</li>
-            <li>AppShell (Toast + Confirm + theme を統合する Client Shell)</li>
-          </ul>
-        </div>
-
-        <div className="border-t border-slate-500/20 pt-4 flex flex-wrap gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30">
-            Next.js 16 + App Router
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 theme-text-blue border border-blue-500/30">
-            React 19
-          </span>
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 theme-text-amber border border-amber-500/30">
-            Tailwind 4
-          </span>
-        </div>
-
-        <div className="border-t border-slate-500/20 pt-4">
-          <p className="text-xs theme-text-muted">
-            <i className="fa-solid fa-arrow-right theme-text-brand mr-1" aria-hidden />
-            次: Phase 3 — Route Handlers + Home ページ ISR (初期 24 件を SSR)
-          </p>
-        </div>
-      </div>
+    <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
+      <HomeInteractive
+        profile={DEFAULT_PROFILE}
+        initialHits={searchResult.hits}
+        initialMcVersions={mcVersions}
+        initialHasMore={initialHasMore}
+      />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
+import { AppShell } from '@/components/AppShell';
 import './globals.css';
 
 // FontAwesome アイコンをグローバル読み込み (Vite 版と同一)
@@ -36,16 +37,17 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root Layout (Phase 1 版)
+ * Root Layout (Phase 2 版)
  *
- * Phase 4 で Parallel Route `@modal` slot を受け取る形に拡張されます。
- * 現段階は children だけを描画する最小構成。
+ * AppShell (Client Component) が Toast/Confirm/theme を管理し、
+ * その内側で children (各ページ) を描画する。
+ * Phase 4 で Parallel Route `@modal` slot を受け取る形に拡張予定。
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja" className="dark">
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

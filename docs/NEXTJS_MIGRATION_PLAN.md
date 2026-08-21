@@ -706,32 +706,48 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 2: 共通コンポーネント移植 (1.5日)
+### 🔹 Phase 2: 共通コンポーネント移植 (1.5日) ✅ **完了 (2026-08-21)**
 
 **目的:** Header / BottomNav / Toast / Confirm / モーダル群など、ページ非依存の UI を `next/components/` にコピー・調整。
 
 **作業:**
-- [ ] `next/components/`, `next/hooks/`, `next/lib/utils/`, `next/lib/constants/`, `next/types.ts` を作成
-- [ ] 以下を `src/` から `next/` にコピー:
-  - components: `Header`, `BottomNav`, `ToastContainer`, `ConfirmDialog`, `CustomDropdown`, `MarkdownRenderer`, `NewProfileModal`, `EditProfileModal`, `DependencyCheckModal`, `ZipProgressModal`
+- [x] `next/components/`, `next/hooks/`, `next/lib/utils/`, `next/lib/constants/`, `next/lib/modrinth/`, `next/types.ts` を作成
+- [x] 以下を `src/` から `next/` にコピー:
+  - components: `Header`, `BottomNav`, `ToastContainer`, `ConfirmDialog`, `CustomDropdown`, `MarkdownRenderer`, `NewProfileModal`, `EditProfileModal`, `DependencyCheckModal`, `ZipProgressModal` (計 10 個)
   - hooks: `useToasts`, `useConfirm`, `useModalA11y`
   - utils: `download`, `hash`, `id`
   - constants: `categories`
   - types.ts
-- [ ] 各ファイルに **`"use client"`** ディレクティブを冒頭に追加 (ブラウザ API を使うため)
-- [ ] `next/components/AppShell.tsx` (Client) を新規作成:
-  - `useToasts` / `useConfirm` / theme state / `ThemeProvider` 相当
-  - Header + BottomNav + Toast + Confirm を配置
-  - children (page) + modal (parallel slot) の両方を受け取る
-- [ ] `next/lib/modrinth/client.ts` に既存 `services/api.ts` の内容をコピー (Client 用フォールバック fetch)
+- [x] 各ファイルに **`"use client"`** ディレクティブを冒頭に追加 (ブラウザ API を使うため)
+- [x] `next/components/AppShell.tsx` (Client) を新規作成
+  - Phase 2 版: `useToasts` / `useConfirm` / theme state (dark 固定) を統合
+  - Header + BottomNav は `useProfiles` に依存するため Phase 5 で AppShell 内に取り込む
+  - Phase 4 で modal (parallel slot) を受け取る形に拡張予定
+- [x] `next/lib/modrinth/client.ts` に既存 `services/api.ts` の内容をコピー (import path を `@/*` alias に修正)
+- [x] 全 import path を相対 → `@/*` alias に統一 (機械的 sed 一括置換)
+
+**Phase 3-5 で個別対応するため今回 Phase 2 では移植しなかったファイル:**
+- `HomeTab` (Phase 3 で HomeInteractive に置換)
+- `ModsTab`, `SettingsTab` (Phase 5)
+- `ModDetailModal` (Phase 4 で ModDetailModalShell に置換)
+- `ModCard` (Phase 3 で HomeInteractive の中で使用)
+- `ErrorBoundary` (Next.js の `app/error.tsx` に置換)
+- `useProfiles`, `useModSearch`, `useDependencyCheck`, `useZipExport`, `useZipImport` (Phase 3-5)
+
+**追加した依存パッケージ (`next/package.json`):**
+- `@fontsource/inter`, `@fontsource/jetbrains-mono`, `@fortawesome/fontawesome-free` (Phase 1 の追加分)
+- `gsap 3.15.0` (ToastContainer / CustomDropdown で使用)
+- `react-markdown 10.1.0` (Vite 版は 9.x だが v10 も既存の pre/code オーバーライドで動作)
+- `remark-gfm 4.0.1`, `rehype-raw 7.0.0`, `rehype-sanitize 6.0.0`
+- `jszip 3.10.1` (Phase 5 の useZipExport 用に事前追加)
 
 **PR:** `feat(next): Phase 2 - 共通コンポーネント (Header/BottomNav/Modal群) を next/ に移植`
 
 **DoD:**
-- ✅ `next/app/page.tsx` を `<HomeInteractive />` プレースホルダに置換して、Header + BottomNav が表示される
-- ✅ Confirm ダイアログ / Toast が動作
-- ✅ TypeScript strict エラー 0 件
-- ✅ 既存 Vite 版が変わらず稼働
+- [x] `next/app/page.tsx` を Phase 2 のショーケースに更新、Vite 版と同じ視覚テーマ (glass-panel / theme-* クラス) が反映されている
+- [x] TypeScript strict エラー 0 件 (Vite 側 / Next.js 側 両方)
+- [x] `pnpm build` (Next.js production) 成功
+- [x] 既存 Vite 版が変わらず稼働 (`vite build` 成功)
 
 ---
 

@@ -317,6 +317,8 @@ Vite 版と Next 版でファイル境界が変わった箇所の対応関係を
 | 項目 | 影響 | 対応方針 |
 | --- | --- | --- |
 | **React ErrorBoundary が消失** | React ツリー内の描画例外時、Vite 版はカスタム UI + 「ローカル削除して再読込」ボタンが出たが、Next 版は Next.js デフォルトの 500 ページ | Phase 8 で `app/error.tsx` + `app/global-error.tsx` を追加予定 (Vite 版 `ErrorBoundary.tsx` のロジックを移植) |
+| **Hero Banner の「登録 MOD 数」パネル消失** | Vite 版では Home 画面右側に大きく Mod カウントが表示されていた (§11.3 参照)。Next.js 版では消えたため BottomNav バッジで代替 | Phase 8 で `components/HomeInteractive.tsx` の Hero Banner に復元推奨 |
+| **`<title>` タグに "DropMod" 重複** | `/mod/[slug]` で `<title>${slug} - DropMod \| DropMod</title>` となる (§11.6 参照)。`layout.tsx` の `title.template` と `generateMetadata` の title 両方が "DropMod" を含む | `app/mod/[slug]/page.tsx` の `title:` から ' - DropMod' を削除する 5 分修正 |
 
 ### 9.2 Vite 版から仕様継承済み (差分としては現れないが担保されている)
 
@@ -360,6 +362,276 @@ cp .archive/vite/{index.html,vite.config.ts,tsconfig.json,package.json,pnpm-lock
 pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+---
+
+## 11. UI/UX 実測差分 (両バージョンをローカルで並行起動して比較)
+
+### 11.1 検証方法
+
+両方をローカルで **production build → 起動** して、curl / 静的 HTML 解析ツールで挙動を実測。sandbox 環境の外部通信制約で Modrinth API は不通なため、以下 4 項目に焦点を絞る:
+
+| 検証対象 | ツール | 目的 |
+| --- | --- | --- |
+| **SSR HTML 差分** | `curl -s` + Python HTML パーサ | JavaScript 実行前に画面にあるものを比較 |
+| **HTTP レスポンスヘッダ** | `curl -I` | セキュリティ / キャッシュ / SEO ヘッダ |
+| **各ページのステータス** | `curl -so /dev/null -w '%{http_code}'` | 404 応答, SPA fallback 挙動 |
+| **JSX ソース比較** | `diff` + `sed -n` | UI 要素の追加 / 削除 / 属性変更 |
+
+起動コマンド:
+```bash
+# Vite 版 (旧)
+cd .archive/vite/  # (実際は一時ディレクトリに展開)
+pnpm install --frozen-lockfile
+pnpm build            # dist/ 生成
+pnpm preview --host 0.0.0.0 --port 4173
+
+# Next.js 版 (新)
+cd /home/user/DropMod
+pnpm install --frozen-lockfile
+pnpm build            # .next/ 生成
+pnpm start --port 3100 --hostname 0.0.0.0
+```
+
+Playwright 等の自動スクリーンショットは sandbox から Chromium バイナリを取得できず断念 (Google CDN 到達不可)。代替として上記の静的解析ベースで徹底比較しました。
+
+### 11.2 SSR HTML の情報量差分 (最重要)
+
+| ページ | Vite 版 | Next.js 版 |
+| --- | ---: | ---: |
+| `/` (Home) | **683 bytes** (`<div id="root"></div>` のみ) | **25,211 bytes** (Header + Hero + Search + Category + Grid skeleton + BottomNav 完全描画) |
+| `/mods` | 683 bytes (SPA fallback) | 22,134 bytes (Empty state 完全描画) |
+| `/settings` | 683 bytes (SPA fallback) | 25,130 bytes (テーマ切替 + ZIP UI + Profile 一覧 完全描画) |
+| `/nonexistent` | **200 OK / 683 bytes** (SPA fallback で Home HTML を返す = 死んだ URL でも 200) | **404 / 11,061 bytes** (正しい 404 ページ) |
+
+**37 倍以上の情報量差**。Next.js 版は JavaScript 実行前に既にほぼ完全な UI が見える。これは:
+
+- **SEO クローラーがコンテンツを直接見られる** (Vite 版は空の `<div id="root">` しか見えないため実質クロール不可)
+- **初期 LCP 向上** (First Meaningful Paint が JavaScript を待たない)
+- **JavaScript 無効ブラウザでも UI が表示される** (フォームは動かないが情報は読める)
+
+具体的に Next.js 版 SSR で見える要素:
+
+```
+Home (/) の SSR HTML 内で描画される DOM 要素 (11 個の id):
+  #toast-container       (空だが空 div は準備済)
+  #app-header            (Header 全体 + プロファイル dropdown 選択済)
+  #header-theme-toggle   (テーマ切替ボタン)
+  #header-theme-icon     (moon アイコン)
+  #tab-home              (Home セクション)
+  #hero-banner           (プロファイル情報 + 編集/複製/依存チェックボタン)
+  #search-bar-panel      (検索入力 + ソート dropdown + カテゴリ 10 個)
+  #mod-grid              (Mod カード skeleton or Empty state)
+  #infinite-scroll-sentinel
+  #bottom-nav            (3 タブすべて描画済)
+  #_R_                   (Next.js Router 予約)
+
+button として初期描画される最初のカテゴリラベル 10 個:
+  「すべて」「装飾」「工業」「魔法」「装備」
+  「ストレージ」「軽量化」「ユーティリティ」「冒険」「ワールド生成」
+```
+
+これらは **Vite 版では JavaScript 実行後にしか存在しません**。
+
+### 11.3 Hero Banner の UI 要素差分 (Vite → Next で意図的に削除された要素あり)
+
+Vite 版 `HomeTab.tsx` の Hero Banner 右側には **登録 MOD 数を強調表示する専用パネル** がありました:
+
+```jsx
+{/* Vite 版のみ (Next.js 版では削除) */}
+<div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-3.5 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-md ring-1 ring-white/20 shrink-0">
+      <i className="fa-solid fa-cubes" aria-hidden="true" />
+    </div>
+    <div>
+      <div className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
+        登録 MOD 数
+      </div>
+      <div className="text-2xl sm:text-3xl font-black theme-text-brand font-mono tracking-tight leading-none mt-0.5">
+        {modCount}
+      </div>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => onSwitchTab('mods')}
+    className="sm:hidden px-3 py-1.5 text-xs font-bold bg-emerald-600 text-slate-950 rounded-lg"
+  >
+    確認
+  </button>
+</div>
+```
+
+**Next.js 版では消失**しています。これは Phase 3 で `HomeInteractive.tsx` を新規実装した際、Vite `HomeTab.tsx` からポート漏れ (元の props に `modCount` を渡す設計がなかった) と推測されます。
+
+**影響:** モバイル/デスクトップとも、Home 画面から「現在のプロファイルに何個 Mod が入っているか」の情報が一目で分からなくなりました。代わりに BottomNav の「選択中のMod」タブに badge (数字) が付くので致命的ではないが、Vite 版比では**明確な UX 退行**です。
+
+**推奨:** Phase 8 で `HomeInteractive.tsx` の Hero Banner に該当パネルを復元。
+
+### 11.4 Hero Banner ボタン (Vite → Next で軽微変更)
+
+| Vite 版ボタン | Next.js 版ボタン | 差分 |
+| --- | --- | --- |
+| `<span>編集</span>` | `プロファイルを編集` | ラベル拡張 (親切化) |
+| `<span>複製</span>` | `複製` | 同一 |
+| `<span>依存・競合チェック</span>` | `依存・競合チェック` | 同一 |
+
+角丸クラスが `rounded-lg` → `rounded-xl` (12px → 16px、若干大きく) に変更。Vite 版は明示的な `text-[11px]` アイコンサイズだが Next.js 版はデフォルト。
+
+### 11.5 ModDetailModal のフッター動作差分
+
+| 要素 | Vite `ModDetailModal.tsx` | Next `ModDetailModalShell.tsx` |
+| --- | --- | --- |
+| フッター折り返し | `flex justify-end gap-2` (1 行固定) | `flex justify-end gap-2 ... flex-wrap` (狭い画面で折り返し可) |
+| 閉じるボタン | 常に「閉じる」 | modal バリアント: 「閉じる」 / page バリアント: 「🏠 ホームに戻る」 |
+| .jar 直DL ボタン | 単純ボタン | **`isJarDownloading` state で spinner 表示 + disabled** (連打防止) |
+| 追加/削除ボタン | 単純ボタン | **`isTogglePending` state で spinner 表示 + disabled** (連打防止) |
+| 追加/削除後の挙動 | `onToggleMod(); onClose();` (直列同期) | `await handleToggleMod(); router.back();` (非同期完了待ち) |
+
+**改善点 (Next.js 版で向上):**
+- 連打時の重複トグル暴発が防がれる (Vite 版は連打すると重複追加リスクがあった)
+- モバイルでボタン列が長すぎる場合に自動折り返し
+
+**変更点 (機能変化):**
+- Vite: モーダルを閉じる = React state のフラグを false に。Next: URL を戻すため `router.back()`。ブラウザ履歴が積まれる。
+
+### 11.6 title タグの重複バグ (Next.js 版で新規発生)
+
+Modrinth API 到達不可時 (build 時など) の `/mod/[slug]` の `<title>` タグを実測:
+
+```html
+<title>sodium - DropMod | DropMod</title>
+```
+
+**"DropMod" が 2 回出現しています**。原因は 2 箇所で "DropMod" が結合されているため:
+
+- `app/layout.tsx`: `title.template = '%s | DropMod'`
+- `app/mod/[slug]/page.tsx`: `generateMetadata` の fallback で `title: '${slug} - DropMod'`
+
+**推奨修正:**
+```typescript
+// app/mod/[slug]/page.tsx
+return {
+-  title: `${slug} - DropMod`,
++  title: slug,   // layout.tsx の template が ' | DropMod' を付ける
+   ...
+};
+```
+
+正常系 (Modrinth 到達成功時) も `${project.title} - DropMod` → `${project.title} | DropMod` に統一するのが望ましい。
+
+Vite 版は `title` タグが `<title>DropMod - Minecraft Mod Downloader</title>` 固定 (静的 HTML) のため、この問題はそもそも発生しない。
+
+### 11.7 HTTP レスポンスヘッダの差分
+
+| ヘッダ | Vite 版 | Next.js 版 |
+| --- | --- | --- |
+| `X-Content-Type-Options` | (無) | `nosniff` ✅ |
+| `Referrer-Policy` | (無) | `strict-origin-when-cross-origin` ✅ |
+| `X-Frame-Options` | (無) | `SAMEORIGIN` ✅ |
+| `Permissions-Policy` | (無) | `camera=(), microphone=(), geolocation=(), interest-cohort=()` ✅ |
+| `Cache-Control` | `no-cache` (dev-server デフォルト) | `s-maxage=300, stale-while-revalidate=31535700` (ISR 5min + 1y SWR) |
+| `Vary` | `Origin` | `rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding` |
+| `x-nextjs-cache` | (無) | `HIT` (2回目以降のリクエスト) |
+| `x-nextjs-prerender` | (無) | `1` (SSG プレレンダー済み) |
+
+すべて Next.js 化で新規獲得したもの。**CDN 効率とセキュリティが顕著に改善**。
+
+### 11.8 バンドルサイズ差分
+
+| 種別 | Vite 版 (dist/) | Next.js 版 (.next/static/) | 差 |
+| --- | ---: | ---: | ---: |
+| JS 合計 | 766 KB (単一 chunk) | 1,286 KB (11 chunks に分割) | +520 KB |
+| CSS 合計 | 214 KB (単一) | 171 KB (2 chunks) | -43 KB |
+| **合計** | **980 KB** | **1,457 KB** | **+477 KB (+48%)** |
+
+Next.js 版のほうが **合計は大きい** が、以下の点で実質的なユーザー体験は改善:
+
+- **route-based code splitting**: `/mods` にアクセスした時は `HomeInteractive.tsx` のバンドルは読まれない (Vite 版は単一 SPA なので初回に全部落とす)
+- **`<link rel="preload">` / `<link rel="preconnect">`** を SSR HTML 内に自動挿入 (Vite 版なし)
+- **`fetchPriority="low"`** を router 用 chunk に付与 (メイン CSS/JS を優先)
+
+初期 First Load JS の実効サイズは `next build` の出力から確認できるが、実測で最も重要な chunk 上位:
+- `1qtbr5bh5dkuq.js` (331 KB) = React DOM
+- `2_idiv-r9kevu.js` (253 KB) = App Shell (AppContext + hooks + FontAwesome)
+- `3_7zh56wg04y1.js` (229 KB) = React
+- `3fpx60_ff5yua.js` (156 KB) = Modrinth ラッパ + JSZip 部分
+
+### 11.9 URL 設計の根本差分
+
+| 動作 | Vite 版 | Next.js 版 |
+| --- | --- | --- |
+| `/mods` を直接開く | 200 OK (SPA fallback で Home HTML → JS が pathname 読んで内部で切替、ただし初回は Home が一瞬見える) | **200 OK でネイティブに /mods 描画** (Home が一瞬見えない) |
+| `/mod/sodium` を直接開く | 200 OK (SPA fallback で Home HTML → 実装なし、URL が変わっただけで実質 dead link) | **200 OK で /mod/sodium フルページ描画** (SEO/共有 URL 対応) |
+| `/nonexistent` を直接開く | **200 OK** (Vite preview は SPA fallback で必ず Home を返す) | **404** (正しい応答) |
+| Home のカードクリック | React state 切替 (URL 変わらず) | `router.push('/mod/[slug]')` → **モーダル表示 + URL 更新** (共有可、ブラウザ戻る対応) |
+| Home ↔ Mods タブ切替 | React state 切替 (URL 変わらず、リロードで Home に戻る) | `router.push('/mods')` → **URL 更新**、リロードしても `/mods` |
+
+**Next.js 版で新規獲得:**
+- ディープリンク (URL 共有時に正しいページが開く)
+- ブラウザバック / フォワード / リロード が期待通り動く
+- Google 検索結果から `/mod/sodium` に直接ランディング可能
+
+### 11.10 追加された Next.js 特有機能
+
+以下は Vite 版に **概念自体が存在しない** 機能:
+
+| 機能 | エンドポイント | 実装 |
+| --- | --- | --- |
+| **RSC ペイロード配信** | `/mod/sodium?_rsc=xxx` に自動リダイレクト | `Vary: rsc` ヘッダで判別、soft nav 時にペイロードのみ返す |
+| **sitemap** | `/sitemap.xml` | 静的3ルート + 人気Mod100件 |
+| **robots** | `/robots.txt` | `Allow: /`, `Disallow: /api/`, `Sitemap:` |
+| **health check** | `/api/health` | `{status:'ok',service:'DropMod Next API'}` |
+| **Route Handler** | `/api/modrinth/*` | Vite の Hono プロキシと同等 (置換) |
+| **OGP メタタグ** | 全ページの `<head>` | `og:title/og:description/og:site_name/og:locale/og:type` |
+| **Twitter Card** | 全ページの `<head>` | `twitter:card/title/description` |
+| **canonical URL** | `/mod/[slug]` | `<link rel="canonical" href="/mod/${slug}">` |
+| **Static prerendering** | `/mod/[slug]` 人気100件 | build 時に `generateStaticParams` |
+
+### 11.11 UI/UX 差分の総括表
+
+| # | 差分 | 種別 | 影響 | 対応 |
+| --- | --- | --- | --- | --- |
+| 1 | Hero Banner から「登録 MOD 数」パネルが消失 | **退行** | Home 画面情報密度低下 | Phase 8 で復元推奨 |
+| 2 | `<title>` タグに "DropMod" 重複 | **バグ** | SEO 表示品質低下 | 5 分で修正可能 |
+| 3 | Home Hero Banner のボタン ラベル拡張 (「編集」→「プロファイルを編集」) | 改善 | 意図が明確 | - |
+| 4 | ModDetailModal のフッターに spinner / disabled 追加 | 改善 | 連打事故防止 | - |
+| 5 | ModDetailModal のフッターに `flex-wrap` | 改善 | モバイル UI 破綻回避 | - |
+| 6 | ModDetailModal の閉じるボタンが variant 別 (「閉じる」 / 「ホームに戻る」) | 改善 | ページ経路に応じた導線 | - |
+| 7 | BottomNav の JSX は完全同一 | (無変更) | - | - |
+| 8 | Header は import path 以外完全同一 | (無変更) | - | - |
+| 9 | SSR HTML 情報量: Vite 683B → Next 25KB | 大幅改善 | SEO / LCP 大幅向上 | - |
+| 10 | 404 レスポンス: Vite 常時 200 → Next 正しい 404 | 改善 | 検索エンジン品質シグナル | - |
+| 11 | セキュリティヘッダ 4 種新規 | 改善 | XSS / clickjacking 対策 | - |
+| 12 | Cache-Control: `no-cache` → `s-maxage=300, SWR=1y` | 大幅改善 | CDN 効率大幅向上 | - |
+| 13 | バンドル合計: 980KB → 1457KB (+48%) | 中立 | route-splitting で実質改善 | - |
+| 14 | URL 直開き / 共有 / リロード対応 | 大幅改善 | ディープリンク成立 | - |
+| 15 | sitemap.xml / robots.txt / OGP / canonical 新規 | 大幅改善 | SEO 対応の質的向上 | - |
+| 16 | `router.back()` によるモーダル閉じ (履歴が積まれる) | 変更 | 「ブラウザ戻る」で自然に閉じる | - |
+| 17 | プロファイル切替の一瞬 Home が見える (SPA fallback がなくなったため) | 改善 | 各ページ直接描画 | - |
+
+### 11.12 制限事項 (今回の実測でカバーできなかった項目)
+
+sandbox の外部通信制限と Chromium 不在により、以下は **手動確認が必要** です:
+
+- 実際の Mod カードのグリッド表示（Modrinth 到達要）
+- Mod カードクリック → モーダル → 閉じる の**視覚的な動画**
+- カテゴリボタン切替時の**アニメーション**
+- Mod 詳細のギャラリー画像**表示**
+- テーマ切替時の**色の変化**
+- LocalStorage 移行 (旧 `craftforge_state_v2` → 新 `dropmod_state_v2`) 実挙動
+- Lighthouse スコア (Performance / Accessibility / SEO)
+- モバイルレイアウト (Chrome DevTools iPhone シミュレーション)
+- Facebook Debugger での OGP プレビュー
+- 実 Vercel 環境での ISR 動作
+
+これらは Vercel 本番デプロイ後の `docs/DEPLOY.md` §5 チェックリストで確認する項目と重なっています。
+
+---
+
+*§11 は 2026-08-21 に Vite 版 (Phase 0 開始時点 `.archive/vite/`) と Next.js 版 (HEAD `260075c`) を並行起動して静的解析で比較した結果です。Playwright 等の動的スクリーンショット比較は sandbox の Chromium 不在で不可能だったため、curl + HTML パーサ + JSX ソース比較で徹底代替しました。*
 
 ---
 

@@ -618,14 +618,14 @@ export { handler as GET, handler as POST };
 ### 概略ガントチャート
 
 ```
-Phase 0: 準備・調査              ▓ (0.5日)
-Phase 1: next/ 骨組み作成        ▓▓ (1日)
-Phase 2: 共通コンポ移植          ▓▓▓ (1.5日)
-Phase 3: Route Handlers + Home   ▓▓▓ (1.5日)
-Phase 4: /mod/[slug] + Modal     ▓▓▓▓ (2日)
-Phase 5: /mods + /settings       ▓▓ (1日)
-Phase 6: 統合切替 + Vite 削除    ▓▓ (1日)
-Phase 7: Vercel 本番検証         ▓ (0.5日)
+Phase 0: 準備・調査              ▓ (0.5日)   ✅ 完了
+Phase 1: next/ 骨組み作成        ▓▓ (1日)     ✅ 完了
+Phase 2: 共通コンポ移植          ▓▓▓ (1.5日)  ✅ 完了
+Phase 3: Route Handlers + Home   ▓▓▓ (1.5日)  ✅ 完了
+Phase 4: /mod/[slug] + Modal     ▓▓▓▓ (2日)   ✅ 完了
+Phase 5: /mods + /settings       ▓▓ (1日)     ✅ 完了
+Phase 6: 統合切替 + Vite アーカイブ ▓▓ (1日)  ✅ 完了
+Phase 7: Vercel 本番検証         ▓ (0.5日)   ⏳ リポジトリ側完了 / Vercel 操作は要ユーザー実施
                                     -----
                                      計 約 9 営業日 (実装のみ)
 ```
@@ -995,41 +995,97 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 7: Vercel 本番検証 (0.5日)
+### 🔹 Phase 7: Vercel 本番検証 (0.5日) ⏳ **リポジトリ側完了 / Vercel 側は要ユーザー操作**
 
 **目的:** Vercel にデプロイして本番相当の環境で最終確認。
 
-**作業:**
-- [ ] Vercel プロジェクト作成 → GitHub 連携 → プレビューデプロイ実行
-- [ ] `vercel.json` を作成 (必要に応じてリージョン指定):
+**リポジトリ側 (私が実施済):**
+- [x] `vercel.json` を新規作成:
   ```json
   {
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "nextjs",
     "regions": ["hnd1"],
-    "functions": {
-      "app/api/modrinth/[...path]/route.ts": { "runtime": "nodejs20.x" }
-    }
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "github": { "silent": false }
   }
   ```
-- [ ] 本番 URL で以下をチェック:
-  - Home 初期 24 件が **HTML 内に含まれている** (view-source で確認)
-  - Mod カードクリック → モーダル
-  - モーダル閉じる → `/`
-  - `/mod/xyz` 直接アクセス → フルページ
-  - `og:image` / `og:title` が Facebook Debugger 等で正しく反映
-  - `/api/health` が Vercel でも 200
-  - Modrinth プロキシ経由の検索・詳細取得が動作
-  - モバイル (Chrome DevTools iPhone シミュレーション) でレイアウト崩れなし
-- [ ] Lighthouse 計測:
-  - Performance ≥ 90
-  - Accessibility ≥ 90
-  - SEO = 100
+  ※ Route Handler の `runtime` は Next.js 16 が自動判定するため明示不要 (`nextjs` フレームワーク検出と競合するケースがあるため意図的に外している)
+- [x] `next.config.ts` に標準セキュリティヘッダを追加 (全ページ):
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `X-Frame-Options: SAMEORIGIN`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
+  - CSP は rehype-sanitize に任せて未設定 (Markdown 内 HTML 対応)
+- [x] `app/layout.tsx` に `metadataBase` 解決関数を追加 (`NEXT_PUBLIC_SITE_URL` → `VERCEL_URL` → `http://localhost:3000` の順)
+- [x] `app/layout.tsx` の `metadata` を刷新:
+  - `title.template = '%s | DropMod'` で子ページのタイトルを自動連結
+  - `openGraph` (siteName/locale/type/title/description) + `twitter` (card/title/description) をルートに設定
+- [x] `app/mod/[slug]/page.tsx` の `generateMetadata` に:
+  - `alternates.canonical = /mod/${slug}`
+  - `openGraph.url = /mod/${slug}` (相対、metadataBase で絶対化)
+  - フォールバック時 (fetch 失敗) も canonical を出力
+- [x] `app/sitemap.ts` を新規作成 (App Router 標準):
+  - 静的ルート 3 件 (`/`, `/mods`, `/settings`) + 人気 Mod 100 件を動的取得
+  - `revalidate = 3600` で 1 時間 ISR
+  - Modrinth 到達不可時は静的ルートのみを返し build 継続
+- [x] `app/robots.ts` を新規作成:
+  - `Allow: /`, `Disallow: /api/`
+  - `Sitemap:` に絶対 URL を明示
+- [x] `.env.example` を Vercel 前提の内容に刷新 (`NEXT_PUBLIC_SITE_URL`, `MODRINTH_USER_AGENT` の推奨値と Scope 説明)
+- [x] `docs/DEPLOY.md` を新規作成 (Vercel プロジェクト作成手順・環境変数一覧・7 段階検証チェックリスト・Lighthouse 目標・トラブルシューティング・ロールバック手順)
+- [x] `README.md` に「Vercel デプロイ」節を追加 (docs/DEPLOY.md への導線)
 
-**PR:** `feat(deploy): Phase 7 - Vercel 本番デプロイ設定を追加`
+**ローカル検証結果 (`pnpm build` + `pnpm start`):**
+- ✅ `pnpm exec tsc --noEmit`: 0 エラー
+- ✅ `pnpm build`: 成功 (下記 Route Table)
+- ✅ `curl -I /`: セキュリティヘッダ 4 種全付与、`x-nextjs-cache: HIT`、`Cache-Control: s-maxage=300, stale-while-revalidate=31535700`
+- ✅ `curl /robots.txt`: 正しく Allow/Disallow/Sitemap を出力
+- ✅ `curl /sitemap.xml`: 静的 3 ルート出力 (Modrinth 到達不可のため Mod 100 件は空、Vercel 本番では自動生成)
+- ✅ `curl /api/health`: `{"status":"ok","service":"DropMod Next API"}`
+- ✅ Home HTML に `og:title` / `og:description` / `og:site_name` / `og:locale` / `og:type` / `twitter:card` / `twitter:title` / `twitter:description` が全出力
+- ✅ Home HTML に Hero Banner + Search Panel + Mod Grid の Server Component が含まれる (Modrinth 空フォールバック表示だが SSR 動作は正常)
+
+**Route Table (本番構成):**
+```
+○ /                       (Static, 5m/1y)
+○ /_not-found
+○ /mods                   (Static)
+○ /settings               (Static)
+● /mod/[slug]             (SSG + ISR, generateStaticParams 人気100件)
+○ /robots.txt             (Static)
+○ /sitemap.xml            (ISR 1h)
+ƒ /(.)mod/[slug]          (Intercepting Modal)
+ƒ /[...catchAll]          (@modal catchAll)
+ƒ /api/health
+ƒ /api/modrinth/[...path]
+```
+
+**ユーザー側 (Vercel 操作) に依頼中:**
+- [ ] Vercel Dashboard で `shiratama644/DropMod` をインポート (Framework Preset = Next.js が自動検出)
+- [ ] Environment Variables を設定:
+  - `NEXT_PUBLIC_SITE_URL` = `https://<your-vercel-domain>` (もしくはカスタムドメイン)
+  - `MODRINTH_USER_AGENT` = 任意の推奨 UA (未設定でもコード内デフォルトあり)
+- [ ] 初回デプロイ実行
+- [ ] `docs/DEPLOY.md` の §5 検証チェックリスト完走:
+  - 5.1 疎通 (`/`, `/mods`, `/settings`, `/api/health`)
+  - 5.2 SSR/SEO (view-source で初期 24 件確認、`/sitemap.xml` に Mod 100 件、`/robots.txt`)
+  - 5.3 OGP (Facebook Debugger / Twitter Card Validator / Discord プレビュー)
+  - 5.4 モーダル動作 (Home クリック → intercept、直接アクセス → フルページ)
+  - 5.5 Route Handlers (`/api/modrinth/search?query=iris` 200)
+  - 5.6 モバイル (Chrome DevTools iPhone/Pixel シミュレーション)
+  - 5.7 Lighthouse (Performance ≥90, Accessibility ≥90, SEO = 100)
+  - 5.8 LocalStorage 移行 (旧 `craftforge_state_v2` → 新 `dropmod_state_v2`)
+
+**PR:** `feat(deploy): Phase 7 - Vercel 本番デプロイ設定 (vercel.json + sitemap/robots + OGP + セキュリティヘッダ + docs/DEPLOY.md)`
 
 **DoD:**
-- ✅ Vercel 本番 URL で全機能動作
-- ✅ Lighthouse スコアが基準達成
-- ✅ OGP スニペットが正しく生成される
+- ✅ リポジトリ側の全設定が投入済
+- ✅ ローカル `pnpm build` + `pnpm start` で全エンドポイントが期待通り動作
+- ⏳ Vercel 本番 URL で `docs/DEPLOY.md` §5 の全チェックが完走 (ユーザー実施)
+- ⏳ Lighthouse スコアが基準達成 (ユーザー実施)
+- ⏳ OGP スニペットが Facebook Debugger で正しく展開 (ユーザー実施)
 
 ---
 

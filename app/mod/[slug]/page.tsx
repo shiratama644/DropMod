@@ -51,6 +51,7 @@ interface Params {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
+  const canonicalPath = `/mod/${slug}`;
   try {
     const project = await fetchModrinthProject(slug);
     const title = `${project.title} - DropMod`;
@@ -60,10 +61,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     return {
       title,
       description,
+      alternates: { canonical: canonicalPath },
       openGraph: {
         title,
         description,
         type: 'article',
+        url: canonicalPath,
         images: project.icon_url ? [{ url: project.icon_url }] : undefined
       },
       twitter: {
@@ -78,7 +81,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     console.warn('[DropMod] generateMetadata failed for', slug, e);
     return {
       title: `${slug} - DropMod`,
-      description: 'Modrinth Mod 詳細'
+      description: 'Modrinth Mod 詳細',
+      alternates: { canonical: canonicalPath }
     };
   }
 }

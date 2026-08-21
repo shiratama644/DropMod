@@ -22,11 +22,54 @@ import '@fontsource/jetbrains-mono/600.css';
 import '@fontsource/jetbrains-mono/700.css';
 import '@fontsource/jetbrains-mono/800.css';
 
+// -----------------------------------------------------------------------------
+// metadataBase の解決 (Phase 7)
+//
+// og:image などの相対 URL を絶対 URL に展開するため必須。優先順位:
+//   1. NEXT_PUBLIC_SITE_URL (ユーザーが Vercel Environment Variables で
+//      本番ドメインを設定した場合。例: https://dropmod.vercel.app)
+//   2. VERCEL_URL (Vercel が自動注入。プレビューデプロイの一意 URL)
+//   3. http://localhost:3000 (ローカル dev のフォールバック)
+// -----------------------------------------------------------------------------
+function resolveMetadataBase(): URL {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) {
+    try {
+      return new URL(explicit);
+    } catch {
+      /* fallthrough */
+    }
+  }
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) {
+    return new URL(`https://${vercelUrl}`);
+  }
+  return new URL('http://localhost:3000');
+}
+
 export const metadata: Metadata = {
-  title: 'DropMod - Minecraft Mod Downloader',
+  metadataBase: resolveMetadataBase(),
+  title: {
+    default: 'DropMod - Minecraft Mod Downloader',
+    template: '%s | DropMod'
+  },
   description:
     'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ',
-  applicationName: 'DropMod'
+  applicationName: 'DropMod',
+  openGraph: {
+    type: 'website',
+    siteName: 'DropMod',
+    locale: 'ja_JP',
+    title: 'DropMod - Minecraft Mod Downloader',
+    description:
+      'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
+  },
+  twitter: {
+    card: 'summary',
+    title: 'DropMod - Minecraft Mod Downloader',
+    description:
+      'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
+  }
 };
 
 // WCAG 2.1 SC 1.4.4 準拠のためピンチズーム許可 (Vite 版と同じ扱い)

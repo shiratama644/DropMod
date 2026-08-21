@@ -1,14 +1,29 @@
 import type { NextConfig } from 'next';
 
 /**
- * DropMod Next.js 設定
+ * DropMod Next.js 設定 (Phase 7)
  *
  * - React Strict Mode を維持 (Vite 版の main.tsx と同挙動)
  * - X-Powered-By ヘッダは公開情報として不要なので無効化
  * - Modrinth CDN の画像を <Image> で使えるように許可
- * - Phase 3 以降のパフォーマンス最適化として、大きめのパッケージを
- *   optimizePackageImports に追加
+ * - パフォーマンス最適化: 大きめのパッケージを optimizePackageImports
+ * - Phase 7 追加: 全ページに標準的なセキュリティヘッダを付与
+ *   (Vercel + Next.js の最小ハードニング。CSP は Markdown 内の任意 HTML を
+ *    許容する必要があるためここでは付与せず、rehype-sanitize 側の allowlist に
+ *    任せる。将来的に Report-Only モードで追加検討)
  */
+
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  {
+    key: 'Permissions-Policy',
+    // カメラ・マイク・位置情報などは使わないので明示的に無効化
+    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+  }
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -20,6 +35,15 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['@fortawesome/fontawesome-free', 'react-markdown']
+  },
+  async headers() {
+    return [
+      {
+        // 全ページに標準セキュリティヘッダを付与
+        source: '/:path*',
+        headers: securityHeaders
+      }
+    ];
   }
 };
 

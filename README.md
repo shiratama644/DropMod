@@ -83,6 +83,26 @@ lib/
 types.ts                      # 全 TypeScript 型
 ```
 
+## Vercel デプロイ
+
+Phase 7 で Vercel 本番デプロイ用の設定が入っています:
+
+- `vercel.json` — 東京リージョン (`hnd1`) 固定、`cleanUrls: true`
+- `next.config.ts` — セキュリティヘッダ (`X-Content-Type-Options` / `Referrer-Policy` / `X-Frame-Options` / `Permissions-Policy`)
+- `app/sitemap.ts` — 静的ルート + 人気 Mod 100 件を動的出力 (1h ISR)
+- `app/robots.ts` — 全ページ許可、`/api/*` を disallow、sitemap を明示
+- `app/layout.tsx` — `metadataBase` を `NEXT_PUBLIC_SITE_URL` / `VERCEL_URL` から解決、OGP / Twitter Card テンプレを設定
+- `app/mod/[slug]/page.tsx` — `generateMetadata` に `alternates.canonical` を追加
+
+セットアップ手順・環境変数一覧・検証チェックリストは [`docs/DEPLOY.md`](./docs/DEPLOY.md) を参照してください。
+
+主な環境変数:
+
+| Key | 用途 |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | OGP / sitemap / robots の baseUrl (例: `https://dropmod.vercel.app`) |
+| `MODRINTH_USER_AGENT` | Modrinth API に送る meaningful UA (レートリミット緩和のため推奨) |
+
 ## 移行履歴
 
 Vite + Hono から Next.js 16 + Vercel への段階的移行 (2025-08〜2026-08)。

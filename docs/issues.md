@@ -611,4 +611,616 @@ render") を新規混入させた。
 | 第2波 | 4 | 8 | 10 | 6 | 28 |
 | 第3波 | 4 | 3 | 3 | 0 | 10 |
 | **第3.5波** | **1** | 0 | 0 | 0 | **1** |
-| **合計** | **13** | **18** | **24** | **16** | **71** |
+| **合計 (Vite 版時代)** | **13** | **18** | **24** | **16** | **71** |
+
+---
+
+# 🌊 第4波: Next.js 移行後の完全洗い出し (Phase 7 完了時点)
+
+> **調査日:** 2026-08-21 (JST)
+> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `1edace5` (Next.js 16.3.1 + React 19.2.8 + App Router)
+> **調査手法:**
+> - 計画書 (`docs/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/diff.md`) と現状の実装の 3 者突き合わせ
+> - `pnpm exec tsc --noEmit` (エラー 0 件確認)
+> - `pnpm build` 実行 (17.7 秒完走、警告 0 件)
+> - `pnpm audit` (脆弱性 0 件確認)
+> - 両バージョン並行起動 (Vite `pnpm preview` port 4173 + Next.js `pnpm start` port 3100) での HTTP レスポンス実測
+> - build 済み JS bundle 内文字列抽出 (Python 正規表現)
+> - JSX ソース全 grep (`<a href>`, `<img>` vs `<Image>`, `useCallback` 有無、`isAnyModalOpen` 網羅性)
+> - `.next/diagnostics/route-bundle-stats.json` からの First Load JS 実測
+>
+> **本波の総件数:** 24件 (Critical: 2 / High: 6 / Medium: 8 / Low: 8)
+>
+> **前提:** Phase 0〜7 のリポジトリ側実装は完了。Vercel 本番デプロイと実 URL 検証はユーザー実施待ち。以下は「本番デプロイ前に修正すべき」または「Phase 8+ で対応すべき」バグ・課題。
+
+## 🎯 計画書と diff.md との整合性チェック結果
+
+| 項目 | 計画書の主張 | 実装 (実測) | diff.md の記述 | 整合性 |
+| --- | --- | --- | --- | :-: |
+| `app/@modal/default.tsx` | 存在すべき | ✅ 11行 | ✅ 記載 | ✅ |
+| `app/@modal/[...catchAll]/page.tsx` | 存在すべき | ✅ 10行 | ✅ 記載 | ✅ |
+| `app/@modal/(.)mod/[slug]/page.tsx` | 存在すべき | ✅ 46行 | ✅ 記載 | ✅ |
+| `app/mod/[slug]/loading.tsx` | 存在すべき | ✅ 39行 | ✅ 記載 | ✅ |
+| `app/mod/[slug]/not-found.tsx` | 存在すべき | ✅ 32行 | ✅ 記載 | ✅ |
+| `ModDetailModalShell.tsx` | 存在すべき (variant 2 モード) | ✅ 512行 | ✅ 記載 | ✅ |
+| `AppContext.tsx` + `AppShell.tsx` 統合 | 完了 | ✅ 119行+363行 | ✅ 記載 | ✅ |
+| `sitemap.ts` + `robots.ts` | 存在すべき | ✅ 76行+34行 | ✅ 記載 | ✅ |
+| `vercel.json` | 存在すべき | ✅ 10行 | ✅ 記載 | ✅ |
+| `next/` サブディレクトリ | Phase 6 でルートに昇格 | ✅ 消滅 | ✅ 記載 | ✅ |
+| `src/` (Vite ソース) | Phase 6 で `.archive/vite/` に退避 | ✅ 完全移動 | ✅ 記載 | ✅ |
+| `app/error.tsx` | 未実装 | ❌ 存在せず | ✅ 「Phase 8 で追加」記載 | ✅ |
+| `app/global-error.tsx` | 未実装 | ❌ 存在せず | ✅ 「Phase 8 で追加」記載 | ✅ |
+| `app/loading.tsx` (グローバル) | diff.md §12.13 で不在指摘 | ❌ 存在せず | ✅ 記載 | ✅ |
+| `app/not-found.tsx` (グローバル) | 明記なし | ❌ 存在せず (Next.js デフォルト使用) | ❌ 未言及 | ⚠️ |
+| `app/@modal/(.)mod/[slug]/loading.tsx` | diff.md §12.13 で不在指摘 | ❌ 存在せず | ✅ 記載 | ✅ |
+| `<a href>` タグ = `<Link>` 使用 | 明記なし | ❌ `not-found.tsx` のみ使用 | ✅ diff.md §12.2 で指摘 | ✅ |
+| `<Image>` 使用 | 明記なし | ❌ 全 `<img>` 使用 (9箇所) | ✅ diff.md §12.6 で指摘 | ✅ |
+| モーダル背景スクロールロック | Vite 版から継承 | ❌ Mod 詳細 modal 時は抜け | ✅ diff.md §12.1 で指摘 | ✅ |
+| `<title>` 重複バグ | 明記なし | ❌ `sodium - DropMod \| DropMod` | ✅ diff.md §11.6 で指摘 | ✅ |
+| `MODRINTH_USER_AGENT` env 変数 | .env.example に定義 | ⚠️ Route Handler は env 無視、Server ラッパのみ使用 | ❌ **未指摘** | ❌ |
+| Hero Banner の「登録 MOD 数」パネル | Vite 版に有り | ❌ 消滅 | ✅ diff.md §11.3 で指摘 | ✅ |
+| `profile?.name \|\| '名称未設定'` フォールバック | Vite 版に有り | ❌ 3 箇所消滅 | ✅ diff.md §12.4 で指摘 | ✅ |
+| theme FOUC (SSR dark → hydration light) | 明記なし | ❌ 対策 script 無し | ✅ diff.md §12.14 で指摘 | ✅ |
+| SSR プロファイル固定によるちらつき | 明記なし | ❌ default 固定 | ✅ diff.md §12.5 で指摘 | ✅ |
+| `NEXT_PUBLIC_SITE_URL` の trailing slash | 明記なし | ⚠️ `layout.tsx` は未処理 | ❌ **未指摘** | ❌ |
+| `useCallback` 未使用の関数 | 明記なし | ❌ 8+ 関数が非 useCallback → AppContext useMemo 無効化 | ❌ **未指摘** | ❌ |
+| dead code `PATH_TO_TAB` | 明記なし | ❌ 宣言のみ、使用箇所無し | ❌ **未指摘** | ❌ |
+| Test coverage | 計画書 §9 に含まれず | ❌ 0 (unit/e2e 全て未実装) | ❌ **未指摘** | ❌ |
+| Route Handler の HEAD method | 明記なし | ❌ GET/POST のみ export | ❌ **未指摘** | ❌ |
+
+**整合性チェック結果**: 計画書と diff.md の記述はすべて実装と一致 (✅ 24件)。ただし **diff.md でも触れられていない未発見バグが 6 件** ある (❌行)。これらを本波で C4/H4/M4/L4 として記載。
+
+---
+
+## 🔴 Critical (第4波、2件)
+
+### C4-1. Route Handler `/api/modrinth/[...path]` が `MODRINTH_USER_AGENT` 環境変数を無視 (ハードコード)
+
+- **箇所:** `app/api/modrinth/[...path]/route.ts:27`
+- **症状:**
+  ```typescript
+  const USER_AGENT = 'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)';
+  ```
+  という**ハードコード**になっている。同じ役目を果たす `lib/modrinth/server.ts` は正しく:
+  ```typescript
+  const USER_AGENT =
+    process.env.MODRINTH_USER_AGENT ||
+    'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)';
+  ```
+  と env を参照する。
+- **影響:**
+  - Vercel Environment Variables で `MODRINTH_USER_AGENT` を設定しても、**Route Handler 経由 (`/api/modrinth/*` = クライアント側 fetchModrinth 経由の全リクエスト)** に反映されない
+  - Modrinth 側から「meaningful UA が変わってない」と判定され、フォークして運用しても連絡先が Modrinth 側に届かない = **規約遵守違反リスク**
+  - `.env.example` と `docs/DEPLOY.md` で「MODRINTH_USER_AGENT を Vercel で設定してください」と案内しているのに、**半分しか効かない**バグ
+- **修正:**
+  ```typescript
+  const USER_AGENT =
+    process.env.MODRINTH_USER_AGENT ||
+    'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)';
+  ```
+  に置換 (`lib/modrinth/server.ts` line 22-24 とコピペ)。
+
+### C4-2. モーダル背景スクロールロックの `/mod/[slug]` 検知抜け (Vite → Next 回帰バグ)
+
+- **箇所:** `components/AppShell.tsx:153-158`
+- **症状:** `isAnyModalOpen` 判定に **`/mod/[slug]` モーダル (Parallel Route)** が含まれていない:
+  ```typescript
+  const isAnyModalOpen =
+    isNewProfileModalOpen ||
+    isEditProfileModalOpen ||
+    isDepCheckModalOpen ||
+    isZipModalOpen ||
+    Boolean(confirmDialogProps.isOpen);
+  // ↑ isModDetailModalOpen 相当が抜けている
+  ```
+  Vite 版 `App.tsx:109-115` には `isModDetailModalOpen` が含まれていた。
+- **影響:**
+  - Home 上に Mod 詳細モーダルが開いている間 (`/mod/[slug]` に soft nav 済)、**モバイルで背景 (Home グリッド) が touch scroll できてしまう**
+  - モーダルからはみ出た指のドラッグで背景が動く → 「モーダルが揺れる」錯覚
+  - モーダル外を誤タップすると背景の Mod カードに反応
+  - Vite 版にはあったガードが Next.js リファクタで消失した **明確な UX 退行**
+- **修正:**
+  ```typescript
+  // components/AppShell.tsx
+  const pathname = usePathname();
+  const isModDetailOpen = pathname?.startsWith('/mod/') ?? false;
+
+  const isAnyModalOpen =
+    isNewProfileModalOpen ||
+    isEditProfileModalOpen ||
+    isDepCheckModalOpen ||
+    isZipModalOpen ||
+    isModDetailOpen ||             // ← 追加
+    Boolean(confirmDialogProps.isOpen);
+  ```
+  `usePathname()` は既に import 済 (line 4) なので追加行のみで完結。
+
+---
+
+## 🟠 High (第4波、6件)
+
+### H4-1. Home HTML 内の `<a href>` タグが 0 個 (`<Link>` 未使用) → SEO/UX 大幅退行
+
+- **箇所:** `components/BottomNav.tsx`, `components/Header.tsx`, `components/ModCard.tsx`, `components/HomeInteractive.tsx` (Empty state), `components/ModsPageClient.tsx` (Empty state) 等ほぼ全て
+- **症状:** 全ページ遷移が `router.push()` (JavaScript イベント) で実装。`import Link from 'next/link'` は `app/mod/[slug]/not-found.tsx:7` の **1 箇所のみ**。
+- **影響:**
+  1. 右クリック「新しいタブで開く」 / 中クリック → 動作しない
+  2. Next.js の `<Link>` 自動 prefetch が全く効かない
+  3. SEO クローラーが素の HTML から `<a>` を辿れない (RSC ペイロード内にはあるが Google/Bing は JavaScript 実行しない)
+  4. キーボードで Tab して「リンクだけ辿る」挙動が壊れる (`<a>` と `<button>` は別 Landmark)
+- **修正:** 以下 5 箇所を `<Link href="/xxx">` に置換 (30 分作業):
+  - `BottomNav.tsx` の 3 タブボタン
+  - `Header.tsx` のロゴクリック
+  - `ModCard.tsx` の div (Mod 詳細への遷移)
+  - `HomeInteractive.tsx` / `ModsPageClient.tsx` の Empty state「Modを探しに行く」ボタン
+- **注意:** `<Link>` は内部で `<a>` を出力するので、`onClick` ハンドラーが必要な場合 (e.stopPropagation 等) は `<Link href="..." onClick={...}>` として併用可能。
+
+### H4-2. `<title>` タグに "DropMod" が重複
+
+- **箇所:** `app/layout.tsx:53` + `app/mod/[slug]/page.tsx:57,84`
+- **症状:** `/mod/sodium` の実測 `<title>`:
+  ```html
+  <title>sodium - DropMod | DropMod</title>
+  ```
+  layout の template = `'%s | DropMod'` に対して、page.tsx の title = `'${project.title} - DropMod'` → 両方が "DropMod" を含む。
+- **影響:**
+  - Google 検索結果に「Sodium - DropMod | DropMod」が表示される (見た目が悪い)
+  - タブ名にも重複が入る
+  - OGP プレビュー (Facebook Debugger) でも重複が視認される
+- **修正:** `app/mod/[slug]/page.tsx` の title から ' - DropMod' を削除 (2 箇所):
+  ```typescript
+  // 正常系 (line 57)
+  const title = project.title;  // ← ' - DropMod' を削除
+  // フォールバック (line 84)
+  return {
+    title: slug,                 // ← ' - DropMod' を削除
+    ...
+  };
+  ```
+  layout の template が自動で ' | DropMod' を付与する。
+
+### H4-3. `next/image` 未使用で Modrinth 画像最適化が効いていない
+
+- **箇所:** `next.config.ts:18-21` (remotePatterns 定義) vs 全 `<img>` 使用箇所 9 箇所
+  - `components/DependencyCheckModal.tsx` (2)
+  - `components/MarkdownRenderer.tsx` (1)
+  - `components/ModCard.tsx` (1)
+  - `components/ModDetailModalShell.tsx` (3)
+  - `components/ModsPageClient.tsx` (2)
+- **症状:** `next.config.ts` に:
+  ```typescript
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'cdn.modrinth.com' },
+      { protocol: 'https', hostname: 'raw.githubusercontent.com' }
+    ]
+  }
+  ```
+  と Modrinth CDN を許可しているのに、**実装は素の `<img>` タグを使用**。`import Image from 'next/image'` は全ファイルで 0 件。
+- **影響:**
+  - WebP / AVIF への自動変換が効かない (Modrinth の PNG icon は WebP で 50-80% サイズ削減見込)
+  - `srcset` 自動生成が効かない (mobile では 1024px 版が過剰)
+  - `loading="lazy"` の Native lazy loading は使えるが、Intersection Observer ベースの Next.js 版と比べて挙動が粗い
+  - `blur placeholder` を使えない (LCP が悪くなる)
+- **修正:** 9 箇所を `<Image>` に置換。各箇所で:
+  ```tsx
+  // Before
+  <img src={hit.icon_url} alt={hit.title} className="w-10 h-10 ..." />
+  // After
+  <Image src={hit.icon_url} alt={hit.title} width={40} height={40} className="..." />
+  ```
+  `<Image>` は width/height 必須なので明示。動的サイズには `fill` prop も使える。
+
+### H4-4. `useCallback` 未使用の 8+ 関数により `AppContext` の `useMemo` が事実上無効化
+
+- **箇所:** `hooks/useProfiles.ts:208, 214, 228, 241, 261, 283, 395, 436` (8個) + `hooks/useZipExport.ts:173` + `hooks/useZipImport.ts:23, 173, 179` (3 個)
+- **症状:** `AppShell.tsx` の contextValue useMemo (line 219-291) は 30 個のフィールドを持つが、その deps に **`useCallback` されていない 12 個の関数参照** が入っている:
+  ```typescript
+  // hooks/useProfiles.ts
+  const handleSwitchProfile = (id: string) => {...};      // useCallback 無し
+  const handleCreateProfile = (...) => {...};              // useCallback 無し
+  const handleDuplicateProfile = () => {...};              // useCallback 無し
+  const handleSaveEditedProfile = (...) => {...};          // useCallback 無し
+  const handleDeleteProfile = async (id: string) => {...}; // useCallback 無し
+  const handleToggleMod = async (...) => {...};            // useCallback 無し
+  const handleUpdateModVersion = async (...) => {...};     // useCallback 無し
+  const handleRemoveAllMods = async () => {...};           // useCallback 無し
+  ```
+  これらは `useProfiles` が再レンダーされるたびに新規参照になる = `AppShell` の useMemo deps が毎回変わる = `contextValue` が毎レンダー新規オブジェクト = **AppContextProvider の value 参照が毎回変わる** = 全 consumer (HomeInteractive, ModsPageClient, SettingsPageClient, ModDetailModalShell) が毎回再レンダー。
+- **影響:**
+  - useMemo が「入っているのに無意味」= 開発者のパフォーマンス最適化意図が完全に壊れている
+  - Toast 1 個追加ごとに useToasts state 更新 → useProfiles 再作成 → contextValue 新規 → 全ページ再レンダー
+  - React DevTools の Highlight Updates を有効にすると、Toast 表示のたびに全画面が緑になる (再レンダー可視化)
+- **修正:** `useProfiles.ts` の 8 関数と `useZipExport.ts` / `useZipImport.ts` の 4 関数を `useCallback` でラップ。第3波の M3-1 で指摘済だが Next.js 版で未修正のまま。
+
+### H4-5. SSR プロファイル固定によるちらつき (Home のみ)
+
+- **箇所:** `app/page.tsx:24-25`
+- **症状:**
+  ```typescript
+  const SSR_DEFAULT_MC_VERSION = '1.20.1';
+  const SSR_DEFAULT_LOADER = 'Fabric';
+  ```
+  Home の SSR は常に 1.20.1/Fabric ベースで初期 24 件を取得。LocalStorage に別プロファイル (例: 1.21.4/Forge) がある場合:
+  1. **サーバー**: 1.20.1/Fabric の Mod 24 個を SSR で返す → HTML に含める
+  2. **ブラウザ**: HTML を表示 → Fabric 用 Mod カードが並ぶ
+  3. **hydration**: LocalStorage 読取 → currentProfile = 1.21.4/Forge に更新
+  4. **useEffect 発火** (`HomeInteractive.tsx:180-186`): mcVersion/loader 変化検知 → 再検索
+  5. **再検索完了**: Forge 用 Mod カードで上書き
+  6. **ユーザー体感**: 「一瞬 Fabric の Mod が見えて、パッと Forge に切り替わる」
+- **影響:**
+  - デフォルトプロファイル (1.20.1/Fabric) のユーザーには影響無し
+  - カスタムプロファイル使用者にはページを開くたびに **200ms〜1s の紛らわしい表示**
+  - CLS (Cumulative Layout Shift) が悪化する可能性 (Mod カードのアイコン差で高さがずれる)
+- **修正 (3 案):**
+  1. **Skeleton SSR**: `app/page.tsx` を Mod カードなしの skeleton だけ返し、hydration 後に CSR 発火 (SSR の意義半減)
+  2. **Cookie 化**: プロファイル情報を LocalStorage + Cookie 両方に保存し、SSR で cookie 読取 (Server Component から cookies() 可能)
+  3. **useState 初期値でカバー**: `HomeInteractive` の hits 初期値を LocalStorage から読む inline script + suppressHydrationWarning
+- **推奨**: (2) Cookie 化。Next.js 15/16 では `cookies()` が Server Component で使えるので SSR 段階でユーザー固有プロファイルを反映可能。
+
+### H4-6. `app/error.tsx` / `app/global-error.tsx` 不在で Vite 版の ErrorBoundary UI が完全消失
+
+- **箇所:** ファイル存在せず (`ls app/error.tsx app/global-error.tsx` → No such file)
+- **症状:** React ツリー内の描画例外が起きた時、Next.js デフォルトの英語 500 ページが表示される。Vite 版 `src/components/ErrorBoundary.tsx` (175 行) には日本語で:
+  - 「アプリの描画中にエラーが発生し、画面が停止しました。以下を試してください:」
+  - 「「リロード」でページを再読み込み」
+  - 「それでも直らない場合は「ローカルデータを削除してリロード」」
+  - 「エラー詳細を表示」ボタン
+  - 「予期しないエラーが発生しました」タイトル
+  - 「データを削除してリロード」アクションボタン (LocalStorage.clear + reload)
+
+  という**丁寧な復旧 UI** があった。
+- **影響:**
+  - 予期しない例外時、日本語ユーザーは「英語の 500 エラー」を見せられ、復旧手段が分からず離脱
+  - LocalStorage 破損時の自動復旧経路が消失 (ユーザーが手動で DevTools 経由で削除する必要)
+- **修正:** 以下 2 ファイルを新規作成 (Vite 版 ErrorBoundary.tsx のロジックを移植):
+  - `app/error.tsx` (Server Component 例外の boundary、`'use client'` 必須)
+  - `app/global-error.tsx` (`app/error.tsx` 自体が失敗した時のフォールバック、`<html>`/`<body>` を含む必要あり)
+
+  Next.js の error.tsx は `error: Error, reset: () => void` の 2 props を受け取る、Vite 版とは API が違う。移植時に注意。
+
+---
+
+## 🟡 Medium (第4波、8件)
+
+### M4-1. Hero Banner の「登録 MOD 数」パネル消失
+
+- **箇所:** `components/HomeInteractive.tsx:216-273` (Hero Banner) 内に該当コード無し
+- **症状:** Vite 版 `HomeTab.tsx:140-155` にあった「emerald gradient で `<i class="fa-cubes"/>` + 大きな `{modCount}` 表示 + モバイル用『確認』ボタン」パネルが Next.js 版では消えている。
+- **影響:**
+  - Home 画面から「現在のプロファイルに何個 Mod が入っているか」の一目情報が失われた
+  - BottomNav バッジ (数字だけ) で代替されているが、視認性・強調度が明らかに低下
+  - モバイルの「確認」ボタン (Home → Mods タブへのショートカット) も消失
+- **修正:** `HomeInteractive.tsx` の Hero Banner 内 (line 265 「複製」ボタンの後あたり) に Vite `HomeTab.tsx:120-155` を移植。ただし `modCount` は `profile.mods.length` から取得。`onSwitchTab('mods')` は `router.push('/mods')` に置換。
+
+### M4-2. `profile?.mcVersion || '未設定'` フォールバック 3 件消失
+
+- **箇所:** `components/HomeInteractive.tsx:238, 241, 244`
+- **症状:** Vite 版:
+  ```jsx
+  Minecraft {profile?.mcVersion || '未設定'}
+  {profile?.loader || '未設定'}
+  {profile?.name || '名称未設定プロファイル'}
+  ```
+  Next 版:
+  ```jsx
+  Minecraft {profile.mcVersion}
+  {profile.loader}
+  {profile.name}
+  ```
+  Optional chaining + フォールバック 3 箇所削除。`description` 1 箇所のみ維持。
+- **影響:**
+  - `useProfiles` の sanitizeLoadedState で通常はガードされるが、`currentProfile` が一瞬 undefined になるレースがあれば `undefined` が h2 に描画される可能性
+  - Context 経由の値受け取りは reference なので、profile 未初期化時に TypeError → React ツリー崩壊
+  - 防御的プログラミングとして復元推奨
+- **修正:**
+  ```jsx
+  Minecraft {profile?.mcVersion || '未設定'}
+  {profile?.loader || '未設定'}
+  {profile?.name || '名称未設定プロファイル'}
+  {profile?.description || 'ModrinthからリアルタイムでModを検索してカスタマイズできます。'}
+  ```
+
+### M4-3. theme FOUC (SSR は常に dark、hydration 後 light に切替)
+
+- **箇所:** `app/layout.tsx:59` (`<html lang="ja" className="dark">`)
+- **症状:** SSR HTML は常に `<html class="dark">` で出力。LocalStorage に light 保存済のユーザーは:
+  1. サーバー: dark HTML 送信
+  2. ブラウザ: 完全な dark UI が描画 (SSR による Header/Grid/BottomNav 全部見える)
+  3. hydration: `useProfiles` が LocalStorage 読取 → theme = 'light' 検出
+  4. `useEffect` 発火: `html.classList.remove('dark')`
+  5. **一瞬 dark UI が完全表示された後、light に切り替わる** → FOUC
+- **影響:**
+  - Vite 版も同じ問題を持つが空 HTML なので気付かれにくかった
+  - Next.js は SSR で完全 UI が見えるため FOUC が明らかに目立つ
+- **修正:** `app/layout.tsx` の `<head>` 内に inline `<script>` を挿入:
+  ```tsx
+  <script
+    dangerouslySetInnerHTML={{
+      __html: `
+        try {
+          const saved = JSON.parse(localStorage.getItem('dropmod_state_v2') || '{}');
+          if (saved.theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch {}
+      `
+    }}
+  />
+  ```
+
+### M4-4. `app/@modal/(.)mod/[slug]/loading.tsx` 不在で ISR MISS 時無音待機
+
+- **箇所:** ファイル存在せず
+- **症状:** `app/mod/[slug]/loading.tsx` はあるがモーダル (Intercepting Route) 版の loading.tsx 無し。
+  - キャッシュ HIT 時 (2 回目以降のアクセス): 瞬時にモーダル表示
+  - **キャッシュ MISS 時 (初回 / ISR 期限切れ)**: RSC ペイロードの fetch を待つ間、Home が見えたまま = **クリック直後に何も反応が無い**ように感じる
+- **影響:**
+  - Vercel 本番の初回訪問時、Mod カードクリック → 数百 ms 何も起きない → ユーザーが再度クリック → 二重リクエスト
+  - Modrinth API 実測 200-500ms + Next.js RSC 生成 100-200ms = 平均 400ms の無音間
+- **修正:** `app/@modal/(.)mod/[slug]/loading.tsx` を作成:
+  ```tsx
+  // ModDetailModalShell の skeleton をモーダル外枠込みで返す
+  export default function InterceptedModLoading() {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md">
+        <div className="glass-panel rounded-3xl p-6 max-w-3xl w-full">
+          {/* skeleton 表示 */}
+        </div>
+      </div>
+    );
+  }
+  ```
+
+### M4-5. `router.back()` による履歴スタック汚染
+
+- **箇所:** `components/ModDetailModalShell.tsx:76-83` (`handleClose` 内)
+- **症状:** モーダル閉じ動作が `router.back()` (履歴が積まれる) で実装:
+  ```typescript
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back();
+  } else {
+    router.push('/');
+  }
+  ```
+  複数の Mod を渡り歩くと履歴が積み上がる。ブラウザバック連打で:
+  1. Home → Mod A → 閉じる → Mod B → 閉じる → **戻る**
+  2. → `/mod/B` (モーダル再開) → 戻る → `/` → 戻る → `/mod/A` (再開) → 戻る → `/` → 戻る → 前サイト
+  → **5-9 回戻らないと元サイトに戻れない**
+- **影響:**
+  - モバイルユーザーがブラウザバックで期待どおり戻れず離脱
+  - Google Analytics のバウンス率悪化 (「Home → Home → Home」の履歴が全部別セッション扱い)
+- **修正案 (Trade-off):**
+  1. `router.replace(/mod/[slug])` を Mod カードクリック時に使う → 履歴を上書き
+  2. ただし複数 Mod 詳細間を「戻る」で行き来したいユースケースは壊れる
+  3. UX 判断次第だが、Vite 版と同じ「モーダル閉じは即 Home」の UX を優先するなら (1) 推奨
+
+### M4-6. `NEXT_PUBLIC_SITE_URL` の trailing slash 未処理 (layout.tsx のみ)
+
+- **箇所:** `app/layout.tsx:14-24` (`resolveMetadataBase`) vs `app/sitemap.ts:15` (`resolveBaseUrl`)
+- **症状:**
+  - `app/sitemap.ts` は正しく: `if (explicit) return explicit.replace(/\/$/, '');`
+  - `app/layout.tsx` は不十分: `return new URL(explicit);` (trailing slash はそのまま `metadataBase` の pathname に残る)
+- **影響:** ユーザーが `NEXT_PUBLIC_SITE_URL=https://dropmod.example.com/` (末尾 `/`) を設定すると:
+  - `<link rel="canonical" href="/mod/sodium">` が `metadataBase` と結合されて `https://dropmod.example.com//mod/sodium` (二重スラッシュ) になる可能性
+  - Google 検索で `https://dropmod.example.com//mod/sodium` として index されると SEO 上「別ページ」扱いされる (canonical 分裂)
+- **修正:**
+  ```typescript
+  function resolveMetadataBase(): URL {
+    const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+    if (explicit) {
+      try {
+        return new URL(explicit.replace(/\/$/, ''));  // ← 末尾 / を除去してから URL 化
+      } catch { /* fallthrough */ }
+    }
+    // 以下同じ
+  }
+  ```
+
+### M4-7. Dead code `PATH_TO_TAB` (宣言のみ、使用箇所無し)
+
+- **箇所:** `components/AppShell.tsx:47-51`
+- **症状:**
+  ```typescript
+  const PATH_TO_TAB: Record<string, TabName> = {
+    '/': 'home',
+    '/mods': 'mods',
+    '/settings': 'settings'
+  };
+  ```
+  宣言されているが、実際の active tab 判定は line 199-203 で if 文でハードコード:
+  ```typescript
+  const activeTab: TabName = useMemo(() => {
+    if (pathname === '/mods') return 'mods';
+    if (pathname === '/settings') return 'settings';
+    return 'home';
+  }, [pathname]);
+  ```
+- **影響:** 特にランタイム影響なし (bundle に少し余分に載る)。**コード品質・可読性の問題**。
+- **修正:** 以下いずれか:
+  1. `PATH_TO_TAB` を実際に使う: `return (PATH_TO_TAB[pathname ?? '/'] ?? 'home');`
+  2. 削除
+- **推奨:** (1)。テーブル駆動のほうがメンテしやすい。
+
+### M4-8. Route Handler が HEAD method を拒否 (healthcheck 用に不便)
+
+- **箇所:** `app/api/modrinth/[...path]/route.ts:108`
+  ```typescript
+  export { handler as GET, handler as POST };
+  ```
+- **症状:** HEAD メソッドが export されていない。Vercel のヘルスチェッカーや外部モニタリング (UptimeRobot 等) が HEAD で `/api/modrinth/*` を叩くと **405 Method Not Allowed** が返る。
+- **影響:**
+  - 監視ツールから「API がダウンしてる」と誤報告される
+  - Vercel の Edge Middleware で HEAD リクエストを受けたい場合に不便
+- **修正:**
+  ```typescript
+  // handler を HEAD 用に軽量版を定義してもいいし、GET と同じでも OK
+  async function headHandler(...) {
+    const res = await handler(req, ctx);
+    return new Response(null, { status: res.status, headers: res.headers });
+  }
+  export { handler as GET, handler as POST, headHandler as HEAD };
+  ```
+
+---
+
+## 🟢 Low (第4波、8件)
+
+### L4-1. `app/loading.tsx` / `app/not-found.tsx` (グローバル) 不在
+
+- **箇所:** ファイル存在せず
+- **症状:**
+  - `app/loading.tsx` 無し: ページ切替時 (`router.push('/mods')` 等) に一瞬何も見えない可能性
+  - `app/not-found.tsx` 無し: 全体の 404 は Next.js デフォルト (英語)
+- **影響:**
+  - 現状 3 ページ (/, /mods, /settings) は全部 static なので実質切替は瞬時、loading.tsx は不要かも
+  - not-found.tsx は英語のまま → 日本語対応推奨
+- **修正:** `app/not-found.tsx` を新規作成 (`app/mod/[slug]/not-found.tsx` を流用可能)。
+
+### L4-2. テストコード完全不在 (unit/integration/e2e 全て 0)
+
+- **箇所:** `tests/`, `__tests__/`, `*.test.ts`, `*.test.tsx` 全て存在せず。`package.json` の scripts に `test` エントリ無し。
+- **症状:** vitest / jest / playwright 等のテストフレームワーク未導入。
+- **影響:**
+  - 第1-3.5波で修正した 71 件のバグの再発防止機構が無い
+  - Phase 8 以降で機能追加・リファクタするたびに手動リグレッションが必要
+  - CI で品質保証できない
+- **修正 (段階的):**
+  1. **短期**: `vitest` + `@testing-library/react` を導入し、`useProfiles` の CRUD ロジックだけ unit test
+  2. **中期**: 各モーダルの open/close/submit の integration test
+  3. **長期**: Playwright で e2e (Home → Mod 検索 → 追加 → 削除 → ZIP DL のフルフロー)
+- **注意:** テストコードは commit の一部として書かれるべきで、Phase 8 で新機能を追加するときに TDD で書く方針が望ましい。
+
+### L4-3. `robots.ts` の `host` フィールドは Yandex 専用 (Google 非対応)
+
+- **箇所:** `app/robots.ts:31`
+- **症状:** `host: baseUrl` は Google/Bing では意味を持たず、Yandex 独自仕様。
+- **影響:** 実害無し (エラーにならない、他のクローラが無視するだけ)。
+- **修正 (任意):** 削除しても機能変化なし。残しても Yandex 対応として意味あり。
+
+### L4-4. `useZipImport` の 3 関数が useCallback 無し (H4-4 の続き)
+
+- **箇所:** `hooks/useZipImport.ts:23, 173, 179`
+- **症状:** `handleImportZipFile`, `handleImportZipInput`, `handleDropZip` 全て useCallback 無し。
+- **影響:** H4-4 と同じ理由でパフォーマンス劣化 (contextValue useMemo 無効化に寄与)。
+- **修正:** H4-4 とセットで対応。
+
+### L4-5. Toast は最大 3 個保持 (`slice(-3)`) — 4 個目以降は消失
+
+- **箇所:** `hooks/useToasts.ts:11`
+- **症状:** `setToasts((prev) => [...prev, { id, message, type }].slice(-3));`
+- **影響:** 一度に 4 個以上の toast が生成されると古いのが表示されずに消える。実運用では稀。
+- **修正 (任意):** 5-7 個に緩和する / スタック時に自動閉じ時間を短くする / 「+N more」のようにグループ化する等の選択肢。
+
+### L4-6. `NEXT_PUBLIC_SITE_URL` 未設定時に canonical が `http://localhost:3000/mod/xxx` になる (dev の話)
+
+- **箇所:** `app/layout.tsx:23` (フォールバック)
+- **症状:** ローカル dev で `NEXT_PUBLIC_SITE_URL` 未設定なら `metadataBase = new URL('http://localhost:3000')`。→ canonical も `http://localhost:3000/mod/sodium`。
+- **影響:**
+  - Vercel 本番では `VERCEL_URL` が自動注入されるので実害無し
+  - ただしローカルで生成した HTML のスナップショットを本番と混同すると SEO 事故
+- **修正 (任意):** dev 時は `metadataBase` を undefined にする分岐追加。または `NEXT_PUBLIC_SITE_URL` を .env.local に必須化。
+
+### L4-7. Header と BottomNav が Mod 詳細フルページでも表示される
+
+- **箇所:** `components/AppShell.tsx:297-321` (Header と BottomNav が全ページ共通レイアウト)
+- **症状:** `/mod/sodium` の直接アクセス時 (variant="page" 描画) でも Header + BottomNav が表示される。SPA モーダル時と同じレイアウト。
+- **影響:**
+  - Mod 詳細のフルページで Header の「プロファイル切替 dropdown」が視覚的にノイズになる
+  - BottomNav の「Home」タブが active 表示されている (正しくは「Mod 詳細」用のタブがあってもよい)
+- **修正 (任意、デザイン判断):**
+  1. `pathname` が `/mod/*` の時は Header を簡略化 (「戻る」ボタンのみ)
+  2. BottomNav を非表示
+  3. 現状維持 (統一感を優先)
+- **推奨:** 現状維持でも問題ないが、`docs/DEPLOY.md` §5.4 のモバイル確認時にユーザーに判断してもらう。
+
+### L4-8. `Toast` が BottomNav と近接 (safe-area-inset-bottom 大きい端末)
+
+- **箇所:** `components/ToastContainer.tsx:15` (`bottom-20` = 5rem = 80px) vs `components/BottomNav.tsx:44` (`bottom-0` + `h-16` = 64px + safe-area)
+- **症状:** iPhone 14 Pro 以降の safe-area-inset-bottom = 34px。BottomNav の実効高 = 64px + 34px = **98px**。Toast の bottom-20 = 80px → **BottomNav に 18px 重なる可能性**。
+- **影響:** モバイル特定機種で Toast が BottomNav の下に隠れる。
+- **修正 (任意):**
+  ```tsx
+  <div
+    className="fixed right-3 sm:right-6 z-50 flex flex-col items-end gap-2.5 pointer-events-none max-w-[calc(100vw-1.5rem)]"
+    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}
+  >
+  ```
+
+---
+
+## 📊 第4波 集計サマリ
+
+| 重大度 | 件数 |
+| --- | ---: |
+| 🔴 Critical | 2 |
+| 🟠 High | 6 |
+| 🟡 Medium | 8 |
+| 🟢 Low | 8 |
+| **合計** | **24** |
+
+## 📊 総合集計 (第1波 〜 第4波)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1波 (Vite バグ 一斉調査) | 4 | 7 | 11 | 10 | 32 | ✅ 全て修正済 (Vite 版) |
+| 第2波 (真っ暗の原因追跡) | 4 | 8 | 10 | 6 | 28 | ✅ 全て修正済 (Vite 版) |
+| 第3波 (追加ボタン無反応) | 4 | 3 | 3 | 0 | 10 | ✅ 全て修正済 (Vite 版) |
+| 第3.5波 (React error #310) | 1 | 0 | 0 | 0 | 1 | ✅ 修正済 (Vite 版) |
+| **第4波 (Next.js 移行後)** | **2** | **6** | **8** | **8** | **24** | ⏳ **要 Phase 8 対応** |
+| **総合計** | **15** | **24** | **32** | **24** | **95** | 71 修正済 + **24 未対応** |
+
+## 🎯 Phase 8 推奨対応順序
+
+上記 24 件のうち、Phase 8 で扱うべき優先順位:
+
+### 🔴 即時対応 (本番デプロイ前)
+
+1. **C4-1** Route Handler の USER_AGENT ハードコード修正 (5 分)
+2. **C4-2** モーダル背景スクロールロック復元 (10 分)
+3. **H4-2** `<title>` 重複バグ修正 (5 分)
+
+### 🟠 短期対応 (Phase 8 前半)
+
+4. **H4-1** `<Link>` への置換 (30 分、SEO 直結)
+5. **H4-6** `app/error.tsx` + `app/global-error.tsx` 追加 (Vite ErrorBoundary 移植、1 時間)
+6. **H4-4** useCallback ラップ (12 関数、30 分)
+7. **M4-1** Hero Banner の「登録 MOD 数」パネル復元 (30 分)
+8. **M4-2** profile フォールバック 3 件復元 (5 分)
+
+### 🟡 中期対応 (Phase 8 後半)
+
+9. **H4-3** `<Image>` 置換 (9 箇所、2 時間、Modrinth 画像 50-80% サイズ削減)
+10. **M4-3** theme FOUC 対策 inline script (15 分)
+11. **M4-4** モーダル ISR MISS 時 loading.tsx (30 分)
+12. **H4-5** SSR ちらつき解消 (Cookie 化、3 時間+)
+13. **M4-6** `NEXT_PUBLIC_SITE_URL` trailing slash 処理 (5 分)
+14. **M4-7** dead code `PATH_TO_TAB` 使用または削除 (5 分)
+15. **M4-8** Route Handler HEAD method 対応 (10 分)
+
+### 🟢 長期対応 (時間があれば)
+
+16. **L4-1** グローバル `not-found.tsx` (日本語化、15 分)
+17. **L4-2** vitest + testing-library 導入 + `useProfiles` unit test (半日)
+18. **L4-5** Toast 上限を 3 → 5-7 に緩和 (5 分)
+19. **L4-8** Toast 位置を safe-area-inset-bottom 対応 (5 分)
+20. **M4-5** `router.replace()` vs `push()` 判断 (要 UX ユーザー確認)
+21. **L4-3** `robots.ts` の host フィールド判断
+22. **L4-4** useZipImport の useCallback ラップ (H4-4 とセット)
+23. **L4-6** dev 時 metadataBase の undefined 化 (任意)
+24. **L4-7** Mod 詳細フルページの Header/BottomNav 判断 (要 UX ユーザー確認)
+
+## 📚 参考文献 (第4波追加)
+
+- Next.js 16 App Router: https://nextjs.org/docs/app
+- Next.js Metadata API: https://nextjs.org/docs/app/api-reference/functions/generate-metadata
+- Next.js Image Component: https://nextjs.org/docs/app/api-reference/components/image
+- Next.js Link Component: https://nextjs.org/docs/app/api-reference/components/link
+- Next.js error.tsx / global-error.tsx: https://nextjs.org/docs/app/api-reference/file-conventions/error
+- Next.js Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+- Modrinth API rate limits: https://docs.modrinth.com/api/#ratelimits
+- Vercel Environment Variables: https://vercel.com/docs/projects/environment-variables
+
+---
+
+*第4波は 2026-08-21 に計画書 (`docs/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/diff.md`)、実装の 3 者突き合わせで洗い出しました。特に diff.md でも触れられていなかった **C4-1 (USER_AGENT ハードコード)**、**H4-4 (useCallback 未使用 12 関数)**、**M4-6 (trailing slash)**、**M4-7 (dead code)**、**M4-8 (HEAD method)**、**L4-2 (テスト 0 件)** の 6 件は本波で新規発見しました。*

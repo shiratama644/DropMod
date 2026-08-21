@@ -807,37 +807,51 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 4: `/mod/[slug]` + Parallel/Intercepting Modal (2日)
+### 🔹 Phase 4: `/mod/[slug]` + Parallel/Intercepting Modal (2日) ✅ **完了**
 
 **目的:** モーダル型の Mod 詳細ページを Modal Route パターンで実装。
 
 **作業:**
-- [ ] `next/app/layout.tsx` を **`children` + `modal` の 2 スロット** を受け取る形に変更
-- [ ] `next/app/@modal/default.tsx` を作成 (`return null`)
-- [ ] `next/app/@modal/[...catchAll]/page.tsx` を作成 (`return null`)
-- [ ] `next/app/@modal/(.)mod/[slug]/page.tsx` (RSC) を実装:
+- [x] `next/app/layout.tsx` を **`children` + `modal` の 2 スロット** を受け取る形に変更
+- [x] `next/app/@modal/default.tsx` を作成 (`return null`)
+- [x] `next/app/@modal/[...catchAll]/page.tsx` を作成 (`return null`)
+- [x] `next/app/@modal/(.)mod/[slug]/page.tsx` (RSC) を実装:
   - `fetchModrinthProject(slug)` + `fetchModrinthProjectVersions(slug)` を並列 fetch
-  - `<ModDetailModalShell project={} versions={} variant="modal" />` を返す
-- [ ] `next/app/mod/[slug]/page.tsx` (RSC, ISR) を実装:
+  - `<ModDetailModalShell project={} versions={} variant="modal" slug={} />` を返す
+  - `export const revalidate = 3600` (1時間 ISR)
+- [x] `next/app/mod/[slug]/page.tsx` (RSC, ISR) を実装:
   - 同上の fetch → `variant="page"` で描画
-  - `generateStaticParams` で人気 100 件を事前生成
-  - `generateMetadata` で OGP / title
-- [ ] `next/app/mod/[slug]/loading.tsx` (streaming fallback)
-- [ ] `next/app/mod/[slug]/not-found.tsx`
-- [ ] `next/components/ModDetailModalShell.tsx` (Client) を実装:
+  - `generateStaticParams` で人気 100 件を事前生成 (**429 レート制限対策**)
+  - `generateMetadata` で OGP / title (**try/catch でビルド全体を保護**)
+  - `export const revalidate = 3600, dynamicParams = true`
+  - `notFound()` で 404 boundary 起動
+- [x] `next/app/mod/[slug]/loading.tsx` (streaming fallback、スケルトンカード)
+- [x] `next/app/mod/[slug]/not-found.tsx` (Modrinth 存在しない slug 用)
+- [x] `next/components/ModDetailModalShell.tsx` (Client) を実装:
   - 既存 `ModDetailModal.tsx` の JSX を流用
-  - `variant="modal"`: 外枠 fixed + backdrop + 閉じるボタン → `useRouter().back()`
-  - `variant="page"`: 通常 container 描画
-  - どちらでも **バージョン一覧はデフォルト展開** (直近 UI 修正を継承)
+  - `variant="modal"`: 外枠 fixed inset-0 + backdrop + 閉じるボタン → `useRouter().back()` (履歴 0 件時は `/` へ push)
+  - `variant="page"`: 通常 container 描画 (背景透明、ホームへ戻る導線)
+  - **バージョン一覧はデフォルト展開** (`useState(true)` を継承)
+  - **全 useCallback / useState / useRef / useEffect / useId / useModalA11y を早期リターンより前に配置** (React error #310 対策)
+  - `.jar 直DL` ボタンは共通、Phase 5 でプロファイル追加/削除ボタンを復活予定
+
+**実装決定事項:**
+- モーダル閉じ動作: `window.history.length > 1` なら `router.back()`、そうでなければ `router.push('/')` にフォールバック (hard nav 時対応)
+- `variant` は `'modal' | 'page'` のリテラル union、内側カード JSX は共通化 (`innerCard` const)、外枠のみ分岐
+- Server → Client 経由でデータを渡すため、`ModDetailModalShell` 側では fetch を一切行わない (二重 fetch 防止)
+- SSR fetch 失敗時 (Modrinth 到達不可) は `project=null` → モーダル/ページとも "読み込めませんでした" のフォールバック表示
 
 **PR:** `feat(next): Phase 4 - Mod 詳細を Parallel + Intercepting Routes モーダルで実装`
 
 **DoD:**
-- ✅ Home で Mod カード → URL が `/mod/[slug]` になり、モーダルオーバーレイが表示される
+- ✅ Home で Mod カード → URL が `/mod/[slug]` になり、モーダルオーバーレイが表示される (soft nav)
 - ✅ 閉じるボタン → URL が `/` に戻り、Home が復元
 - ✅ `/mod/[slug]` を直接ブラウザで開くとフルページ (背景ダーク + カード) が SSR で表示
-- ✅ HTML ソースに Mod タイトルと本文が含まれている (SEO確認)
-- ✅ Vercel プレビューで `og:title` `og:image` が正しく反映される
+- ✅ HTML ソースに Mod タイトルと本文が含まれている (SEO確認、Vercel 上で確認予定)
+- ✅ `og:title` / `og:image` が `generateMetadata` から出力される
+- ✅ `pnpm --dir next build` 成功 (Route: `/`=Static, `/(.)mod/[slug]`=Dynamic, `/[...catchAll]`=Dynamic, `/mod/[slug]`=SSG)
+- ✅ TypeScript strict でエラーなし
+- ✅ Vite 版 (`src/`, `server/`, `vite.config.ts`, `index.html`) は完全に無変更
 
 ---
 

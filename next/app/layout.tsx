@@ -37,17 +37,32 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root Layout (Phase 2 版)
+ * Root Layout (Phase 4 版)
  *
  * AppShell (Client Component) が Toast/Confirm/theme を管理し、
  * その内側で children (各ページ) を描画する。
- * Phase 4 で Parallel Route `@modal` slot を受け取る形に拡張予定。
+ *
+ * Phase 4 で `@modal` Parallel Route slot を追加:
+ *   - `/mod/[slug]` を Home からクリック時 → `@modal/(.)mod/[slug]` に
+ *     インターセプトされ、Home ページの上にモーダルとして重ねて描画
+ *   - 直接 URL アクセス時 → 通常の `/mod/[slug]/page.tsx` がフルページ描画
+ *   - `@modal/default.tsx` = 何もない状態、`@modal/[...catchAll]/page.tsx`
+ *     = 他ページに遷移した際にモーダルを閉じる (両方必須)
  */
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+  modal
+}: {
+  children: ReactNode;
+  modal: ReactNode;
+}) {
   return (
     <html lang="ja" className="dark">
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
-        <AppShell>{children}</AppShell>
+        <AppShell>
+          {children}
+          {modal}
+        </AppShell>
       </body>
     </html>
   );

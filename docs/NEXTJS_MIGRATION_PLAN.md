@@ -917,40 +917,81 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 6: 統合切替 + Vite 削除 (1日)
+### 🔹 Phase 6: 統合切替 + Vite アーカイブ (1日) ✅ **完了**
 
-**目的:** Next.js 版を **本番の主軸** にして、Vite 版を安全に削除。
+**目的:** Next.js 版を **本番の主軸** にして、Vite 版を `.archive/vite/` に安全にアーカイブ。
+
+**方針変更 (ユーザー指示):**
+> Vite 版は **削除せず** `.archive/vite/` に完全な形で保存する。
+> → 履歴・比較・緊急ロールバックに使えるようにする。ルートの build 対象からは外す。
 
 **作業:**
-- [ ] `next/` の中身を **リポジトリのルートに移動**:
+- [x] `next/` の中身を **リポジトリのルートに移動** (すべて `git mv` で履歴を保持):
   - `next/app/` → `app/`
   - `next/components/` → `components/`
   - `next/lib/` → `lib/`
   - `next/hooks/` → `hooks/`
   - `next/public/` → `public/`
-  - `next/next.config.mjs`, `next/tsconfig.json` → ルートへ
-  - `next/package.json` の依存を **ルート `package.json` にマージ**
-- [ ] 以下を **削除**:
-  - `src/` (Vite 版ソース全部)
-  - `server/` (Hono)
-  - `index.html`
-  - `vite.config.ts`
-  - 依存: `vite`, `@vitejs/plugin-react`, `@tailwindcss/vite`, `@hono/vite-dev-server`, `@hono/node-server`, `hono`, `rollup-plugin-visualizer`
-- [ ] `package.json` scripts を Next.js 標準に:
-  - `dev`: `next dev`
-  - `build`: `next build`
-  - `start`: `next start`
-  - `preview` 削除
-- [ ] `pnpm install` で lockfile 更新
-- [ ] `pnpm build` → ローカルで完全ビルド確認
+  - `next/types.ts` → `types.ts`
+  - `next/next.config.ts` → `next.config.ts` (`.mjs` ではなく `.ts` 版のまま昇格)
+  - `next/postcss.config.mjs` → `postcss.config.mjs`
+  - `next/tsconfig.json` → `tsconfig.json`
+  - `next/package.json` → `package.json` (刷新: `name`, `description`, `engines`, `packageManager` を追加)
+  - `next/pnpm-lock.yaml` → `pnpm-lock.yaml`
+  - `next/.gitignore` の内容 → ルート `.gitignore` に統合刷新
+  - `next/` (残った `node_modules` / `.next` / `next-env.d.ts` / `tsconfig.tsbuildinfo`) を削除
+- [x] Vite 版を `.archive/vite/` に **完全退避**:
+  - `src/` → `.archive/vite/src/`
+  - `server/` → `.archive/vite/server/`
+  - `index.html` → `.archive/vite/index.html`
+  - `vite.config.ts` → `.archive/vite/vite.config.ts`
+  - `tsconfig.json` (旧 Vite 版) → `.archive/vite/tsconfig.json`
+  - `package.json` (旧 Vite 版) → `.archive/vite/package.json`
+  - `pnpm-lock.yaml` (旧 Vite 版) → `.archive/vite/pnpm-lock.yaml`
+  - `pnpm-workspace.yaml` (旧 Vite 版) → `.archive/vite/pnpm-workspace.yaml`
+- [x] `.archive/vite/README.md` を新規作成:
+  - 収録物一覧
+  - Vite 版と Next.js 版の主な差分表
+  - 緊急ロールバック手順
+- [x] `tsconfig.json` の `exclude` に `.archive` を追加 (TypeScript が旧 React 18 のコードを型チェック対象にしないよう)
+- [x] ルート `.gitignore` を Next.js 標準に刷新:
+  - `.next/` / `next-env.d.ts` / `.vercel` / Turbopack キャッシュ等を追加
+  - `.archive/**/node_modules` `.archive/**/.next` `.archive/**/dist` `.archive/**/.vite` を除外して、退避後に副次生成物が入り込むのを防ぐ
+- [x] ルート `README.md` を新規作成 (Vite 用の古い create-next-app 版から刷新):
+  - 主な機能・技術構成・セットアップ手順
+  - ディレクトリ構成
+  - `.archive/vite/` への参照
+- [x] `pnpm-workspace.yaml` を削除 (旧 next/ 側の allowBuilds 設定はルート化後は不要、モノレポでもない)
+- [x] `pnpm install` (lockfile 検証) → `pnpm exec tsc --noEmit` → `pnpm build` の 3 段階を確認
 
-**PR:** `chore(migration): Phase 6 - Vite 版を削除し Next.js 版を本番構成に統合`
+**scripts (刷新後):**
+```json
+{
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "typecheck": "tsc --noEmit"
+}
+```
+
+**engines (刷新後):**
+```json
+{
+  "node": ">=20.0.0",
+  "pnpm": ">=9.0.0"
+}
+```
+
+**PR:** `chore(migration): Phase 6 - Next.js 版をルートへ昇格、Vite 版は .archive/vite/ にアーカイブ`
 
 **DoD:**
-- ✅ `pnpm build` 成功
-- ✅ `pnpm start` で本番モード起動 → 全機能動作
-- ✅ TypeScript strict エラー 0 件
-- ✅ リポジトリの `src/` と `server/` が消えている
+- ✅ `pnpm install` 成功 (lockfile 整合)
+- ✅ `pnpm exec tsc --noEmit`: 0 エラー
+- ✅ `pnpm build`: 成功 (Route 構成は Phase 5 と同じ)
+- ✅ 旧 Vite 版のソースが `.archive/vite/` に完全保存されている (git mv で履歴保持)
+- ✅ ルート直下から `src/` `server/` `index.html` `vite.config.ts` が消えている
+- ✅ `README.md` / `.archive/vite/README.md` に運用手順が記載されている
 
 ---
 

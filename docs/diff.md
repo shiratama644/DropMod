@@ -21,6 +21,11 @@
 
 合計で `.archive/vite/` 側 37 ファイル、Next 側 46 ファイル。うち共通対応関係が 25 ペア成立。
 
+**UI/UX 実測差分 (§11・§12 参照):**
+- 総発見項目 **32 件** (§11.11 の 17 件 + §12.15 の 15 件)
+- 内訳: 🔴 重大 (即時対応推奨) **3 件** / 🟡 中 (次期リリース) **8 件** / 🟢 低 (時間があれば) **8 件** / ✅ 改善 (Next で新規獲得・維持) **13 件**
+- 特に **§12.1 モーダル背景スクロールロック抜け** と **§12.2 `<a href>` 未使用** は本番デプロイ前に修正することを強く推奨
+
 ---
 
 ## 2. 完全同一 (6 件)
@@ -316,9 +321,16 @@ Vite 版と Next 版でファイル境界が変わった箇所の対応関係を
 
 | 項目 | 影響 | 対応方針 |
 | --- | --- | --- |
-| **React ErrorBoundary が消失** | React ツリー内の描画例外時、Vite 版はカスタム UI + 「ローカル削除して再読込」ボタンが出たが、Next 版は Next.js デフォルトの 500 ページ | Phase 8 で `app/error.tsx` + `app/global-error.tsx` を追加予定 (Vite 版 `ErrorBoundary.tsx` のロジックを移植) |
+| **React ErrorBoundary が消失** | React ツリー内の描画例外時、Vite 版はカスタム UI + 「ローカル削除して再読込」ボタンが出たが、Next 版は Next.js デフォルトの 500 ページ (英語) | Phase 8 で `app/error.tsx` + `app/global-error.tsx` を追加予定 (Vite 版 `ErrorBoundary.tsx` のロジックを移植) |
 | **Hero Banner の「登録 MOD 数」パネル消失** | Vite 版では Home 画面右側に大きく Mod カウントが表示されていた (§11.3 参照)。Next.js 版では消えたため BottomNav バッジで代替 | Phase 8 で `components/HomeInteractive.tsx` の Hero Banner に復元推奨 |
 | **`<title>` タグに "DropMod" 重複** | `/mod/[slug]` で `<title>${slug} - DropMod \| DropMod</title>` となる (§11.6 参照)。`layout.tsx` の `title.template` と `generateMetadata` の title 両方が "DropMod" を含む | `app/mod/[slug]/page.tsx` の `title:` から ' - DropMod' を削除する 5 分修正 |
+| 🔴 **モーダル open 時の背景スクロールロック抜け** | `AppShell.tsx` の `isAnyModalOpen` に `/mod/[slug]` モーダル検知が無い (§12.1 参照)。モバイルで背景 (Home グリッド) が touch scroll できてしまう。Vite にはあったガードが消失 | Phase 8 で `usePathname()` を使い `pathname?.startsWith('/mod/')` を `isAnyModalOpen` に追加 (10 分修正) |
+| 🔴 **`<a href>` タグ数が 0** | 全てのページ遷移が `router.push()` 実装で `<Link>` 未使用 (§12.2 参照)。右クリック「新規タブ」・中クリック・prefetch・SEO クロールが全て機能しない | Phase 8 で BottomNav/Header/ModCard/Empty state を `<Link>` に置換 (30 分修正) |
+| **`next/image` 未使用** | `next.config.ts` に `remotePatterns` はあるが `<img>` を 9 箇所で素で使用 (§12.6 参照)。Modrinth CDN の PNG が WebP 変換されない、lazy loading・srcset 未使用 | Phase 8 で `<Image>` に置換、画像サイズ 50-80% 削減見込 |
+| **防御コード欠落** | `profile?.name \|\| '名称未設定プロファイル'` 等の Optional chaining + フォールバック 3 件消失 (§12.4 参照) | Optional chaining を復元 (5 分) |
+| **theme FOUC** | SSR は常に dark で送信、hydration 後に light に切替。Vite より視覚的に目立つ (§12.14 参照) | `<script>` inline で hydration 前に LocalStorage 読取 |
+| **一般ページの loading/error boundary 不在** | `app/loading.tsx` / `app/error.tsx` / `app/global-error.tsx` が無い (§12.13 参照)。ページ切替時に一瞬何も見えない、React 例外時デフォルト 500 | Phase 8 で追加 |
+| **SSR は default profile 固定 → hydration 後ちらつき** | Home の SSR は 1.20.1/Fabric 固定 → LocalStorage 復元後に別プロファイルの結果が上書きで見える (§12.5 参照)。Vite には無かった現象 | skeleton SSR + CSR 発火に変更 or cookie 化 |
 
 ### 9.2 Vite 版から仕様継承済み (差分としては現れないが担保されている)
 
@@ -632,6 +644,448 @@ sandbox の外部通信制限と Chromium 不在により、以下は **手動�
 ---
 
 *§11 は 2026-08-21 に Vite 版 (Phase 0 開始時点 `.archive/vite/`) と Next.js 版 (HEAD `260075c`) を並行起動して静的解析で比較した結果です。Playwright 等の動的スクリーンショット比較は sandbox の Chromium 不在で不可能だったため、curl + HTML パーサ + JSX ソース比較で徹底代替しました。*
+
+---
+
+## 12. 深掘り差分 (bundle strings 抽出・A11y・ルーティング挙動・キャッシュ・build 統計)
+
+§11 で拾えなかった、より低レベル / 隠れた差分を集中的に洗い出した結果です。以下の 8 つの視点で追加調査しました:
+
+1. **build 済み JS bundle 内の日本語文字列抽出比較** (JSX props ではなく実際にユーザーが見る文言)
+2. **A11y (aria-* / role 属性) の実 DOM 出現数**
+3. **CSS build 差分** (font 埋め込み方式)
+4. **HTTP 経由の実挙動** (SPA fallback / RSC ペイロード / api ルート)
+5. **モーダル open state のスクロールロック挙動**
+6. **`<a href>` vs `router.push()` 選択差分**
+7. **Suspense/loading 境界の配置**
+8. **First Load JS の Next.js 公式ビルド統計**
+
+### 12.1 【重大 UX バグ】モーダル open 時の背景スクロールロック抜け
+
+**発見**: `AppShell.tsx` の `isAnyModalOpen` 判定に **`isModDetailModalOpen` に相当する項目が抜けている**。
+
+```diff
+// Vite App.tsx
+  const isAnyModalOpen =
+    isNewProfileModalOpen ||
+    isEditProfileModalOpen ||
+-   isModDetailModalOpen ||          // ← Vite にはあった
+    isDepCheckModalOpen ||
+    isZipModalOpen ||
+    Boolean(confirmDialogProps.isOpen);
+```
+
+**影響**: `/mod/[slug]` にソフトナビした状態 (URL 付きモーダル表示中) で:
+- モバイルで背景 (Home グリッド) が **touch scroll できてしまう**
+- モーダルからはみ出た touch で背景がスクロールする → ユーザーが「モーダルが揺れる」ように感じる
+- モーダル外のクリックが背景の Mod カードに反応してしまう可能性
+
+Vite 版では `document.body.style.overflow = 'hidden'` が確実にかかっていた。
+
+**原因**: Next 版では ModDetailModal が `usePathname()` ベースの URL 制御なので、AppShell 側に「Mod 詳細モーダルが開いてる」ことを伝える仕組みが無い。
+
+**推奨修正 (Phase 8):**
+```typescript
+// AppShell.tsx
+const pathname = usePathname();
+const isModDetailOpen = pathname?.startsWith('/mod/') ?? false;
+
+const isAnyModalOpen =
+  isNewProfileModalOpen ||
+  isEditProfileModalOpen ||
+  isDepCheckModalOpen ||
+  isZipModalOpen ||
+  isModDetailOpen ||                 // ← 追加
+  Boolean(confirmDialogProps.isOpen);
+```
+
+### 12.2 【重大 SEO/UX 退行】`<a href>` タグ数がゼロ
+
+**発見**: Next.js 版 Home HTML には **`<a href>` タグが 0 個**。全てのページ遷移が `router.push()` (JavaScript イベント) で実装されている。`<Link>` の使用は `not-found.tsx` のみ。
+
+| ページ遷移 | Vite 版 | Next.js 版 |
+| --- | --- | --- |
+| BottomNav の 3 タブ | `<button onClick={setActiveTab}>` (元々 URL 無し) | `<button onClick={router.push}>` (`<a>` にできる) |
+| Header ロゴ (`ホームへ`) | `<div role="button" onClick={setActiveTab('home')}>` | `<div role="button" onClick={router.push('/')}>` |
+| ModCard クリック | `<div onClick={setDetailProjectId}>` (SPA モーダル) | `<div onClick={router.push('/mod/${id}')}>` |
+| 「Modを探しに行く」ボタン (Empty state) | `<button onClick={setActiveTab('home')}>` | `<button onClick={router.push('/')}>` |
+| ModDetailModal の閉じるボタン | `<button onClick={setIsOpen(false)}>` | `<button onClick={router.back()}>` |
+
+**影響:**
+1. **右クリック / 中クリック で新規タブが開けない** (すべて `<button>` / `<div>` のため)
+2. **`rel="prefetch"` が効かない** (Next.js の `<Link>` の自動 prefetch を活用できていない)
+3. **SEO クローラーが素の HTML から `<a>` を辿れない** (RSC ペイロード内には存在するが検索エンジンは JS 実行しない)
+4. **キーボード Tab 移動での "リンクだけ辿る" 挙動が動作しない** (`<a>` と `<button>` は違う Landmark)
+
+**推奨修正 (Phase 8):** BottomNav, Header ロゴ, ModCard, Empty state ボタンを `<Link>` に置換。
+
+### 12.3 【新規発見: 消失文字列】Vite bundle にあって Next bundle に無い日本語
+
+両 build 済み JS bundle から日本語文字列を Python の正規表現で抽出 (テンプレートリテラルの `${x}` を正規化してから比較) し、片方にしか無い文言を集計:
+
+**Vite bundle にあって Next bundle に無い文言 (16件):**
+
+```
+アプリの描画中にエラーが発生し、画面が停止しました。以下を試してください:
+「リロード」でページを再読み込み
+それでも直らない場合は「ローカルデータを削除してリロード」
+エラー詳細を表示
+データを削除してリロード
+予期しないエラーが発生しました
+                                    ← ここまで ErrorBoundary の UI 文言 (6件)
+                                       Vite 版 src/components/ErrorBoundary.tsx (175行)
+                                       Next.js では未移植 (§9.1 で指摘済)
+
+登録 MOD 数                          ← Hero Banner 右側パネル (§11.3 で指摘済)
+名称未設定プロファイル                ← profile.name 空時のフォールバック (下記 §12.4)
+詳細本文を読み込んでいます...        ← ModDetail の Body 読み込みスピナー
+読み込み中...                       ← ModDetail のヘッダ loading placeholder
+
+対応バージョン一覧 (                 ← 文字列連結方式の差 (下記 §12.7)
+ギャラリー・スクリーンショット (
+```
+
+**Next bundle にあって Vite bundle に無い文言 (10件):**
+
+```
+ホームに戻る                        ← variant="page" 時のフッターボタン (§11.5)
+Mod 情報を読み込めませんでした。      ← Server fetch 失敗時の新規エラー表示
+このプロファイル向けの対応バージョンは見つかりませんでした。  ← 新規 empty state
+[DropMod] sitemap: Modrinth 取得失敗、静的ルートのみ出力:  ← Server サイド ログ
+MC ${x} (${x}) • ${x} 個のMod       ← Settings のプロファイル一覧ラベル (Vite と表記微差)
+```
+
+### 12.4 【新規発見: 防御コード欠落】`profile?.name || '名称未設定プロファイル'` フォールバックが消滅
+
+**Vite `HomeTab.tsx` (line 88-99):**
+```jsx
+<span>Minecraft {profile?.mcVersion || '未設定'}</span>
+<span>{profile?.loader || '未設定'}</span>
+<h2>{profile?.name || '名称未設定プロファイル'}</h2>
+<p>{profile?.description || 'Modrinthから...'}</p>
+```
+
+**Next `HomeInteractive.tsx` (line 244):**
+```jsx
+<span>Minecraft {profile.mcVersion}</span>        {/* ← || '未設定' なし */}
+<span>{profile.loader}</span>                     {/* ← || '未設定' なし */}
+<h2>{profile.name}</h2>                          {/* ← || '名称未設定プロファイル' なし */}
+<p>{profile.description || 'Modrinthから...'}</p> {/* description だけは維持 */}
+```
+
+**影響**: `useProfiles` の sanitizeLoadedState で通常はガードされるが、Context 移行時に `currentProfile` が一瞬 undefined になるレースがあれば `undefined` が h2 に描画される。防御コードが 4 → 1 に減った。
+
+**推奨修正 (Phase 8):** Optional chaining + フォールバックを復元。
+
+### 12.5 【新規発見: SSR フォールバック不整合】Home の SSR は default profile 固定
+
+**Next `app/page.tsx`:**
+```typescript
+const SSR_DEFAULT_MC_VERSION = '1.20.1';
+const SSR_DEFAULT_LOADER = 'Fabric';
+
+export default async function HomePage() {
+  const [searchResult, mcVersions] = await Promise.all([
+    fetchModrinthSearch({
+      mcVersion: SSR_DEFAULT_MC_VERSION,   // ← 常に 1.20.1
+      loader: SSR_DEFAULT_LOADER,           // ← 常に Fabric
+      ...
+    }),
+```
+
+**挙動:**
+- LocalStorage に「1.21.4 / Forge」のプロファイルがあるユーザーが Home を開くと:
+  1. **SSR HTML**: 1.20.1/Fabric ベースの Mod カード 24 個が届く
+  2. **hydration 完了**: LocalStorage 復元 → mcVersion/loader が変わる → useEffect が発火
+  3. **CSR re-fetch**: 1.21.4/Forge の 24 個が上書きで表示
+  4. **ユーザーには**: 「一瞬 Fabric の Mod が見えて、パッと Forge のに切り替わる」**ちらつき**
+
+Vite 版は SSR 無しの CSR 一直線だから、この現象は起きない (代わりに初期表示自体が遅い)。
+
+**軽減案 (Phase 8):**
+- SSR 段階では **抽象的なプレースホルダ (skeleton) だけ返し**、hydration 後に fetch する (SSR の意義を捨てる)
+- または、LocalStorage を先読みする inline `<script>` を layout に注入して、SSR を条件分岐にする
+- または、静的化を諦めて **cookie-based プロファイル管理**に移行 (要大改修)
+
+### 12.6 【新規発見: `<Image>` 未使用】Modrinth CDN の画像が最適化されていない
+
+**`next.config.ts`:**
+```typescript
+images: {
+  remotePatterns: [
+    { protocol: 'https', hostname: 'cdn.modrinth.com' },
+    { protocol: 'https', hostname: 'raw.githubusercontent.com' }
+  ]
+}
+```
+
+**しかし実際の Component:**
+```bash
+# next/image を import している箇所を検索
+$ grep -rn "from 'next/image'" components/ app/
+(結果: 0 件)
+
+# <img> タグの使用箇所
+$ grep -rn '<img' components/
+components/DependencyCheckModal.tsx:673:  <img ... />
+components/DependencyCheckModal.tsx:735:  <img ... />
+components/MarkdownRenderer.tsx:146:      <img ... />
+components/ModCard.tsx:50:              <img ... />
+components/ModDetailModalShell.tsx:187:  <img ... />
+components/ModDetailModalShell.tsx:270:  <img ... />
+components/ModDetailModalShell.tsx:303:  <img ... />
+components/ModsPageClient.tsx:288:       <img ... />
+components/ModsPageClient.tsx:381:       <img ... />
+```
+
+**影響:** Next.js の画像最適化 (WebP/AVIF 変換、srcset 生成、lazy loading、blur placeholder) が **全て効いていない**。`remotePatterns` の設定だけあって使われていない。
+
+**推奨修正 (Phase 8):** ModCard / ModDetailModalShell / ModsPageClient の 9 箇所を `next/image` の `<Image>` に置換。Modrinth の PNG icon が自動で WebP に変換されて 50%〜80% サイズ削減が見込める。
+
+### 12.7 【新規発見: 文字列連結スタイルの一貫化】
+
+**Vite:**
+```jsx
+<span>対応バージョン一覧 ({versions.length})</span>
+<span>ギャラリー・スクリーンショット ({project.gallery.length})</span>
+```
+→ bundle には `対応バージョン一覧 (` と `)` が別々に残る (2 つの文字列 + JSX children)
+
+**Next:**
+```jsx
+<span>{`対応バージョン一覧 (${versions.length})`}</span>
+<span>{`ギャラリー・スクリーンショット (${project.gallery.length})`}</span>
+```
+→ bundle には `対応バージョン一覧 (${x})` としてテンプレートリテラル 1 つで残る
+
+**理由**: 過去に他コンポーネントで「JSX 内で日本語と `{変数}` を接続詞で汚く混ぜない」というユーザー指摘を受けた際、テンプレートリテラルに統一する方針で移植したため。
+
+**影響**: **UI 表示は完全に同じ**。i18n 抽出ツール (i18next-parser 等) の互換性がむしろ向上している。
+
+### 12.8 A11y (aria-* / role) 属性の SSR 段階出現数
+
+curl で取得した Home HTML を直接 grep:
+
+| 属性 | Vite (SSR HTML) | Next.js (SSR HTML) |
+| --- | ---: | ---: |
+| `aria-hidden="true"` | 0 | **21** |
+| `aria-pressed="false"` | 0 | **9** |
+| `aria-pressed="true"` | 0 | **1** (Home タブが active) |
+| `role="combobox"` | 0 | **2** (プロファイル / ソート dropdown) |
+| `aria-haspopup="listbox"` | 0 | **2** |
+| `aria-expanded="false"` | 0 | **2** |
+| `role="button"` | 0 | **1** (Header ロゴ) |
+| `aria-current="page"` | 0 | **1** (BottomNav Home) |
+| `aria-label="..."` | 0 | **9** (テーマ切替 / 依存チェック / ZIP保存 / ZIP読込 / プロファイル切り替え / 新規プロファイル作成 / 並び順 / メインナビゲーション / ホーム画面へ移動) |
+| **合計** | **0** | **48** |
+
+**影響:** 
+- スクリーンリーダー (VoiceOver / NVDA) が **JavaScript 実行前に Landmark と Widget を認識**できる
+- Lighthouse Accessibility スコアの `aria-*` 系項目で有利
+- キーボード-only ユーザーが Tab 順序を認識できる
+
+Vite 版もハイドレーション完了後は同じ数の aria が付与されるが、**SSR 段階では 0**。→ アクセシビリティ支援ツールとの相性は Next.js が圧勝。
+
+### 12.9 CSS ビルドの font 埋め込み方式
+
+**Vite (`dist/assets/index-CDcqlQEQ.css`, 214KB):**
+```css
+@font-face {
+  font-family: Inter;
+  src: url(data:font/woff2;base64,d09GMg...) format("woff2"),
+       url(data:font/woff;base64,d09GRg...) format("woff");
+}
+/* ↑ base64 でフォントを CSS 内に埋め込み */
+```
+
+**Next.js (`.next/static/chunks/3phldgbukhn51.css`, 111KB + 別 css 60KB):**
+```css
+@font-face {
+  font-family: Inter;
+  src: url(../media/inter-latin-400-normal.abc123.woff2) format("woff2");
+}
+/* ↑ 別ファイルに分離し、CSS からは URL 参照 */
+```
+
+| メトリクス | Vite | Next.js |
+| --- | ---: | ---: |
+| CSS ファイル合計 | 214 KB (1 個) | 171 KB (2 個) |
+| フォント (別ファイル) | 800+ KB (public/assets/) | 800+ KB (.next/static/media/) |
+| **CSS + font 単純合計** | ~1.0 MB | ~1.0 MB |
+| キャッシュ効率 | ❌ フォントと CSS が一体、CSS 更新でフォント再 DL | ✅ フォント単独、CSS 更新でも Etag ヒット |
+| ネットワークリクエスト数 (初回) | 1 (CSS のみ) | 数個 (CSS + 使用フォント) |
+| HTTP/2 環境 | 単一 request 有利 | multiplexing で差なし |
+
+**総合評価**: 継続運用時のキャッシュ効率は **Next 圧勝**。初回訪問時のリクエスト数は Vite 有利だが HTTP/2 の multiplexing で差はほぼ無い。
+
+### 12.10 SPA fallback の副作用: API ルートの応答差分
+
+Vite `pnpm preview` (production 静的 hosting 相当) 環境で、Hono プロキシは動かず、全 URL に Home HTML を返す:
+
+| URL | Vite `preview` | Next.js `start` |
+| --- | --- | --- |
+| `/` | 200 text/html (Home) | 200 text/html (Home SSR) |
+| `/mods` | **200 text/html (Home 返却)** | 200 text/html (mods SSR) |
+| `/mod/sodium` | **200 text/html (Home 返却)** | 200 text/html (mod 詳細 SSR) |
+| `/api/health` | **200 text/html (Home 返却)** ❌ | 200 application/json ✅ |
+| `/api/modrinth/tag/game_version` | **200 text/html (Home 返却)** ❌ | 502 application/json (Modrinth 到達不可、正しくプロキシ試行) |
+| `/sitemap.xml` | **200 text/html (Home 返却)** ❌ | 200 application/xml ✅ |
+| `/robots.txt` | **200 text/html (Home 返却)** ❌ | 200 text/plain ✅ |
+| `/nonexistent` | **200 text/html (Home 返却)** ❌ | 404 text/html ✅ |
+
+**Vite の運用リスク**: `pnpm dev` 時のみ Hono API が動作するため、**Vercel/Cloudflare Pages 等の静的 hosting にデプロイすると Modrinth API が完全に死ぬ**。dev / preview / prod で挙動が異なる = **本番環境で想定外の障害**。
+
+Vite 版を実運用するには Node.js サーバ (`@hono/node-server`) を別途起動して同一 origin にリバースプロキシする必要があり、デプロイ複雑度が高い。
+
+Next.js 版はこの問題を **Route Handler で構造的に解消**している。
+
+### 12.11 Next.js の実 First Load JS メトリクス (公式 build 統計)
+
+`.next/diagnostics/route-bundle-stats.json` から実測:
+
+| Route | First Load JS (uncompressed) | 使用 chunks 数 |
+| --- | ---: | ---: |
+| `/` (Home) | **800 KB** | 9 個 |
+| `/mods` | **797 KB** | 9 個 |
+| `/settings` | **793 KB** | 9 個 |
+| `/mod/[slug]` | **1,126 KB** | 11 個 |
+| `/(.)mod/[slug]` | **1,117 KB** | 10 個 |
+
+参考: Vite 版 SPA は **単一 bundle 766 KB** で全ページ共通。
+
+**分析:**
+- Home/mods/settings は共通 chunk が多く 800KB 前後で揃う
+- Mod 詳細ページは +330KB 追加 (react-markdown + rehype/remark + gsap の詳細ページ限定 chunk)
+- Vite 版はページ切替でネットワーク発生ゼロ (初回 766KB 一括読み込み)
+- Next 版はページ切替で追加チャンクを取りに行くが、共通部分は browser cache HIT
+
+**結論**: 初回 Home ロード時は Vite が有利 (766KB vs 800KB)、以降のページ遷移は Next.js が有利 (RSC ペイロード 20〜50KB のみ)。継続利用時の総ダウンロード量は Next.js のほうが少ない。
+
+### 12.12 `router.back()` の副作用: 履歴スタック汚染
+
+**Vite 版**: モーダル閉じは `setIsOpen(false)`。ブラウザ履歴は 1 エントリのまま。
+
+**Next 版**: モーダル閉じは `router.back()`。開くたびに `router.push('/mod/[slug]')` で **履歴が積まれる**。
+
+**シナリオ:**
+1. Home → Mod A クリック → モーダル (`/mod/A`)
+2. モーダル閉じる → Home (`/`)
+3. Mod B クリック → モーダル (`/mod/B`)
+4. モーダル閉じる → Home (`/`)
+5. ブラウザ「戻る」ボタン → **`/mod/B` に戻ってしまう** (Mod B のモーダルが再開する)
+6. さらに「戻る」 → `/` (Home)
+7. さらに「戻る」 → `/mod/A` (Mod A モーダル再開)
+8. さらに「戻る」 → `/` (Home)
+9. さらに「戻る」 → 前ページ (別サイト等)
+
+**影響:**
+- ブラウザバックの挙動が「モーダルを閉じた後にもう一度モーダルが開く」→ 混乱
+- 検索エンジンからのランディング後、ワンクリック戻れない
+- ユーザーが「戻る」を連打しないと元のサイトに戻れない (履歴汚染)
+
+**軽減案:**
+- `router.push()` の代わりに `router.replace()` を使う (履歴を上書き)
+- ただし複数 Mod を渡り歩く場合、履歴が壊れて期待通り戻れない
+- Trade-off が微妙、UX 設計次第
+
+### 12.13 loading.tsx / not-found.tsx / error.tsx の配置
+
+Next 版で追加された Suspense/error boundary の配置:
+
+| ファイル | 存在 | 目的 |
+| --- | :-: | --- |
+| `app/loading.tsx` | ❌ | 存在しない → **Home へ切替時に一瞬何も見えない可能性** |
+| `app/error.tsx` | ❌ | 存在しない → **React 例外時デフォルト 500 ページ** |
+| `app/global-error.tsx` | ❌ | 存在しない → **`app/error.tsx` も落ちた時のフォールバック** |
+| `app/not-found.tsx` | ❌ | 存在しない → 全体の 404 は Next.js デフォルト |
+| `app/mod/[slug]/loading.tsx` | ✅ | Mod 詳細ページの Suspense fallback (スケルトン) |
+| `app/mod/[slug]/not-found.tsx` | ✅ | Mod 詳細ページ専用の 404 |
+| `app/@modal/(.)mod/[slug]/loading.tsx` | ❌ | 存在しない → **モーダル経路で ISR MISS 時に無音待機** |
+
+**影響:**
+- 一般ページの loading / error / not-found が Next.js デフォルト (英語) のまま
+- Vite 版には `ErrorBoundary` に日本語 UI があった (§12.3 参照)、Next 版はそれが完全に消失
+
+**推奨追加 (Phase 8):**
+1. `app/error.tsx` — Vite 版 `ErrorBoundary.tsx` のロジックを移植
+2. `app/global-error.tsx` — アプリ全体の最終フォールバック
+3. `app/@modal/(.)mod/[slug]/loading.tsx` — モーダル ISR MISS 時のスケルトン
+4. `app/loading.tsx` — 全体切替時の共通 skeleton (任意、UX 向上)
+
+### 12.14 theme (dark/light) の初期化 FOUC
+
+**Vite 版:**
+- `<html lang="ja" class="dark">` 固定 (index.html)
+- `useProfiles` の hydration で LocalStorage 復元 → theme が light に変わる可能性
+
+**Next 版:**
+- `<html lang="ja" className="dark">` 固定 (layout.tsx)
+- 同じく hydration で light に変わる可能性
+
+**両者共通**: LocalStorage に light 保存済のユーザーが、hydration 完了までの一瞬 dark 画面を見る **FOUC (Flash of Unstyled Content)**。
+
+**Next.js のほうが影響が大きい理由:**
+- Vite は空 HTML なので視覚的にはほぼ気付かれない (単に真っ黒→light 切替)
+- Next は SSR で dark theme の完全 UI (Header/Grid) を描画してしまうため、「一瞬 dark UI が完全表示 → パッと light に切り替わる」動きが目立つ
+
+**推奨修正 (Phase 8):**
+```typescript
+// app/layout.tsx の <head> 内に inline script を注入
+<script dangerouslySetInnerHTML={{ __html: `
+  try {
+    const saved = JSON.parse(localStorage.getItem('dropmod_state_v2') || '{}');
+    if (saved.theme === 'light') document.documentElement.classList.remove('dark');
+  } catch {}
+`}} />
+```
+
+### 12.15 更新された総括表 (§11.11 の追補)
+
+§11.11 の 17 項目に加えて、§12 で発見した項目:
+
+| # | 差分 | 種別 | 影響度 | 対応 |
+| --- | --- | --- | :-: | --- |
+| 18 | モーダル open 時の背景スクロールロック抜け (`isAnyModalOpen` の項目漏れ) | **重大 UX バグ** | 🔴 高 | AppShell.tsx に `usePathname()` で `/mod/*` 検知を追加 |
+| 19 | `<a href>` タグ数 0 (全部 `router.push()`) | **重大 SEO/UX 退行** | 🔴 高 | BottomNav/Header/ModCard/Empty state を `<Link>` に置換 |
+| 20 | ErrorBoundary の日本語 UI 文言 6 件が消失 | 退行 | 🟡 中 | `app/error.tsx` + `app/global-error.tsx` 追加 (§9.1 で既記録) |
+| 21 | `profile?.name \|\| '名称未設定プロファイル'` 等の防御コード 3 件消失 | 退行 | 🟢 低 | Optional chaining + フォールバック復元 (5 分) |
+| 22 | SSR は default profile 固定 → hydration 後に ちらつき | 新規発生 | 🟡 中 | skeleton SSR + CSR 発火に変更 or cookie 化 |
+| 23 | `next/image` 未使用 (`<img>` 9 箇所) | 未活用 | 🟡 中 | ModCard/ModDetailModalShell/ModsPageClient を `<Image>` に |
+| 24 | ModDetail の「読み込み中...」「詳細本文を読み込んでいます...」文言消失 | 変更 | 🟢 低 | SSR で fetch 完了しているため不要、モーダル ISR MISS 時のみ `loading.tsx` 追加が望ましい |
+| 25 | `router.back()` で履歴スタック汚染 | 変更 | 🟢 低 | UX 判断次第で `router.replace()` に |
+| 26 | `app/loading.tsx` / `app/error.tsx` / `app/global-error.tsx` 不在 | 未実装 | 🟡 中 | Phase 8 で追加 |
+| 27 | theme FOUC (dark で SSR → hydration で light に一瞬切替) | 新規発生 | 🟢 低 | inline `<script>` で hydration 前に LocalStorage 読取 |
+| 28 | Vite `preview` で `/api/*` が Home HTML を返す (SPA fallback) | Vite の元々の制約 | ✅ 解決済 | Next 版で構造的解消 |
+| 29 | Vite `preview` で `/sitemap.xml` / `/robots.txt` が Home HTML | Vite の元々の制約 | ✅ 解決済 | Next 版で正しい MIME で応答 |
+| 30 | Vite bundle は font を base64 で CSS 埋め込み、Next は分離 | 実装差 | ✅ Next 有利 | (キャッシュ効率) |
+| 31 | SSR HTML に aria-* / role 属性が Vite 0 個 → Next 48 個 | 大幅改善 | ✅ Next 有利 | - |
+| 32 | 日本語文字列連結: Vite は JSX children、Next はテンプレートリテラル | 実装差 | ✅ 同等 | i18n 抽出容易性は Next 有利 |
+
+### 12.16 発見された修正候補の優先度 (Phase 8+ ロードマップ提案)
+
+以下の順で対応すると効果が高い:
+
+**優先度 🔴 高 (即時対応推奨):**
+1. `<a href>` / `<Link>` への置換 (SEO 直結)
+2. モーダル背景スクロールロックの復元 (UX バグ)
+3. `<title>` タグ重複バグ修正 (§11.6 で既指摘、5 分作業)
+
+**優先度 🟡 中 (次期リリースまでに):**
+4. `app/error.tsx` + Vite ErrorBoundary 移植
+5. Hero Banner の「登録 MOD 数」パネル復元 (§11.3 で既指摘)
+6. `next/image` への置換 (Modrinth 画像最適化)
+7. `app/loading.tsx` (全体 skeleton)
+8. `app/@modal/(.)mod/[slug]/loading.tsx` (モーダル ISR MISS 時 skeleton)
+9. SSR/hydration ちらつき解消 (skeleton or cookie 化)
+
+**優先度 🟢 低 (時間があれば):**
+10. `profile?.name || '名称未設定プロファイル'` 等の防御コード復元
+11. theme FOUC の inline script 対応
+12. `router.replace()` vs `router.push()` の履歴戦略決定
+
+---
+
+*§12 は 2026-08-21 に §11 で拾えなかった低レベル / 隠れた差分を Python + curl + `.next/diagnostics/` のビルド統計から追加調査した結果です。特に §12.1 と §12.2 は本番デプロイ前に修正することを強く推奨します。*
 
 ---
 

@@ -7,6 +7,7 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useAppContext } from './AppContext';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell (Phase 4)
@@ -58,6 +59,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   slug
 }) => {
   const router = useRouter();
+  const { currentProfile, handleToggleMod } = useAppContext();
 
   // -------- Hook 群 (早期 return より前に全て) --------
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -67,6 +69,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const [isVersionsExpanded, setIsVersionsExpanded] = useState(true);
   const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
   const [isJarDownloading, setIsJarDownloading] = useState(false);
+  const [isTogglePending, setIsTogglePending] = useState(false);
 
   const handleClose = useCallback(() => {
     if (!isModal) return;
@@ -104,6 +107,27 @@ export const ModDetailModalShell: React.FC<Props> = ({
     },
     [isJarDownloading]
   );
+
+  const handleProfileToggle = useCallback(
+    async (projectId: string, e: React.MouseEvent) => {
+      if (isTogglePending) return;
+      setIsTogglePending(true);
+      try {
+        await handleToggleMod(projectId, e);
+        // 追加/削除操作後、モーダル表示中はそのまま閉じる (Vite 版と同じ UX)
+        if (isModal) {
+          if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back();
+          } else {
+            router.push('/');
+          }
+        }
+      } finally {
+        setIsTogglePending(false);
+      }
+    },
+    [handleToggleMod, isModal, isTogglePending, router]
+  );
   // ----------------------------------------------------
 
   // データが無い or 空 (SSR fetch 失敗時など) のガード。
@@ -133,6 +157,10 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const latestVersion = versions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
   const displayedVersions = isVersionsExpanded ? versions : [];
+
+  const isAdded = currentProfile.mods.some(
+    (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+  );
 
   // -------- 内側カード (両バリアント共通) --------
   const innerCard = (
@@ -404,7 +432,45 @@ export const ModDetailModalShell: React.FC<Props> = ({
             )}
           </button>
         )}
-        {/* Phase 5 で useProfiles と連携して「プロファイルに追加/削除」ボタンを復活予定 */}
+        {isAdded ? (
+          <button
+            type="button"
+            onClick={(e) => handleProfileToggle(project.id, e)}
+            disabled={isTogglePending}
+            className="px-4 py-2 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {isTogglePending ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                処理中...
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-trash-can" aria-hidden />
+                プロファイルから削除
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => handleProfileToggle(project.id, e)}
+            disabled={isTogglePending}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {isTogglePending ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                追加中...
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-plus" aria-hidden />
+                プロファイルに追加
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

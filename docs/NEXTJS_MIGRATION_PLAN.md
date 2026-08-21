@@ -855,28 +855,65 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)
 
 ---
 
-### 🔹 Phase 5: `/mods` + `/settings` (1日)
+### 🔹 Phase 5: `/mods` + `/settings` (1日) ✅ **完了**
 
 **目的:** プロファイル依存の 2 タブを Client Component で実装。
 
 **作業:**
-- [ ] `next/hooks/useProfiles.ts` をコピー (LocalStorage 依存維持)
-- [ ] `next/hooks/useZipExport.ts` / `useZipImport.ts` / `useDependencyCheck.ts` をコピー
-- [ ] `next/lib/modrinth/client.ts` を最終化 (現行 `services/api.ts` 相当)
-- [ ] `next/app/mods/page.tsx` (Client, `"use client"`):
-  - AppShell 側の `useProfiles` を Context 経由で参照 (もしくは Client hook 直接)
-  - 既存 `ModsTab.tsx` の中身を移植
-- [ ] `next/app/settings/page.tsx` (Client): 同上
-- [ ] AppShell の Header / BottomNav 側で `next/link` を使ってルート切替を URL ベースに (`useRouter().push('/mods')` など)
-- [ ] active tab の判定を `usePathname()` に置換
+- [x] `next/hooks/useProfiles.ts` をコピー (LocalStorage 依存維持、path 変換 + `'use client'` 付与)
+- [x] `next/hooks/useZipExport.ts` / `useZipImport.ts` / `useDependencyCheck.ts` をコピー (同上)
+- [x] `next/lib/modrinth/client.ts` は Phase 2 で移植済 (fetchStableModVersion / fetchModrinth 使用)
+- [x] `next/components/AppContext.tsx` を新規作成 (AppContextValue 型 + Provider + `useAppContext()`)
+- [x] `next/components/AppShell.tsx` を全面刷新 (300+ 行):
+  - Vite 版 App.tsx の全 hook (useProfiles / useDependencyCheck / useZipExport / useZipImport) を集約
+  - Theme state (dark/light) と html クラス切替を統合
+  - Modal open state (NewProfile / Edit / DepCheck) と ZIP モーダルを一元管理
+  - モーダル多重オープン時の body スクロールロック
+  - `handleResetData` (Confirm → localStorage.clear → reload) を復活
+  - Header / BottomNav をレイアウトに組み込み、`usePathname()` で active tab 判定、`router.push()` で URL ベース遷移
+  - AppContext.Provider で全子ページに値を提供
+- [x] `next/components/ModsPageClient.tsx` (Client, 350 行):
+  - Vite 版 `ModsTab.tsx` の完全移植
+  - AppContext から currentProfile / handleToggleMod / handleUpdateModVersion / handleRemoveAllMods / handleDownloadZip / openDependencyCheckModal を取得
+  - Mod 詳細遷移は `router.push('/mod/${slug ?? id}')` に変更 (URL 統一)
+  - デスクトップテーブル + モバイルカードリスト + Empty state
+  - バージョン切替は Vite 版と同一の buildVersionOptions + fetchStableModVersion キャッシュロジックを継承
+- [x] `next/components/SettingsPageClient.tsx` (Client, 200 行):
+  - Vite 版 `SettingsTab.tsx` の完全移植
+  - AppContext から theme / setTheme / ZIP import/export / profiles CRUD / handleResetData を取得
+  - .zip / .mrpack ドラッグ&ドロップと file input からのインポート、プロファイル切替、削除、データ初期化
+- [x] `next/app/mods/page.tsx` — 小さい RSC ラッパ (metadata + `<ModsPageClient />`)
+- [x] `next/app/settings/page.tsx` — 小さい RSC ラッパ (同上)
+- [x] `next/components/HomeInteractive.tsx` を Context 化:
+  - profile / handleToggleMod は props から Context 経由に変更
+  - Hero Banner に「プロファイル編集 / 複製 / 依存チェック起動」ボタンを追加
+- [x] `next/components/ModDetailModalShell.tsx` の追加/削除ボタンを Context 経由で復活:
+  - currentProfile.mods を見て isAdded 判定 → 「追加」 / 「削除」を切り替え
+  - トグル完了後、モーダルバリアントは自動で閉じる (Vite 版と同 UX)
+  - 全 hook (`handleProfileToggle` / `isTogglePending`) は早期リターンより前に配置 (React error #310 対策継承)
+- [x] `next/app/page.tsx` (Home) から profile prop を削除 (Context 側で管理)
+- [x] `next/components/ModCard.tsx` の `onToggleMod` シグネチャを緩めて Context の async 関数を受け取れるように調整
 
-**PR:** `feat(next): Phase 5 - /mods と /settings を CSR で移植`
+**実装決定事項:**
+- **Context vs Zustand:** 計画書 §5 の判断に従い React 標準 Context を採用。Phase 8 以降で必要になったら Zustand/Jotai へ移行検討。
+- **AppShell の位置:** Root Layout の Client 直下に 1 インスタンスだけ配置し、Root Layout が children + modal 2 スロットを受け取る構造 (Phase 4) はそのまま維持。useProfiles の hydration は 1 セッションで 1 度だけ走る。
+- **SSR プロファイル依存:** Home の初期 24 件 SSR は default profile (1.20.1 / Fabric) 固定。Client マウント後に LocalStorage 復元が完了して mcVersion/loader が変わったら通常の絞り込み変更 useEffect が自動発火して再検索される。
+- **タブ切替:** `usePathname()` で `/`, `/mods`, `/settings` を判定し、`/mod/[slug]` 表示中は Home をアクティブ扱い (Home からのソフトナビが最も一般的な導線のため)。
+- **モーダル閉じ:** 追加/削除操作後、モーダルバリアントの Mod 詳細は自動で `router.back()` する (Vite 版と同じ UX)。
+
+**PR:** `feat(next): Phase 5 - /mods と /settings を CSR で移植 + AppContext 統合`
 
 **DoD:**
-- ✅ 3 タブ (`/`, `/mods`, `/settings`) を BottomNav で切替できる
-- ✅ プロファイルの追加・切替・削除が動作
-- ✅ Mod トグル・ZIP エクスポート・ZIP インポート・依存チェックが動作
+- ✅ 3 タブ (`/`, `/mods`, `/settings`) を BottomNav で URL ベースで切替できる
+- ✅ プロファイルの追加・切替・削除・複製・編集が動作
+- ✅ Mod トグル (Home / ModDetailModal / ModsPage 全経路) が動作
+- ✅ バージョン変更 (`/mods` のドロップダウン) が動作
+- ✅ ZIP エクスポート / インポート / 依存チェックが動作
 - ✅ LocalStorage の既存データ (旧 `craftforge_state_v2` 含む) が正しく復元される
+- ✅ Vite 版 (`src/`, `server/`, `vite.config.ts`, `index.html`) は完全に無変更
+- ✅ `pnpm --dir next exec tsc --noEmit`: 0 エラー
+- ✅ `pnpm --dir next build`: 成功
+    - Route: `/`=Static, `/mods`=Static, `/settings`=Static, `/mod/[slug]`=SSG, `/(.)mod/[slug]`=Dynamic, `/[...catchAll]`=Dynamic, `/api/*`=Dynamic
 
 ---
 

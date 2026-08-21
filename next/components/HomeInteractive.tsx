@@ -2,25 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ModrinthHit, Profile } from '@/types';
+import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
 import { CATEGORIES } from '@/lib/constants/categories';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
+import { useAppContext } from './AppContext';
 
 // ============================================================================
-// HomeInteractive (Phase 3 版)
+// HomeInteractive (Phase 5 版)
 //
-// Home ページの検索 / カテゴリ / ソート / 無限スクロールを担う Client
-// Component。初期 24 件は Server Component 側で SSR 取得され、props で
-// ハイドレートされる (体感 TTFB / LCP の高速化)。
+// Home ページの検索 / カテゴリ / ソート / 無限スクロール + Hero Banner の
+// プロファイル操作 (編集 / 複製 / 依存チェック起動) を担う。
 //
-// 以降のページング・絞り込み・検索クエリ変更は Client 側で
-// /api/modrinth/* プロキシ経由 (キャッシュはブラウザ側 = 未実装 = 都度取得)。
+// Phase 3: profile / handleToggleMod は props で受け取っていた
+// Phase 5: AppContext から取得 (useProfiles と統合)
 //
-// Phase 5 で useProfiles を Client Context 化した際、`profile` prop を
-// Context 経由に差し替える予定。現在は Phase 3 用に SSR 側で採用したのと
-// 同じ default profile を props で受け取る。
+// SSR で取得した initialHits はマウント時点の "現在プロファイル" とほぼ
+// 一致する想定 (アクティブプロファイルの mcVersion/loader は LocalStorage
+// 由来なので、初回 SSR では常に default profile 1.20.1/Fabric)。
+// LocalStorage hydration が完了して mcVersion/loader が変わった場合は、
+// 通常の絞り込み変更 useEffect が発火して自動で再検索される。
 // ============================================================================
 
 const SORT_OPTIONS = [
@@ -31,9 +33,7 @@ const SORT_OPTIONS = [
 ];
 
 interface Props {
-  /** 初期プロファイル (Phase 5 で Context 差替え予定) */
-  profile: Profile;
-  /** SSR で取得した初期 24 件 */
+  /** SSR で取得した初期 24 件 (default profile 1.20.1 / Fabric ベース) */
   initialHits: ModrinthHit[];
   /** SSR で取得した Minecraft バージョン一覧 */
   initialMcVersions: string[];
@@ -42,12 +42,18 @@ interface Props {
 }
 
 export const HomeInteractive: React.FC<Props> = ({
-  profile,
   initialHits,
   initialMcVersions,
   initialHasMore
 }) => {
   const router = useRouter();
+  const {
+    currentProfile: profile,
+    handleToggleMod,
+    handleDuplicateProfile,
+    openEditProfileModal,
+    openDependencyCheckModal
+  } = useAppContext();
 
   // 表示状態
   const [hits, setHits] = useState<ModrinthHit[]>(initialHits);
@@ -56,13 +62,12 @@ export const HomeInteractive: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // 絞り込み state (初期値 = SSR で採用したデフォルト)
+  // 絞り込み state
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<string>('popular');
   const [searchInput, setSearchInput] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
 
-  // 検索の race condition 対策 (Phase 2 で移植済みの Vite 版と同パターン)
   const activeAbortRef = useRef<AbortController | null>(null);
   const requestSeqRef = useRef<number>(0);
   const isLoadingRef = useRef<boolean>(false);
@@ -70,11 +75,8 @@ export const HomeInteractive: React.FC<Props> = ({
 
   const SEARCH_LIMIT = 24;
 
-  // 検索実行
   const executeSearch = useCallback(
     async (append: boolean, targetOffset: number) => {
-      // append=false (絞り込み変更) は前のリクエストを強制中断
-      // append=true (無限スクロール) は既存 fetch 中ならスキップ
       if (append) {
         if (isLoadingRef.current) return;
       } else if (activeAbortRef.current) {
@@ -131,7 +133,6 @@ export const HomeInteractive: React.FC<Props> = ({
               return [...prev, ...uniqueNew];
             });
           } else {
-            // 初期取得時も重複除去
             const seen = new Set<string>();
             const uniq = data.hits.filter((h) => {
               if (!h || !h.project_id) return false;
@@ -162,18 +163,15 @@ export const HomeInteractive: React.FC<Props> = ({
     [profile.mcVersion, profile.loader, selectedCategory, sortBy, debouncedQuery]
   );
 
-  // 常に最新の executeSearch を Ref に保持 (render 中同期セットで race 防止)
   const executeSearchRef = useRef(executeSearch);
   executeSearchRef.current = executeSearch;
 
-  // 検索文字列 debounce (350ms)
+  // debounce
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchInput), 350);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // 絞り込み or 検索文字列変更 → 検索実行
-  // (初回マウントは SSR 済みなのでスキップ)
   useEffect(() => {
     if (isFirstRunRef.current) {
       isFirstRunRef.current = false;
@@ -184,7 +182,7 @@ export const HomeInteractive: React.FC<Props> = ({
     executeSearchRef.current(false, 0);
   }, [profile.mcVersion, profile.loader, selectedCategory, sortBy, debouncedQuery]);
 
-  // 無限スクロール (sentinel は callback ref でマウント/アンマウントを確実に検知)
+  // 無限スクロール
   const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
   const sentinelRef = useCallback((node: HTMLDivElement | null) => {
     setSentinelEl(node);
@@ -207,7 +205,6 @@ export const HomeInteractive: React.FC<Props> = ({
     return () => observer.disconnect();
   }, [sentinelEl, hasMore]);
 
-  // アンマウント時に abort
   useEffect(() => {
     return () => {
       if (activeAbortRef.current) activeAbortRef.current.abort();
@@ -216,23 +213,17 @@ export const HomeInteractive: React.FC<Props> = ({
 
   const handleOpenModDetail = useCallback(
     (id: string) => {
-      // Phase 4 で Parallel Route の /mod/[slug] へ soft navigation
       router.push(`/mod/${id}`);
     },
     [router]
   );
-
-  const handleToggleModStub = useCallback((_id: string, e: React.MouseEvent) => {
-    // Phase 5 で useProfiles と連結。現段階は無操作。
-    e.stopPropagation();
-  }, []);
 
   const safeHits = Array.isArray(hits) ? hits : [];
   const safeMcVersions = Array.isArray(initialMcVersions) ? initialMcVersions : [];
 
   return (
     <section id="tab-home" className="space-y-4 sm:space-y-6">
-      {/* Hero Banner (Phase 3 では最小限。Phase 5 で編集ボタン等を追加) */}
+      {/* Hero Banner */}
       <div
         id="hero-banner"
         className="glass-panel rounded-3xl p-4 sm:p-6 relative overflow-hidden border border-emerald-500/20 shadow-xl"
@@ -256,11 +247,32 @@ export const HomeInteractive: React.FC<Props> = ({
             {profile.description ||
               'ModrinthからリアルタイムでModを検索してカスタマイズできます。'}
           </p>
-          <p className="text-[11px] theme-text-muted mt-2">
-            <i className="fa-solid fa-info-circle mr-1" aria-hidden />
-            Phase 3: 初期 {initialHits.length} 件は Server 側で ISR 取得済。以降の検索は Client 側で実行。
-            (Phase 5 でプロファイル切替 UI が有効化されます)
-          </p>
+          <div className="flex flex-wrap items-center gap-1.5 pt-2">
+            <button
+              type="button"
+              onClick={openEditProfileModal}
+              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <i className="fa-solid fa-pen-to-square theme-text-brand" aria-hidden />
+              プロファイルを編集
+            </button>
+            <button
+              type="button"
+              onClick={handleDuplicateProfile}
+              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <i className="fa-solid fa-copy theme-text-blue" aria-hidden />
+              複製
+            </button>
+            <button
+              type="button"
+              onClick={openDependencyCheckModal}
+              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 theme-text-amber border border-amber-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <i className="fa-solid fa-shield-halved" aria-hidden />
+              依存・競合チェック
+            </button>
+          </div>
         </div>
       </div>
 
@@ -395,7 +407,7 @@ export const HomeInteractive: React.FC<Props> = ({
                 hit={hit}
                 profile={profile}
                 onOpenDetail={handleOpenModDetail}
-                onToggleMod={handleToggleModStub}
+                onToggleMod={handleToggleMod}
               />
             ))}
             {isLoading &&
@@ -440,7 +452,7 @@ export const HomeInteractive: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Phase 3 で initialMcVersions は未使用だが Phase 5 で使う想定なので保持 */}
+      {/* MC versions は Phase 5 で AppContext 側でも取得しているため参考情報 */}
       <div hidden aria-hidden>
         {safeMcVersions.length} MC versions preloaded from SSR
       </div>

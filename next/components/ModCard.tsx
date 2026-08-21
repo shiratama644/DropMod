@@ -7,7 +7,12 @@ interface ModCardProps {
   hit: ModrinthHit;
   profile: Profile;
   onOpenDetail: (id: string) => void;
-  onToggleMod: (id: string, e: React.MouseEvent) => void;
+  /**
+   * 追加/削除トグル。AppShell 側の handleToggleMod は Promise を返すため
+   * 戻り値は緩めに unknown で受ける (React イベントは戻り値を無視するため
+   * ランタイム上は問題なし)。
+   */
+  onToggleMod: (id: string, e?: React.MouseEvent, silent?: boolean) => unknown;
 }
 
 function formatDownloads(num: number): string {

@@ -24,6 +24,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
 import { ZipProgressModal } from './ZipProgressModal';
 import { AppContextProvider, type AppContextValue } from './AppContext';
+import { useAppActionsStore } from '@/lib/store/appActions';
 // QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
 // AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)
 import { OfflineBanner } from './OfflineBanner';
@@ -313,6 +314,59 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       mcVersions
     ]
   );
+
+  // Phase 9-A: appActionsStore への登録
+  //   下流コンポーネント (Settings/Mods/Home/ModDetail) が useAppContext ではなく
+  //   Zustand 直接参照で action を取得できるようにする。
+  //   AppShell がマウントされている間だけ有効。unmount で null に戻す。
+  const registerAppActions = useAppActionsStore((s) => s.registerAppActions);
+  const unregisterAppActions = useAppActionsStore((s) => s.unregisterAppActions);
+  useEffect(() => {
+    registerAppActions({
+      handleSwitchProfile,
+      handleCreateProfile,
+      handleDuplicateProfile,
+      handleSaveEditedProfile,
+      handleDeleteProfile,
+      handleToggleMod,
+      handleUpdateModVersion,
+      handleRemoveAllMods,
+      runBackgroundDepCheck,
+      handleDownloadZip,
+      handleCancelZip,
+      handleImportZipInput,
+      handleDropZip,
+      openNewProfileModal,
+      openEditProfileModal,
+      openDependencyCheckModal,
+      handleResetData,
+      mcVersions,
+      currentProfile
+    });
+    return () => unregisterAppActions();
+  }, [
+    registerAppActions,
+    unregisterAppActions,
+    handleSwitchProfile,
+    handleCreateProfile,
+    handleDuplicateProfile,
+    handleSaveEditedProfile,
+    handleDeleteProfile,
+    handleToggleMod,
+    handleUpdateModVersion,
+    handleRemoveAllMods,
+    runBackgroundDepCheck,
+    handleDownloadZip,
+    handleCancelZip,
+    handleImportZipInput,
+    handleDropZip,
+    openNewProfileModal,
+    openEditProfileModal,
+    openDependencyCheckModal,
+    handleResetData,
+    mcVersions,
+    currentProfile
+  ]);
 
   return (
     <AppContextProvider value={contextValue}>

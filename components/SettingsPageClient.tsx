@@ -2,36 +2,45 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import type { ThemeMode } from '@/types';
-import { useAppContext } from './AppContext';
+import { useProfilesStore } from '@/lib/store/profiles';
+import { useToastStore } from '@/lib/store/toast';
+import { useConfirmStore } from '@/lib/store/confirm';
+import { useAppAction } from '@/lib/store/appActions';
 import {
   getMigrationStatus,
   restoreFromLocalStorageBackup
 } from '@/lib/db/migrate';
 
 // ============================================================================
-// SettingsPageClient
+// SettingsPageClient (Phase 9-A.1: useAppContext 撤去)
 //
 // Vite 版 `src/components/SettingsTab.tsx` の完全移植。
-// AppContext 経由で theme / profile CRUD / ZIP import/export / データ初期化
-// を取得する。
+//
+// Phase 9-A.1 の変更:
+//   - useAppContext() を撤去
+//   - store 由来 (theme/profiles/showToast/confirm): 各 Zustand store を細粒度 subscribe
+//   - hook 由来 (handleDownloadZip 等): appActionsStore 経由で subscribe
+//   - 目的: contextValue の 30+ フィールドのうち 1 つ変わっても全 consumer が
+//     再レンダーする問題を解消 (Zustand 個別 selector で再レンダー最小化)
 // ============================================================================
 
 export const SettingsPageClient: React.FC = () => {
-  const {
-    theme,
-    setTheme,
-    handleDownloadZip,
-    handleImportZipInput,
-    handleDropZip,
-    profiles,
-    currentProfileId,
-    handleSwitchProfile,
-    openNewProfileModal,
-    handleDeleteProfile,
-    handleResetData,
-    showToast,
-    confirm
-  } = useAppContext();
+  // ---- Zustand store 直接参照 (細粒度 subscription) ----
+  const theme = useProfilesStore((s) => s.theme);
+  const setTheme = useProfilesStore((s) => s.setTheme);
+  const profiles = useProfilesStore((s) => s.profiles);
+  const currentProfileId = useProfilesStore((s) => s.currentProfileId);
+  const showToast = useToastStore((s) => s.showToast);
+  const confirm = useConfirmStore((s) => s.confirm);
+
+  // ---- appActionsStore 経由 (AppShell 内 hook 由来の関数群) ----
+  const handleDownloadZip = useAppAction('handleDownloadZip');
+  const handleImportZipInput = useAppAction('handleImportZipInput');
+  const handleDropZip = useAppAction('handleDropZip');
+  const handleSwitchProfile = useAppAction('handleSwitchProfile');
+  const handleDeleteProfile = useAppAction('handleDeleteProfile');
+  const openNewProfileModal = useAppAction('openNewProfileModal');
+  const handleResetData = useAppAction('handleResetData');
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

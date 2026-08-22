@@ -5,81 +5,25 @@ import { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
+import {
+  syncProfiles as dexieSyncProfiles,
+  getAllProfiles as dexieGetAllProfiles,
+  getMeta as dexieGetMeta,
+  setMeta as dexieSetMeta
+} from '@/lib/db/dexie';
+import {
+  migrateFromLocalStorage,
+  cleanupExpiredBackup,
+  META_KEYS,
+  LOCAL_STORAGE_KEYS
+} from '@/lib/db/migrate';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
-// -------------------------------------------------------------------
-// 破損 LocalStorage への防御関数を module-level pure function
-// として外出し。以前は useProfiles 内部に定義していたが、
-//   - state / props を一切参照しない (完全な pure function)
-//   - useEffect 内でしか使用されない
-// ため、レンダーごとに関数インスタンスを作り直す必要がなかった。
-// module-level に置くことで再生成コストをゼロにし、他ファイルからも
-// テストしやすい形式になる。
-//
-// - profiles が配列でない / 空配列 の場合はデフォルトへフォールバック
-// - 各 profile が必要フィールドを欠く場合は補完
-// - currentProfileId が存在しないプロファイルを指す場合は先頭に戻す
-// これにより、外部要因で壊れたデータでもアプリ全体クラッシュしない。
-// -------------------------------------------------------------------
-export function sanitizeLoadedState(raw: unknown): {
-  theme?: ThemeMode;
-  currentProfileId?: string;
-  profiles?: Profile[];
-} | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const src = raw as {
-    profiles?: unknown;
-    theme?: unknown;
-    currentProfileId?: unknown;
-  };
-
-  let normalizedProfiles: Profile[] | undefined;
-  if (Array.isArray(src.profiles)) {
-    normalizedProfiles = (src.profiles as unknown[])
-      .filter(
-        (p): p is Record<string, unknown> =>
-          !!p && typeof p === 'object' && typeof (p as { id?: unknown }).id === 'string'
-      )
-      .map((p) => ({
-        id: String(p.id),
-        name: typeof p.name === 'string' ? p.name : '(名称未設定)',
-        mcVersion: typeof p.mcVersion === 'string' ? p.mcVersion : '1.20.1',
-        loader: typeof p.loader === 'string' ? p.loader : 'Fabric',
-        description: typeof p.description === 'string' ? p.description : '',
-        mods: Array.isArray(p.mods)
-          ? (p.mods as unknown[]).filter(
-              (m): m is ModItem =>
-                !!m &&
-                typeof m === 'object' &&
-                typeof (m as { id?: unknown }).id === 'string'
-            )
-          : []
-      }));
-    if (normalizedProfiles.length === 0) {
-      normalizedProfiles = undefined;
-    }
-  }
-
-  let normalizedTheme: ThemeMode | undefined;
-  if (src.theme === 'dark' || src.theme === 'light') normalizedTheme = src.theme;
-
-  let normalizedCurrentId: string | undefined;
-  if (typeof src.currentProfileId === 'string') {
-    const target = src.currentProfileId;
-    if (normalizedProfiles && normalizedProfiles.some((p) => p.id === target)) {
-      normalizedCurrentId = target;
-    } else if (normalizedProfiles && normalizedProfiles[0]) {
-      normalizedCurrentId = normalizedProfiles[0].id;
-    }
-  }
-
-  return {
-    theme: normalizedTheme,
-    currentProfileId: normalizedCurrentId,
-    profiles: normalizedProfiles
-  };
-}
+// Sub-Phase 8-A: `sanitizeLoadedState` は lib/state/sanitize.ts に移動。
+// 以下は既存 import ユーザーとの互換のための re-export。
+export { sanitizeLoadedState } from '@/lib/state/sanitize';
+import { sanitizeLoadedState as sanitizeLoadedStateShim } from '@/lib/state/sanitize';
 
 export const useProfiles = (
   theme: ThemeMode,
@@ -130,63 +74,126 @@ export const useProfiles = (
   // ------------------------------------------------------------------
   const [hasHydrated, setHasHydrated] = useState<boolean>(false);
 
-  // sanitizeLoadedState は module-level pure function に外出し済み
-  // (ファイル上部を参照)。
-
-  // LocalStorage から復元 (旧キー `craftforge_state_v2` からの自動移行を含む)
+  // ---------------------------------------------------------------------
+  // Sub-Phase 8-A: Dexie (IndexedDB) からの hydration
+  //
+  //   1. migrateFromLocalStorage()  — 初回起動時のみ LocalStorage → Dexie コピー
+  //   2. cleanupExpiredBackup()     — 移行から 7 日経過後は LocalStorage を掃除
+  //   3. Dexie の profiles テーブル + meta (theme/currentProfileId) を読む
+  //   4. hasHydrated = true にして以降の保存 useEffect を有効化
+  //
+  // 失敗時 (IndexedDB 利用不可な Safari プライベートブラウズ等) は
+  // LocalStorage をフォールバックとして読む。
+  // ---------------------------------------------------------------------
   useEffect(() => {
-    const STORAGE_KEY = 'dropmod_state_v2';
-    const LEGACY_KEY = 'craftforge_state_v2';
+    let cancelled = false;
 
-    let saved = localStorage.getItem(STORAGE_KEY);
-
-    // 新キーが無ければ旧キーから読み取り、成功したら新キーへコピーして旧キーを削除
-    if (!saved) {
-      const legacy = localStorage.getItem(LEGACY_KEY);
-      if (legacy) {
-        try {
-          localStorage.setItem(STORAGE_KEY, legacy);
-          localStorage.removeItem(LEGACY_KEY);
-          saved = legacy;
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-
-    if (saved) {
+    (async () => {
       try {
-        const parsed = JSON.parse(saved);
-        const sanitized = sanitizeLoadedState(parsed);
-        if (sanitized) {
-          if (sanitized.theme) setThemeState(sanitized.theme);
-          if (sanitized.profiles && sanitized.profiles.length > 0) {
-            setProfiles(sanitized.profiles);
-          }
-          if (sanitized.currentProfileId) {
-            setCurrentProfileId(sanitized.currentProfileId);
-          }
+        // Step 1-2: 移行 + 掃除
+        await migrateFromLocalStorage();
+        await cleanupExpiredBackup();
+
+        // Step 3: Dexie 読み取り
+        const [dbProfiles, savedTheme, savedCurrentId] = await Promise.all([
+          dexieGetAllProfiles(),
+          dexieGetMeta(META_KEYS.THEME),
+          dexieGetMeta(META_KEYS.CURRENT_PROFILE_ID)
+        ]);
+
+        if (cancelled) return;
+
+        // Dexie に profiles があれば ProfileRow を Profile へ (updatedAt を除く)
+        if (dbProfiles.length > 0) {
+          const restored: Profile[] = dbProfiles.map(({ updatedAt: _, ...p }) => p);
+          setProfiles(restored);
+        }
+
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          setThemeState(savedTheme);
+        }
+
+        if (savedCurrentId) {
+          setCurrentProfileId(savedCurrentId);
         }
       } catch (e) {
-        console.error('[DropMod] LocalStorage の復元に失敗、デフォルトで続行:', e);
+        // Dexie が使えない環境 (Safari プライベート等) では LocalStorage を直接読む
+        console.warn('[DropMod] Dexie 読み取り失敗、LocalStorage にフォールバック:', e);
+        try {
+          const saved =
+            localStorage.getItem(LOCAL_STORAGE_KEYS.CURRENT) ??
+            localStorage.getItem(LOCAL_STORAGE_KEYS.LEGACY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const sanitized = sanitizeLoadedStateShim(parsed);
+            if (sanitized && !cancelled) {
+              if (sanitized.theme) setThemeState(sanitized.theme);
+              if (sanitized.profiles && sanitized.profiles.length > 0) {
+                setProfiles(sanitized.profiles);
+              }
+              if (sanitized.currentProfileId) {
+                setCurrentProfileId(sanitized.currentProfileId);
+              }
+            }
+          }
+        } catch (innerErr) {
+          console.error('[DropMod] LocalStorage フォールバックも失敗:', innerErr);
+        }
+      } finally {
+        if (!cancelled) setHasHydrated(true);
       }
-    }
-    // 復元完了 → 以降は保存 useEffect が動く
-    setHasHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [setThemeState]);
 
-  // LocalStorage へ保存 (hydration完了後のみ)
+  // ---------------------------------------------------------------------
+  // Sub-Phase 8-A: Dexie への保存 (hydration 完了後のみ)
+  //
+  //   - syncProfiles で追加・更新・削除を差分同期
+  //   - meta (theme / currentProfileId) は個別 put
+  //   - LocalStorage への並行書き込みも「バックアップ期限内」の間だけ継続
+  //     → 7 日以内なら Dexie が壊れても LocalStorage からロールバック可能
+  //     → 期限切れ後は cleanupExpiredBackup が消すので、二重書きは自動で止まる
+  //
+  // 失敗時 (QuotaExceededError 等) は console.warn のみでアプリはクラッシュさせない。
+  // ---------------------------------------------------------------------
   useEffect(() => {
     if (!hasHydrated) return;
-    try {
-      localStorage.setItem(
-        'dropmod_state_v2',
-        JSON.stringify({ theme, currentProfileId, profiles })
-      );
-    } catch (e) {
-      // QuotaExceededError 等: 保存できなくてもアプリはクラッシュさせない
-      console.warn('[DropMod] LocalStorage への保存に失敗:', e);
-    }
+
+    // Dexie 保存 (非同期、失敗時はログのみ)
+    void (async () => {
+      try {
+        await dexieSyncProfiles(profiles);
+        await Promise.all([
+          dexieSetMeta(META_KEYS.THEME, theme),
+          dexieSetMeta(META_KEYS.CURRENT_PROFILE_ID, currentProfileId)
+        ]);
+      } catch (e) {
+        console.warn('[DropMod] Dexie への保存に失敗:', e);
+      }
+    })();
+
+    // LocalStorage への並行バックアップ (バックアップ期限内 or 期限未設定なら)
+    // 期限切れ後は cleanupExpiredBackup が meta と LocalStorage を消すので
+    // ここでの再作成を避けるため getMeta で確認してから書く。
+    void (async () => {
+      try {
+        const backupExpiry = await dexieGetMeta(META_KEYS.BACKUP_EXPIRES_AT);
+        // バックアップ期限が未来 or (レア: hydrate と同時実行で meta 未設定) の場合のみ書く
+        if (backupExpiry && Date.now() < Number(backupExpiry)) {
+          localStorage.setItem(
+            LOCAL_STORAGE_KEYS.CURRENT,
+            JSON.stringify({ theme, currentProfileId, profiles })
+          );
+        }
+      } catch (e) {
+        // QuotaExceededError 等: 保存できなくてもアプリはクラッシュさせない
+        console.warn('[DropMod] LocalStorage バックアップ書き込みに失敗:', e);
+      }
+    })();
   }, [hasHydrated, theme, currentProfileId, profiles]);
 
   // ---------------------------------------------------------------------

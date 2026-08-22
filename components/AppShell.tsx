@@ -12,6 +12,7 @@ import { useDependencyCheck } from '@/hooks/useDependencyCheck';
 import { useZipExport } from '@/hooks/useZipExport';
 import { useZipImport } from '@/hooks/useZipImport';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
+import { db } from '@/lib/db/dexie';
 
 import { ToastContainer } from './ToastContainer';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -185,16 +186,25 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     });
     if (!ok) return;
     try {
+      // Sub-Phase 8-A: Dexie (IndexedDB) を削除。
+      //   - profiles / apiCache / meta の 3 テーブルを含む DropModDB ごと削除
+      //   - Dexie.delete() は非同期だが await で完了を待ってから reload する
+      //   - close() を先に呼ぶことで他タブのハンドルを切り reload 後の再作成を確実にする
+      await db.close();
+      await db.delete();
+
+      // LocalStorage バックアップ (7 日間分) も削除
       localStorage.removeItem('dropmod_state_v2');
       localStorage.removeItem('craftforge_state_v2');
+
       // SSR プロファイル情報を保持する cookie も削除。
       // これが無いと reload 後の SSR で旧プロファイル用 Mod カードが並び、
       // ユーザーには「初期化バグ」に見える。
       // 書き込み側と同じく Secure フラグを付けて削除リクエスト
       // (localhost では自動的に無視される)
       document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
-    } catch {
-      /* ignore */
+    } catch (e) {
+      console.warn('[DropMod] データ初期化中に例外:', e);
     }
     window.location.reload();
   }, [confirm]);

@@ -9,7 +9,8 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { useAppContext } from './AppContext';
+import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useAppAction } from '@/lib/store/appActions';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell
@@ -63,7 +64,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
   slug
 }) => {
   const router = useRouter();
-  const { currentProfile, handleToggleMod } = useAppContext();
+  // Phase 9-A.4: useAppContext 撤去、Zustand + appActions 直接参照
+  const profileFromSelector = useProfilesStore(selectCurrentProfile);
+  const firstProfile = useProfilesStore((s) => s.profiles[0]);
+  const currentProfile = profileFromSelector ?? firstProfile ?? {
+    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
+    description: '', mods: []
+  };
+  const handleToggleMod = useAppAction('handleToggleMod');
 
   // -------- Hook 群 (早期 return より前に全て) --------
   const dialogRef = useRef<HTMLDivElement>(null);

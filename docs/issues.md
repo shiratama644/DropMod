@@ -2790,3 +2790,307 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 - レビュープロセスとして、**「主張が正しいか、その根拠となるコマンドを実際に走らせて検証する」** ステップを標準ルーチンに組み込むべき。
 
 *これらの取りこぼしを修正した結果、当初の主張通り本当に「判断留保 = 0 件、Phase / issue ID プレフィックス = 0 件」を達成。Phase 8 に安心して進める状態が完成した。*
+
+---
+
+# 🌊 第7波: Phase 8 完了後 完全検証 (45 検査項目)
+
+> **調査日:** 2026-08-23 (JST)
+> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `5747545` (Phase 8 完了レポート含む)
+> **調査手法:**
+> - PHASE8_PLAN.md と実装の 1:1 突き合わせ (§5〜§13)
+> - 各 sub-phase の実装レビュー (依存関係・命名・deps 補完)
+> - 静的検査 (`tsc --noEmit` / `pnpm lint` / `pnpm build`)
+> - `pnpm test:unit` 78 テスト全 pass 確認
+> - Runtime 検証 (全ページ HTTP status / h1 数 / セキュリティヘッダ / CSP / preconnect)
+> - `pnpm audit` = 0 脆弱性
+> - Dead code / unused export 検出 (grep で参照数確認)
+> - React Strict Mode / SSR/CSR ミスマッチ / 並行実行時のレース確認
+>
+> **本波の総件数:** 12 件 (Critical: 2 / High: 5 / Medium: 3 / Low: 2)
+>
+> **前提:** Phase 8 (Dexie 化 + TSQ + Zustand + テスト導入 + 小改善) 完了。
+>          計画書と実装の意図的な差分は `diff/phase8.md` に別記録。
+>          このセクションは「実装上のバグ・潜在不具合」を記載する。
+
+## 📊 45 検査項目の内訳
+
+### ✅ 問題なし確認 (33 項目)
+
+- 全 4 コミット (8-A/8-B/8-C step1/step2/8-D/8-E) の静的検査 clean
+- pnpm test:unit = 78 tests all pass
+- pnpm build = ✓ Compiled successfully
+- pnpm audit = 0 vulnerabilities
+- 全ページ HTTP status 期待通り (`/, /mods, /settings, /mod/sodium, /api/health, /sitemap.xml, /manifest.webmanifest, /icon.png` = 200; `/nonexistent, /next.svg` = 404)
+- HEAD `/api/health` = 200
+- 全ページ h1 数 = 1 (C6-1 継続)
+- Security headers (HSTS/COOP) 全ページに付与
+- CSP Report-Only 全ページに付与、iframe/img/font/connect 全 allowlist 正しい
+- 画像リソース CORP = cross-origin (SNS プレビュー対応)
+- preconnect `cdn.modrinth.com` + dns-prefetch `api.modrinth.com` 反映
+- Cookie に `; Secure` フラグ (L5-11 継続)
+- body.mod-fullpage CSS 反映 (L4-7 継続)
+- Vite 版 (`.archive/vite/`) 全期間非破壊
+- Dexie / TSQ / Zustand / web-vitals すべて 0 error でバンドル済み
+- devtools は production bundle から完全除外 (grep = 0)
+- `noUncheckedIndexedAccess` 継続 (L6-3 効果継続)
+- `sanitizeLoadedState` の pure function 化 (L5-10 継続)
+- Route Handler `dynamic = 'force-dynamic'` (`/api/modrinth`) 継続
+- generateStaticParams / generateMetadata の failsafe 継続
+- SSR ガード: Dexie / TSQ / navigator は全て useEffect 内でのみ触る
+
+### 🆕 新規発見バグ (12 件)
+
+---
+
+## 🔴 Critical (第7波、2件)
+
+### C7-1. 新規ユーザーで LocalStorage バックアップが一度も書かれない
+
+- **箇所:** `lib/db/migrate.ts:83-86` + `hooks/useProfiles.ts:190-201`
+- **症状:**
+  1. 新規ユーザーが初回アクセス → `migrateFromLocalStorage()` は `raw = null` を見て `markMigrated(false)` を呼ぶ
+  2. `markMigrated(false)` は `META_BACKUP_EXPIRES_AT` を書かない (backup 期限が設定されない)
+  3. その後 `useProfiles` の save useEffect が動くたびに:
+     ```typescript
+     const backupExpiry = await dexieGetMeta(META_KEYS.BACKUP_EXPIRES_AT); // null
+     if (backupExpiry && Date.now() < Number(backupExpiry)) { ... } // false で skip
+     ```
+     → LocalStorage への書き込みが **常に skip**
+- **影響:**
+  - 新規ユーザーが登録した Profile は Dexie にのみ保存され、**LocalStorage バックアップが取られない**
+  - Dexie が破損した場合 (Safari プライベート → 通常モード移行等) に **復旧不能**
+  - 計画書 §5.4 の「7 日間バックアップ」意図と矛盾
+- **修正:** `markMigrated(false)` の呼び出し 2 箇所を **`markMigrated(true)`** (バックアップ有効) に変更するか、`markMigrated` に条件分岐追加 (raw が null でも Dexie に書き込みが発生したら backup 開始)
+
+### C7-2. `useProjectQuery/useVersionsQuery/useProjectsBatchQuery` が完全に dead code
+
+- **箇所:** `lib/query/hooks.ts` (104 行)、参照:0 箇所
+- **症状:** 3 つの hook が定義され export されているが、`app/`, `components/`, `hooks/` の全ファイルからの import が **ゼロ**。TSQ + Dexie persister は導入されたが、実際に Modrinth 呼び出しが TSQ 経由になっているのは `HomeInteractive.tsx` の検索のみ。
+  - `useProfiles.handleToggleMod` (行 424): `fetchModrinth('/project/{id}')` 直呼び (計画書 §6.5 で置換予定)
+  - `useProfiles.fetchStableModVersion`: `fetchModrinth('/project/{id}/version')` 直呼び
+  - `useProfiles.handleUpdateModVersion` (行 518): `fetchModrinth('/version/{id}')` 直呼び
+  - `useDependencyCheck`: `fetchModrinth('/projects?ids=...')` 直呼び
+- **影響:**
+  - **Mod 追加時の `/project/{id}` はキャッシュされない** → オフライン UX の恩恵が Home 検索のみに限定
+  - 依存チェックも同様
+  - 追加された 104 行のコードが完全に無駄 (Bundle 増加要因)
+- **修正:** Phase 9 の 9-A で `useProfiles.handleToggleMod` を `queryClient.fetchQuery({ queryKey: queryKeys.project(id), queryFn: ... })` に置換 (計画書 §6.5 通り)
+- **差分としても記録:** `diff/phase8.md` D5
+
+---
+
+## 🟠 High (第7波、5件)
+
+### H7-1. `dexieAsyncStorage` で JSON.parse/stringify の二重ラウンドトリップ
+
+- **箇所:** `lib/query/client.ts:56-92`
+- **症状:** TanStack Query の `createAsyncStoragePersister` に `serialize: JSON.stringify` と `deserialize: JSON.parse` を渡している。同時に `dexieAsyncStorage.setItem` の中で **さらに** `JSON.parse(value)` して Dexie に put、`getItem` で **さらに** `JSON.stringify(row.data)` している。
+  ```
+  TSQ → JSON.stringify (serialize) → dexieAsyncStorage.setItem
+       → JSON.parse → Dexie apiCache.data (object 保存)
+       → JSON.stringify (getItem) → persister
+       → JSON.parse (deserialize) → TSQ
+  ```
+  つまり **JSON round-trip が 2 回** 発生。
+- **影響:**
+  - 大量キャッシュで CPU コスト増 (パフォーマンス)
+  - `undefined` / 関数 / Symbol / BigInt / Date object が含まれた場合の情報損失リスク (現状 Modrinth API に無いが、将来性)
+- **修正:** どちらか片方に統一。**推奨**: dexieAsyncStorage 側では `value` をそのまま `db.apiCache.put({ data: value })` (string で保存)、`getItem` で `row.data` (string) を直接返す。persister 側の serialize/deserialize に処理を集約。
+
+### H7-2. `persistQueryClient` の restore 完了 Promise を待たずに query が実行される
+
+- **箇所:** `lib/query/client.ts:135` (`const [unsubscribe] = persistQueryClient({...})`)
+- **症状:** TSQ の `persistQueryClient` は `[unsubscribe, restorePromise]` を返す (2 要素 tuple)。実装は第 1 要素のみ受け取り、**restore 完了を待たない**。
+  - マウント → attachPersister が subscribe 張る + restore 開始 (非同期)
+  - useInfiniteQuery が発火 → キャッシュに何もない → fetch 実行
+  - restore 完了 → キャッシュに persisted data 投入 → **再レンダー + fetch は無駄**
+- **影響:**
+  - **オフライン初回訪問時に「キャッシュあるのに fetch 失敗」する挙動**
+  - キャッシュヒットのメリットが減少
+  - 計画書 §6.6 の「オフラインでも既読キャッシュ表示」が初回で機能しない可能性
+- **修正:**
+  - **推奨**: `PersistQueryClientProvider` に切り替え (TSQ 公式推奨、children を restore 完了まで待たせる)
+  - 代替: hydrate 完了フラグ + 未完了間は spinner 表示
+
+### H7-3. E2E `theme-persistence.spec.ts` の Playwright セレクタが無効
+
+- **箇所:** `e2e/theme-persistence.spec.ts:22-25`
+- **症状:**
+  ```typescript
+  const themeButton = page.locator('#header-theme-icon').first();
+  const parentButton = themeButton.locator('..');  // ← ❌
+  await parentButton.click();
+  ```
+  Playwright の `.locator('..')` は **XPath セレクタとしては解釈されず**、CSS セレクタとして扱われて **無効** (`Failed to find element`)。E2E テストが失敗する。
+- **影響:**
+  - CI で theme-persistence.spec.ts が **必ず失敗**
+  - Sandbox でローカル未実行のため気づかなかった
+- **修正:**
+  ```typescript
+  // 推奨:
+  const themeButton = page.getByRole('button', { name: 'テーマ切り替え' });
+  await themeButton.click();
+  ```
+
+### H7-4. tsconfig の `types: ["vitest/globals", "@testing-library/jest-dom"]` が全 TS ファイルに適用
+
+- **箇所:** `tsconfig.json:26`
+- **症状:** `types` に vitest / jest-dom を追加したことで、**app/ / components/ / hooks/ / lib/ のすべての TS ファイル**でも `describe`, `it`, `expect`, `beforeEach`, `toBeInTheDocument` などの globals が型定義される。実装コードで誤って `describe(...)` を書いても TypeScript エラーにならない。
+- **影響:**
+  - 実装コードとテストコードの境界が型的に曖昧に
+  - 生産コードに `describe` / `expect` などをうっかり残しても検出できない
+  - 生産 bundle には影響しない (runtime に vitest globals は無い) が、開発体験が悪い
+- **修正:**
+  - **推奨**: `tsconfig.test.json` を分離
+    ```json
+    {
+      "extends": "./tsconfig.json",
+      "compilerOptions": {
+        "types": ["vitest/globals", "@testing-library/jest-dom", "node"]
+      },
+      "include": ["__tests__/**/*", "vitest.setup.ts", "vitest.config.ts", "e2e/**/*"]
+    }
+    ```
+    `tsconfig.json` からは `types` を除去。vitest が自動で `tsconfig.test.json` を pick up。
+
+### H7-5. Playwright config の webServer が CI 上で `pnpm build` を 2 回実行
+
+- **箇所:** `playwright.config.ts:44` + `docs/CI_WORKFLOW.yml`
+- **症状:** CI では `build` job で `pnpm build` を実行後、`e2e` job で **`webServer.command`** も `'pnpm build && pnpm start ...'` を実行する。**同じ build を 2 回**行う無駄。
+- **影響:**
+  - CI 実行時間 +2 分 (Next.js build 分)
+  - Vercel Hobby / GitHub Actions 無料枠の消費増
+- **修正:**
+  - Option A: CI 上では `webServer.command` を `pnpm start ...` のみに (build artifact を job 間で保存 + キャッシュ復元)
+  - Option B: CI 上では webServer を使わず、job 内で明示的に `pnpm start &` する
+  - Option C (低コスト): `if (process.env.CI) webServer.command = 'pnpm start ...'` 動的分岐
+
+---
+
+## 🟡 Medium (第7波、3件)
+
+### M7-1. `restoreFromLocalStorageBackup` / `getMigrationStatus` の UI 未実装
+
+- **箇所:** `lib/db/migrate.ts:172, 216`、Settings ページ側 UI = 無し
+- **症状:** 計画書 §11.3 で「Settings ページに『LocalStorage バックアップから復元』ボタンを Phase 8-A で予め実装」と記載されていたが、**UI 実装漏れ**。緊急時にユーザーが復元操作をトリガーできない (DevTools コンソールから直接呼ぶ以外)。
+- **影響:** Dexie 破損時の復旧 UX が悪い。
+- **修正:** Settings ページに「データベース状態」セクションを追加:
+  ```tsx
+  const status = await getMigrationStatus();
+  // 表示: Dexie 使用可否 / 最終移行日時 / バックアップ有無・残日数
+  // ボタン: 「LocalStorage から復元」
+  ```
+- **差分としても記録:** `diff/phase8.md` D4
+
+### M7-2. `hooks/useProfiles.ts` の `sanitizeLoadedState` re-export が dead code
+
+- **箇所:** `hooks/useProfiles.ts:24-27`
+- **症状:**
+  ```typescript
+  // Sub-Phase 8-A: `sanitizeLoadedState` は lib/state/sanitize.ts に移動。
+  // 以下は既存 import ユーザーとの互換のための re-export。
+  export { sanitizeLoadedState } from '@/lib/state/sanitize';
+  import { sanitizeLoadedState as sanitizeLoadedStateShim } from '@/lib/state/sanitize';
+  ```
+  「既存 import ユーザー」を探しても `@/hooks/useProfiles` から `sanitizeLoadedState` を import する箇所は **ゼロ** (テストも `@/lib/state/sanitize` から直接 import)。
+- **影響:** 実害無し、可読性低下、bundle には影響なし。
+- **修正:** `export { sanitizeLoadedState } from ...` を削除。`import { sanitizeLoadedState as sanitizeLoadedStateShim }` は残す (fallback 経路で使用中)。
+
+### M7-3. React Strict Mode で hydrate useEffect が 2 回発火 (副作用小だが冗長)
+
+- **箇所:** `hooks/useProfiles.ts:96-158`
+- **症状:** Zustand の `hasHydrated` フラグは 1 回目の hook で true になるが、Strict Mode の 2 回目マウントでも `useEffect` は再発火する。
+  - `migrateFromLocalStorage()` は冪等 (migratedAt チェック) なので安全
+  - `dexieGetAllProfiles()` + `dexieGetMeta()` を 2 回実行するのは無駄
+  - `setProfiles()` / `setThemeState()` を 2 回呼ぶ (同じ値なので無害だが)
+- **影響:**
+  - dev モードでのみ発生
+  - 起動時の I/O が 2 倍
+- **修正:** useEffect 内先頭で `if (useProfilesStore.getState().hasHydrated) return;` を追加
+
+---
+
+## 🟢 Low (第7波、2件)
+
+### L7-1. `putProfile` / `bulkPutProfiles` が dead export
+
+- **箇所:** `lib/db/dexie.ts:93-108`
+- **症状:** `putProfile` / `bulkPutProfiles` は export されているが、`syncProfiles` のみが実際に使用されている。呼び出し 0 箇所。
+- **影響:** 実害無し、bundle には影響なし。将来の integration 用に残す可能性はある。
+- **修正:** 削除するか、`// TODO Phase 9: 個別 profile 保存 API` コメント追加。
+
+### L7-2. `useConfirm` unmount cleanup の副作用が全 store 影響
+
+- **箇所:** `hooks/useConfirm.ts:24-28` + `lib/store/confirm.ts:78-85`
+- **症状:** `useConfirm` hook の unmount で `cleanup()` を呼び、pending の Promise を false で resolve + state を INITIAL_STATE に。しかし cleanup は **module-level の pendingResolve と store 全体**をリセットするので、複数 `useConfirm` インスタンスがある場合、1 個の unmount で他インスタンスの pending も飛ぶ。
+- **影響:**
+  - 現状 `useConfirm` は AppShell 1 箇所でのみ呼ばれるので実害無し
+  - 将来複数コンポーネントから呼ばれると顕在化
+- **修正:** cleanup を「自 hook が開いた dialog の resolve」に限定する仕組み (dialog ID を hook 内 ref に持たせ、pendingResolve と一致した場合のみ cleanup) を検討。ただし複雑度増のため現状維持でも可。
+
+---
+
+## 📊 第7波 集計サマリ
+
+| 重大度 | 件数 | 内訳 |
+| --- | ---: | --- |
+| 🔴 Critical | 2 | C7-1 (新規ユーザー LocalStorage backup), C7-2 (TSQ hook 群 dead code) |
+| 🟠 High | 5 | H7-1〜H7-5 |
+| 🟡 Medium | 3 | M7-1〜M7-3 |
+| 🟢 Low | 2 | L7-1, L7-2 |
+| **合計** | **12** | Phase 8 実装のレビューで発見 |
+
+## 📊 総合集計 (第1波 〜 第7波)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1〜3.5波 | 13 | 18 | 24 | 16 | 71 | ✅ 全て修正済 (Vite 版) |
+| 第4波 | 2 | 6 | 8 | 8 | 24 | ✅ 24 修正済 (M4-5, L4-7 も対応) |
+| 第5波 | 3 | 6 | 12 | 14 | 35 | ✅ 35 修正 / L5-12 は改善不要確定 |
+| 第6波 | 1 | 2 | 4 | 3 | 10 | ✅ 全 10 件 + 追加 2 件 修正済 |
+| **第7波 (Phase 8 完了後)** | **2** | **5** | **3** | **2** | **12** | ⏳ **要対応** |
+| **総合計** | **21** | **37** | **51** | **43** | **152** | **140 修正 + 1 確定 + 12 新規** |
+
+## 🎯 修正推奨順序 (第7波)
+
+### 🔴 即時対応 (バグ品質、Phase 9 前推奨)
+
+1. **C7-1** 新規ユーザー LocalStorage backup 有効化 (`markMigrated(true)`) (5 分)
+2. **H7-3** E2E theme-persistence の Playwright セレクタ修正 (5 分)
+3. **H7-4** tsconfig の types 分離 (`tsconfig.test.json` 作成) (15 分)
+
+### 🟠 短期対応 (Phase 9 冒頭)
+
+4. **H7-1** dexieAsyncStorage の JSON 二重処理解消 (15 分)
+5. **H7-2** PersistQueryClientProvider への移行 or hydrate 待ち (30 分)
+6. **H7-5** CI 上の `pnpm build` 2 重実行を回避 (10 分)
+
+### 🟡 中期対応 (Phase 9 内)
+
+7. **M7-1** Settings に「LocalStorage 復元」UI 追加 (60 分)
+8. **M7-2** dead re-export 削除 (2 分)
+9. **M7-3** Strict Mode 二重発火のガード追加 (5 分)
+10. **C7-2** TSQ hook 群を実際に使う (useProfiles.toggleMod 書き換え) (2 時間、Phase 9 の 9-A で対応)
+
+### 🟢 長期対応
+
+11. **L7-1** dead export 整理 (2 分)
+12. **L7-2** useConfirm cleanup の副作用制限 (30 分、要設計検討)
+
+## 🔍 検査手法まとめ (45 項目)
+
+以下の観点で全 Phase 8 追加ファイル + 既存ファイル (影響ある部分) を精査:
+
+**計画書との突き合わせ (10 項目)** — §5〜§13 の DoD 逐項目確認
+**設計・アーキテクチャ (6 項目)** — Zustand slice 設計、Provider 順序、SSR safety
+**セキュリティ (5 項目)** — CSP Report-Only 内容、CORP 適用範囲、Cookie Secure 継続
+**Race condition (5 項目)** — Strict Mode 二重発火、persister hydrate タイミング、Dexie 並行書き込み
+**エッジケース (5 項目)** — 新規ユーザー / IndexedDB 未サポート / 巨大 profile / offline 検出
+**Dead code / unused (4 項目)** — TSQ hook 群、re-export、helper 関数
+**テスト (5 項目)** — vitest coverage 実測、Playwright セレクタ、E2E 動作、tsconfig 分離
+**Runtime 実測 (5 項目)** — 全ページ HTTP status, HEAD, headers, preconnect, h1 数
+
+---
+
+*第7波は Phase 8 完了直後の完全検証として全 45 検査項目を実施した結果です。計画書との「意図的な差分」は `diff/phase8.md` に別途記録し、こちらは「実装ミス・潜在不具合」12 件のみを記載しました。C7-1 (新規ユーザー LocalStorage backup) は最も影響が大きいので、Phase 9 冒頭で即対応推奨。*

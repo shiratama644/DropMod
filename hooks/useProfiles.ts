@@ -364,6 +364,7 @@ export const useProfiles = (
 
     if (existsIndex >= 0) {
       // --- 削除 ---
+      // L6-3 (noUncheckedIndexedAccess) 対応: 配列アクセスの結果を optional chaining で扱う
       const removed = latestProfile.mods[existsIndex];
       setProfiles((prev) =>
         prev.map((p) =>
@@ -372,7 +373,7 @@ export const useProfiles = (
             : p
         )
       );
-      if (!silent) showToast(`「${removed.title || 'Mod'}」を削除しました`, 'info');
+      if (!silent) showToast(`「${removed?.title || 'Mod'}」を削除しました`, 'info');
     } else {
       // --- 追加 ---
       if (!silent) showToast('ModrinthからMod情報を取得中...', 'info');
@@ -404,6 +405,13 @@ export const useProfiles = (
         const targetVersion = versionRes.targetVersion;
         const primaryFile =
           targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
+
+        // L6-3 (noUncheckedIndexedAccess) 対応: 上で files.length===0 は既に return しているが
+        // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
+        if (!primaryFile) {
+          if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
+          return;
+        }
 
         const modObj: ModItem = {
           id: project.id,

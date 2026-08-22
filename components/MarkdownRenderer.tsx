@@ -34,13 +34,52 @@ const sanitizeSchema = {
     'center',
     'font'
   ],
+  // L6-2 修正: defaultSchema.attributes をタグ単位でも spread して継承。
+  //   以前は各タグを完全上書きしていたため、将来 rehype-sanitize の
+  //   defaultSchema にセキュリティ属性 (例: aria-*, id, referrerpolicy 等) が
+  //   追加された際に喪失するリスクがあった。
+  //   spread により defaultSchema 側の属性を残しつつ、本アプリで追加が必要な
+  //   属性 (iframe の allowfullscreen 等) を上乗せする形にする。
   attributes: {
     ...defaultSchema.attributes,
-    iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title', 'className'],
-    div: ['className', 'align'],
-    span: ['className'],
-    img: ['src', 'alt', 'title', 'width', 'height', 'className', 'loading'],
-    a: ['href', 'title', 'target', 'rel', 'className']
+    iframe: [
+      ...((defaultSchema.attributes?.iframe as (string | [string, ...unknown[]])[]) || []),
+      'src',
+      'width',
+      'height',
+      'frameborder',
+      'allow',
+      'allowfullscreen',
+      'title',
+      'className'
+    ],
+    div: [
+      ...((defaultSchema.attributes?.div as (string | [string, ...unknown[]])[]) || []),
+      'className',
+      'align'
+    ],
+    span: [
+      ...((defaultSchema.attributes?.span as (string | [string, ...unknown[]])[]) || []),
+      'className'
+    ],
+    img: [
+      ...((defaultSchema.attributes?.img as (string | [string, ...unknown[]])[]) || []),
+      'src',
+      'alt',
+      'title',
+      'width',
+      'height',
+      'className',
+      'loading'
+    ],
+    a: [
+      ...((defaultSchema.attributes?.a as (string | [string, ...unknown[]])[]) || []),
+      'href',
+      'title',
+      'target',
+      'rel',
+      'className'
+    ]
   }
 };
 
@@ -73,7 +112,9 @@ function isAllowedIframeSrc(src: string | undefined): boolean {
 function getYouTubeVideoId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
+  // L6-3 (noUncheckedIndexedAccess) 対応: match[2] は可能性として undefined
+  const videoId = match?.[2];
+  return videoId && videoId.length === 11 ? videoId : null;
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
@@ -161,20 +202,23 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             );
           },
           // 見出し
+          // C6-1 修正: Header の <h1>DropMod</h1> と重複しないよう、
+          // Markdown 本文の見出しは h1 → h2, h2 → h3, h3 → h4 と一段ずつ降格。
+          // (SEO/A11y: 1 ページに h1 は 1 個が原則)
           h1: ({ node, children, ...props }) => (
-            <h1 className="text-xl sm:text-2xl font-black mt-6 mb-3 theme-text-primary border-b-2 border-emerald-500/40 pb-1.5" {...props}>
-              {children}
-            </h1>
-          ),
-          h2: ({ node, children, ...props }) => (
-            <h2 className="text-lg sm:text-xl font-extrabold mt-5 mb-2 theme-text-primary border-b border-slate-500/30 pb-1" {...props}>
+            <h2 className="text-xl sm:text-2xl font-black mt-6 mb-3 theme-text-primary border-b-2 border-emerald-500/40 pb-1.5" {...props}>
               {children}
             </h2>
           ),
-          h3: ({ node, children, ...props }) => (
-            <h3 className="text-base sm:text-lg font-bold mt-4 mb-2 theme-text-brand border-b border-slate-500/20 pb-1" {...props}>
+          h2: ({ node, children, ...props }) => (
+            <h3 className="text-lg sm:text-xl font-extrabold mt-5 mb-2 theme-text-primary border-b border-slate-500/30 pb-1" {...props}>
               {children}
             </h3>
+          ),
+          h3: ({ node, children, ...props }) => (
+            <h4 className="text-base sm:text-lg font-bold mt-4 mb-2 theme-text-brand border-b border-slate-500/20 pb-1" {...props}>
+              {children}
+            </h4>
           ),
           // GFM テーブル
           table: ({ node, children, ...props }) => (

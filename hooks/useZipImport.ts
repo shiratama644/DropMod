@@ -59,7 +59,9 @@ export const useZipImport = (
           for (const f of mrpackData.files) {
             const downloadUrl = f.downloads && f.downloads[0] ? f.downloads[0] : '';
             const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
-            const filename = pathParts[pathParts.length - 1];
+            // L6-3 (noUncheckedIndexedAccess) 対応: 配列インデックスは T | undefined。
+            // split の結果は空配列にはならないが型システムには保証されない。
+            const filename = pathParts[pathParts.length - 1] || 'mod.jar';
 
             importedMods.push({
               id: generateId('mrpack'),
@@ -88,9 +90,11 @@ export const useZipImport = (
       }
 
       // 2. .jar 詰め合わせ ZIP インポート (.jarハッシュ照合 ➔ プロファイル作成モーダル開く)
-      const jarEntries = Object.keys(zip.files).filter(
-        (name) => !zip.files[name].dir && name.toLowerCase().endsWith('.jar')
-      );
+      // L6-3 (noUncheckedIndexedAccess) 対応: zip.files[name] は T | undefined
+      const jarEntries = Object.keys(zip.files).filter((name) => {
+        const entry = zip.files[name];
+        return !!entry && !entry.dir && name.toLowerCase().endsWith('.jar');
+      });
 
       if (jarEntries.length === 0) {
         showToast('ZIP内に .jar ファイルが見つかりませんでした', 'warning');
@@ -112,7 +116,10 @@ export const useZipImport = (
       const hashes: string[] = [];
       try {
         for (const entryName of jarEntries) {
-          const fileBuffer = await zip.files[entryName].async('arraybuffer');
+          // L6-3 (noUncheckedIndexedAccess) 対応
+          const zipEntry = zip.files[entryName];
+          if (!zipEntry) continue;
+          const fileBuffer = await zipEntry.async('arraybuffer');
           const sha1 = await calculateSha1(fileBuffer);
           hashes.push(sha1);
         }

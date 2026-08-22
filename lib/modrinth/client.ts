@@ -232,7 +232,9 @@ export async function fetchStableModVersion(
 
   if (!versions || versions.length === 0) return null;
 
+  // L6-3 (noUncheckedIndexedAccess) 対応: versions[0] は T | undefined
   const stableVersion = versions.find((v) => v.version_type === 'release') || versions[0];
+  if (!stableVersion) return null;
   return { targetVersion: stableVersion, allVersions: versions };
 }
 

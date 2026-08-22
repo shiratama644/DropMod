@@ -250,7 +250,14 @@ export const useZipExport = (
           if (signal.aborted) throw new Error('Aborted');
 
           const index = currentIndex++;
+          // L6-3 (noUncheckedIndexedAccess) 対応: 配列インデックスは T | undefined。
+          // while 条件で範囲内は保証されているが、型システムに明示ガードを与える。
           const mod = currentProfile.mods[index];
+          if (!mod) {
+            processedCount++;
+            failCount++;
+            continue;
+          }
 
           updateZipState({
             detailText: `ダウンロード中: ${mod.title} (${mod.selectedVersionNumber || 'Stable'})`,

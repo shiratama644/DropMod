@@ -72,6 +72,17 @@ export const metadata: Metadata = {
     title: 'DropMod - Minecraft Mod Downloader',
     description:
       'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
+  },
+  // M6-4 修正: manifest.json (`app/manifest.ts`) と各種アイコンを明示的にリンク。
+  //   - favicon.ico は `app/favicon.ico` から自動的に <link rel="icon"> として注入されるが、
+  //     PWA / iOS Safari 用の追加サイズは metadata.icons で補う。
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }]
   }
 };
 

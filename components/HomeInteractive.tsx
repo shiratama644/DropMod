@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
 import { CATEGORIES } from '@/lib/constants/categories';
+import { SEARCH_LIMIT } from '@/lib/constants/search';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
 import { useAppContext } from './AppContext';
@@ -70,8 +71,6 @@ export const HomeInteractive: React.FC<Props> = ({
   const requestSeqRef = useRef<number>(0);
   const isLoadingRef = useRef<boolean>(false);
   const isFirstRunRef = useRef<boolean>(true);
-
-  const SEARCH_LIMIT = 24;
 
   const executeSearch = useCallback(
     async (append: boolean, targetOffset: number) => {
@@ -193,7 +192,9 @@ export const HomeInteractive: React.FC<Props> = ({
     if (!sentinelEl) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingRef.current) {
+        // L6-3 (noUncheckedIndexedAccess) 対応: entries[0] は可能性として undefined
+        const first = entries[0];
+        if (first?.isIntersecting && hasMore && !isLoadingRef.current) {
           fetchNextPageRef.current();
         }
       },

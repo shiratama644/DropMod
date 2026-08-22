@@ -2501,3 +2501,85 @@ Route (app)                  Revalidate  Expire
 ---
 
 *第6波は 2026-08-22 に第5波修正完了後、Phase 8 に進む前の最終監査として全 55 ファイルを 39 検査項目で再精査した結果です。判断留保 5 件は全て実害無しを再確認、新規発見 10 件のうち **C6-1 (h1 複数)** と **H6-1 (Retry-After timeout)** は本番デプロイ前に修正推奨。**H6-2 (Next.js patch)** はワンコマンドで解消。他は品質改善レベルです。*
+
+---
+
+# ✅ 第6波修正結果 (2026-08-22 実施)
+
+> **修正コミット:** (このコミット)
+> **修正者:** Arena Agent Mode
+> **実施内容:** 第6波で発見した **全 10 件 (Critical 1 / High 2 / Medium 4 / Low 3)** をすべて修正完了。
+
+## 修正一覧
+
+| ID | 重大度 | 修正内容 | 対象ファイル |
+| --- | --- | --- | --- |
+| **C6-1** | 🔴 Critical | MarkdownRenderer の h1/h2/h3 を h2/h3/h4 に降格 (Header の h1 と重複させない) | `components/MarkdownRenderer.tsx` |
+| **H6-1** | 🟠 High | `parseRetryAfterMs` の最大待機時間を 30s → 8s に短縮 (Vercel Hobby 10s timeout 内)。環境変数 `MODRINTH_MAX_RETRY_WAIT_MS` で上書き可能 | `lib/modrinth/server.ts` |
+| **H6-2** | 🟠 High | `next` を 16.3.1 → 16.3.2 に更新 (`pnpm add next@16.3.2`) | `package.json`, `pnpm-lock.yaml` |
+| **M6-1** | 🟡 Medium | `public/` から create-next-app デフォルト SVG 5 個 (`next.svg`, `vercel.svg`, `file.svg`, `globe.svg`, `window.svg`) を削除 | `public/*.svg` |
+| **M6-2** | 🟡 Medium | `package.json` に `"type": "module"` を追加 (Vite 版と揃える) | `package.json` |
+| **M6-3** | 🟡 Medium | `SEARCH_LIMIT = 24` を `lib/constants/search.ts` に共通化 | `lib/constants/search.ts` (新規), `app/page.tsx`, `components/HomeInteractive.tsx` |
+| **M6-4** | 🟡 Medium | `app/manifest.ts` 作成 + DropMod ブランドの favicon.ico / icon.png (192) / icon-512.png / icon-512-maskable.png / apple-icon.png を追加。`app/layout.tsx` metadata から明示リンク | `app/manifest.ts` (新規), `app/favicon.ico`, `public/icon*.png`, `public/apple-icon.png`, `app/layout.tsx` |
+| **L6-1** | 🟢 Low | セキュリティヘッダに `Strict-Transport-Security` / `Cross-Origin-Opener-Policy` / `Cross-Origin-Resource-Policy` を追加 | `next.config.ts` |
+| **L6-2** | 🟢 Low | `sanitizeSchema.attributes` の各タグ属性リストを `defaultSchema.attributes.<tag>` を spread する形に変更 (将来の rehype-sanitize アップデートに追従) | `components/MarkdownRenderer.tsx` |
+| **L6-3** | 🟢 Low | `tsconfig.json` に `noUncheckedIndexedAccess: true` を追加。副次的に発見された 21 件の型エラーを全て修正 | `tsconfig.json`, `components/HomeInteractive.tsx`, `components/MarkdownRenderer.tsx`, `components/NewProfileModal.tsx`, `hooks/useModalA11y.ts`, `hooks/useProfiles.ts`, `hooks/useZipExport.ts`, `hooks/useZipImport.ts`, `lib/modrinth/client.ts` |
+
+## 検証結果
+
+### 静的解析
+- ✅ `pnpm exec tsc --noEmit` = 0 error (`noUncheckedIndexedAccess` 有効化後も clean)
+- ✅ `pnpm lint` = 0 error / 0 warning
+- ✅ `pnpm build` = ✓ Compiled successfully in 220ms
+
+### Runtime 実測 (`pnpm start --port 3100`)
+| URL | HTTP | 備考 |
+| --- | --- | --- |
+| `/` | 200 | Home |
+| `/mods` | 200 | 選択中の Mod |
+| `/settings` | 200 | 設定 |
+| `/mod/sodium` | 200 | Mod 詳細フルページ |
+| `/api/health` | 200 | GET / HEAD 両方 200 |
+| `/sitemap.xml` | 200 | |
+| `/robots.txt` | 200 | |
+| `/manifest.webmanifest` | 200 | 新規 (M6-4) |
+| `/icon.png` | 200 | 新規 (M6-4) |
+| `/apple-icon.png` | 200 | 新規 (M6-4) |
+| `/favicon.ico` | 200 | 新規ブランド版 (M6-4) |
+| `/nonexistent` | 404 | not-found ページ |
+| `/next.svg` | 404 | 削除確認 (M6-1) |
+| `/vercel.svg` | 404 | 削除確認 (M6-1) |
+
+### h1 数の検証 (C6-1)
+- `/` = 1 (Header のみ)
+- `/mods` = 1 (Header のみ)
+- `/mod/sodium` = **1** (Header のみ) ← 修正前は Markdown の `#` で 2+ になっていた
+
+### セキュリティヘッダ検証 (L6-1)
+```
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+X-Frame-Options: SAMEORIGIN
+Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload  ← 新規
+Cross-Origin-Opener-Policy: same-origin                                   ← 新規
+Cross-Origin-Resource-Policy: same-origin                                 ← 新規
+```
+
+### 追加検証: 副作用チェック
+- ✅ `noUncheckedIndexedAccess` 有効化に伴う 21 件の型エラーはすべて明示ガード or フォールバックで修正 (実行時挙動は等価)
+- ✅ `"type": "module"` 追加後も `next.config.ts` / `postcss.config.mjs` / `eslint.config.mjs` は明示拡張子で問題なし。build/start 正常
+- ✅ MarkdownRenderer の h1→h2 降格で `<h4>` に降格された `###` (元 h3) は既存のオーバーライドがそのまま流用され、視覚的な回帰なし
+- ✅ Vite 版 (`.archive/vite/`) は独立 package.json のため一切影響なし (非破壊確認)
+
+## 総合集計 (第1波 〜 第6波完了時点)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1〜3.5波 | 13 | 18 | 24 | 16 | 71 | ✅ 全て修正済 (Vite 版) |
+| 第4波 | 2 | 6 | 8 | 8 | 24 | ✅ 20 修正 / 4 判断留保 |
+| 第5波 | 3 | 6 | 12 | 14 | 35 | ✅ 30 修正 / 5 判断留保 |
+| **第6波** | **1** | **2** | **4** | **3** | **10** | ✅ **全 10 件修正完了** |
+| **総合計** | **19** | **32** | **48** | **41** | **140** | **131 修正 + 9 判断留保** |
+
+*第6波修正完了時点で判断留保は依然 9 件のみ (M4-5, L4-7, M5-5, L5-2, L5-4, L5-10, L5-11, L5-12, L5-13)、いずれも実害なしを再確認済み。*

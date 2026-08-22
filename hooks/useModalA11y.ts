@@ -81,6 +81,9 @@ export function useModalA11y(
 
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
+      // L6-3 (noUncheckedIndexedAccess) 対応: length===0 は上で return したが
+      // 配列インデックスの戻り値は T | undefined 型なので明示ガード。
+      if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
 
       if (e.shiftKey) {

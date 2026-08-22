@@ -49,8 +49,10 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       setName(initialImportData.name);
       if (initialImportData.mcVersion && mcVersions.includes(initialImportData.mcVersion)) {
         setVersion(initialImportData.mcVersion);
-      } else if (mcVersions.length > 0) {
-        setVersion(mcVersions[0]);
+      } else {
+        // L6-3 (noUncheckedIndexedAccess) 対応: mcVersions[0] は string | undefined
+        const first = mcVersions[0];
+        if (first) setVersion(first);
       }
       if (initialImportData.loader) {
         setLoader(initialImportData.loader);
@@ -58,7 +60,8 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
     } else {
       setName('');
-      if (mcVersions.length > 0) setVersion(mcVersions[0]);
+      const first = mcVersions[0];
+      if (first) setVersion(first);
       setLoader('Fabric');
       setDesc('');
     }

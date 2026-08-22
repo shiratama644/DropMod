@@ -21,12 +21,11 @@
 import { cookies } from 'next/headers';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { HomeInteractive } from '@/components/HomeInteractive';
+import { SEARCH_LIMIT } from '@/lib/constants/search';
 
 // cookie が無い時のフォールバック
 const SSR_DEFAULT_MC_VERSION = '1.20.1';
 const SSR_DEFAULT_LOADER = 'Fabric';
-
-const SEARCH_LIMIT = 24;
 
 interface ActiveProfileCookie {
   mcVersion: string;

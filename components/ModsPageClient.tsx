@@ -8,30 +8,42 @@ import type { ModItem, ModrinthVersion, Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { useAppContext } from './AppContext';
+import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useAppAction } from '@/lib/store/appActions';
 
 // ============================================================================
-// ModsPageClient
+// ModsPageClient (Phase 9-A.2: useAppContext 撤去)
 //
 // Vite 版 `src/components/ModsTab.tsx` の完全移植。差分:
-//   - 引数 profile / handleToggleMod / handleUpdateModVersion / ...
-//     は全て useAppContext() 経由に変更
 //   - Mod カードクリック時の詳細遷移は router.push(`/mod/${slug}`) に統一
-//     (Home 経由でなく直接 URL 更新でも Modal Route が動くように)
 //   - Vite 版と同一 UX: バージョン切替、.jar 直DL、削除、依存チェック起動、
 //     全削除、ZIP 出力
+//
+// Phase 9-A.2 の変更:
+//   - useAppContext() を撤去
+//   - currentProfile: useProfilesStore の selectCurrentProfile selector で取得
+//   - handleXxx 群は appActionsStore 経由 (useAppAction)
 // ============================================================================
 
 export const ModsPageClient: React.FC = () => {
   const router = useRouter();
-  const {
-    currentProfile: profile,
-    handleToggleMod,
-    handleUpdateModVersion,
-    handleRemoveAllMods,
-    handleDownloadZip,
-    openDependencyCheckModal
-  } = useAppContext();
+
+  // ---- Zustand: currentProfile を selector で計算 (profiles/currentProfileId の
+  //      どちらかが変わった時のみ再レンダー) ----
+  //   fallback は先頭 profile。profiles が完全に空なら不変なダミーを使う。
+  const profileFromSelector = useProfilesStore(selectCurrentProfile);
+  const firstProfile = useProfilesStore((s) => s.profiles[0]);
+  const profile = profileFromSelector ?? firstProfile ?? {
+    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
+    description: '', mods: []
+  };
+
+  // ---- appActionsStore 経由 ----
+  const handleToggleMod = useAppAction('handleToggleMod');
+  const handleUpdateModVersion = useAppAction('handleUpdateModVersion');
+  const handleRemoveAllMods = useAppAction('handleRemoveAllMods');
+  const handleDownloadZip = useAppAction('handleDownloadZip');
+  const openDependencyCheckModal = useAppAction('openDependencyCheckModal');
 
   const [modVersionsMap, setModVersionsMap] = useState<Map<string, ModrinthVersion[]>>(
     new Map()

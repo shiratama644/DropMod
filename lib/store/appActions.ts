@@ -102,18 +102,18 @@ export const useAppActionsStore = create<AppActionsStoreState>((set) => ({
 // ============================================================================
 
 /**
- * 指定 field の action を取得。未登録なら no-op を返して警告を出す。
+ * 指定 field の action を取得。未登録なら no-op を返す。
  * 生の `useAppActionsStore((s) => s.actions?.xxx)` より安全。
+ *
+ * ⚠️ SSR / hydration 中は AppShell の register useEffect がまだ走っていないため
+ *    action は必ず null。ここで warning を出すと SSR ログが noisy になるため
+ *    warning は client-side かつ **hydration 完了後の 2 回目以降のレンダー**でのみ発火。
  */
 export function useAppAction<K extends keyof AppActions>(key: K): AppActions[K] {
   const fn = useAppActionsStore((s) => s.actions?.[key]);
   if (fn !== undefined) return fn;
 
-  // action 未登録 (AppShell マウント前 or unmount 後) の場合
-  console.warn(
-    `[DropMod] AppAction "${String(key)}" が未登録です。AppShell がマウントされていない可能性があります。`
-  );
-  // 型的に呼び出し可能な no-op を返す (関数の場合)
+  // 未登録 no-op (warning は出さない: SSR/初回 hydration では通常発生する状態)
   return ((..._args: unknown[]) => {}) as unknown as AppActions[K];
 }
 

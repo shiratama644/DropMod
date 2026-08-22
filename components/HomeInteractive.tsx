@@ -10,7 +10,8 @@ import { SEARCH_LIMIT } from '@/lib/constants/search';
 import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
-import { useAppContext } from './AppContext';
+import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useAppAction } from '@/lib/store/appActions';
 
 // ============================================================================
 // HomeInteractive
@@ -47,13 +48,17 @@ export const HomeInteractive: React.FC<Props> = ({
   initialHits,
   initialHasMore
 }) => {
-  const {
-    currentProfile: profile,
-    handleToggleMod,
-    handleDuplicateProfile,
-    openEditProfileModal,
-    openDependencyCheckModal
-  } = useAppContext();
+  // Phase 9-A.3: useAppContext 撤去、Zustand + appActions 直接参照
+  const profileFromSelector = useProfilesStore(selectCurrentProfile);
+  const firstProfile = useProfilesStore((s) => s.profiles[0]);
+  const profile = profileFromSelector ?? firstProfile ?? {
+    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
+    description: '', mods: []
+  };
+  const handleToggleMod = useAppAction('handleToggleMod');
+  const handleDuplicateProfile = useAppAction('handleDuplicateProfile');
+  const openEditProfileModal = useAppAction('openEditProfileModal');
+  const openDependencyCheckModal = useAppAction('openDependencyCheckModal');
 
   // ---------------------------------------------------------------------
   // Sub-Phase 8-B: useInfiniteQuery で検索を管理

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
@@ -18,12 +19,15 @@ import {
   LOCAL_STORAGE_KEYS
 } from '@/lib/db/migrate';
 import { useProfilesStore } from '@/lib/store/profiles';
+import { queryKeys } from '@/lib/query/keys';
+import { DEFAULT_STALE_TIME_MS } from '@/lib/query/client';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
-// Sub-Phase 8-A: `sanitizeLoadedState` は lib/state/sanitize.ts に移動。
-// 以下は既存 import ユーザーとの互換のための re-export。
-export { sanitizeLoadedState } from '@/lib/state/sanitize';
+// `sanitizeLoadedState` は lib/state/sanitize.ts に集約 (第7波 M7-2 修正)。
+// 以前は互換のため useProfiles からも re-export していたが、参照 0 の dead code
+// だったため削除。fallback 経路 (Dexie 失敗時) の LocalStorage 読み取り用に
+// import のみ残す。
 import { sanitizeLoadedState as sanitizeLoadedStateShim } from '@/lib/state/sanitize';
 
 export const useProfiles = (
@@ -46,6 +50,11 @@ export const useProfiles = (
   //   互換を保ちつつ store を並走させる。次段の Sub-Phase 8-C Step 4 で
   //   props 経由を廃止し、store.setTheme に一本化する。
   // ------------------------------------------------------------------
+
+  // C7-2 修正: TanStack Query client を取得して Modrinth /project/{id} 呼び出しを
+  // キャッシュ経由に。同じ project ID の 2 回目以降は fetch を発生させない。
+  // Dexie apiCache persister 経由でオフライン時も既読プロジェクト情報を取得可能。
+  const queryClient = useQueryClient();
 
   // 個別 selector で購読することで、他 field 変更時の再レンダーを抑制。
   const profiles = useProfilesStore((s) => s.profiles);
@@ -94,6 +103,15 @@ export const useProfiles = (
   // LocalStorage をフォールバックとして読む。
   // ---------------------------------------------------------------------
   useEffect(() => {
+    // M7-3 修正: React Strict Mode の double-effect / 別インスタンスからの
+    //   重複 hydrate を避ける。Zustand store は module-global なので、
+    //   一度 hasHydrated=true になっていたら Dexie 読み取りは不要。
+    //   migrateFromLocalStorage は冪等だが、getAllProfiles + getMeta の
+    //   I/O を無駄に 2 回実行してしまうため事前チェック。
+    if (useProfilesStore.getState().hasHydrated) {
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -420,8 +438,16 @@ export const useProfiles = (
       // --- 追加 ---
       if (!silent) showToast('ModrinthからMod情報を取得中...', 'info');
       try {
-        // Modrinth /project の取得は先に開始 (project ID は不変)
-        const projectPromise = fetchModrinth<any>(`/project/${projectId}`);
+        // C7-2 修正: fetchModrinth 直呼びから queryClient.fetchQuery に置換。
+        //   - 同じ project ID の 2 回目以降はキャッシュヒットで即返却
+        //   - Dexie apiCache persister 経由でオフラインでも取得可能
+        //   - staleTime 15 分 (useProjectQuery と同じ)
+        const projectPromise = queryClient.fetchQuery({
+          queryKey: queryKeys.project(projectId),
+          queryFn: ({ signal }) =>
+            fetchModrinth<any>(`/project/${projectId}`, undefined, { signal }),
+          staleTime: 15 * 60 * 1000
+        });
 
         // 「追加時点で見えているプロファイル」ではなく、
         // fetch 完了時点で最新のプロファイルを基準に version を選ぶ
@@ -504,7 +530,7 @@ export const useProfiles = (
     } finally {
       toggleInFlightRef.current.delete(projectId);
     }
-  }, [showToast, setProfiles]);
+  }, [showToast, setProfiles, queryClient]);
 
   const handleUpdateModVersion = useCallback(
     async (projectId: string, versionId: string) => {
@@ -515,7 +541,14 @@ export const useProfiles = (
       if (!mod) return;
 
       try {
-        const versionData = await fetchModrinth<any>(`/version/${versionId}`);
+        // C7-2 修正: fetchModrinth 直呼び → queryClient.fetchQuery で
+        //   同じ versionId は 24h キャッシュヒット (Dexie apiCache 永続化)
+        const versionData = await queryClient.fetchQuery({
+          queryKey: queryKeys.version(versionId),
+          queryFn: ({ signal }) =>
+            fetchModrinth<any>(`/version/${versionId}`, undefined, { signal }),
+          staleTime: 60 * 60 * 1000 // 1h (version は project より変わりにくい)
+        });
         if (versionData && versionData.files && versionData.files.length > 0) {
           const primaryFile = versionData.files.find((f: any) => f.primary) || versionData.files[0];
 
@@ -546,7 +579,7 @@ export const useProfiles = (
         showToast('バージョンの更新に失敗しました', 'warning');
       }
     },
-    [showToast, setProfiles]
+    [showToast, setProfiles, queryClient]
   );
 
   const handleRemoveAllMods = useCallback(async () => {

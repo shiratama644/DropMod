@@ -35,12 +35,18 @@ export interface ProfileRow extends Profile {
  * apiCache テーブル行。
  *
  * TanStack Query の persister が Storage 互換 API を要求するため、
- * key = canonical query key、data = JSON.stringify 可能な payload。
+ * key = canonical query key、
+ * data = **既にシリアライズ済みの string** (persister が渡す value をそのまま保存)。
  * expiresAt を index にしておくと期限切れの掃除が O(log n) で走る。
+ *
+ * H7-1 修正: 以前は `data: unknown` として setItem 内で JSON.parse していたが、
+ *   persister 側の serialize (JSON.stringify) と合わせて JSON round-trip が 2 回
+ *   発生していた。data を string のまま保存することで CPU コストを半減し、
+ *   `undefined`/`function`/`BigInt`/`Date` などの JSON 損失リスクも回避。
  */
 export interface ApiCacheRow {
   key: string;
-  data: unknown;
+  data: string;
   createdAt: number;
   expiresAt: number;
 }
@@ -91,6 +97,9 @@ export const db = new DropModDatabase();
 /**
  * ModItem[] を含む Profile 全体をそのまま IndexedDB に put する。
  * upsert 挙動 (同 id が既にあれば上書き) なので冪等に使える。
+ *
+ * ⚠️ Sub-Phase 8-A 時点では未使用 (現状は syncProfiles を diff 同期に使用中)。
+ *    Phase 9 で「単一プロファイルの直接保存 API」として利用予定。
  */
 export async function putProfile(profile: Profile): Promise<void> {
   await db.profiles.put({ ...profile, updatedAt: Date.now() });
@@ -100,6 +109,8 @@ export async function putProfile(profile: Profile): Promise<void> {
  * 複数プロファイルを一括 put する。
  * 削除・追加も含めた「現在の profiles 全体」を上書きしたい場合は
  * `syncProfiles` を使う (下記)。
+ *
+ * ⚠️ Sub-Phase 8-A 時点では未使用。Phase 9 で ZIP インポート後の一括投入等で使用予定。
  */
 export async function bulkPutProfiles(profiles: Profile[]): Promise<void> {
   if (profiles.length === 0) return;

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
 import { AppShell } from '@/components/AppShell';
+import { Providers as QueryProviders } from '@/components/Providers';
 import './globals.css';
 
 // FontAwesome アイコンをグローバル読み込み (Vite 版と同一)
@@ -140,10 +141,15 @@ try {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
-        <AppShell>
-          {children}
-          {modal}
-        </AppShell>
+        {/* C7-2 修正 追随: QueryClientProvider を Root Layout に移動。
+             AppShell の中で useQueryClient() を使うため、AppShell 全体を
+             PersistQueryClientProvider の中に入れる必要がある。 */}
+        <QueryProviders>
+          <AppShell>
+            {children}
+            {modal}
+          </AppShell>
+        </QueryProviders>
       </body>
     </html>
   );

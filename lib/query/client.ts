@@ -12,7 +12,6 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
-import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { db } from '@/lib/db/dexie';
 
@@ -41,9 +40,10 @@ const PERSIST_THROTTLE_MS = 1_000;
  * ({ getItem, setItem, removeItem } × 全て Promise<...>) を、
  * Dexie の apiCache テーブルで実装する。
  *
- * データ形状:
- *   apiCache.data = 元の JSON (string ではなく object のまま保持、
- *                              取り出す時に JSON.stringify で string 化)
+ * データ形状 (H7-1 修正):
+ *   apiCache.data = **persister が渡す value (string) をそのまま保存**
+ *   → JSON.parse/stringify のラウンドトリップを排除、CPU 半減 + 損失リスク回避
+ *   → persister 側の serialize/deserialize (JSON.stringify/parse) に処理を集約
  *
  * TTL:
  *   setItem 時に expiresAt = now + CACHE_TTL_MS を書き、
@@ -59,8 +59,8 @@ const dexieAsyncStorage = {
         await db.apiCache.delete(key);
         return null;
       }
-      // TanStack Query は string を期待するので JSON.stringify で返す
-      return JSON.stringify(row.data);
+      // データは既に string 形式で保存されているのでそのまま返す
+      return row.data;
     } catch (e) {
       console.warn('[DropMod] apiCache.getItem 失敗:', e);
       return null;
@@ -68,9 +68,10 @@ const dexieAsyncStorage = {
   },
   async setItem(key: string, value: string): Promise<void> {
     try {
+      // persister が既に serialize した string をそのまま保存
       await db.apiCache.put({
         key,
-        data: JSON.parse(value),
+        data: value,
         createdAt: Date.now(),
         expiresAt: Date.now() + CACHE_TTL_MS
       });
@@ -122,28 +123,28 @@ export function createQueryClient(): QueryClient {
 }
 
 /**
- * QueryClient に Dexie persister を接続する。
+ * Dexie apiCache を Async Storage 互換で見せる persister ファクトリ。
  *
- * @returns unsubscribe 関数。Providers のアンマウント時に呼ぶ。
+ * H7-2 修正: 以前は `attachPersister(client)` として `persistQueryClient` を
+ *   直接呼び unsubscribe 関数だけ返していたが、restore 完了 Promise (第 2 tuple)
+ *   を待たなかったため、初回 query が cache 未 restore 状態で fetch されていた。
+ *   → `PersistQueryClientProvider` に置き換え、children を restore 完了まで待たせる
+ *     公式推奨パターンに変更 (components/Providers.tsx を参照)。
  */
-export function attachPersister(client: QueryClient): () => void {
-  const persister = createAsyncStoragePersister({
+export function createDexiePersister() {
+  return createAsyncStoragePersister({
     storage: dexieAsyncStorage,
     key: 'DropModTSQ',
-    throttleTime: PERSIST_THROTTLE_MS,
-    // Query 内の予期しない object 型を保持するための serializer:
-    // デフォルトは JSON.stringify/parse で問題ない
-    serialize: (data) => JSON.stringify(data),
-    deserialize: (data) => JSON.parse(data)
+    throttleTime: PERSIST_THROTTLE_MS
+    // serialize/deserialize は library デフォルト (JSON.stringify/parse) を使う。
+    // H7-1 修正で dexieAsyncStorage が string を受け取り string を返す形になったため、
+    // ここで再度指定する必要はない。
   });
-
-  const [unsubscribe] = persistQueryClient({
-    queryClient: client,
-    persister,
-    maxAge: CACHE_TTL_MS,
-    // buster を変えると全キャッシュを無効化できる (デプロイ時のスキーマ変更用)
-    buster: 'v1'
-  });
-
-  return unsubscribe;
 }
+
+/** persister に渡す永続化オプション (Provider から使用) */
+export const persistOptions = {
+  maxAge: CACHE_TTL_MS,
+  // buster を変えると全キャッシュを無効化できる (デプロイ時のスキーマ変更用)
+  buster: 'v1'
+} as const;

@@ -71,18 +71,22 @@ export async function migrateFromLocalStorage(): Promise<MigrationResult> {
 
   // LocalStorage 読み込み (新キー → 旧キー)
   let raw: string | null = null;
+  let localStorageWritable = true;
   try {
     raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
   } catch (e) {
-    // localStorage 自体が使えない (プライベートブラウズ等) → 移行不要扱い
+    // localStorage 自体が使えない (プライベートブラウズ等) → バックアップ不能
     console.warn('[DropMod] LocalStorage read failed during migration:', e);
-    await markMigrated(false); // 空でも migratedAt を書いて再試行を止める
-    return { status: 'no-data', profilesMigrated: 0, themeMigrated: false };
+    localStorageWritable = false;
   }
 
   if (!raw) {
-    // 新規ユーザー: 何も移行するものが無い
-    await markMigrated(false);
+    // 新規ユーザー or 空 LocalStorage: 何も移行するものはないが、
+    //   C7-1 修正: 新規ユーザーでも 7 日 LocalStorage バックアップを有効化する。
+    //   これが無いと以降 useProfiles.save が LocalStorage への並行書き込みを永遠に
+    //   スキップし、Dexie 破損時の復旧手段が完全に失われる (計画書 §5.4 に反する)。
+    //   ただし localStorage 自体が使えない環境では backup も不可なので false のまま。
+    await markMigrated(localStorageWritable);
     return { status: 'no-data', profilesMigrated: 0, themeMigrated: false };
   }
 

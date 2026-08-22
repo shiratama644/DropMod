@@ -19,11 +19,12 @@ test.describe('Theme persistence', () => {
     const initialClass = await page.locator('html').getAttribute('class');
     expect(initialClass).toContain('dark');
 
-    // テーマ切替ボタン (Header 内、theme icon を持つボタン)
-    const themeButton = page.locator('#header-theme-icon').first();
-    // 親の button を取得してクリック
-    const parentButton = themeButton.locator('..');
-    await parentButton.click();
+    // テーマ切替ボタン: id で直接取得 (H7-3 修正)
+    //   以前は `page.locator('#header-theme-icon').first().locator('..')` としていたが、
+    //   Playwright の `.locator('..')` は CSS セレクタ扱いで無効 (XPath 非対応)。
+    //   Header の <button id="header-theme-toggle"> を直接 click する。
+    const themeButton = page.locator('#header-theme-toggle');
+    await themeButton.click();
 
     // light に切り替わっている
     await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);

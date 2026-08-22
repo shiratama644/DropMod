@@ -1,8 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type { ThemeMode } from '@/types';
 import { useAppContext } from './AppContext';
+import {
+  getMigrationStatus,
+  restoreFromLocalStorageBackup
+} from '@/lib/db/migrate';
 
 // ============================================================================
 // SettingsPageClient
@@ -24,7 +28,9 @@ export const SettingsPageClient: React.FC = () => {
     handleSwitchProfile,
     openNewProfileModal,
     handleDeleteProfile,
-    handleResetData
+    handleResetData,
+    showToast,
+    confirm
   } = useAppContext();
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -32,6 +38,97 @@ export const SettingsPageClient: React.FC = () => {
   };
 
   const onSetTheme = (mode: ThemeMode) => setTheme(mode);
+
+  // ------------------------------------------------------------------
+  // M7-1 修正: データベース (Dexie) 状態の表示 + LocalStorage 復元 UI
+  //
+  //   - 起動時に一度 getMigrationStatus() で現状を取得
+  //   - 「LocalStorage から復元」ボタン: confirm → restore → reload
+  //   Dexie が壊れた場合の緊急復旧手段として提供 (計画書 §11.3)
+  // ------------------------------------------------------------------
+  const [dbStatus, setDbStatus] = useState<{
+    migrated: boolean;
+    migratedAt: Date | null;
+    backupAvailable: boolean;
+    backupExpiresAt: Date | null;
+    schemaVersion: string | null;
+  } | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await getMigrationStatus();
+        if (!cancelled) setDbStatus(s);
+      } catch (e) {
+        console.warn('[DropMod] getMigrationStatus 失敗:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleRestoreFromBackup = useCallback(async () => {
+    if (!dbStatus?.backupAvailable) {
+      showToast('復元可能な LocalStorage バックアップがありません', 'warning');
+      return;
+    }
+    const ok = await confirm({
+      title: 'LocalStorage から復元しますか？',
+      message:
+        '現在の Dexie (IndexedDB) データを破棄し、LocalStorage バックアップから再構築します。' +
+        '\n復元後は自動的にページがリロードされます。' +
+        '\nこの操作は取り消せません。',
+      confirmLabel: '復元する',
+      cancelLabel: 'キャンセル',
+      danger: true
+    });
+    if (!ok) return;
+    setIsRestoring(true);
+    try {
+      const result = await restoreFromLocalStorageBackup();
+      if (result.status === 'migrated') {
+        showToast(
+          `${result.profilesMigrated} 件のプロファイルを復元しました。リロードします...`,
+          'success'
+        );
+        // 少し待ってからリロード (Toast を見せるため)
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast(
+          `復元できませんでした (${result.status})。LocalStorage が空か破損している可能性があります`,
+          'warning'
+        );
+        setIsRestoring(false);
+      }
+    } catch (e) {
+      console.error('[DropMod] 復元エラー:', e);
+      showToast('復元中にエラーが発生しました', 'error');
+      setIsRestoring(false);
+    }
+  }, [dbStatus, showToast, confirm]);
+
+  const formatDate = (d: Date | null): string =>
+    d ? d.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+
+  // Date.now() は React 19 の purity ルールで render / useMemo 中に呼べないため
+  // useEffect で state 更新の形にする (dbStatus 変化のたびに再計算)
+  const [remainingBackupDays, setRemainingBackupDays] = useState<number>(0);
+  useEffect(() => {
+    if (!dbStatus?.backupExpiresAt) {
+      setRemainingBackupDays(0);
+      return;
+    }
+    const remaining = Math.max(
+      0,
+      Math.ceil((dbStatus.backupExpiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+    );
+    setRemainingBackupDays(remaining);
+  }, [dbStatus?.backupExpiresAt]);
 
   return (
     <section id="tab-settings" className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
@@ -185,6 +282,54 @@ export const SettingsPageClient: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* ============================================================
+             M7-1: データベース状態 & LocalStorage 復元
+             Dexie が壊れた場合の緊急復旧手段として提供。
+        ============================================================ */}
+        <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3">
+          <div>
+            <h3 className="text-xs sm:text-sm font-bold flex items-center gap-2">
+              <i className="fa-solid fa-database theme-text-brand" aria-hidden />
+              データベース状態
+            </h3>
+            <div className="text-xs theme-text-muted mt-1">
+              プロファイルデータの保存先 (IndexedDB) の状態と、緊急復旧オプション。
+            </div>
+          </div>
+          <div className="theme-sub-box rounded-xl p-3 text-xs space-y-1.5">
+            <div className="flex justify-between gap-2">
+              <span className="theme-text-muted">スキーマバージョン</span>
+              <span className="font-mono">{dbStatus?.schemaVersion ?? '—'}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="theme-text-muted">移行完了日時</span>
+              <span className="font-mono">{formatDate(dbStatus?.migratedAt ?? null)}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="theme-text-muted">LocalStorage バックアップ</span>
+              <span className={`font-mono ${dbStatus?.backupAvailable ? 'theme-text-brand' : 'theme-text-muted'}`}>
+                {dbStatus?.backupAvailable
+                  ? `あり (残り ${remainingBackupDays} 日)`
+                  : 'なし'}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="text-xs theme-text-muted max-w-md">
+              Dexie (IndexedDB) が破損している場合のみ使用してください。
+              バックアップ (最終 7 日間) から Dexie を再構築し、ページをリロードします。
+            </div>
+            <button
+              type="button"
+              onClick={handleRestoreFromBackup}
+              disabled={!dbStatus?.backupAvailable || isRestoring}
+              className="btn-hover-effect w-full sm:w-auto px-3.5 py-2 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 theme-text-amber border border-amber-500/30 rounded-xl transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isRestoring ? '復元中...' : 'LocalStorage から復元'}
+            </button>
           </div>
         </div>
 

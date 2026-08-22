@@ -24,7 +24,8 @@ import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
 import { ZipProgressModal } from './ZipProgressModal';
 import { AppContextProvider, type AppContextValue } from './AppContext';
-import { Providers as QueryProviders } from './Providers';
+// QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
+// AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)
 import { OfflineBanner } from './OfflineBanner';
 import { WebVitalsReporter } from './WebVitalsReporter';
 
@@ -314,11 +315,10 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   );
 
   return (
-    <QueryProviders>
-      <AppContextProvider value={contextValue}>
-        <WebVitalsReporter />
-        <OfflineBanner />
-        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    <AppContextProvider value={contextValue}>
+      <WebVitalsReporter />
+      <OfflineBanner />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <Header
         theme={theme}
@@ -380,8 +380,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         detailText={zipDetailText}
       />
 
-        <ConfirmDialog {...confirmDialogProps} />
-      </AppContextProvider>
-    </QueryProviders>
+      <ConfirmDialog {...confirmDialogProps} />
+    </AppContextProvider>
   );
 };

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Profile } from '@/types';
+import { useQueryClient } from '@tanstack/react-query';
 import { fetchModrinthBatch } from '@/lib/modrinth/client';
 
 // プロファイル変更後、依存チェックを実行するまでの待機時間 (デバウンス)
@@ -10,6 +11,11 @@ const DEP_CHECK_DEBOUNCE_MS = 1200;
 
 export const useDependencyCheck = (currentProfile: Profile) => {
   const [hasDepWarning, setHasDepWarning] = useState<boolean>(false);
+
+  // C7-2 修正: 依存チェックのバッチ /versions 取得を TanStack Query キャッシュに載せる。
+  // 同一 versionId セットへの再チェック (連続 toggle → 依存チェック再実行) で
+  // 5 分以内なら Modrinth API を叩き直さない。
+  const queryClient = useQueryClient();
 
   // 最新 profile を常に参照するための Ref (非同期処理内 stale closure 対策)
   // render 中に同期でセットすることで、setState 直後に発火する非同期処理が
@@ -31,9 +37,16 @@ export const useDependencyCheck = (currentProfile: Profile) => {
 
       if (versionIds.length > 0) {
         try {
-          // Modrinth /versions は 1000 個上限 → 100 個ずつ chunk 分割
-          const batchVersions = await fetchModrinthBatch<any>('/versions', versionIds);
-          batchVersions.forEach((v) => versionMap.set(v.id, v));
+          // C7-2 修正: canonical query key で 5 分キャッシュ。
+          //   versionIds はソートして key の安定性を確保 (order によって key が変わらないように)
+          const sortedIds = [...versionIds].sort();
+          const batchKey = ['versions-batch', sortedIds.join(',')] as const;
+          const batchVersions = await queryClient.fetchQuery({
+            queryKey: batchKey,
+            queryFn: () => fetchModrinthBatch<any>('/versions', versionIds),
+            staleTime: 5 * 60 * 1000 // 5 分
+          });
+          batchVersions.forEach((v: any) => versionMap.set(v.id, v));
         } catch (_e) {
           // レートリミット等: 前回の hasDepWarning を保持して無音失敗
         }
@@ -76,7 +89,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
     } catch (e) {
       // 想定外エラー: 無音失敗 (前回値を維持)
     }
-  }, []);
+  }, [queryClient]);
 
   // ----------------------------------------------------------------------
   // 実行トリガー: 「プロファイルが実質的に変化したときのみ」再チェック

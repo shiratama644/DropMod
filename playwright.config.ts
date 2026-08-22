@@ -48,8 +48,14 @@ export default defineConfig({
     }
   ],
   webServer: {
-    // production ビルドを使う (dev mode のオーバーヘッドと HMR ノイズを避ける)
-    command: 'pnpm build && pnpm start --port ' + PORT + ' --hostname 0.0.0.0',
+    // H7-5 修正: CI では build 済み成果物 (.next) を再利用して start のみ実行
+    //   → build job で成果物生成 → e2e job で pnpm build && pnpm start は build 二重実行
+    //   → CI 検出時は start のみ、ローカルは既存挙動 (build + start)
+    // ローカルでも .next が新しければ build スキップされる仕組みは Next.js 側にないので
+    // ローカルは build + start のまま (dev の最新反映を優先)。
+    command: process.env.CI
+      ? `pnpm start --port ${PORT} --hostname 0.0.0.0`
+      : `pnpm build && pnpm start --port ${PORT} --hostname 0.0.0.0`,
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000

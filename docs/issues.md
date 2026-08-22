@@ -3094,3 +3094,75 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 ---
 
 *第7波は Phase 8 完了直後の完全検証として全 45 検査項目を実施した結果です。計画書との「意図的な差分」は `diff/phase8.md` に別途記録し、こちらは「実装ミス・潜在不具合」12 件のみを記載しました。C7-1 (新規ユーザー LocalStorage backup) は最も影響が大きいので、Phase 9 冒頭で即対応推奨。*
+
+---
+
+# ✅ 第7波 12 件の修正 + 追加バグ発見 (2026-08-23 実施)
+
+第7波で発見した 12 件全てを慎重に修正、加えて修正の過程で追加バグ 1 件を発見し即修正。
+
+## 修正一覧 (12 + 追加 1)
+
+| ID | 重大度 | 修正内容 | 対象ファイル |
+| --- | --- | --- | --- |
+| **C7-1** | 🔴 Critical | 新規ユーザー経路でも `markMigrated(true)` を呼んで 7 日 LocalStorage backup 有効化 | `lib/db/migrate.ts` |
+| **C7-2** | 🔴 Critical | `useProfiles.handleToggleMod` / `handleUpdateModVersion` を `queryClient.fetchQuery` に置換、`useDependencyCheck` の batch 呼び出しにも canonical query key を付与 | `hooks/useProfiles.ts`, `hooks/useDependencyCheck.ts`, `lib/query/keys.ts` |
+| **H7-1** | 🟠 High | `dexieAsyncStorage` の JSON parse/stringify 二重処理を撤廃。`ApiCacheRow.data` を `unknown` → `string` に変更し persister value をそのまま保存 | `lib/db/dexie.ts`, `lib/query/client.ts` |
+| **H7-2** | 🟠 High | `attachPersister` + `useEffect` パターンから `PersistQueryClientProvider` に切り替え、restore 完了を待って children を render | `lib/query/client.ts`, `components/Providers.tsx` |
+| **H7-3** | 🟠 High | E2E theme-persistence の `.locator('..')` 無効セレクタを `#header-theme-toggle` 直接指定に | `e2e/theme-persistence.spec.ts` |
+| **H7-4** | 🟠 High | `tsconfig.json` から `types: ['vitest/globals', ...]` を削除し `tsconfig.test.json` に分離、実装コードから vitest globals を型的に参照不可能に | `tsconfig.json`, `tsconfig.test.json` (新規), `package.json` (typecheck script) |
+| **H7-5** | 🟠 High | Playwright `webServer.command` を `process.env.CI` で分岐 (CI では `pnpm start` のみ)、CI workflow で build artifact を e2e job に受け渡す仕組み追加 | `playwright.config.ts`, `docs/CI_WORKFLOW.yml` |
+| **M7-1** | 🟡 Medium | Settings に「データベース状態」セクション + `restoreFromLocalStorageBackup` 呼び出しボタン追加 (migratedAt/バックアップ残日数/schemaVersion 表示込み) | `components/SettingsPageClient.tsx` |
+| **M7-2** | 🟡 Medium | `hooks/useProfiles.ts` の `sanitizeLoadedState` re-export を削除 (dead code) | `hooks/useProfiles.ts` |
+| **M7-3** | 🟡 Medium | hydrate useEffect に `if (useProfilesStore.getState().hasHydrated) return;` ガードを追加、React Strict Mode 二重発火を回避 | `hooks/useProfiles.ts` |
+| **L7-1** | 🟢 Low | `putProfile` / `bulkPutProfiles` に「Phase 9 で使用予定」のコメントを追加 (dead export 明示化) | `lib/db/dexie.ts` |
+| **L7-2** | 🟢 Low | `useConfirmStore` に owner ID (Symbol) を導入、`cleanup(ownerId)` は自 hook が開いた dialog のみ対象。テストも 3 件追加 (7 → 9 → 10 tests) | `lib/store/confirm.ts`, `hooks/useConfirm.ts`, `__tests__/lib/store/confirm.test.ts` |
+
+## 🐛 修正過程で発見した追加バグ (即修正)
+
+### C7-3 (回帰): `useQueryClient()` を useProfiles に追加 → Provider 階層エラー
+
+- **原因:** `useProfiles` は AppShell のトップレベルで呼ばれるが、`QueryClientProvider` は AppShell の JSX 返却値の中にあった。React の hook 実行は JSX より前なので、`useQueryClient()` は Provider の外で呼ばれ **"No QueryClient set" エラー**が発生 → `_not-found` の prerender が失敗し `pnpm build` がコケた。
+- **影響:** production build 不能 (Critical)
+- **修正:**
+  - `<QueryProviders>` を `app/layout.tsx` の `<body>` 直下に移動
+  - `AppShell` から `<QueryProviders>` を撤去 (単なる `<AppContextProvider>` のみ返す)
+  - これで階層は `<html><body><QueryProviders><AppShell (useQueryClient 可)>...` となり順序解決
+
+## 検証結果
+
+### 静的検査
+- ✅ `pnpm typecheck` = 0 error (`tsconfig.json` + `tsconfig.test.json` 両方 clean)
+- ✅ `pnpm lint` = 0 error / 0 warning
+- ✅ `pnpm build` = ✓ Compiled successfully (1542ms) — **prerender エラー完全解消**
+- ✅ `pnpm test:unit` = **80 tests all pass** (第7波修正前の 78 + confirm store の owner ID テスト 2 追加)
+
+### Runtime 実測 (`pnpm start`)
+- ✅ 全ページ HTTP status 期待通り (`/, /mods, /settings, /mod/sodium, /api/health, /sitemap.xml, /manifest.webmanifest` = 200; `/nonexistent` = 404)
+- ✅ 全ページ h1 数 = 1 (C6-1 継続)
+- ✅ Security headers 全て継続 (HSTS/COOP/CSP Report-Only)
+- ✅ Settings ページに「LocalStorage から復元」ボタン表示確認 (curl grep で "LocalStorage から復元" 出力)
+
+### Bundle サイズ変化
+- 修正前: Home 960 KB / Mod詳細 1259 KB
+- 修正後: Home **963 KB** (+3 KB SettingsPageClient ロジック追加) / Mod詳細 **1262 KB** (+3 KB useQueryClient hook 追加)
+- 微増だが想定範囲内
+
+### コード品質改善
+- **Dead code 除去**: TSQ hook 群を実利用に移行 (C7-2)、sanitizeLoadedState re-export 削除 (M7-2)
+- **型安全性向上**: tsconfig 分離で実装コード↔テストコードの境界を強制 (H7-4)
+- **パフォーマンス改善**: JSON 二重処理排除 (H7-1)、Strict Mode 二重発火防止 (M7-3)
+- **UX 改善**: PersistQueryClientProvider で cache restore 待ち (H7-2)、Settings に緊急復旧 UI (M7-1)
+
+## 総合集計 (第1波 〜 第7波修正完了)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1〜3.5波 | 13 | 18 | 24 | 16 | 71 | ✅ 全て修正済 (Vite 版) |
+| 第4波 | 2 | 6 | 8 | 8 | 24 | ✅ 全 24 件修正済 |
+| 第5波 | 3 | 6 | 12 | 14 | 35 | ✅ 34 修正 + L5-12 改善不要確定 |
+| 第6波 | 1 | 2 | 4 | 3 | 10 | ✅ 全 10 件 + 追加 2 件 修正済 |
+| **第7波** | **2** | **5** | **3** | **2** | **12** | ✅ **全 12 件 + 追加 1 件 修正済** |
+| **総合計** | **21** | **37** | **51** | **43** | **152 + 1** | **152 修正 + 1 確定** |
+
+*Phase 9 に進む前の全バグ修正が完了。判断留保・未対応バグゼロの状態。*

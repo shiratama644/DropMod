@@ -49,6 +49,9 @@ export const projectKey = (idOrSlug: string) => ['project', idOrSlug] as const;
 export const versionsKey = (idOrSlug: string, mcVersion?: string, loader?: string) =>
   ['versions', idOrSlug, mcVersion ?? null, loader ?? null] as const;
 
+/** 単一 version 詳細 (versionId 指定) */
+export const versionKey = (versionId: string) => ['version', versionId] as const;
+
 /** タグ / ゲームバージョン一覧 */
 export const gameVersionsKey = ['tag', 'game_version'] as const;
 
@@ -63,6 +66,7 @@ export const queryKeys = {
   },
   project: projectKey,
   versions: versionsKey,
+  version: versionKey,
   gameVersions: gameVersionsKey,
   projectsBatch: projectsBatchKey
 } as const;

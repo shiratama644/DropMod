@@ -6,23 +6,23 @@
  * Sub-Phase 8-B: AppShell の中に配置し、下流の全 Client Component が
  * useQuery / useInfiniteQuery / useMutation を使えるようにする。
  *
+ * H7-2 修正: PersistQueryClientProvider に置き換え
+ *   以前は QueryClientProvider + useEffect で persistQueryClient() を呼び、
+ *   restore 完了 Promise を待たなかったため初回 query が cache 未 restore で
+ *   fetch されていた。公式推奨の PersistQueryClientProvider に切替、
+ *   `onSuccess` で restore 完了を認識してから children を通常レンダリング。
+ *
  * 実装ポイント:
  *   - QueryClient は useState の initializer で「1 セッション 1 インスタンス」を保証
- *     (関数呼び出しで new すると再レンダーで毎回作り直され、キャッシュが消える)
- *   - persister は useEffect で attach、unmount で detach
+ *   - persister は useMemo で 1 セッション 1 個
  *   - ReactQueryDevtools は dev のみ動的 import (production bundle 除外)
- *     next/dynamic に process.env.NODE_ENV を渡し dead-code elimination で除去
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createQueryClient, attachPersister } from '@/lib/query/client';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createQueryClient, createDexiePersister, persistOptions } from '@/lib/query/client';
 
-// process.env.NODE_ENV は Next.js の compiler が静的置換するため、
-// production ビルドでは `const enableDevtools = false;` に定数畳み込みされ、
-// 続く三項の false 側 (null) だけが残り、devtools の dynamic import は
-// 完全にツリーシェイクされる。
 const enableDevtools = process.env.NODE_ENV === 'development';
 
 const ReactQueryDevtools = enableDevtools
@@ -39,20 +39,15 @@ interface Props {
 
 export function Providers({ children }: Props) {
   const [client] = useState(() => createQueryClient());
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    unsubscribeRef.current = attachPersister(client);
-    return () => {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    };
-  }, [client]);
+  const persister = useMemo(() => createDexiePersister(), []);
 
   return (
-    <QueryClientProvider client={client}>
+    <PersistQueryClientProvider
+      client={client}
+      persistOptions={{ persister, ...persistOptions }}
+    >
       {children}
       {ReactQueryDevtools ? <ReactQueryDevtools initialIsOpen={false} /> : null}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

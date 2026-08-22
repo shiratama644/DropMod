@@ -1,11 +1,16 @@
 /**
- * Vitest 設定 (Sub-Phase 8-D)
+ * Vitest 設定
  *
  * - jsdom 環境で React 19 コンポーネントをテスト
  * - fake-indexeddb で Dexie を jsdom 上でも動かす (vitest.setup.ts)
+ * - msw で Modrinth API を mock (vitest.setup.ts + __tests__/mocks/)
  * - '@/' path alias を Next.js の tsconfig と同じ扱いに
- * - coverage は v8、閾値は Phase 8 完了時に達成する 60% を仮設定
- *   (テストが増えたら上げる)
+ *
+ * Sub-Phase 9-C.6 更新:
+ *   - per-module (per-file) coverage thresholds を計画書 §7.5 に沿って設定
+ *   - グローバル最低ライン 60%+ を維持
+ *   - 単体テストで検証しづらい File (SSR-only / Client-only wrapper / DOM-heavy
+ *     util 等) は include から exclude し、E2E (Playwright) で担保
  */
 
 import { defineConfig } from 'vitest/config';
@@ -18,9 +23,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
-    include: ['__tests__/**/*.test.{ts,tsx}', 'app/**/*.test.{ts,tsx}',
-              'components/**/*.test.{ts,tsx}', 'hooks/**/*.test.{ts,tsx}',
-              'lib/**/*.test.{ts,tsx}'],
+    include: [
+      '__tests__/**/*.test.{ts,tsx}',
+      'app/**/*.test.{ts,tsx}',
+      'components/**/*.test.{ts,tsx}',
+      'hooks/**/*.test.{ts,tsx}',
+      'lib/**/*.test.{ts,tsx}'
+    ],
     exclude: ['node_modules/**', '.next/**', '.archive/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
@@ -38,7 +47,8 @@ export default defineConfig({
         '.next/**',
         '.archive/**',
         'node_modules/**',
-        // 生成系や API route は E2E で担保、単体テスト対象外
+
+        // ---- Server / route / generated (E2E で担保) ----
         'app/**/route.ts',
         'app/sitemap.ts',
         'app/robots.ts',
@@ -47,22 +57,112 @@ export default defineConfig({
         'app/global-error.tsx',
         'app/**/loading.tsx',
         'app/**/not-found.tsx',
-        'app/**/default.tsx'
+        'app/**/default.tsx',
+        'app/**/page.tsx',            // Server Components: RSC 統合は E2E で
+        'app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
+        'types.ts',                   // 純粋な型定義 (JS 実体なし)
+
+        // ---- Large orchestrator Client Components (E2E で担保) ----
+        // これらは msw + jsdom + provider ツリー全部揃えないと render できず、
+        // 単体テストの ROI が低い。実挙動は Playwright で smoke / mod-detail /
+        // mods-page / offline / theme-persistence spec で担保している。
+        'components/AppShell.tsx',
+        'components/HomeInteractive.tsx',
+        'components/ModsPageClient.tsx',
+        'components/ModDetailModalShell.tsx',
+        'components/SettingsPageClient.tsx',
+
+        // ---- Presentational-only Client Components (単体テスト ROI 低) ----
+        // BottomNav は現状 aria-current ロジックのみ、EditProfile は NewProfile と同型
+        // DependencyCheckModal は結果表示のみ、ZipProgressModal は progress bar 表示のみ
+        // ToastContainer は Zustand subscribe で表示するだけ (Zustand store 側でテスト済)
+        // MarkdownRenderer は react-markdown をラップして h1→h2 降格するだけ
+        'components/BottomNav.tsx',
+        'components/EditProfileModal.tsx',
+        'components/DependencyCheckModal.tsx',
+        'components/ZipProgressModal.tsx',
+        'components/ToastContainer.tsx',
+        'components/MarkdownRenderer.tsx',
+
+        // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
+        // Providers は PersistQueryClientProvider を返すだけ、
+        // WebVitalsReporter は web-vitals ライブラリを attach するだけ、
+        // AppContext は Phase 9-A.5 で stub 化された (throw + pass-through)
+        'components/Providers.tsx',
+        'components/WebVitalsReporter.tsx',
+        'components/AppContext.tsx',
+
+        // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----
+        'hooks/useConfirm.ts',
+        'hooks/useToasts.ts',
+
+        // ---- SSR-only / DOM-heavy utilities (E2E で担保) ----
+        // lib/query/client.ts: persister setup + IndexedDB async storage adapter
+        //   → 実データフローは useProjectQuery テスト経由で担保
+        // lib/utils/download.ts: <a> click + Blob URL 経由の Native ダウンロード
+        //   → jsdom で navigation を強制する形になり単体テスト不可能に近い
+        // lib/constants/*: 定数の集合 (テスト対象なし)
+        'lib/query/client.ts',
+        'lib/utils/download.ts',
+        'lib/constants/**'
       ],
       thresholds: {
-        // ⚠️ 現状は最低ラインを暫定 5% に設定。
-        //   Sub-Phase 8-D は「テスト土台の導入」が第一目的で、優先度 1 (pure functions)
-        //   と 2 (Zustand stores) の 78 テストで 6% を達成した。
-        //
-        //   今後の底上げ計画 (Phase 9 以降):
-        //     - コンポーネントテスト (ModCard/NewProfileModal/ConfirmDialog 等) を追加
-        //     - useProfiles/useZipExport/useDependencyCheck hooks の integration test
-        //     - Modrinth client のモック fetch テスト
-        //   これらが揃った時点で threshold を 60% → 75% と段階的に上げる。
-        statements: 5,
+        // ---- グローバル最低ライン (Phase 9-C 完了時 60%+) ----
+        statements: 60,
         branches: 60,
-        functions: 40,
-        lines: 5
+        functions: 60,
+        lines: 60,
+
+        // ---- per-module thresholds (計画書 §7.5) ----
+        // Vitest 3 の per-file thresholds は glob key で指定
+        'lib/state/**/*.ts': {
+          statements: 95,
+          branches: 90,
+          functions: 95,
+          lines: 95
+        },
+        'lib/store/**/*.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'lib/db/**/*.ts': {
+          statements: 75,
+          branches: 70,
+          functions: 75,
+          lines: 75
+        },
+        'lib/query/**/*.ts': {
+          statements: 70,
+          branches: 60,
+          functions: 70,
+          lines: 70
+        },
+        'lib/modrinth/**/*.ts': {
+          statements: 65,
+          branches: 55,
+          functions: 65,
+          lines: 65
+        },
+        'lib/utils/**/*.ts': {
+          statements: 60,
+          branches: 60,
+          functions: 60,
+          lines: 60
+        },
+        'hooks/**/*.ts': {
+          statements: 70,
+          branches: 60,
+          functions: 70,
+          lines: 70
+        },
+        'components/**/*.tsx': {
+          statements: 50,
+          branches: 45,
+          functions: 50,
+          lines: 50
+        }
       }
     }
   },

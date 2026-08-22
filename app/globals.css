@@ -1,0 +1,298 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+    --bg-base: #f1f5f9;
+    --bg-panel: rgba(255, 255, 255, 0.92);
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-hover: rgba(255, 255, 255, 0.98);
+    --bg-input: #e2e8f0;
+    --border-main: rgba(0, 0, 0, 0.10);
+    --border-card: rgba(0, 0, 0, 0.08);
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --sub-box-bg: rgba(226, 232, 240, 0.85);
+    --modal-overlay: rgba(15, 23, 42, 0.6);
+    --badge-bg: #e2e8f0;
+    --dropdown-bg: rgba(255, 255, 255, 0.98);
+    --dropdown-border: rgba(0, 0, 0, 0.12);
+    --dropdown-hover: rgba(5, 150, 105, 0.12);
+
+    --color-text-brand: #047857;
+    --color-text-amber: #b45309;
+    --color-text-blue: #1d4ed8;
+    --color-text-red: #b91c1c;
+    --fade-grad-end: rgba(241, 245, 249, 1);
+}
+
+html.dark {
+    --bg-base: #090d14;
+    --bg-panel: rgba(15, 23, 42, 0.85);
+    --bg-card: rgba(30, 41, 59, 0.65);
+    --bg-card-hover: rgba(30, 41, 59, 0.90);
+    --bg-input: #0f172a;
+    --border-main: rgba(255, 255, 255, 0.10);
+    --border-card: rgba(255, 255, 255, 0.08);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --sub-box-bg: rgba(15, 23, 42, 0.85);
+    --modal-overlay: rgba(0, 0, 0, 0.80);
+    --badge-bg: #1e293b;
+    --dropdown-bg: rgba(15, 23, 42, 0.98);
+    --dropdown-border: rgba(255, 255, 255, 0.15);
+    --dropdown-hover: rgba(16, 185, 129, 0.22);
+
+    --color-text-brand: #34d399;
+    --color-text-amber: #fbbf24;
+    --color-text-blue: #60a5fa;
+    --color-text-red: #f87171;
+    --fade-grad-end: rgba(9, 13, 20, 1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    /* テキスト全体の選択を禁止していた `user-select: none` は廃止。
+       Mod タイトルや説明文をコピー可能にするため。
+       クリック要素側 (button/.tab-btn/.custom-dropdown-*) で個別に無効化する。 */
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
+}
+
+/* インタラクティブ要素はダブルタップでの範囲選択を無効化 */
+button,
+[role="button"],
+.tab-btn,
+label {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+code, input, textarea {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.theme-text-brand { color: var(--color-text-brand); }
+.theme-text-amber { color: var(--color-text-amber); }
+.theme-text-blue { color: var(--color-text-blue); }
+.theme-text-red { color: var(--color-text-red); }
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-main);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.active-tab-btn {
+    color: var(--color-text-brand);
+    border-top: 2px solid #10b981;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 100%);
+}
+
+.tab-btn {
+    transition: all 0.2s ease;
+}
+
+.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.dynamic-input {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+}
+
+.theme-sub-box {
+    background-color: var(--sub-box-bg);
+    border: 1px solid var(--border-main);
+}
+
+.theme-text-secondary {
+    color: var(--text-secondary);
+}
+
+.theme-text-muted {
+    color: var(--text-muted);
+}
+
+.theme-badge {
+    background-color: var(--badge-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-card);
+}
+
+.custom-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-dropdown-trigger {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    user-select: none;
+}
+.custom-dropdown-trigger:hover, .custom-dropdown-trigger:focus-visible {
+    border-color: #10b981;
+}
+
+.custom-dropdown-menu-portal {
+    position: fixed;
+    z-index: 99999 !important;
+    background: var(--dropdown-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--dropdown-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    user-select: none;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.custom-dropdown-item {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.custom-dropdown-item:hover, .custom-dropdown-item.is-focused {
+    background-color: var(--dropdown-hover);
+    color: var(--color-text-brand);
+}
+.custom-dropdown-item.is-selected {
+    color: var(--color-text-brand);
+    font-weight: 700;
+    background-color: var(--dropdown-hover);
+}
+
+.scroll-fade-container {
+    position: relative;
+}
+.scroll-fade-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2rem;
+    background: linear-gradient(to right, transparent, var(--fade-grad-end));
+    pointer-events: none;
+    border-radius: 0 0.75rem 0.75rem 0;
+}
+/* -------------------------------------------------------------------
+ * タブ切替フェードイン (GSAP を廃止した後の代替演出)
+ * `#tab-home/#tab-mods/#tab-settings` がマウントされた瞬間に短くフェード。
+ * ----------------------------------------------------------------- */
+@keyframes tab-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+#tab-home, #tab-mods, #tab-settings {
+    animation: tab-fade-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    #tab-home, #tab-mods, #tab-settings {
+        animation: none;
+    }
+}
+
+/* Mod カード出現アニメーション (GSAP 廃止の代替)
+ * .mod-card-item に付与するだけで自動フェード。stagger を模した delay 用に
+ * :nth-child で少しずつずらして視覚的リズムを出す。
+ */
+@keyframes mod-card-appear {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+.mod-card-item {
+    animation: mod-card-appear 0.28s ease-out both;
+}
+.mod-card-item:nth-child(2)  { animation-delay: 0.03s; }
+.mod-card-item:nth-child(3)  { animation-delay: 0.06s; }
+.mod-card-item:nth-child(4)  { animation-delay: 0.09s; }
+.mod-card-item:nth-child(5)  { animation-delay: 0.12s; }
+.mod-card-item:nth-child(6)  { animation-delay: 0.15s; }
+.mod-card-item:nth-child(7)  { animation-delay: 0.18s; }
+.mod-card-item:nth-child(8)  { animation-delay: 0.21s; }
+.mod-card-item:nth-child(9)  { animation-delay: 0.24s; }
+.mod-card-item:nth-child(n+10) { animation-delay: 0.27s; }
+@media (prefers-reduced-motion: reduce) {
+    .mod-card-item { animation: none; }
+}
+
+/* ---------------------------------------------------------------
+ * /mod/[slug] のフルページ表示時は
+ *   グローバル Header と BottomNav を非表示にし、モーダルアプリ風の
+ *   詳細画面 UX を提供する。
+ *
+ *   ・variant="page" の ModDetailModalShell がマウントされている間だけ
+ *     body に `mod-fullpage` クラスが付与される (アンマウントで剥がれる)
+ *   ・Home 上のモーダル (variant="modal") では付与されないので、
+ *     グローバル Header はそのまま残る (背景の Home で操作可能)
+ *
+ *   ページ側は独自の「ホームに戻る」リンクを提供済み。
+ * --------------------------------------------------------------- */
+body.mod-fullpage #app-header,
+body.mod-fullpage #bottom-nav {
+    display: none;
+}
+/* Header/BottomNav が消える分、body の pb-28 パディングを緩和して
+   詳細カードが画面下部に無駄なスペースを作らないようにする */
+body.mod-fullpage {
+    padding-bottom: 0;
+}

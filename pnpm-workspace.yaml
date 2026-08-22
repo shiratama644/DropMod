@@ -1,2 +1,10 @@
+# eslint-config-next の依存 (unrs-resolver) のビルド script を明示許可。
+# false のままだと pnpm install/lint 時に警告 + exit code 1 になる。
+# unrs-resolver は eslint-config-next 16 が内部で使う TypeScript path resolver。
 allowBuilds:
+  # ESLint 16 の path resolver
+  unrs-resolver: true
+  # next/image の image optimization に使うが Sandbox で不要 & ビルド失敗しやすい
+  sharp: false
+  # vitest / @vitejs/plugin-react が使う JS bundler (Sub-Phase 8-D で追加)
   esbuild: true

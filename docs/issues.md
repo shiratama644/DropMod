@@ -2180,3 +2180,324 @@ Route (app)                  Revalidate  Expire
 ---
 
 *第5波は 2026-08-22 に全 55 ファイル (49 コード + 6 config) を精査し、diff.md との整合性も再確認した結果です。第4波では見落とされていた「Critical: 二重遷移 3 件」「High: ESLint 不能・tsconfig 退行 2 件」「High: Modrinth batch 上限 1 件」等、実装は動くが本番運用で顕在化する可能性がある潜在バグを新規発見しました。特に **C5-1, C5-2** は「動くが URL 履歴とレースが起きる」タイプで、動作テストでは気付きにくい重要バグです。*
+
+---
+
+# 🌊 第6波: 第5波修正後の Phase 8 前 最終監査 (39 検査項目)
+
+> **調査日:** 2026-08-22 (JST)
+> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `718ce63` (第5波修正完了直後)
+> **調査手法:**
+> - 判断留保 5 件の再評価 (実は隠れたバグか)
+> - 前波修正の副作用チェック (H5-4 batch, C5-1/2 二重遷移解消, H5-6 inflight ガード)
+> - セキュリティ視点 (CSRF, XSS, SSRF, path traversal, prototype pollution, ReDoS)
+> - Race condition 全 useEffect / async 関数の再検査
+> - エッジケース (巨大 profile, 破損 cookie/LS, 空 profile)
+> - Vercel 本番デプロイ実挙動 (Serverless Function timeout, Edge Runtime, cold start)
+> - SEO / A11y 標準準拠 (h1 数、manifest.json、favicon)
+> - 依存関係 outdated + audit
+> - Bundle stats 実測
+>
+> **本波の総件数:** 10 件 (Critical: 1 / High: 2 / Medium: 4 / Low: 3)
+>
+> **前提:** 第5波修正で 30 件対応済み、判断留保 5 件は実害無しを再確認。それでも「Phase 8 に進む前に本当にバグが無いか」という観点で 39 項目を追加検査し、新たに発見された潜在バグをリストアップ。
+
+## 📊 39 検査項目の内訳
+
+### ✅ 問題なし確認 (29 項目)
+
+**判断留保 5 件の再評価:**
+- M5-5 (input.value clear 重複) — Header と useZipImport で 2 回実行、両方空文字設定で実害無し
+- L5-2/L5-4/L5-10/L5-11/L5-12/L5-13 — 全て実害無し確定
+
+**セキュリティ:**
+- SSRF 経路無し (`isSafePath` + `parsedTarget.host !== MODRINTH_HOST` で防御)
+- XSS 経路無し (`rehypeSanitize` + `sanitizeSchema` + `iframe` allowlist)
+- ReDoS リスク無し (YouTube URL regex は入力長制限あり)
+- theme init script は静的文字列で XSS 経路無し
+- prototype pollution 経路無し (`JSON.parse` 結果を direct spread していない)
+
+**Race condition:**
+- `useProfiles.handleToggleMod` の Ref パターン + toggleInFlightRef で並列トグル防止
+- `HomeInteractive` の AbortController + requestSeq で fetch race 防止
+- `useZipExport` の abort controller cleanup 追加済 (M5-12)
+- `useZipImport` の importInFlightRef で並列 import 防止 (H5-6)
+- `IntersectionObserver` の callback ref パターンで mount/unmount 検知
+- `useConfirm` のアンマウント時 pending Promise resolve (L5-7)
+
+**その他:**
+- 全 useCallback deps 妥当
+- 全 useEffect cleanup 適切
+- `pnpm audit` 0 脆弱性
+- モーダル z-index 階層適切 (Header 30 / BottomNav 40 / Modal 50 / Confirm 60)
+- HEAD /api/health, HEAD /api/modrinth 両方 200 応答
+- Route Handler `dynamic = 'force-dynamic'` 明示 (/api/modrinth)
+- 全ページ HTTP status 期待通り (`/nonexistent` = 404)
+
+### 🆕 新規発見バグ (10 件)
+
+---
+
+## 🔴 Critical (第6波、1件)
+
+### C6-1. Mod 詳細ページで `<h1>` が複数発生 (SEO/A11y 標準違反)
+
+- **箇所:** `components/Header.tsx:70` + `components/MarkdownRenderer.tsx:164-168`
+- **症状:** ページ内 h1 タグ:
+  - Header の `<h1>DropMod</h1>` (全ページ共通)
+  - `MarkdownRenderer` の `h1` オーバーライド (Modrinth Markdown 本文中の `# 見出し`)
+- **影響:**
+  - `/mod/sodium` などで Modrinth の README が `# タイトル` を含む場合、**同一ページ内に `<h1>` が 2 個以上**発生
+  - SEO クローラは「1 ページ 1 h1 が推奨」原則に従うため、複数 h1 でランキングに悪影響
+  - スクリーンリーダーが「これはメインコンテンツ?」と混乱
+- **修正:** `MarkdownRenderer.tsx` の h1 オーバーライドを `<h2>` に降格、h2 → h3、h3 → h4 と順次 shift
+  ```typescript
+  h1: ({ node, children, ...props }) => (
+    <h2 className="..." {...props}>{children}</h2>  // ← h1 を h2 に
+  ),
+  h2: ({ node, children, ...props }) => (
+    <h3 className="..." {...props}>{children}</h3>  // ← 順次シフト
+  ),
+  // ...
+  ```
+  代替案: Header の `<h1>DropMod</h1>` を `<span role="banner">` に変更 (推奨度低い)
+
+---
+
+## 🟠 High (第6波、2件)
+
+### H6-1. `parseRetryAfterMs` の 30 秒上限が Vercel Hobby (10s) timeout を超える
+
+- **箇所:** `lib/modrinth/server.ts:51`
+- **症状:**
+  ```typescript
+  function parseRetryAfterMs(headerValue: string | null): number | null {
+    if (!headerValue) return null;
+    const asNumber = Number(headerValue);
+    if (Number.isFinite(asNumber) && asNumber >= 0) {
+      return Math.min(asNumber * 1000, 30_000);  // ← 最大 30 秒
+    }
+    // ...
+  }
+  ```
+  Modrinth が `Retry-After: 60` を返すと 30 秒待機 → Vercel Hobby プランの Serverless Function は 10 秒でタイムアウト → **502 応答**。
+- **影響:**
+  - Vercel Hobby プラン (無料枠) で Modrinth 429 発生時に function timeout
+  - ユーザーには「エラー」として表示される
+  - Pro プラン (60 秒) や Enterprise (900 秒) は OK
+- **修正:** 環境検出して timeout を厳しく設定
+  ```typescript
+  // Vercel Hobby: 10s, Pro: 60s, Enterprise: 900s
+  const MAX_RETRY_WAIT_MS =
+    process.env.VERCEL_ENV === 'production' && process.env.VERCEL_PLAN === 'hobby'
+      ? 8000  // 10s - 2s buffer
+      : 30_000;
+  return Math.min(asNumber * 1000, MAX_RETRY_WAIT_MS);
+  ```
+  もしくは常に 8s を上限にする (Hobby 前提)。
+
+### H6-2. Next.js 16.3.1 → 16.3.2 の patch 未適用
+
+- **箇所:** `package.json:22`
+- **症状:** `"next": "16.3.1"` (現在 latest = 16.3.2)。**patch バージョン差** でセキュリティ・バグ修正を含む可能性。
+- **影響:**
+  - 既知の脆弱性・バグ修正が含まれる可能性 (Next.js 公式 CHANGELOG を要確認)
+  - Vercel deployment で Next.js が自動で 16.3.2 に差し替わる可能性あり (`^16.3.1` なら)
+- **修正:** `pnpm add next@16.3.2` で明示更新
+
+---
+
+## 🟡 Medium (第6波、4件)
+
+### M6-1. `public/` に create-next-app デフォルト SVG 5 個が残存
+
+- **箇所:** `public/next.svg`, `public/vercel.svg`, `public/file.svg`, `public/globe.svg`, `public/window.svg`
+- **症状:** `create-next-app` が生成したデフォルト SVG が **一切参照されていない**まま残存。`grep -rn "next.svg" app/ components/` → 0 件
+- **影響:**
+  - サイトから `/next.svg` や `/vercel.svg` に直接アクセスすると 200 で配信される (**Vercel ロゴを配信する DropMod は混乱を招く**)
+  - ブランディング的に不整合
+  - リポジトリの bloat
+- **修正:** `rm public/{next,vercel,file,globe,window}.svg`
+
+### M6-2. `package.json` に `"type": "module"` が欠如 (Vite 版から退行)
+
+- **箇所:** `package.json`
+- **症状:** Vite 版は `"type": "module"` を持っていたが、Next 版は無い。
+  - 実害: 将来 `.js` ファイル (utility scripts 等) を作った時、CommonJS 扱いされる
+  - 現状 `.js` ファイル無し = 実害無し、将来性の問題
+- **影響:** 現状無し。予防策として追加推奨。
+- **修正:** `package.json` に `"type": "module"` を追加。`next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs` は明示拡張子で影響なし。
+
+### M6-3. `SEARCH_LIMIT = 24` が 2 ファイルに重複定義
+
+- **箇所:** `app/page.tsx:29` + `components/HomeInteractive.tsx:74`
+- **症状:** 両方に `const SEARCH_LIMIT = 24;` が定義されている。一方だけ変更するとバグに (SSR と CSR で件数不一致)。
+- **影響:** 実害無しだが DRY 違反、将来のリファクタで事故る可能性
+- **修正:** `lib/constants/search.ts` に共通定数を作成し両方で import
+  ```typescript
+  // lib/constants/search.ts
+  export const SEARCH_LIMIT = 24;
+  ```
+
+### M6-4. `manifest.json` 無し + カスタム `favicon.ico` 無し (PWA + ブランディング欠如)
+
+- **箇所:** `public/manifest.json` (欠如), `app/favicon.ico` (create-next-app デフォルトのまま)
+- **症状:**
+  - PWA 対応の `manifest.json` (`app/manifest.ts` 相当) 無し → 「ホーム画面に追加」で正しいアイコン/名前が使えない
+  - `app/favicon.ico` は create-next-app のデフォルト画像 (25KB) で DropMod ブランドを反映していない
+- **影響:**
+  - モバイル UX (「ホーム画面に追加」体験) の質低下
+  - ブラウザタブのアイコンが「Next.js のロゴ」に見える (実際は Next.js デフォルト favicon)
+- **修正:**
+  1. `app/manifest.ts` を作成 (App Router 標準):
+     ```typescript
+     import type { MetadataRoute } from 'next';
+     export default function manifest(): MetadataRoute.Manifest {
+       return {
+         name: 'DropMod - Minecraft Mod Downloader',
+         short_name: 'DropMod',
+         description: 'Modrinth から Minecraft の Mod を検索・ダウンロード',
+         start_url: '/',
+         display: 'standalone',
+         background_color: '#0f172a',
+         theme_color: '#059669',
+         icons: [
+           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+         ]
+       };
+     }
+     ```
+  2. `public/icon-192.png`, `public/icon-512.png`, `app/favicon.ico` を DropMod ブランド (emerald 立方体) に置換
+  3. `app/apple-icon.png` も追加推奨 (iOS Safari 用)
+
+---
+
+## 🟢 Low (第6波、3件)
+
+### L6-1. セキュリティヘッダ追加余地 (`HSTS` / `CSP` / `COOP` / `COEP`)
+
+- **箇所:** `next.config.ts:16-24`
+- **症状:** 現状の `securityHeaders`:
+  - ✅ X-Content-Type-Options
+  - ✅ Referrer-Policy
+  - ✅ X-Frame-Options
+  - ✅ Permissions-Policy
+  - ❌ Strict-Transport-Security (Vercel が自動付与するが明示推奨)
+  - ❌ Content-Security-Policy (Markdown 内 HTML との兼ね合いで難しいが Report-Only モードで開始可)
+  - ❌ Cross-Origin-Opener-Policy (Spectre 対策)
+  - ❌ Cross-Origin-Embedder-Policy
+- **影響:** 現状の 4 種で最低限のハードニングは達成、追加は「より堅牢に」レベル
+- **修正:**
+  ```typescript
+  const securityHeaders = [
+    // 既存 4 種
+    { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    // CSP は Markdown iframe (YouTube 埋め込み) との兼ね合いで慎重に:
+    // { key: 'Content-Security-Policy-Report-Only', value: "default-src 'self' 'unsafe-inline' data: https:; ..." },
+  ];
+  ```
+
+### L6-2. `sanitizeSchema.attributes` の上書きで defaultSchema の属性が失われる可能性
+
+- **箇所:** `components/MarkdownRenderer.tsx:37-45`
+- **症状:**
+  ```typescript
+  attributes: {
+    ...defaultSchema.attributes,  // ← spread で継承しているように見えるが
+    iframe: [...],  // ← 上書きで defaultSchema.attributes.iframe を完全置換
+    a: ['href', 'title', 'target', 'rel', 'className']  // ← 同上
+  }
+  ```
+  実は spread は上位のみで各要素は完全上書き。`defaultSchema.attributes.a` に `id`, `aria-*` などがあった場合 (デフォルトは無し)、失われる。**現状 defaultSchema にこれらは含まれないので実害無し**。
+- **影響:** 現状無し、将来 rehype-sanitize が更新されて defaultSchema に新しい属性が追加された場合の互換性リスク
+- **修正 (念のため):**
+  ```typescript
+  attributes: {
+    ...defaultSchema.attributes,
+    iframe: [
+      ...(defaultSchema.attributes?.iframe || []),
+      'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title', 'className'
+    ],
+    // ...
+  }
+  ```
+
+### L6-3. `tsconfig.json` に `noUncheckedIndexedAccess` 未設定
+
+- **箇所:** `tsconfig.json`
+- **症状:** `arr[i]` が `T` 型として推論される (実行時は `T | undefined`)。out of bounds アクセスで `undefined.foo` エラーの潜在リスク。
+- **影響:**
+  - 現状の実装で影響ある箇所は少ない (大部分は `.find` / `.map` / for..of 使用)
+  - 将来コード追加時に型安全性が下がるリスク
+- **修正 (任意):**
+  ```json
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true
+  }
+  ```
+  ただし既存コードで大量の型エラーが発生する可能性 → 有効化前に全 `[i]` アクセスを見直し
+
+---
+
+## 📊 第6波 集計サマリ
+
+| 重大度 | 件数 | 内訳 |
+| --- | ---: | --- |
+| 🔴 Critical | 1 | C6-1 (h1 複数) |
+| 🟠 High | 2 | H6-1 (Retry-After 30s > Hobby 10s), H6-2 (Next 16.3.2 未適用) |
+| 🟡 Medium | 4 | M6-1〜M6-4 |
+| 🟢 Low | 3 | L6-1〜L6-3 |
+| **合計** | **10** | すべて第5波修正後の残存または新規発見 |
+
+## 📊 総合集計 (第1波 〜 第6波)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1波 (Vite バグ 一斉調査) | 4 | 7 | 11 | 10 | 32 | ✅ 全て修正済 (Vite 版) |
+| 第2波 (真っ暗の原因追跡) | 4 | 8 | 10 | 6 | 28 | ✅ 全て修正済 (Vite 版) |
+| 第3波 (追加ボタン無反応) | 4 | 3 | 3 | 0 | 10 | ✅ 全て修正済 (Vite 版) |
+| 第3.5波 (React error #310) | 1 | 0 | 0 | 0 | 1 | ✅ 修正済 (Vite 版) |
+| 第4波 (Next.js 移行後) | 2 | 6 | 8 | 8 | 24 | ✅ 20 修正済 / 4 判断留保 |
+| 第5波 (第4波後の完全再検査) | 3 | 6 | 12 | 14 | 35 | ✅ 30 修正済 / 5 判断留保 |
+| **第6波 (Phase 8 前 最終監査)** | **1** | **2** | **4** | **3** | **10** | ⏳ **要対応** |
+| **総合計** | **19** | **32** | **48** | **41** | **140** | **121 修正 + 9 留保 + 10 新規** |
+
+## 🎯 修正推奨順序 (第6波)
+
+### 🔴 即時対応 (本番デプロイ品質)
+
+1. **C6-1** MarkdownRenderer の h1 → h2 降格 (5 分、SEO 直結)
+2. **H6-1** parseRetryAfterMs の 30s → 8s 上限 (Hobby プラン対応、3 分)
+3. **H6-2** Next.js 16.3.2 に更新 (`pnpm add next@16.3.2`) (2 分)
+
+### 🟡 短期対応
+
+4. **M6-1** public/ から create-next-app デフォルト SVG 削除 (2 分)
+5. **M6-2** package.json に `"type": "module"` 追加 (1 分)
+6. **M6-3** SEARCH_LIMIT を lib/constants/search.ts に共通化 (5 分)
+7. **M6-4** manifest.json + カスタム favicon (30 分〜、要デザイン素材)
+
+### 🟢 長期対応
+
+8. **L6-1** HSTS / COOP セキュリティヘッダ追加 (10 分)
+9. **L6-2** sanitizeSchema.attributes の spread 継承化 (5 分)
+10. **L6-3** noUncheckedIndexedAccess 有効化 (半日、影響範囲要調査)
+
+## 🔍 検査手法まとめ (39 項目)
+
+以下の観点で全 55 ファイルを再精査:
+
+**設計・アーキテクチャ (5 項目)** — 判断留保再評価、依存関係、Route Handler cache、public/、tsconfig
+**セキュリティ (7 項目)** — SSRF, XSS, path traversal, prototype pollution, ReDoS, cookie flag, sanitize schema
+**Race condition (6 項目)** — useProfiles, useZipExport, useZipImport, useDependencyCheck, HomeInteractive, useConfirm
+**エッジケース (5 項目)** — 巨大 profile, 空 profile, 破損 cookie, batch 上限, retry timeout
+**SEO / A11y (5 項目)** — h1 数、meta タグ、Link href、favicon, manifest
+**Bundle / Performance (4 項目)** — bundle stats, First Load JS, chunk 分割, optimizePackageImports
+**Runtime 実測 (4 項目)** — 全ページ HTTP status, HEAD method, `<a href>` count, cookie 削除
+**依存関係 (3 項目)** — audit, outdated, deprecated
+
+---
+
+*第6波は 2026-08-22 に第5波修正完了後、Phase 8 に進む前の最終監査として全 55 ファイルを 39 検査項目で再精査した結果です。判断留保 5 件は全て実害無しを再確認、新規発見 10 件のうち **C6-1 (h1 複数)** と **H6-1 (Retry-After timeout)** は本番デプロイ前に修正推奨。**H6-2 (Next.js patch)** はワンコマンドで解消。他は品質改善レベルです。*

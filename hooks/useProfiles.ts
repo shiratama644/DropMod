@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
@@ -17,6 +17,7 @@ import {
   META_KEYS,
   LOCAL_STORAGE_KEYS
 } from '@/lib/db/migrate';
+import { useProfilesStore } from '@/lib/store/profiles';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
@@ -31,20 +32,33 @@ export const useProfiles = (
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void,
   confirmDialog: ConfirmFn
 ) => {
-  const [currentProfileId, setCurrentProfileId] = useState<string>('default-profile');
-  const [profiles, setProfiles] = useState<Profile[]>([
-    {
-      id: 'default-profile',
-      name: '1.20.1 Fabric 軽量化・ユーティリティ',
-      mcVersion: '1.20.1',
-      loader: 'Fabric',
-      description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
-      mods: []
-    }
-  ]);
+  // ------------------------------------------------------------------
+  // Sub-Phase 8-C: state を Zustand (useProfilesStore) に委譲。
+  //
+  // hook は以下の役割:
+  //   - store の状態を購読
+  //   - Modrinth API 呼び出し・cookie 書き込み・showToast 連携を担う
+  //     (副作用を含む action を store から追い出して pure に保つ)
+  //   - store の setter に一元アクセス
+  //
+  // 注意: props 経由の setThemeState (旧 API) と store.setTheme の
+  //   両方に書き込むことで、既存の theme 管理 (AppShell useState) との
+  //   互換を保ちつつ store を並走させる。次段の Sub-Phase 8-C Step 4 で
+  //   props 経由を廃止し、store.setTheme に一本化する。
+  // ------------------------------------------------------------------
+
+  // 個別 selector で購読することで、他 field 変更時の再レンダーを抑制。
+  const profiles = useProfilesStore((s) => s.profiles);
+  const currentProfileId = useProfilesStore((s) => s.currentProfileId);
+  const hasHydrated = useProfilesStore((s) => s.hasHydrated);
+
+  // action は Zustand 内で stable なので参照が変わらない。
+  const setProfiles = useProfilesStore((s) => s.setProfiles);
+  const setCurrentProfileId = useProfilesStore((s) => s.setCurrentProfileId);
+  const setHasHydrated = useProfilesStore((s) => s.setHasHydrated);
 
   // ------------------------------------------------------------------
-  // 最新state参照用 Ref (stale closure 対策)
+  // 最新 state 参照用 Ref (stale closure 対策)
   //
   // handleToggleMod のような非同期処理の中では、レンダー時点の profiles
   // をキャプチャした値ではなく、常に最新の値を参照する必要がある。
@@ -54,6 +68,10 @@ export const useProfiles = (
   // ⚠️ ref の更新は useEffect ではなく render 中に同期で行う
   //    (useEffect は render 後に非同期で走るため、同じレンダーサイクル内で
   //     発火した非同期処理が古い ref を掴む race を防ぐ)。
+  //
+  // 補足: Zustand には useProfilesStore.getState() があるが、Ref 更新なしで
+  //   直接 getState() を呼ぶと、subscribeWithSelector 経由の購読と挙動が微妙に
+  //   ずれる恐れがあるため、既存の Ref パターンを維持する。
   // ------------------------------------------------------------------
   const profilesRef = useRef<Profile[]>(profiles);
   const currentProfileIdRef = useRef<string>(currentProfileId);
@@ -63,16 +81,6 @@ export const useProfiles = (
   // handleToggleMod の並列呼び出し防止用 (同一 projectId への連打で
   // 重複トグルが起きないようにする)
   const toggleInFlightRef = useRef<Set<string>>(new Set());
-
-  // ------------------------------------------------------------------
-  // Hydration ゲート (M-6)
-  //
-  // 復元 useEffect と保存 useEffect が同時にマウントで走ると、復元完了前
-  // に「初期state (デフォルトプロファイル1個)」を localStorage へ書き
-  // 戻してしまうレースが発生し得る。hasHydrated が true になるまで
-  // 保存側は動作させない。
-  // ------------------------------------------------------------------
-  const [hasHydrated, setHasHydrated] = useState<boolean>(false);
 
   // ---------------------------------------------------------------------
   // Sub-Phase 8-A: Dexie (IndexedDB) からの hydration
@@ -147,7 +155,7 @@ export const useProfiles = (
     return () => {
       cancelled = true;
     };
-  }, [setThemeState]);
+  }, [setThemeState, setProfiles, setCurrentProfileId, setHasHydrated]);
 
   // ---------------------------------------------------------------------
   // Sub-Phase 8-A: Dexie への保存 (hydration 完了後のみ)
@@ -259,7 +267,7 @@ export const useProfiles = (
       setCurrentProfileId(fallbackProfile.id);
       showToast('プロファイルが失われたため既定を復旧しました', 'warning');
     }
-  }, [profiles.length, hasHydrated, showToast]);
+  }, [profiles.length, hasHydrated, showToast, setProfiles, setCurrentProfileId]);
 
   // 常に非 undefined を保証: find が失敗しても最低限のフォールバックを返す
   const currentProfile: Profile =
@@ -291,7 +299,7 @@ export const useProfiles = (
       const p = profilesRef.current.find((x) => x.id === id);
       if (p) showToast(`「${p.name}」に切替`, 'info');
     },
-    [showToast]
+    [showToast, setCurrentProfileId]
   );
 
   const handleCreateProfile = useCallback(
@@ -311,7 +319,7 @@ export const useProfiles = (
         'success'
       );
     },
-    [showToast]
+    [showToast, setProfiles, setCurrentProfileId]
   );
 
   const handleDuplicateProfile = useCallback(() => {
@@ -330,7 +338,7 @@ export const useProfiles = (
     setProfiles((prev) => [...prev, duplicated]);
     setCurrentProfileId(newId);
     showToast(`「${duplicated.name}」を作成しました`, 'success');
-  }, [showToast]);
+  }, [showToast, setProfiles, setCurrentProfileId]);
 
   const handleSaveEditedProfile = useCallback(
     (name: string, mcVersion: string, loader: string, description: string) => {
@@ -350,7 +358,7 @@ export const useProfiles = (
         );
       }
     },
-    [showToast]
+    [showToast, setProfiles]
   );
 
   const handleDeleteProfile = useCallback(
@@ -375,7 +383,7 @@ export const useProfiles = (
       }
       showToast('プロファイルを削除しました', 'info');
     },
-    [showToast, confirmDialog]
+    [showToast, confirmDialog, setProfiles, setCurrentProfileId]
   );
 
   const handleToggleMod = useCallback(async (projectId: string, e?: React.MouseEvent, silent = false) => {
@@ -496,7 +504,7 @@ export const useProfiles = (
     } finally {
       toggleInFlightRef.current.delete(projectId);
     }
-  }, [showToast]);
+  }, [showToast, setProfiles]);
 
   const handleUpdateModVersion = useCallback(
     async (projectId: string, versionId: string) => {
@@ -538,7 +546,7 @@ export const useProfiles = (
         showToast('バージョンの更新に失敗しました', 'warning');
       }
     },
-    [showToast]
+    [showToast, setProfiles]
   );
 
   const handleRemoveAllMods = useCallback(async () => {
@@ -558,7 +566,7 @@ export const useProfiles = (
       prev.map((p) => (p.id === currentProfileIdRef.current ? { ...p, mods: [] } : p))
     );
     showToast('すべてのModを削除しました', 'info');
-  }, [showToast, confirmDialog]);
+  }, [showToast, confirmDialog, setProfiles]);
 
   return {
     profiles,

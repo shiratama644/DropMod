@@ -13,6 +13,7 @@ import { useZipExport } from '@/hooks/useZipExport';
 import { useZipImport } from '@/hooks/useZipImport';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
 import { db } from '@/lib/db/dexie';
+import { useProfilesStore } from '@/lib/store/profiles';
 
 import { ToastContainer } from './ToastContainer';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -63,17 +64,15 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const { toasts, showToast, dismissToast } = useToasts();
   const { confirm, dialogProps: confirmDialogProps } = useConfirm();
 
-  // ---------- Theme ----------
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  // ---------- Theme (Sub-Phase 8-C: Zustand 経由) ----------
+  const theme = useProfilesStore((s) => s.theme);
+  const setThemeState = useProfilesStore((s) => s.setTheme);
+  const toggleTheme = useProfilesStore((s) => s.toggleTheme);
   useEffect(() => {
     const html = document.documentElement;
     if (theme === 'light') html.classList.remove('dark');
     else html.classList.add('dark');
   }, [theme]);
-  const toggleTheme = useCallback(
-    () => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark')),
-    []
-  );
 
   // ---------- Profiles ----------
   const {
@@ -280,6 +279,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     [
       theme,
       toggleTheme,
+      setThemeState,
       profiles,
       currentProfileId,
       currentProfile,

@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Profile } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchModrinthBatch } from '@/lib/modrinth/client';
+import { useDepCheckStore } from '@/lib/store/depCheck';
 
 // プロファイル変更後、依存チェックを実行するまでの待機時間 (デバウンス)
 // Modを連続追加/削除する際に何度も走らないように短い遅延を挟む
 const DEP_CHECK_DEBOUNCE_MS = 1200;
 
 export const useDependencyCheck = (currentProfile: Profile) => {
-  const [hasDepWarning, setHasDepWarning] = useState<boolean>(false);
+  // 9-B.3: hasDepWarning を Zustand store に。
+  //   BottomNav / Header の警告バッジが下流コンポーネントから直接 subscribe できるように。
+  //   isChecking / lastCheckAt は現時点で UI 未使用だが、Phase 10 の DependencyCheckModal
+  //   拡張で活用予定。
+  const hasDepWarning = useDepCheckStore((s) => s.hasDepWarning);
+  const setHasDepWarning = useDepCheckStore((s) => s.setHasDepWarning);
+  const setChecking = useDepCheckStore((s) => s.setChecking);
+  const markChecked = useDepCheckStore((s) => s.markChecked);
 
   // C7-2 修正: 依存チェックのバッチ /versions 取得を TanStack Query キャッシュに載せる。
   // 同一 versionId セットへの再チェック (連続 toggle → 依存チェック再実行) で
@@ -27,8 +35,10 @@ export const useDependencyCheck = (currentProfile: Profile) => {
     const profile = profileRef.current;
     if (!profile.mods || profile.mods.length === 0) {
       setHasDepWarning(false);
+      markChecked();
       return;
     }
+    setChecking(true);
     try {
       const versionIds = profile.mods
         .map((m) => m.selectedVersionId)
@@ -88,8 +98,10 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       setHasDepWarning(warning);
     } catch (e) {
       // 想定外エラー: 無音失敗 (前回値を維持)
+    } finally {
+      markChecked();
     }
-  }, [queryClient]);
+  }, [queryClient, setHasDepWarning, setChecking, markChecked]);
 
   // ----------------------------------------------------------------------
   // 実行トリガー: 「プロファイルが実質的に変化したときのみ」再チェック

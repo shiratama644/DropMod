@@ -2723,3 +2723,70 @@ function computeConcurrency(totalMods: number): number {
 | **総合計** | **19** | **32** | **48** | **41** | **140** | **139 修正 + 1 確定 (改善不要)** |
 
 *判断留保はゼロに。Phase 8 に安心して進める状態。*
+
+---
+
+# 🔬 「本当にゼロか」再検証で発見した 4 件の取りこぼしバグ
+
+第6波修正 → 判断留保 9 件解決の後、ユーザーからの「本当にゼロかを詳しく調べて」という指示で再監査を実施したところ、以下 **4 件の取りこぼし** を検出し即座に修正した。
+
+## 🐛 取りこぼしバグ
+
+### 追加バグ 3: L5-13 の Python スクリプトがルートレベルファイルを対象外にしていた
+
+- **影響ファイル:**
+  - `types.ts` — 3 箇所 (`H5-5 修正:`, `M5-6 修正:`, `L5-1 修正:`)
+  - `next.config.ts` — 7 箇所 (`(Phase 7)`, `Phase 7 追加:`, `L6-1 追加:` ×2, `Phase 8 以降`, `L5-9 修正:`, `M5-8 修正:`)
+  - `eslint.config.mjs` — 3 箇所 (`H5-1 修正:`, `第1波 M-6, 第2波 H2-1, 第3波 C3-3 で議論確定`, `第2波 H2-1, 第3波 M3-2 で議論確定`)
+- **原因:** `/tmp/cleanup_phase_comments.py` の対象を `app/`, `components/`, `hooks/`, `lib/` の 4 ディレクトリに限定していた。ルート直下の設定ファイル群 (`types.ts`, `next.config.ts`, `eslint.config.mjs`) は完全にスコープ外。
+- **修正:** 3 ファイル全 13 箇所を手動で整理。プレフィックスを削除し、WHY コメントは保存。
+
+### 追加バグ 4: 私自身が今波で追加したコメントも整理漏れ
+
+- **影響:** `app/globals.css:279` の `L4-7 修正:` プレフィックス。L4-7 修正時に自分で追加した CSS コメントを、L5-13 整理の対象から除外し忘れていた (CSS ファイルは Python スクリプトの対象拡張子ではなかった)。
+- **修正:** プレフィックス削除。
+
+### 追加バグ 5: `ModDetailModalShell.tsx` の設計コメントが M4-5 修正と矛盾
+
+- **箇所:** `components/ModDetailModalShell.tsx:22`
+- **症状:** ファイル冒頭のドキュメンテーションコメントに「閉じるボタンや背景クリック時に `router.back()` で URL を元に戻す」と書かれていたが、実際は M4-5 修正で `router.replace('/')` に変更済み。コードと**コメントが矛盾**しており、将来の読み手を混乱させる。
+- **修正:** コメントを実装に合わせて `router.replace('/')` の説明に更新 (履歴上書きの理由も追記)。
+
+### 追加バグ 6: issues.md の「grep = 0 件」主張が事実と不一致
+
+- **箇所:** `docs/issues.md` の第6波「判断留保 9 件対応結果」セクション
+- **症状:** 「`grep -rn -E "Phase [0-9]+|[CHML][0-9]+-[0-9]+"` = **0 件**」と主張していたが、実際は `app/`, `components/`, `hooks/`, `lib/` に限った結果。ルートレベルファイルを含めれば 13 箇所残っていた。**主張と実態の不一致 = ドキュメントバグ**。
+- **修正:** 上記 4 ファイル (types/next.config/eslint.config/globals.css) を整理してから、issues.md の主張を実態に一致させる (本セクションで追記)。
+
+## 🔍 完全ゼロ確認 (取りこぼし修正後)
+
+```bash
+find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js" -o -name "*.css" -o -name "*.json" \) \
+  -not -path "./node_modules/*" -not -path "./.next/*" -not -path "./.archive/*" -not -path "./.git/*" \
+  -not -path "./docs/*" | \
+  xargs grep -c -E "(Phase [0-9]+|[CHML][0-9]+-[0-9]+)" 2>/dev/null | grep -v ":0$"
+# → 出力なし = 完全 0 件 ✅
+```
+
+## ✅ 追加検証項目 (全 pass)
+
+- ✅ `pnpm exec tsc --noEmit` = 0 error
+- ✅ `pnpm lint` = 0 error / 0 warning
+- ✅ `pnpm build` = ✓ Compiled successfully in 977ms
+- ✅ 全ページ HTTP status 期待通り
+- ✅ HEAD `/api/health` = 200, HEAD `/api/modrinth/...` = 502 (Modrinth 到達不可の期待動作)
+- ✅ 全ページ h1 数 = 1
+- ✅ HTML には CORP なし (デフォルト = 同一 origin only)、画像には `Cross-Origin-Resource-Policy: cross-origin`
+- ✅ Cookie に `; Secure` 付与を JS バンドル内で確認
+- ✅ `body.mod-fullpage` CSS がバンドル済み CSS に含まれる
+- ✅ `effectiveType` (computeConcurrency 内部) が JS バンドルに含まれる
+- ✅ `modal-` プレフィックス (useId 生成の uid) が JS バンドルに含まれる
+- ✅ Vite 版 (`.archive/vite/`) 非破壊
+
+## 📊 学び
+
+- 「一括整理スクリプト」を書く場合、**対象ディレクトリの明示的な決定** が非常に重要。今回は「よく変更するディレクトリ」に絞ったため、めったに変更しない設定ファイル (`types.ts`, `next.config.ts` など) を見落とした。
+- ドキュメントに「0 件」と書く時は、**必ずその 0 件を検証するコマンドを併記** すべき。今回は書いていたコマンドがローカルディレクトリ限定だったが、主張は全体を対象と読み取れる書き方だった。**言葉とコマンドの一致** が正確性の鍵。
+- レビュープロセスとして、**「主張が正しいか、その根拠となるコマンドを実際に走らせて検証する」** ステップを標準ルーチンに組み込むべき。
+
+*これらの取りこぼしを修正した結果、当初の主張通り本当に「判断留保 = 0 件、Phase / issue ID プレフィックス = 0 件」を達成。Phase 8 に安心して進める状態が完成した。*

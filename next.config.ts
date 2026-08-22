@@ -1,13 +1,13 @@
 import type { NextConfig } from 'next';
 
 /**
- * DropMod Next.js 設定 (Phase 7)
+ * DropMod Next.js 設定
  *
  * - React Strict Mode を維持 (Vite 版の main.tsx と同挙動)
  * - X-Powered-By ヘッダは公開情報として不要なので無効化
  * - Modrinth CDN の画像を <Image> で使えるように許可
  * - パフォーマンス最適化: 大きめのパッケージを optimizePackageImports
- * - Phase 7 追加: 全ページに標準的なセキュリティヘッダを付与
+ * - 全ページに標準的なセキュリティヘッダを付与
  *   (Vercel + Next.js の最小ハードニング。CSP は Markdown 内の任意 HTML を
  *    許容する必要があるためここでは付与せず、rehype-sanitize 側の allowlist に
  *    任せる。将来的に Report-Only モードで追加検討)
@@ -22,14 +22,14 @@ const securityHeaders = [
     // カメラ・マイク・位置情報などは使わないので明示的に無効化
     value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
   },
-  // L6-1 追加: Strict-Transport-Security
+  // Strict-Transport-Security:
   //   Vercel は自動で HSTS を付与するが、本番以外 (self-hosted / preview) でも
   //   確実に付くよう明示。max-age=63072000 (2 年) + includeSubDomains + preload。
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload'
   },
-  // L6-1 追加: Cross-Origin-Opener-Policy
+  // Cross-Origin-Opener-Policy:
   //   Spectre 系 side-channel 攻撃対策として popup を同一 origin に限定。
   //   本アプリは window.open で外部 URL を新規タブに開くが noopener 付きなので影響なし。
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
@@ -41,7 +41,7 @@ const securityHeaders = [
   //
   // Content-Security-Policy は Markdown 内の任意 iframe (YouTube/Vimeo/Twitch/Streamable)
   // + rehype-raw の <div>/<span>/<a> 等を許容する必要があり、慎重な設計が必要。
-  // rehype-sanitize 側の allowlist に任せ、CSP は Phase 8 以降で Report-Only モードから
+  // rehype-sanitize 側の allowlist に任せ、CSP は Report-Only モードから将来
   // 導入検討する (現時点では未設定)。
   //
   // Cross-Origin-Embedder-Policy: require-corp は Modrinth CDN / GitHub raw の
@@ -58,15 +58,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     remotePatterns: [
-      // L5-9 修正: pathname で絞り込み (Modrinth CDN は /data/**、
+      // pathname で絞り込み (Modrinth CDN は /data/**、
       // GitHub raw は /**/*.{png,jpg,...} が多いが後者は絞りにくいので広範のまま)
       { protocol: 'https', hostname: 'cdn.modrinth.com', pathname: '/data/**' },
       { protocol: 'https', hostname: 'raw.githubusercontent.com' } // Modrinth 本文中の画像埋め込み用
     ]
   },
   experimental: {
-    // M5-8 修正: @fortawesome/fontawesome-free は CSS-only ライブラリで
-    // JS export が無いため optimizePackageImports の対象として無効 → 削除。
+    // @fortawesome/fontawesome-free は CSS-only ライブラリで
+    // JS export が無いため optimizePackageImports の対象にできない (含めない)。
     optimizePackageImports: ['react-markdown']
   },
   async headers() {

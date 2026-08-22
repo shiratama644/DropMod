@@ -19,7 +19,9 @@ import { useAppContext } from './AppContext';
 //
 //   variant="modal"  → `/@modal/(.)mod/[slug]` からインターセプトされて Home の
 //                      上に「モーダル」として重ねて表示される。閉じるボタンや
-//                      背景クリック時に `router.back()` で URL を元に戻す。
+//                      背景クリック時に `router.replace('/')` で Home に戻す
+//                      (履歴を上書きするので、複数モーダル遷移後も戻るボタン
+//                       連打で前サイトに戻れる)。
 //   variant="page"   → `/mod/[slug]` を直接開いた場合のフルページ描画。
 //                      背景・backdrop なし、閉じるボタンなし。SEO/OGP 対象。
 //

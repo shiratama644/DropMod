@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// H5-1 修正: Next.js 16 で `next lint` が削除されたため、ESLint flat config を導入。
+// ESLint flat config (Next.js 16 で `next lint` が削除された移行対応)
 //
 // eslint-config-next の推奨ルールをベースに、プロジェクト独自の緩和ルールを設定。
 // eslint-config-next@16 は flat config 配列を直接 export する。
@@ -8,8 +8,8 @@
 // (render 中に Ref に同期セット) と衝突するため意図的に無効化:
 //   - react-hooks/refs
 //   - react-hooks/set-state-in-effect
-// これらのパターンは docs/issues.md 第1〜3.5波で議論・確定した設計であり、
-// 「安全な理由付きの使用」なのでルール違反として扱わない。
+// これらのパターンは「安全な理由付きの使用」として設計確定済みなので
+// ルール違反として扱わない (詳しい経緯は docs/issues.md を参照)。
 // -----------------------------------------------------------------------------
 
 import nextConfig from 'eslint-config-next';
@@ -37,10 +37,10 @@ const config = [
       // JSX 内で日本語文字列を許容 (react/no-unescaped-entities は日本語で誤検出多発)
       'react/no-unescaped-entities': 'off',
       // 既存の stale closure 対策 (Ref に render 中同期セット) を許容
-      // (第1波 M-6, 第2波 H2-1, 第3波 C3-3 で議論確定)
+      // (詳しい経緯は docs/issues.md を参照)
       'react-hooks/refs': 'off',
       // useEffect 内での破損 LocalStorage 復旧・hydration 直後の同期は必要
-      // (第2波 H2-1, 第3波 M3-2 で議論確定)
+      // (詳しい経緯は docs/issues.md を参照)
       'react-hooks/set-state-in-effect': 'off'
     }
   }

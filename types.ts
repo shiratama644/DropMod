@@ -36,8 +36,8 @@ export interface ModrinthHit {
   display_categories: string[];
   versions: string[];
   downloads: number;
-  // H5-5 修正: Modrinth API はアイコン未設定プロジェクトを null で返すため
-  // null を許容する型に変更。呼び出し側で null チェック必須。
+  // Modrinth API はアイコン未設定プロジェクトを null で返すため
+  // null を許容する型にしている。呼び出し側で null チェック必須。
   icon_url: string | null;
 }
 
@@ -100,8 +100,8 @@ export interface ModrinthVersion {
 export interface Toast {
   id: string;
   message: string;
-  // M5-6 修正: 'error' 種別を追加 (削除失敗・致命的エラー時の赤系表示用)。
-  // 既存の 'warning' 系呼び出しに影響なし (追加のみ)。
+  // 'error' 種別は削除失敗・致命的エラー時の赤系表示用。
+  // 'warning' との視覚的区別のため独立した種別として持たせる。
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
@@ -118,7 +118,7 @@ export interface DependencyCheckData {
   depProjectMap: Map<string, ModrinthProject>;
 }
 
-// L5-1 修正: Modrinth API レスポンスの型を明示 (any を削減)
+// Modrinth API レスポンスの型を明示 (any を削減する目的)
 // .mrpack (Modrinth Index) のフォーマット v1
 // https://docs.modrinth.com/docs/modpacks/format_definition/
 export interface MrpackFile {

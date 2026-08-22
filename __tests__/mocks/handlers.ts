@@ -13,7 +13,9 @@
 import { http, HttpResponse } from 'msw';
 
 const MODRINTH_DIRECT = 'https://api.modrinth.com/v2';
-const MODRINTH_PROXY = 'http://localhost/api/modrinth';
+// client.ts は `/api/modrinth/${endpoint}` (相対 URL) を fetch する。
+// msw v2 では relative URL は "パスマッチ" として扱われるため origin なしで登録。
+const MODRINTH_PROXY = '/api/modrinth';
 
 // ============================================================================
 // 個別 handler builder (direct/proxy を同時に登録するためのヘルパ)

@@ -8,3 +8,6 @@ allowBuilds:
   sharp: false
   # vitest / @vitejs/plugin-react が使う JS bundler (Sub-Phase 8-D で追加)
   esbuild: true
+  # msw は browser 用 service worker (public/mockServiceWorker.js) を postinstall で
+  # 配置するが、DropMod はテスト時に msw/node のみ使うので不要
+  msw: false

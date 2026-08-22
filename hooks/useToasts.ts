@@ -1,27 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import type { Toast } from '@/types';
+/**
+ * useToasts hook (Sub-Phase 8-C Step 2: Zustand store の shim)
+ *
+ * 内部実装は lib/store/toast.ts に移し、この hook は下位互換のための薄いアダプタ。
+ * 呼び出し側のコード変更なしで置換完了。
+ */
 
-// Toast 保持上限を 3 → 5 に緩和。
-// AutoFix や依存チェックのような連続 toast 発火が多いユースケースで
-// 4-5 個目のメッセージが失われる問題を軽減。
-const MAX_VISIBLE_TOASTS = 5;
+import { useToastStore } from '@/lib/store/toast';
 
 export const useToasts = () => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const showToast = useCallback(
-    (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-      const id = 'toast-' + Date.now() + '-' + Math.random();
-      setToasts((prev) => [...prev, { id, message, type }].slice(-MAX_VISIBLE_TOASTS));
-    },
-    []
-  );
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  const toasts = useToastStore((s) => s.toasts);
+  const showToast = useToastStore((s) => s.showToast);
+  const dismissToast = useToastStore((s) => s.dismissToast);
 
   return { toasts, showToast, dismissToast };
 };

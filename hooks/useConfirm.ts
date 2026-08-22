@@ -1,72 +1,33 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
-
-interface ConfirmState extends ConfirmDialogOptions {
-  isOpen: boolean;
-}
-
-const INITIAL_STATE: ConfirmState = {
-  isOpen: false,
-  title: '',
-  message: ''
-};
-
 /**
- * ネイティブ window.confirm() の Promise ベース代替。
+ * useConfirm hook (Sub-Phase 8-C Step 2: Zustand store の shim)
  *
- * const { confirm, dialogProps } = useConfirm();
- * // ...
- * const ok = await confirm({ title: '削除しますか？', message: '...' });
- * if (ok) doIt();
+ * 内部実装は lib/store/confirm.ts へ移行。
+ * この hook は下位互換のための薄いアダプタで、既存呼び出し側は変更不要。
  *
- * // JSX にダイアログを挿入:
- * <ConfirmDialog {...dialogProps} />
+ * アンマウント時に pending Promise を resolve するのは
+ * useEffect で cleanup() を呼ぶことで実現。
  */
+
+import { useEffect } from 'react';
+import { useConfirmStore } from '@/lib/store/confirm';
+
 export function useConfirm() {
-  const [state, setState] = useState<ConfirmState>(INITIAL_STATE);
-  const resolveRef = useRef<((v: boolean) => void) | null>(null);
+  const state = useConfirmStore((s) => s.state);
+  const confirm = useConfirmStore((s) => s.confirm);
+  const handleConfirm = useConfirmStore((s) => s.handleConfirm);
+  const handleCancel = useConfirmStore((s) => s.handleCancel);
+  const cleanup = useConfirmStore((s) => s.cleanup);
 
   // コンポーネントアンマウント時に pending Promise を false で resolve。
-  // これが無いと `await confirm({...})` を呼んだ非同期関数が完了せずメモリリーク +
-  // 後続処理が実行されないバグになる。
+  // これが無いと await confirm({...}) を呼んだ非同期関数が完了せず
+  // メモリリーク + 後続処理が実行されないバグになる。
   useEffect(() => {
     return () => {
-      if (resolveRef.current) {
-        resolveRef.current(false);
-        resolveRef.current = null;
-      }
+      cleanup();
     };
-  }, []);
-
-  const confirm = useCallback((options: ConfirmDialogOptions): Promise<boolean> => {
-    return new Promise<boolean>((resolve) => {
-      // 前のダイアログが残っていれば false でクローズ
-      if (resolveRef.current) {
-        resolveRef.current(false);
-        resolveRef.current = null;
-      }
-      resolveRef.current = resolve;
-      setState({ ...options, isOpen: true });
-    });
-  }, []);
-
-  const handleConfirm = useCallback(() => {
-    if (resolveRef.current) {
-      resolveRef.current(true);
-      resolveRef.current = null;
-    }
-    setState((prev) => ({ ...prev, isOpen: false }));
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    if (resolveRef.current) {
-      resolveRef.current(false);
-      resolveRef.current = null;
-    }
-    setState((prev) => ({ ...prev, isOpen: false }));
-  }, []);
+  }, [cleanup]);
 
   return {
     confirm,

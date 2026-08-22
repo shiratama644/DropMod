@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
@@ -167,6 +167,36 @@ export const useProfiles = (
   }, [hasHydrated, theme, currentProfileId, profiles]);
 
   // ---------------------------------------------------------------------
+  // H4-5 修正: SSR プロファイル固定によるちらつき解消のため cookie に書き込み
+  //
+  // Home ページの SSR (Server Component) は cookies() でこの値を読み取り、
+  // 実際のユーザープロファイル (LocalStorage 由来) に合わせた初期 24 件を返す。
+  // これで hydration 後の再検索によるちらつきが起きなくなる。
+  //
+  // 書き込むのは mcVersion / loader のみ (SSR 検索に必要な最小情報)。
+  // 個人情報や大きなデータは含めない (cookie サイズ制限のため)。
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const currentProfileForCookie =
+      profilesRef.current.find((p) => p.id === currentProfileIdRef.current) ||
+      profilesRef.current[0];
+    if (!currentProfileForCookie) return;
+    try {
+      const value = encodeURIComponent(
+        JSON.stringify({
+          mcVersion: currentProfileForCookie.mcVersion,
+          loader: currentProfileForCookie.loader
+        })
+      );
+      // 1 年間有効、path=/ でサイト全体、SameSite=Lax (通常アクセスで送信)
+      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax`;
+    } catch (e) {
+      console.warn('[DropMod] cookie 書き込みに失敗:', e);
+    }
+  }, [hasHydrated, currentProfileId, profiles]);
+
+  // ---------------------------------------------------------------------
   // profiles が空配列になった場合の安全弁
   //
   // 通常は handleDeleteProfile で「最低1件」を保証しているが、
@@ -205,82 +235,112 @@ export const useProfiles = (
       mods: []
     };
 
-  const handleSwitchProfile = (id: string) => {
-    setCurrentProfileId(id);
-    const p = profiles.find((x) => x.id === id);
-    if (p) showToast(`「${p.name}」に切替`, 'info');
-  };
+  // ------------------------------------------------------------------
+  // H4-4 修正: 全 handle* 関数を useCallback でラップ
+  //
+  // これらは AppShell の contextValue useMemo の deps に入るため、
+  // useCallback しないと毎レンダー新参照 → contextValue も毎レンダー新規
+  // → 全 consumer (HomeInteractive / ModsPageClient / SettingsPageClient
+  //   / ModDetailModalShell) が毎レンダー再レンダー。
+  //
+  // 依存性最小化のため、profilesRef.current / currentProfileIdRef.current を
+  // 使って最新値を参照する (deps から profiles / currentProfileId を除外可)。
+  // showToast / confirmDialog は上位で useCallback 済 (useToasts / useConfirm)。
+  // ------------------------------------------------------------------
+  const handleSwitchProfile = useCallback(
+    (id: string) => {
+      setCurrentProfileId(id);
+      const p = profilesRef.current.find((x) => x.id === id);
+      if (p) showToast(`「${p.name}」に切替`, 'info');
+    },
+    [showToast]
+  );
 
-  const handleCreateProfile = (
-    name: string,
-    mcVersion: string,
-    loader: string,
-    description: string,
-    mods: ModItem[] = []
-  ) => {
-    const newId = generateId('profile');
-    const newProfile: Profile = { id: newId, name, mcVersion, loader, description, mods };
-    setProfiles((prev) => [...prev, newProfile]);
-    setCurrentProfileId(newId);
-    showToast(`プロファイル「${name}」を作成しました${mods.length > 0 ? ` (${mods.length} 個のMod入り)` : ''}`, 'success');
-  };
+  const handleCreateProfile = useCallback(
+    (
+      name: string,
+      mcVersion: string,
+      loader: string,
+      description: string,
+      mods: ModItem[] = []
+    ) => {
+      const newId = generateId('profile');
+      const newProfile: Profile = { id: newId, name, mcVersion, loader, description, mods };
+      setProfiles((prev) => [...prev, newProfile]);
+      setCurrentProfileId(newId);
+      showToast(
+        `プロファイル「${name}」を作成しました${mods.length > 0 ? ` (${mods.length} 個のMod入り)` : ''}`,
+        'success'
+      );
+    },
+    [showToast]
+  );
 
-  const handleDuplicateProfile = () => {
+  const handleDuplicateProfile = useCallback(() => {
+    // Ref 経由で最新の currentProfile を取得 (stale closure 回避)
+    const latestId = currentProfileIdRef.current;
+    const latest =
+      profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
+    if (!latest) return;
     const newId = generateId('profile');
     const duplicated: Profile = {
-      ...currentProfile,
+      ...latest,
       id: newId,
-      name: `${currentProfile.name} (コピー)`,
-      mods: JSON.parse(JSON.stringify(currentProfile.mods))
+      name: `${latest.name} (コピー)`,
+      mods: JSON.parse(JSON.stringify(latest.mods))
     };
     setProfiles((prev) => [...prev, duplicated]);
     setCurrentProfileId(newId);
     showToast(`「${duplicated.name}」を作成しました`, 'success');
-  };
+  }, [showToast]);
 
-  const handleSaveEditedProfile = (name: string, mcVersion: string, loader: string, description: string) => {
-    // 最新の currentProfileId を参照 (stale closure対策)
-    const targetId = currentProfileIdRef.current;
-    const before = profilesRef.current.find((p) => p.id === targetId);
-    const compatChanged =
-      before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
+  const handleSaveEditedProfile = useCallback(
+    (name: string, mcVersion: string, loader: string, description: string) => {
+      const targetId = currentProfileIdRef.current;
+      const before = profilesRef.current.find((p) => p.id === targetId);
+      const compatChanged =
+        before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
 
-    setProfiles((prev) =>
-      prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
-    );
-    showToast('プロファイルを更新しました', 'success');
-    if (compatChanged) {
-      // 既存Modのバージョン互換性が保証されなくなる旨を明示的に警告
-      showToast(
-        'MC/ローダーを変更しました。「選択中のMod」タブでバージョン再選択を推奨',
-        'warning'
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
       );
-    }
-  };
+      showToast('プロファイルを更新しました', 'success');
+      if (compatChanged) {
+        showToast(
+          'MC/ローダーを変更しました。「選択中のMod」タブでバージョン再選択を推奨',
+          'warning'
+        );
+      }
+    },
+    [showToast]
+  );
 
-  const handleDeleteProfile = async (id: string) => {
-    if (profiles.length <= 1) {
-      showToast('最低1つのプロファイルが必要です', 'warning');
-      return;
-    }
-    const target = profiles.find((p) => p.id === id);
-    const ok = await confirmDialog({
-      title: 'プロファイルを削除しますか？',
-      message: `「${target?.name || '(名称未設定)'}」を削除します。\nこの操作は取り消せません。`,
-      confirmLabel: '削除する',
-      cancelLabel: 'キャンセル',
-      danger: true
-    });
-    if (!ok) return;
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
-    if (currentProfileIdRef.current === id) {
-      const remaining = profilesRef.current.filter((p) => p.id !== id);
-      if (remaining[0]) setCurrentProfileId(remaining[0].id);
-    }
-    showToast('プロファイルを削除しました', 'info');
-  };
+  const handleDeleteProfile = useCallback(
+    async (id: string) => {
+      if (profilesRef.current.length <= 1) {
+        showToast('最低1つのプロファイルが必要です', 'warning');
+        return;
+      }
+      const target = profilesRef.current.find((p) => p.id === id);
+      const ok = await confirmDialog({
+        title: 'プロファイルを削除しますか？',
+        message: `「${target?.name || '(名称未設定)'}」を削除します。\nこの操作は取り消せません。`,
+        confirmLabel: '削除する',
+        cancelLabel: 'キャンセル',
+        danger: true
+      });
+      if (!ok) return;
+      setProfiles((prev) => prev.filter((p) => p.id !== id));
+      if (currentProfileIdRef.current === id) {
+        const remaining = profilesRef.current.filter((p) => p.id !== id);
+        if (remaining[0]) setCurrentProfileId(remaining[0].id);
+      }
+      showToast('プロファイルを削除しました', 'info');
+    },
+    [showToast, confirmDialog]
+  );
 
-  const handleToggleMod = async (projectId: string, e?: React.MouseEvent, silent = false) => {
+  const handleToggleMod = useCallback(async (projectId: string, e?: React.MouseEvent, silent = false) => {
     if (e && e.stopPropagation) e.stopPropagation();
 
     // 同一 projectId への並列トグル呼び出しを防止 (連打・重複クリック対策)
@@ -390,54 +450,59 @@ export const useProfiles = (
     } finally {
       toggleInFlightRef.current.delete(projectId);
     }
-  };
+  }, [showToast]);
 
-  const handleUpdateModVersion = async (projectId: string, versionId: string) => {
-    // Ref 経由で最新state参照 (stale closure対策)
-    const latestProfileId = currentProfileIdRef.current;
-    const latestProfile =
-      profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
-    const mod = latestProfile?.mods.find((m) => m.id === projectId || m.slug === projectId);
-    if (!mod) return;
+  const handleUpdateModVersion = useCallback(
+    async (projectId: string, versionId: string) => {
+      const latestProfileId = currentProfileIdRef.current;
+      const latestProfile =
+        profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
+      const mod = latestProfile?.mods.find((m) => m.id === projectId || m.slug === projectId);
+      if (!mod) return;
 
-    try {
-      const versionData = await fetchModrinth<any>(`/version/${versionId}`);
-      if (versionData && versionData.files && versionData.files.length > 0) {
-        const primaryFile = versionData.files.find((f: any) => f.primary) || versionData.files[0];
+      try {
+        const versionData = await fetchModrinth<any>(`/version/${versionId}`);
+        if (versionData && versionData.files && versionData.files.length > 0) {
+          const primaryFile = versionData.files.find((f: any) => f.primary) || versionData.files[0];
 
-        setProfiles((prev) =>
-          prev.map((p) =>
-            p.id === currentProfileIdRef.current
-              ? {
-                  ...p,
-                  mods: p.mods.map((m) =>
-                    m.id === projectId || m.slug === projectId
-                      ? {
-                          ...m,
-                          selectedVersionId: versionData.id,
-                          selectedVersionNumber: versionData.version_number,
-                          versionType: versionData.version_type || 'release',
-                          fileUrl: primaryFile.url,
-                          filename: primaryFile.filename
-                        }
-                      : m
-                  )
-                }
-              : p
-          )
-        );
-        showToast(`「${mod.title}」を Ver ${versionData.version_number} に更新`, 'success');
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === currentProfileIdRef.current
+                ? {
+                    ...p,
+                    mods: p.mods.map((m) =>
+                      m.id === projectId || m.slug === projectId
+                        ? {
+                            ...m,
+                            selectedVersionId: versionData.id,
+                            selectedVersionNumber: versionData.version_number,
+                            versionType: versionData.version_type || 'release',
+                            fileUrl: primaryFile.url,
+                            filename: primaryFile.filename
+                          }
+                        : m
+                    )
+                  }
+                : p
+            )
+          );
+          showToast(`「${mod.title}」を Ver ${versionData.version_number} に更新`, 'success');
+        }
+      } catch (e) {
+        showToast('バージョンの更新に失敗しました', 'warning');
       }
-    } catch (e) {
-      showToast('バージョンの更新に失敗しました', 'warning');
-    }
-  };
+    },
+    [showToast]
+  );
 
-  const handleRemoveAllMods = async () => {
-    if (currentProfile.mods.length === 0) return;
+  const handleRemoveAllMods = useCallback(async () => {
+    const latestId = currentProfileIdRef.current;
+    const latest =
+      profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
+    if (!latest || latest.mods.length === 0) return;
     const ok = await confirmDialog({
       title: '全てのModを削除しますか？',
-      message: `プロファイル「${currentProfile.name}」から ${currentProfile.mods.length} 個のModを全て削除します。\nこの操作は取り消せません。`,
+      message: `プロファイル「${latest.name}」から ${latest.mods.length} 個のModを全て削除します。\nこの操作は取り消せません。`,
       confirmLabel: 'すべて削除',
       cancelLabel: 'キャンセル',
       danger: true
@@ -447,7 +512,7 @@ export const useProfiles = (
       prev.map((p) => (p.id === currentProfileIdRef.current ? { ...p, mods: [] } : p))
     );
     showToast('すべてのModを削除しました', 'info');
-  };
+  }, [showToast, confirmDialog]);
 
   return {
     profiles,

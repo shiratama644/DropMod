@@ -141,13 +141,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             );
           },
           // 画像スタイリング
+          // H4-3 判断: Markdown 内画像は width/height が未知 (任意サイズ)
+          // かつ src の origin もユーザー生成コンテンツで多様。
+          // next/image の remotePatterns に事前追加できない性質のため <img> を維持。
+          // lazy loading + async decoding + no-img-element の eslint disable で明示。
           img: ({ node, src, alt, ...props }) => {
             return (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={src}
+                src={typeof src === 'string' ? src : undefined}
                 alt={alt || ''}
                 className="my-3 rounded-2xl max-w-full h-auto shadow-md border border-slate-500/20 hover:opacity-95 transition"
                 loading="lazy"
+                decoding="async"
                 {...props}
               />
             );

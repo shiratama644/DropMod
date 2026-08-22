@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { Profile, ThemeMode } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 
@@ -48,22 +49,17 @@ export const Header: React.FC<HeaderProps> = ({
     [onImportZip]
   );
 
-  const handleLogoKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSwitchTab('home');
-    }
-  };
+  // H4-1 修正: <Link> はネイティブに Enter/Space キーで発火するため、
+  // 以前あった handleLogoKeyDown は不要になった。
 
   return (
     <header id="app-header" className="sticky top-0 z-30 glass-panel">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center justify-between">
-          <div
-            role="button"
-            tabIndex={0}
+          {/* H4-1 修正: <div role="button"> → <Link> に変更 (SEO/新規タブ対応) */}
+          <Link
+            href="/"
             onClick={() => onSwitchTab('home')}
-            onKeyDown={handleLogoKeyDown}
             aria-label="ホーム画面へ移動"
             className="flex items-center gap-2.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl p-0.5"
           >
@@ -76,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
               </h1>
               <p className="text-xs theme-text-muted mt-0.5">Minecraft Mod Profile Manager</p>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-1.5">
             <button

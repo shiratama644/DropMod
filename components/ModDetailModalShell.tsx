@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/types';
@@ -181,12 +183,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
       {/* 固定ヘッダー (題名) */}
       <div className="flex items-start justify-between gap-3 border-b border-slate-500/20 p-4 sm:p-6 pb-4 shrink-0 bg-transparent">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-slate-800/80 p-1 flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700/50">
+          <div className="w-12 h-12 rounded-2xl bg-slate-800/80 p-1 flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700/50 relative">
             {project.icon_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              // H4-3 修正: <img> → next/image (WebP + srcset)
+              <Image
                 src={project.icon_url}
                 alt={project.title}
+                width={48}
+                height={48}
                 className="w-full h-full object-contain rounded-xl"
               />
             ) : (
@@ -266,15 +270,16 @@ export const ModDetailModalShell: React.FC<Props> = ({
                   onClick={() => setSelectedGalleryImg(img.url)}
                   className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  {/* H4-3 修正: <img> → next/image (fill mode で可変サイズ対応) */}
+                  <Image
                     src={img.url}
                     alt={img.title || 'Gallery image'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    loading="lazy"
+                    fill
+                    sizes="(min-width: 640px) 176px, 128px"
+                    className="object-cover group-hover:scale-105 transition duration-300"
                   />
                   {img.title && (
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white">
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
                       {img.title}
                     </div>
                   )}
@@ -299,11 +304,17 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 閉じる ✕
               </button>
             </div>
+            {/* H4-3 修正: 拡大プレビューは width/height 未確定 (画像アスペクト比依存)
+                のため next/image の layout=intrinsic 相当が使えない。
+                object-contain + max-h-72 の伸縮レイアウトを維持するため <img> のまま。
+                CDN 経由なので lazy load + async decoding を明示。 */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={selectedGalleryImg}
-              alt=""
+              alt="ギャラリー画像プレビュー"
               className="max-h-72 w-full object-contain rounded-xl"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         )}
@@ -403,14 +414,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
             閉じる
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-1.5"
+          // H4-1 修正: <button router.push> → <Link href> に変更
+          <Link
+            href="/"
+            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-house" aria-hidden />
             ホームに戻る
-          </button>
+          </Link>
         )}
         {latestFile && (
           <button
@@ -497,14 +508,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
       <div className="mb-3">
-        <button
-          type="button"
-          onClick={() => router.push('/')}
+        {/* H4-1 修正: <button router.push> → <Link href> に変更 */}
+        <Link
+          href="/"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
           ホームに戻る
-        </button>
+        </Link>
       </div>
       {innerCard}
     </main>

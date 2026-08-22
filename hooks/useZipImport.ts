@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem } from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
@@ -20,7 +20,8 @@ export const useZipImport = (
     loader?: string;
   } | null>(null);
 
-  const handleImportZipFile = async (file: File) => {
+  // H4-4/L4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため)。
+  const handleImportZipFile = useCallback(async (file: File) => {
     showToast('ZIPファイルを解析中...', 'info');
     try {
       const zip = await JSZip.loadAsync(file);
@@ -168,19 +169,25 @@ export const useZipImport = (
       console.error(e);
       showToast('ZIPファイルの解析またはModrinthとの照合に失敗しました', 'warning');
     }
-  };
+  }, [setProfiles, setCurrentProfileId, setIsNewProfileModalOpen, showToast]);
 
-  const handleImportZipInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleImportZipFile(file);
-    e.target.value = '';
-  };
+  const handleImportZipInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleImportZipFile(file);
+      e.target.value = '';
+    },
+    [handleImportZipFile]
+  );
 
-  const handleDropZip = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleImportZipFile(file);
-  };
+  const handleDropZip = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file) handleImportZipFile(file);
+    },
+    [handleImportZipFile]
+  );
 
   return {
     pendingImportData,

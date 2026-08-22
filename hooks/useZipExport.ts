@@ -170,7 +170,10 @@ export const useZipExport = (
     }
   }, [showToast, updateZipState]);
 
-  const handleDownloadZip = async () => {
+  // H4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため参照安定化)。
+  // currentProfile は上位で変化するので deps に含める必要があるが、少なくとも
+  // profile 変化なしのレンダー間では同一参照を維持できる。
+  const handleDownloadZip = useCallback(async () => {
     // 1. ガード節（プロファイル内にModがない場合）
     if (currentProfile.mods.length === 0) {
       showToast('プロファイルにModが登録されていません', 'warning');
@@ -328,7 +331,7 @@ export const useZipExport = (
         activeZipAbortRef.current = null;
       }
     }
-  };
+  }, [currentProfile, showToast, updateZipState]);
 
   return {
     isZipModalOpen: zipState.isOpen,

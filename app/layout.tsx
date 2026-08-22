@@ -32,10 +32,13 @@ import '@fontsource/jetbrains-mono/800.css';
 //   3. http://localhost:3000 (ローカル dev のフォールバック)
 // -----------------------------------------------------------------------------
 function resolveMetadataBase(): URL {
+  // M4-6 修正: NEXT_PUBLIC_SITE_URL に末尾スラッシュがあると canonical URL 生成時に
+  // '//' (二重スラッシュ) になる可能性があるため事前に除去。sitemap.ts / robots.ts の
+  // resolveBaseUrl と同じ挙動に統一。
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
   if (explicit) {
     try {
-      return new URL(explicit);
+      return new URL(explicit.replace(/\/$/, ''));
     } catch {
       /* fallthrough */
     }
@@ -99,8 +102,27 @@ export default function RootLayout({
   children: ReactNode;
   modal: ReactNode;
 }) {
+  // M4-3 修正: theme FOUC (SSR dark → hydration 後 light) を回避する inline script。
+  // hydration 前に LocalStorage を読み取り、'light' が保存されていれば
+  // <html> の dark クラスを外す。これで hydration 時にちらつきが起きない。
+  // dangerouslySetInnerHTML は script タグ挿入の Next.js 推奨方法。
+  const themeInitScript = `
+try {
+  var raw = localStorage.getItem('dropmod_state_v2') || localStorage.getItem('craftforge_state_v2');
+  if (raw) {
+    var s = JSON.parse(raw);
+    if (s && s.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
+  }
+} catch (e) { /* noop */ }
+  `.trim();
+
   return (
-    <html lang="ja" className="dark">
+    <html lang="ja" className="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
         <AppShell>
           {children}

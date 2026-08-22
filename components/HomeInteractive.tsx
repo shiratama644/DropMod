@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
@@ -221,6 +222,11 @@ export const HomeInteractive: React.FC<Props> = ({
   const safeHits = Array.isArray(hits) ? hits : [];
   const safeMcVersions = Array.isArray(initialMcVersions) ? initialMcVersions : [];
 
+  // M4-1 修正: Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
+  // Home 画面右側に emerald gradient で目立つ Mod カウント表示 + モバイル用
+  // 「確認」ボタン (Home → Mods タブへのショートカット)。
+  const modCount = profile?.mods?.length || 0;
+
   return (
     <section id="tab-home" className="space-y-4 sm:space-y-6">
       {/* Hero Banner */}
@@ -231,47 +237,75 @@ export const HomeInteractive: React.FC<Props> = ({
         <div className="hero-bg-cube absolute -right-10 -bottom-10 opacity-10 theme-text-brand pointer-events-none hidden sm:block">
           <i className="fa-solid fa-cubes text-[180px]" aria-hidden />
         </div>
-        <div className="relative z-10 min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30">
-              Minecraft {profile.mcVersion}
-            </span>
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 theme-text-blue border border-blue-500/30">
-              {profile.loader}
-            </span>
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* M4-2 修正: profile?.mcVersion || '未設定' 等のフォールバックを Vite 版から復元 */}
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30 shrink-0">
+                Minecraft {profile?.mcVersion || '未設定'}
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 theme-text-blue border border-blue-500/30 shrink-0">
+                {profile?.loader || '未設定'}
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight break-all leading-tight">
+              {profile?.name || '名称未設定プロファイル'}
+            </h2>
+            <p className="text-xs sm:text-sm theme-text-muted break-all leading-relaxed">
+              {profile?.description ||
+                'ModrinthからリアルタイムでModを検索してカスタマイズできます。'}
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5 pt-2">
+              <button
+                type="button"
+                onClick={openEditProfileModal}
+                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-pen-to-square theme-text-brand" aria-hidden />
+                プロファイルを編集
+              </button>
+              <button
+                type="button"
+                onClick={handleDuplicateProfile}
+                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-copy theme-text-blue" aria-hidden />
+                複製
+              </button>
+              <button
+                type="button"
+                onClick={openDependencyCheckModal}
+                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 theme-text-amber border border-amber-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-shield-halved" aria-hidden />
+                依存・競合チェック
+              </button>
+            </div>
           </div>
-          <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight break-all leading-tight">
-            {profile.name}
-          </h2>
-          <p className="text-xs sm:text-sm theme-text-muted break-all leading-relaxed">
-            {profile.description ||
-              'ModrinthからリアルタイムでModを検索してカスタマイズできます。'}
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 pt-2">
-            <button
-              type="button"
-              onClick={openEditProfileModal}
-              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+
+          {/* M4-1 修正: 登録 MOD 数パネル (Vite 版から復元) */}
+          <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-3.5 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-md ring-1 ring-white/20 shrink-0">
+                <i className="fa-solid fa-cubes" aria-hidden />
+              </div>
+              <div>
+                <div className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
+                  登録 MOD 数
+                </div>
+                <div className="text-2xl sm:text-3xl font-black theme-text-brand font-mono tracking-tight leading-none mt-0.5">
+                  {modCount}
+                </div>
+              </div>
+            </div>
+            {/* モバイル用ショートカット (Vite 版と同挙動) */}
+            <Link
+              href="/mods"
+              className="sm:hidden px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-lg transition"
             >
-              <i className="fa-solid fa-pen-to-square theme-text-brand" aria-hidden />
-              プロファイルを編集
-            </button>
-            <button
-              type="button"
-              onClick={handleDuplicateProfile}
-              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <i className="fa-solid fa-copy theme-text-blue" aria-hidden />
-              複製
-            </button>
-            <button
-              type="button"
-              onClick={openDependencyCheckModal}
-              className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 theme-text-amber border border-amber-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <i className="fa-solid fa-shield-halved" aria-hidden />
-              依存・競合チェック
-            </button>
+              確認
+            </Link>
           </div>
         </div>
       </div>

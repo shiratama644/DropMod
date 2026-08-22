@@ -1,37 +1,74 @@
 // ============================================================================
-// Home ページ (Phase 5 版)
+// Home ページ (Phase 5 版 + H4-5 修正)
 //
 // Server Component として初期 24 件を Modrinth /search から SSR 取得 →
 // Client Component (<HomeInteractive />) にハイドレート。
 //
 // ISR: 90 分毎に再生成 (docs/NEXTJS_MIGRATION_PLAN.md §7 参照)。
 //
-// プロファイル状態は AppContext (LocalStorage 由来) に統合済み。SSR 段階では
-// まだ Client の LocalStorage を参照できないため、"default profile" 相当の
-// 1.20.1 / Fabric ベースで初期 24 件を取得しておく。マウント後に
-// HomeInteractive の絞り込み変更 useEffect が発火し、実際のアクティブ
-// プロファイル (LocalStorage 復元後) に合わせて再検索される。
+// H4-5 修正: cookies() で dropmod_active_profile を読み取り、ユーザーの実際の
+// プロファイルの mcVersion/loader で SSR fetch する。これで hydration 後に
+// LocalStorage から復元されたプロファイルと SSR 結果がミスマッチして
+// 「ちらつき」が起きる問題が解消される。
+// cookie が無い or 無効なら SSR_DEFAULT (1.20.1 / Fabric) で fetch。
 // ============================================================================
 
+import { cookies } from 'next/headers';
 import { fetchLatestMinecraftVersions, fetchModrinthSearch } from '@/lib/modrinth/server';
 import { HomeInteractive } from '@/components/HomeInteractive';
 
-// 90分毎に ISR 再生成 (fetch のキャッシュ TTL は個別に指定済)
+// 90分毎に ISR 再生成 (fetch のキャッシュ TTL は個別に指定済)。
+// ただし cookie 依存のため実質は cookie 値ごとに個別 SSR (Dynamic Rendering)
+// になる可能性がある。Vercel の Edge Cache では cookie を Vary に含む挙動。
 export const revalidate = 5400;
 
-// SSR 初期取得用の "デフォルトプロファイル相当" (実際の Profile 型ではなく
-// 検索パラメータのみ)
+// cookie が無い時のフォールバック
 const SSR_DEFAULT_MC_VERSION = '1.20.1';
 const SSR_DEFAULT_LOADER = 'Fabric';
 
 const SEARCH_LIMIT = 24;
 
+interface ActiveProfileCookie {
+  mcVersion: string;
+  loader: string;
+}
+
+/** dropmod_active_profile cookie を安全にパース */
+function parseActiveProfileCookie(raw: string | undefined): ActiveProfileCookie | null {
+  if (!raw) return null;
+  try {
+    const decoded = decodeURIComponent(raw);
+    const obj = JSON.parse(decoded);
+    if (
+      obj &&
+      typeof obj === 'object' &&
+      typeof obj.mcVersion === 'string' &&
+      typeof obj.loader === 'string' &&
+      obj.mcVersion.length < 32 &&
+      obj.loader.length < 32
+    ) {
+      return { mcVersion: obj.mcVersion, loader: obj.loader };
+    }
+  } catch {
+    /* 破損した cookie は無視 */
+  }
+  return null;
+}
+
 export default async function HomePage() {
+  // Next.js 15+ では cookies() は async
+  const cookieStore = await cookies();
+  const activeProfileCookie = cookieStore.get('dropmod_active_profile')?.value;
+  const parsed = parseActiveProfileCookie(activeProfileCookie);
+
+  const mcVersion = parsed?.mcVersion || SSR_DEFAULT_MC_VERSION;
+  const loader = parsed?.loader || SSR_DEFAULT_LOADER;
+
   const [searchResult, mcVersions] = await Promise.all([
     fetchModrinthSearch({
       query: '',
-      mcVersion: SSR_DEFAULT_MC_VERSION,
-      loader: SSR_DEFAULT_LOADER,
+      mcVersion,
+      loader,
       category: 'All',
       sortBy: 'popular',
       offset: 0,

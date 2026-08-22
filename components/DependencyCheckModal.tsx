@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { Profile, DependencyCheckData, ModItem } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import { useModalA11y } from '@/hooks/useModalA11y';
@@ -670,9 +671,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
-                            <img
+                            // H4-3 修正: <img> → next/image
+                            <Image
                               src={pInfo.icon_url}
                               alt={title}
+                              width={28}
+                              height={28}
                               className="w-7 h-7 rounded-lg object-contain bg-slate-800 p-0.5 shrink-0"
                             />
                           ) : (
@@ -732,9 +736,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
-                            <img
+                            // H4-3 修正: <img> → next/image
+                            <Image
                               src={pInfo.icon_url}
                               alt={title}
+                              width={28}
+                              height={28}
                               className="w-7 h-7 rounded-lg object-contain bg-slate-800 p-0.5 shrink-0"
                             />
                           ) : (

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { ModItem, ModrinthVersion, Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
@@ -214,7 +216,7 @@ export const ModsPageClient: React.FC = () => {
 // -----------------------------------------------------------------------------
 
 function EmptyState() {
-  const router = useRouter();
+  // H4-1 修正: <button router.push> → <Link href> に変更 (SEO/新規タブ対応)
   return (
     <div id="empty-mods-state" className="p-8 sm:p-12 text-center">
       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full theme-sub-box flex items-center justify-center mx-auto theme-text-muted text-xl sm:text-2xl mb-3">
@@ -224,13 +226,12 @@ function EmptyState() {
       <p className="text-xs theme-text-muted mt-1 max-w-sm mx-auto">
         「ホーム」タブからModrinthのModを検索して、このプロファイルに追加してください。
       </p>
-      <button
-        type="button"
-        onClick={() => router.push('/')}
-        className="mt-4 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+      <Link
+        href="/"
+        className="inline-block mt-4 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
         Modを探しに行く
-      </button>
+      </Link>
     </div>
   );
 }
@@ -284,11 +285,13 @@ function DesktopTable({
                     onClick={() => onOpenDetail(mod)}
                   >
                     {mod.icon_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      // H4-3 修正: <img> → next/image (WebP 自動変換 + srcset)
+                      <Image
                         src={mod.icon_url}
+                        alt={mod.title}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
-                        alt=""
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 text-xs font-bold shrink-0 shadow">
@@ -377,11 +380,13 @@ function MobileList({
                 onClick={() => onOpenDetail(mod)}
               >
                 {mod.icon_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  // H4-3 修正: <img> → next/image (WebP 自動変換 + srcset)
+                  <Image
                     src={mod.icon_url}
+                    alt={mod.title}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
-                    alt=""
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 text-xs font-bold shrink-0 shadow">

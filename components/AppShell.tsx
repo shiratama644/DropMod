@@ -150,11 +150,17 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
 
   // ---------- Modal-open scroll lock ----------
+  // C4-2 修正: /mod/[slug] Parallel Route モーダル表示中も背景スクロールをロック。
+  // Vite 版 App.tsx にあった isModDetailModalOpen ガードが Next.js 版で消失していた
+  // 回帰バグを usePathname() ベースで復元 (URL が /mod/* かどうかで判定)。
+  const isModDetailOpen = pathname?.startsWith('/mod/') ?? false;
+
   const isAnyModalOpen =
     isNewProfileModalOpen ||
     isEditProfileModalOpen ||
     isDepCheckModalOpen ||
     isZipModalOpen ||
+    isModDetailOpen ||
     Boolean(confirmDialogProps.isOpen);
 
   useEffect(() => {
@@ -196,10 +202,11 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   // 「Mod 詳細を開く前にいた画面」に相当するタブを active にしたい。
   // 単純化のため、詳細画面時は home をアクティブ扱いにする (Home からのソフト
   // ナビが最も一般的な導線のため)。
+  // M4-7 修正: dead code だった PATH_TO_TAB テーブルを実際に使う (可読性向上)。
+  // /mod/[slug] などマッチしないパスは 'home' にフォールバック (Home が最も
+  // 一般的な起点タブのため、Mod 詳細画面でも Home が active 表示になる)。
   const activeTab: TabName = useMemo(() => {
-    if (pathname === '/mods') return 'mods';
-    if (pathname === '/settings') return 'settings';
-    return 'home';
+    return PATH_TO_TAB[pathname ?? '/'] ?? 'home';
   }, [pathname]);
 
   const handleSwitchTab = useCallback(

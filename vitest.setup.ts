@@ -33,3 +33,11 @@ afterAll(() => {
 beforeEach(() => {
   vi.stubEnv('NODE_ENV', 'test');
 });
+
+// jsdom は Element.scrollIntoView を実装していない。
+// CustomDropdown (Arrow キーで focused option を可視化する) など複数箇所で
+// 呼ぶため、no-op stub をグローバルに置く。
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView =
+    () => {};
+}

@@ -23,7 +23,7 @@ import { NewProfileModal } from './NewProfileModal';
 import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
 import { ZipProgressModal } from './ZipProgressModal';
-import { AppContextProvider, type AppContextValue } from './AppContext';
+import { AppContextProvider } from './AppContext';
 import { useAppActionsStore } from '@/lib/store/appActions';
 // QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
 // AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)
@@ -236,84 +236,11 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // ---------- Provide context ----------
-  const contextValue: AppContextValue = useMemo(
-    () => ({
-      theme,
-      setTheme: setThemeState,
-      toggleTheme,
-
-      profiles,
-      currentProfileId,
-      currentProfile,
-      handleSwitchProfile,
-      handleCreateProfile,
-      handleDuplicateProfile,
-      handleSaveEditedProfile,
-      handleDeleteProfile,
-      handleToggleMod,
-      handleUpdateModVersion,
-      handleRemoveAllMods,
-
-      hasDepWarning,
-      runBackgroundDepCheck,
-
-      isZipModalOpen,
-      zipProgress,
-      zipStatusText,
-      zipStatusCount,
-      zipDetailText,
-      handleDownloadZip,
-      handleCancelZip,
-
-      handleImportZipInput,
-      handleDropZip,
-
-      showToast,
-      confirm,
-
-      openNewProfileModal,
-      openEditProfileModal,
-      openDependencyCheckModal,
-
-      handleResetData,
-      mcVersions
-    }),
-    [
-      theme,
-      toggleTheme,
-      setThemeState,
-      profiles,
-      currentProfileId,
-      currentProfile,
-      handleSwitchProfile,
-      handleCreateProfile,
-      handleDuplicateProfile,
-      handleSaveEditedProfile,
-      handleDeleteProfile,
-      handleToggleMod,
-      handleUpdateModVersion,
-      handleRemoveAllMods,
-      hasDepWarning,
-      runBackgroundDepCheck,
-      isZipModalOpen,
-      zipProgress,
-      zipStatusText,
-      zipStatusCount,
-      zipDetailText,
-      handleDownloadZip,
-      handleCancelZip,
-      handleImportZipInput,
-      handleDropZip,
-      showToast,
-      confirm,
-      openNewProfileModal,
-      openEditProfileModal,
-      openDependencyCheckModal,
-      handleResetData,
-      mcVersions
-    ]
-  );
+  // ---------- (Phase 9-A.5) contextValue useMemo は撤去 ----------
+  //   従来 30+ フィールドを含む Fat Context を作っていたが、Phase 9-A で全 4 消費者
+  //   コンポーネントを Zustand + appActionsStore 直接参照に移行したため不要に。
+  //   AppContextProvider は pass-through な stub (children を返すだけ) として維持し、
+  //   Phase 10 で完全削除予定。
 
   // Phase 9-A: appActionsStore への登録
   //   下流コンポーネント (Settings/Mods/Home/ModDetail) が useAppContext ではなく
@@ -369,7 +296,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   ]);
 
   return (
-    <AppContextProvider value={contextValue}>
+    <AppContextProvider>
       <WebVitalsReporter />
       <OfflineBanner />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

@@ -1,119 +1,73 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+/**
+ * AppContext (Phase 9-A.5 で stub 化、Phase 10 で完全削除予定)
+ *
+ * Phase 9-A で全 4 消費者コンポーネント (HomeInteractive / ModDetailModalShell /
+ * ModsPageClient / SettingsPageClient) を `useProfilesStore` / `useToastStore` /
+ * `useConfirmStore` / `useAppAction` の直接参照に書き換えたため、Context は
+ * 実質使われていない。
+ *
+ * ただし以下の理由で **即削除ではなく stub 化** に留める:
+ *   1. 緊急ロールバック: Phase 9 実装で予期せぬ回帰が見つかった場合、
+ *      Provider だけ残しておけば「AppContextProvider を復活 → 既存 Zustand
+ *      並走」のフォールバックが利く
+ *   2. 外部ドキュメント / メモリ: docs や commit log に AppContext の存在を
+ *      前提とした記述があるため、いきなり削除ではなく 1 phase 猶予を挟む
+ *   3. Provider Component は pass-through で Runtime コスト実質ゼロ
+ *
+ * Phase 10 で `AppContextProvider` の使用箇所 (AppShell の 1 箇所のみ) を
+ * 消し、このファイル全体を削除する予定。
+ */
+
 import type { ReactNode } from 'react';
-import type { Profile, ThemeMode } from '@/types';
-import type { ConfirmDialogOptions } from './ConfirmDialog';
 
-// ============================================================================
-// AppContext
-//
-// Vite 版の App.tsx がトップレベルで持っていた:
-//   - useProfiles (プロファイル状態 + CRUD + Mod トグル + LocalStorage 永続化)
-//   - useDependencyCheck (バックグラウンド依存チェック警告バッジ)
-//   - useZipExport / useZipImport (ZIP 出力・取込)
-//   - useToasts / useConfirm (Toast / 確認ダイアログ)
-//   - theme (dark/light)
-//   - モーダル open state (新規プロファイル / 編集 / 依存チェック / mrpack 取り込み後)
-//
-// これらを AppShell (Root Layout の Client 直下) に集約し、Home / Mods /
-// Settings / ModDetail 全ページから Context 経由で参照する。
-//
-// なぜ Context か:
-//   - Next.js App Router 下で Server Component (page.tsx) と Client
-//     Component の混在があるため、Client 側の共有 state を props で
-//     bucket brigade するのは現実的でない
-//   - Zustand / Jotai を導入せずとも React 標準 (Context) で十分
-//     (計画書 §5 の判断)
-//   - useProfiles は 1 セッション 1 インスタンス必須 (LocalStorage の
-//     hydration ガードのため二重マウントを避ける)
-// ============================================================================
+/**
+ * @deprecated Phase 10 で削除予定。全 field は Zustand store 直接参照に移行済み。
+ *   型は互換のため残すが実質空オブジェクト。誤って import しても実質参照できない。
+ */
+export type AppContextValue = Record<string, never>;
 
-export interface AppContextValue {
-  // Theme
-  theme: ThemeMode;
-  setTheme: (t: ThemeMode) => void;
-  toggleTheme: () => void;
-
-  // Profiles
-  profiles: Profile[];
-  currentProfileId: string;
-  currentProfile: Profile;
-  handleSwitchProfile: (id: string) => void;
-  handleCreateProfile: (
-    name: string,
-    mcVersion: string,
-    loader: string,
-    description: string,
-    mods?: import('@/types').ModItem[]
-  ) => void;
-  handleDuplicateProfile: () => void;
-  handleSaveEditedProfile: (
-    name: string,
-    mcVersion: string,
-    loader: string,
-    description: string
-  ) => void;
-  // useProfiles 側は async 関数だが呼び出し側は Promise を待たない想定
-  handleDeleteProfile: (id: string) => void | Promise<void>;
-  handleToggleMod: (
-    projectId: string,
-    e?: React.MouseEvent,
-    silent?: boolean
-  ) => Promise<void>;
-  handleUpdateModVersion: (projectId: string, versionId: string) => void | Promise<void>;
-  handleRemoveAllMods: () => void | Promise<void>;
-
-  // Dep check
-  hasDepWarning: boolean;
-  runBackgroundDepCheck: () => void;
-
-  // ZIP export
-  isZipModalOpen: boolean;
-  zipProgress: number;
-  zipStatusText: string;
-  zipStatusCount: string;
-  zipDetailText: string;
-  handleDownloadZip: () => void;
-  handleCancelZip: () => void;
-
-  // ZIP import
-  handleImportZipInput: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDropZip: (e: React.DragEvent) => void;
-
-  // Toast / Confirm
-  showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
-  confirm: (opts: ConfirmDialogOptions) => Promise<boolean>;
-
-  // Modals (Header / Tab から呼び出し)
-  openNewProfileModal: () => void;
-  openEditProfileModal: () => void;
-  openDependencyCheckModal: () => void;
-
-  // Reset (Settings → データ初期化)
-  handleResetData: () => void;
-
-  // Fallback MC versions (Settings 等で使う)
-  mcVersions: string[];
+/**
+ * @deprecated Phase 10 で削除予定。呼び出すと即 throw する。
+ *
+ * 対応する Zustand store (Phase 9 の移行先):
+ *   - profiles / theme          → useProfilesStore
+ *   - toast (showToast)          → useToastStore
+ *   - confirm                    → useConfirmStore
+ *   - zipExport (isZipModalOpen/zipProgress/handleDownloadZip 等)
+ *                                → useZipExportStore + useAppAction('handleDownloadZip')
+ *   - zipImport (handleImportZipInput 等) → useAppAction
+ *   - depCheck (hasDepWarning)   → useDepCheckStore
+ *   - modal open state           → useAppAction('openXxxModal')
+ *
+ * 例:
+ *   // Before
+ *   const { profiles, showToast } = useAppContext();
+ *   // After
+ *   const profiles = useProfilesStore((s) => s.profiles);
+ *   const showToast = useToastStore((s) => s.showToast);
+ */
+export function useAppContext(): never {
+  throw new Error(
+    '[DropMod] useAppContext() は Phase 9-A で撤去されました。' +
+      '対応する Zustand store (useProfilesStore/useToastStore/etc.) を直接使うか、' +
+      '`useAppAction(key)` (lib/store/appActions.ts) を利用してください。' +
+      '詳細は docs/PHASE9_PLAN.md 付録 A を参照。'
+  );
 }
 
-const AppContext = createContext<AppContextValue | null>(null);
-
-export function useAppContext(): AppContextValue {
-  const ctx = useContext(AppContext);
-  if (!ctx) {
-    throw new Error(
-      'useAppContext must be used inside <AppShell> (Root Layout provides it)'
-    );
-  }
-  return ctx;
-}
-
+/**
+ * @deprecated Phase 10 で削除予定。Pass-through wrapper (Runtime コストなし)。
+ * 現状 AppShell から 1 箇所のみ呼ばれるが、Phase 9-A 実装で全依存が
+ * Zustand + appActionsStore に移った後は「単に children を返すだけ」の
+ * ダミーとして機能。value prop は完全無視される。
+ */
 interface ProviderProps {
-  value: AppContextValue;
+  value?: unknown; // 後方互換のためだけに保持、無視
   children: ReactNode;
 }
 
-export function AppContextProvider({ value, children }: ProviderProps) {
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+export function AppContextProvider({ children }: ProviderProps) {
+  return <>{children}</>;
 }

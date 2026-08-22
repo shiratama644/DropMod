@@ -1,0 +1,359 @@
+/**
+ * useProfiles integration test (Sub-Phase 9-C.3)
+ *
+ * - fake-indexeddb + msw で完全な integration
+ * - Dexie hydration → profile CRUD → handleToggleMod (Modrinth mock) の一連を検証
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { server } from '../mocks/server';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useProfilesStore } from '@/lib/store/profiles';
+import { clearApiCache } from '@/lib/modrinth/client';
+import { createQueryWrapper } from '../test-utils/queryWrapper';
+import { db } from '@/lib/db/dexie';
+import type { ThemeMode } from '@/types';
+
+// ------------------ Reset helpers ------------------
+
+async function resetAll() {
+  // Zustand store reset
+  useProfilesStore.setState({
+    profiles: [
+      {
+        id: 'default-profile',
+        name: '1.20.1 Fabric 軽量化・ユーティリティ',
+        mcVersion: '1.20.1',
+        loader: 'Fabric',
+        description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
+        mods: []
+      }
+    ],
+    currentProfileId: 'default-profile',
+    hasHydrated: false,
+    theme: 'dark'
+  });
+  // Dexie reset (fake-indexeddb backed)
+  try {
+    await db.profiles.clear();
+    await db.meta.clear();
+    await db.apiCache.clear();
+  } catch {
+    // 初回など (テーブル未初期化) は無視
+  }
+  // Memory cache reset
+  clearApiCache();
+  // LocalStorage reset
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear();
+  }
+  // cookie reset
+  if (typeof document !== 'undefined') {
+    document.cookie = 'dropmod_active_profile=; path=/; max-age=0';
+  }
+}
+
+// ------------------ Hook harness ------------------
+
+interface Harness {
+  theme: ThemeMode;
+  setThemeState: ReturnType<typeof vi.fn>;
+  showToast: ReturnType<typeof vi.fn>;
+  confirmDialog: ReturnType<typeof vi.fn>;
+}
+
+function makeHarness(confirmValue = true): Harness {
+  return {
+    theme: 'dark' as ThemeMode,
+    setThemeState: vi.fn(),
+    showToast: vi.fn(),
+    confirmDialog: vi.fn().mockResolvedValue(confirmValue)
+  };
+}
+
+describe('useProfiles', () => {
+  beforeEach(async () => {
+    await resetAll();
+  });
+
+  it('hydrate: LocalStorage が空 & Dexie が空なら DEFAULT_PROFILE を維持', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() =>
+      expect(useProfilesStore.getState().hasHydrated).toBe(true)
+    );
+    expect(result.current.profiles).toHaveLength(1);
+    expect(result.current.profiles[0]!.id).toBe('default-profile');
+    expect(result.current.currentProfile?.id).toBe('default-profile');
+  });
+
+  it('handleCreateProfile: 新規プロファイル追加 + currentProfileId 切替', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      result.current.handleCreateProfile('MyPack', '1.21.1', 'NeoForge', 'desc');
+    });
+    expect(result.current.profiles).toHaveLength(2);
+    const newP = result.current.profiles[1]!;
+    expect(newP.name).toBe('MyPack');
+    expect(newP.mcVersion).toBe('1.21.1');
+    expect(newP.loader).toBe('NeoForge');
+    expect(result.current.currentProfileId).toBe(newP.id);
+    expect(h.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('作成しました'),
+      'success'
+    );
+  });
+
+  it('handleCreateProfile: mods 付き (initialMods) で作成できる', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    const initialMods = [
+      { id: 'preset-a', title: 'Preset A', description: '' },
+      { id: 'preset-b', title: 'Preset B', description: '' }
+    ];
+    await act(async () => {
+      result.current.handleCreateProfile('WithMods', '1.20.1', 'Fabric', '', initialMods);
+    });
+    const created = result.current.profiles[1]!;
+    expect(created.mods).toHaveLength(2);
+    const successCall = h.showToast.mock.calls.find(([, t]) => t === 'success');
+    expect(successCall?.[0]).toContain('2 個のMod入り');
+  });
+
+  it('handleSwitchProfile: currentProfileId が切り替わる', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // 2 つ目を追加
+    await act(async () => {
+      result.current.handleCreateProfile('B', '1.20.1', 'Fabric', '');
+    });
+    const bId = result.current.profiles[1]!.id;
+
+    // default に戻す
+    act(() => {
+      result.current.handleSwitchProfile('default-profile');
+    });
+    expect(result.current.currentProfileId).toBe('default-profile');
+
+    // B に切替
+    act(() => {
+      result.current.handleSwitchProfile(bId);
+    });
+    expect(result.current.currentProfileId).toBe(bId);
+  });
+
+  it('handleDuplicateProfile: 現在プロファイルの複製 + 名前に "(コピー)"', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      result.current.handleDuplicateProfile();
+    });
+    expect(result.current.profiles).toHaveLength(2);
+    expect(result.current.profiles[1]!.name).toContain('(コピー)');
+    expect(result.current.currentProfileId).toBe(result.current.profiles[1]!.id);
+  });
+
+  it('handleDeleteProfile: confirm=true → 削除、default は最後の 1 個を守る', async () => {
+    const h = makeHarness(true);
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // 最後の 1 個を削除しようとすると拒否
+    await act(async () => {
+      await result.current.handleDeleteProfile('default-profile');
+    });
+    expect(result.current.profiles).toHaveLength(1);
+    expect(h.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('最低1つ'),
+      'warning'
+    );
+
+    // 2 つに増やしてから削除
+    await act(async () => {
+      result.current.handleCreateProfile('B', '1.20.1', 'Fabric', '');
+    });
+    const bId = result.current.profiles[1]!.id;
+    await act(async () => {
+      await result.current.handleDeleteProfile(bId);
+    });
+    expect(result.current.profiles).toHaveLength(1);
+  });
+
+  it('handleDeleteProfile: confirm=false → キャンセルされ削除しない', async () => {
+    const h = makeHarness(false);
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      result.current.handleCreateProfile('B', '1.20.1', 'Fabric', '');
+    });
+    const bId = result.current.profiles[1]!.id;
+    await act(async () => {
+      await result.current.handleDeleteProfile(bId);
+    });
+    expect(result.current.profiles).toHaveLength(2);
+  });
+
+  it('handleSaveEditedProfile: 名前/MC/loader/description を更新', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      result.current.handleSaveEditedProfile('NewName', '1.21.1', 'NeoForge', 'new desc');
+    });
+    const updated = result.current.profiles[0]!;
+    expect(updated.name).toBe('NewName');
+    expect(updated.mcVersion).toBe('1.21.1');
+    expect(updated.loader).toBe('NeoForge');
+    expect(updated.description).toBe('new desc');
+    expect(h.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('プロファイルを更新'),
+      'success'
+    );
+  });
+
+  it('handleToggleMod: 追加 → 削除 (デフォルト handler で mock)', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // 追加
+    await act(async () => {
+      await result.current.handleToggleMod('sodium');
+    });
+    expect(result.current.currentProfile?.mods.length).toBe(1);
+    expect(result.current.currentProfile?.mods[0]?.slug).toBe('sodium');
+    // success toast
+    const successCall = h.showToast.mock.calls.find(([, t]) => t === 'success');
+    expect(successCall?.[0]).toContain('追加');
+
+    // 削除 (同じ projectId でトグル)
+    // 追加時に id は 'id-sodium' が入る (mock handler の返り値より)
+    const addedId = result.current.currentProfile!.mods[0]!.id;
+    await act(async () => {
+      await result.current.handleToggleMod(addedId);
+    });
+    expect(result.current.currentProfile?.mods.length).toBe(0);
+    const infoCall = h.showToast.mock.calls.find(
+      ([msg, t]) => t === 'info' && typeof msg === 'string' && msg.includes('削除')
+    );
+    expect(infoCall).toBeDefined();
+  });
+
+  it('handleUpdateModVersion: 選択中バージョンを差し替え', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // 追加
+    await act(async () => {
+      await result.current.handleToggleMod('sodium');
+    });
+    const addedId = result.current.currentProfile!.mods[0]!.id;
+
+    // version 差し替え (mock handler が version_number: '1.0.0' で返す)
+    await act(async () => {
+      await result.current.handleUpdateModVersion(addedId, 'ver-99');
+    });
+    const updated = result.current.currentProfile!.mods[0]!;
+    expect(updated.selectedVersionId).toBe('ver-99');
+    expect(updated.selectedVersionNumber).toBe('1.0.0');
+  });
+
+  it('handleRemoveAllMods: mods=0 なら何もしない、mods>0 なら confirm 後クリア', async () => {
+    const h = makeHarness(true);
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // 空プロファイル → 何もしない
+    await act(async () => {
+      await result.current.handleRemoveAllMods();
+    });
+    expect(h.confirmDialog).not.toHaveBeenCalled();
+
+    // Mod を追加
+    await act(async () => {
+      await result.current.handleToggleMod('sodium');
+    });
+    expect(result.current.currentProfile?.mods.length).toBe(1);
+
+    // 全削除
+    await act(async () => {
+      await result.current.handleRemoveAllMods();
+    });
+    expect(h.confirmDialog).toHaveBeenCalled();
+    expect(result.current.currentProfile?.mods.length).toBe(0);
+  });
+
+  it('handleToggleMod: fetch 失敗時は warning toast + mod 追加されない', async () => {
+    server.use(
+      http.get('/api/modrinth/project/:slug', () =>
+        new HttpResponse('down', { status: 500 })
+      ),
+      http.get('https://api.modrinth.com/v2/project/:slug', () =>
+        new HttpResponse('down', { status: 500 })
+      )
+    );
+
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      await result.current.handleToggleMod('deadmod');
+    });
+    expect(result.current.currentProfile?.mods.length).toBe(0);
+    const warningCall = h.showToast.mock.calls.find(
+      ([, t]) => t === 'warning'
+    );
+    expect(warningCall?.[0]).toContain('失敗');
+  });
+});

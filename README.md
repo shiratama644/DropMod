@@ -9,7 +9,7 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 - Modrinth API で Mod を検索・追加・削除 (Hero Banner から検索条件をプロファイルに自動連動)
 - Mod 詳細を **Parallel + Intercepting Routes** による SPA モーダルで表示
   ソフトナビ時は `/mod/[slug]` でモーダル、直接 URL アクセス時は SSR フルページ (SEO / OGP 対応)
-- Home 初期 24 件は ISR (5 分キャッシュ) で SSR、以降の検索・無限スクロールは CSR
+- Home 初期 24 件は cookie ベースの Dynamic SSR (ユーザーの実プロファイル別)、Modrinth API 応答は fetch cache で 5 分間 revalidate。以降の検索・無限スクロールは CSR
 - 依存・競合チェック (背景 1.2 秒デバウンス実行 + 手動リフレッシュ)
 - ZIP エクスポート (プロファイル全 `.jar` を並列 DL → JSZip)、`.mrpack` / `.jar` ZIP インポート
 - ダーク / ライトテーマ切替、LocalStorage 永続化 (旧 `craftforge_state_v2` からの自動移行対応)
@@ -22,7 +22,7 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 | UI | React 19.2.8, Tailwind CSS 4.3, FontAwesome, `@fontsource/inter` + `@fontsource/jetbrains-mono` |
 | 型 | TypeScript 5 (strict) |
 | データ | Modrinth API v2 直叩き (Server 側 ISR キャッシュ + Client 側 LRU/TTL キャッシュ) |
-| 永続化 | LocalStorage (`dropmod_state_v2`) |
+| 永続化 | LocalStorage (`dropmod_state_v2`) + Cookie (`dropmod_active_profile`, SSR プロファイル反映用、mcVersion/loader のみ) |
 | デプロイ | Vercel (`next start` / Edge/Node ランタイム両対応) |
 | パッケージマネージャ | pnpm 11.22.0 (Node 20 以上) |
 

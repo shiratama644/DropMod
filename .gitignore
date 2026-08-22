@@ -42,6 +42,9 @@ next-env.d.ts
 out/
 build/
 
+# --- Turbopack cache (L5-8 修正) ---
+.turbo/
+
 # --- Vercel ---
 .vercel
 

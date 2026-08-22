@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem } from '@/types';
 
@@ -146,7 +146,7 @@ const downloadModFile = async (
 // ==========================================
 export const useZipExport = (
   currentProfile: Profile,
-  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void
+  showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
 ) => {
   // 5つの状態を1つのオブジェクトにまとめ、更新の整合性を担保
   const [zipState, setZipState] = useState<ZipProgressState>(INITIAL_STATE);
@@ -169,6 +169,18 @@ export const useZipExport = (
       showToast('ZIPエクスポートをキャンセルしました', 'info');
     }
   }, [showToast, updateZipState]);
+
+  // M5-12 修正: アンマウント時に in-flight DL を abort。
+  // ZIP 生成中にユーザーがページ遷移 (or リロード) すると abort されずに
+  // fetch が継続し、ネットワーク帯域を無駄に消費する問題を解消。
+  useEffect(() => {
+    return () => {
+      if (activeZipAbortRef.current) {
+        activeZipAbortRef.current.abort();
+        activeZipAbortRef.current = null;
+      }
+    };
+  }, []);
 
   // H4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため参照安定化)。
   // currentProfile は上位で変化するので deps に含める必要があるが、少なくとも

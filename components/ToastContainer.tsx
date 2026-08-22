@@ -80,6 +80,10 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
   } else if (toast.type === 'warning') {
     bgClass = 'glass-panel border-amber-500/60';
     icon = 'fa-triangle-exclamation theme-text-amber';
+  } else if (toast.type === 'error') {
+    // M5-6 修正: error 種別を新設 (削除失敗・致命的エラー時の赤系表示)
+    bgClass = 'glass-panel border-red-500/60';
+    icon = 'fa-circle-xmark theme-text-red';
   }
 
   return (

@@ -29,12 +29,16 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'cdn.modrinth.com' },
+      // L5-9 修正: pathname で絞り込み (Modrinth CDN は /data/**、
+      // GitHub raw は /**/*.{png,jpg,...} が多いが後者は絞りにくいので広範のまま)
+      { protocol: 'https', hostname: 'cdn.modrinth.com', pathname: '/data/**' },
       { protocol: 'https', hostname: 'raw.githubusercontent.com' } // Modrinth 本文中の画像埋め込み用
     ]
   },
   experimental: {
-    optimizePackageImports: ['@fortawesome/fontawesome-free', 'react-markdown']
+    // M5-8 修正: @fortawesome/fontawesome-free は CSS-only ライブラリで
+    // JS export が無いため optimizePackageImports の対象として無効 → 削除。
+    optimizePackageImports: ['react-markdown']
   },
   async headers() {
     return [

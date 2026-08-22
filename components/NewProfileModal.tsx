@@ -79,7 +79,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onCreate(name, version, loader, desc, initialImportData?.mods || []);
+    // M5-4 修正: name / desc を trim() (EditProfileModal と一貫性)。
+    // 空白のみのプロファイル名を防ぐ。
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      // 空欄チェックは HTML5 required 属性が担うが二重防御
+      return;
+    }
+    onCreate(trimmedName, version, loader, desc.trim(), initialImportData?.mods || []);
     setName('');
     setDesc('');
     onClose();

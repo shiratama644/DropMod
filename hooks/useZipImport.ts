@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import { Profile, ModItem } from '@/types';
+import { Profile, ModItem, MrpackIndex } from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
-import { fetchModrinth } from '@/lib/modrinth/client';
+import {
+  fetchModrinthBatch,
+  fetchModrinthVersionFilesBatch
+} from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
 
 export const useZipImport = (
   setProfiles: React.Dispatch<React.SetStateAction<Profile[]>>,
   setCurrentProfileId: (id: string) => void,
   setIsNewProfileModalOpen: (open: boolean) => void,
-  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void
+  showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
 ) => {
   const [pendingImportData, setPendingImportData] = useState<{
     name: string;
@@ -20,8 +23,18 @@ export const useZipImport = (
     loader?: string;
   } | null>(null);
 
+  // H5-6 修正: 二重取り込み防止 (素早く複数 ZIP を drop した際、後勝ちで
+  // 前の pendingImportData が消失するバグ)
+  const importInFlightRef = useRef<boolean>(false);
+
   // H4-4/L4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため)。
   const handleImportZipFile = useCallback(async (file: File) => {
+    // H5-6 修正: inFlight ガード
+    if (importInFlightRef.current) {
+      showToast('別の ZIP を処理中です。完了してから再試行してください', 'warning');
+      return;
+    }
+    importInFlightRef.current = true;
     showToast('ZIPファイルを解析中...', 'info');
     try {
       const zip = await JSZip.loadAsync(file);
@@ -30,7 +43,8 @@ export const useZipImport = (
       // 1. .mrpack (Modrinth Index ZIP) インポート: モーダルは開かずダイレクト追加
       if (mrpackFile) {
         const text = await mrpackFile.async('string');
-        const mrpackData = JSON.parse(text);
+        // L5-1 修正: MrpackIndex 型で受ける (any → 明示型)
+        const mrpackData = JSON.parse(text) as MrpackIndex;
         const mcVer = mrpackData.dependencies?.minecraft || '1.20.1';
         // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
         //   fabric-loader / forge / neoforge / quilt-loader
@@ -110,11 +124,8 @@ export const useZipImport = (
         throw e;
       }
 
-      const versionMap = await fetchModrinth<Record<string, any>>('/version_files', {}, {
-        method: 'POST',
-        body: { hashes, algorithm: 'sha1' },
-        noCache: true
-      });
+      // H5-4 修正: /version_files POST は 1000 個の hash 上限 → 100 個ずつ chunk 分割
+      const versionMap = await fetchModrinthVersionFilesBatch<any>(hashes, 'sha1');
 
       const foundVersions = Object.values(versionMap);
       if (foundVersions.length === 0) {
@@ -122,8 +133,9 @@ export const useZipImport = (
         return;
       }
 
+      // H5-4 修正: /projects も 1000 個上限 → chunk 分割
       const projectIds = Array.from(new Set(foundVersions.map((v) => v.project_id)));
-      const projects = await fetchModrinth<any[]>('/projects', { ids: JSON.stringify(projectIds) });
+      const projects = await fetchModrinthBatch<any>('/projects', projectIds);
       const projectMap = new Map<string, any>();
       projects.forEach((p) => projectMap.set(p.id, p));
 
@@ -167,7 +179,15 @@ export const useZipImport = (
       showToast(`Modrinth上で ${initialMods.length} 個のModを特定しました。プロファイルを作成してください。`, 'success');
     } catch (e) {
       console.error(e);
-      showToast('ZIPファイルの解析またはModrinthとの照合に失敗しました', 'warning');
+      // JSON parse エラーは mrpack 特有のエラーとして区別可能
+      if (e instanceof SyntaxError) {
+        showToast('ZIP内の modrinth.index.json が破損しています', 'warning');
+      } else {
+        showToast('ZIPファイルの解析またはModrinthとの照合に失敗しました', 'warning');
+      }
+    } finally {
+      // H5-6 修正: inFlight ガード解除 (成功・失敗どちらでも)
+      importInFlightRef.current = false;
     }
   }, [setProfiles, setCurrentProfileId, setIsNewProfileModalOpen, showToast]);
 

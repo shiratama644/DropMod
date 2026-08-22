@@ -1,0 +1,6 @@
+# H5-1 修正: eslint-config-next の依存 (unrs-resolver) のビルド script を明示許可。
+# false のままだと pnpm install/lint 時に警告 + exit code 1 になる。
+# unrs-resolver は eslint-config-next 16 が内部で使う TypeScript path resolver。
+allowBuilds:
+  unrs-resolver: true
+  sharp: false

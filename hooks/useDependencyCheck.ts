@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Profile } from '@/types';
-import { fetchModrinth } from '@/lib/modrinth/client';
+import { fetchModrinthBatch } from '@/lib/modrinth/client';
 
 // プロファイル変更後、依存チェックを実行するまでの待機時間 (デバウンス)
 // Modを連続追加/削除する際に何度も走らないように短い遅延を挟む
@@ -31,11 +31,10 @@ export const useDependencyCheck = (currentProfile: Profile) => {
 
       if (versionIds.length > 0) {
         try {
-          const batchVersions = await fetchModrinth<any[]>('/versions', {
-            ids: JSON.stringify(versionIds)
-          });
+          // H5-4 修正: Modrinth /versions は 1000 個上限 → 100 個ずつ chunk 分割
+          const batchVersions = await fetchModrinthBatch<any>('/versions', versionIds);
           batchVersions.forEach((v) => versionMap.set(v.id, v));
-        } catch (e) {
+        } catch (_e) {
           // レートリミット等: 前回の hasDepWarning を保持して無音失敗
         }
       }
@@ -46,9 +45,12 @@ export const useDependencyCheck = (currentProfile: Profile) => {
         if (m.slug) installedProjectSet.add(m.slug);
       });
 
+      // M5-11 修正: outer break は明示的にラベルで示す (以前は inner break のみで
+      // outer は `if (warning) break;` に依存していて可読性が低かった)
+      // L5-3 修正: mod.selectedVersionId! の non-null assertion → 明示的 undefined チェック
       let warning = false;
-      for (const mod of profile.mods) {
-        const vData = versionMap.get(mod.selectedVersionId!);
+      outer: for (const mod of profile.mods) {
+        const vData = mod.selectedVersionId ? versionMap.get(mod.selectedVersionId) : undefined;
         if (vData && vData.dependencies) {
           for (const dep of vData.dependencies) {
             if (
@@ -57,7 +59,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
               !installedProjectSet.has(dep.project_id)
             ) {
               warning = true;
-              break;
+              break outer;
             }
             if (
               dep.dependency_type === 'incompatible' &&
@@ -65,11 +67,10 @@ export const useDependencyCheck = (currentProfile: Profile) => {
               installedProjectSet.has(dep.project_id)
             ) {
               warning = true;
-              break;
+              break outer;
             }
           }
         }
-        if (warning) break;
       }
       setHasDepWarning(warning);
     } catch (e) {

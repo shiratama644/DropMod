@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useId, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useId, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import gsap from 'gsap';
 import { DropdownOption } from '@/types';
@@ -27,7 +27,11 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const chevronRef = useRef<HTMLElement>(null);
 
   const listboxId = useId();
-  const safeOptions = Array.isArray(options) ? options : [];
+  // L5-warn 修正: useMemo でラップして useCallback deps の安定化
+  const safeOptions = useMemo(
+    () => (Array.isArray(options) ? options : []),
+    [options]
+  );
   const selectedOption = safeOptions.find((o) => o.value === selectedValue) || safeOptions[0];
 
   const handleClose = useCallback((immediate = false) => {
@@ -159,10 +163,14 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   }, [isOpen, focusedIndex]);
 
   // Cleanup GSAP animations on unmount
+  // L5-warn 修正: cleanup で参照する ref 値を effect 時点で capture
+  // (unmount 時に ref.current が null になっていても killTweensOf を実行)
   useEffect(() => {
+    const menuEl = menuRef.current;
+    const chevronEl = chevronRef.current;
     return () => {
-      if (menuRef.current) gsap.killTweensOf(menuRef.current);
-      if (chevronRef.current) gsap.killTweensOf(chevronRef.current);
+      if (menuEl) gsap.killTweensOf(menuEl);
+      if (chevronEl) gsap.killTweensOf(chevronEl);
     };
   }, []);
 

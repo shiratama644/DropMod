@@ -8,7 +8,6 @@ import { ModrinthHit, Profile } from '@/types';
 interface ModCardProps {
   hit: ModrinthHit;
   profile: Profile;
-  onOpenDetail: (id: string) => void;
   /**
    * 追加/削除トグル。AppShell 側の handleToggleMod は Promise を返すため
    * 戻り値は緩めに unknown で受ける (React イベントは戻り値を無視するため
@@ -24,7 +23,7 @@ function formatDownloads(num: number): string {
   return num.toString();
 }
 
-export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onOpenDetail, onToggleMod }) => {
+export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) => {
   const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
   const displayCategory =
     (hit.display_categories && hit.display_categories[0]) ||
@@ -49,10 +48,12 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onOpenDetail, on
     e.preventDefault();
   };
 
+  // C5-1 修正: onOpenDetail prop を廃止し <Link> の href に完全委譲。
+  // 以前は Link (`/mod/${slug || id}`) と onOpenDetail (`/mod/${project_id}`) の
+  // 二重遷移で URL 履歴汚染 + RSC ペイロード fetch レースが発生していた。
   return (
     <Link
       href={detailPath}
-      onClick={() => onOpenDetail(hit.project_id)}
       className="mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
       <div className="space-y-2">

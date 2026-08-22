@@ -101,7 +101,7 @@ Serverless Function は Hobby プランでも東京リージョンで実行可�
 - [ ] Best Practices ≥ 90
 - [ ] SEO = 100
 
-Home では初期 24 件が SSR/ISR で流し込まれるため LCP が短くなり、Performance が高得点になるはず。もし 90 未満なら:
+Home では初期 24 件が **cookie ベースの Dynamic SSR** (ユーザーの実プロファイル反映) で流し込まれるため LCP が短くなり、Performance が高得点になるはず。Modrinth API の応答自体は fetch cache で 5 分間 revalidate されます。もし 90 未満なら:
 - FontAwesome の CSS ファイルサイズ (~200KB) を確認 → Phase 8 で `next/font/local` + サブセット化を検討
 - `optimizePackageImports` の対象を追加
 - Modrinth の icon 画像を Next.js `<Image>` に置き換える (現状は `<img>` のまま)

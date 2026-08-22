@@ -15,7 +15,9 @@
 //   - 許可メソッドは GET / POST のみ (Modrinth 参照系のみを想定)
 //
 // パフォーマンス:
-//   - レスポンスは Web Streams でパススルー (arrayBuffer 全ロードしない)
+//   - リクエスト body は arrayBuffer に全ロード (fetch RequestInit 仕様上
+//     ReadableStream body は Node.js undici で duplex 対応が不安定なため)
+//   - レスポンスは Web Streams でパススルー (メモリ効率良く 100MB+ ファイルも)
 //   - Retry-After ヘッダは透過してクライアント側の 429 リトライで活用
 // ============================================================================
 

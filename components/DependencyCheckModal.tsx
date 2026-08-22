@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { Profile, DependencyCheckData, ModItem } from '@/types';
-import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
+import {
+  fetchModrinth,
+  fetchStableModVersion,
+  fetchModrinthBatch
+} from '@/lib/modrinth/client';
 import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface DependencyCheckModalProps {
@@ -114,9 +118,11 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
       if (versionIds.length > 0) {
         try {
-          const batchVersions = await fetchModrinth<Array<{ id: string }>>('/versions', {
-            ids: JSON.stringify(versionIds),
-          });
+          // H5-4 修正: /versions は 1000 個上限 → 100 個ずつ chunk 分割
+          const batchVersions = await fetchModrinthBatch<{ id: string }>(
+            '/versions',
+            versionIds
+          );
           batchVersions.forEach((v) => {
             if (v?.id) versionMap.set(v.id, v);
           });
@@ -219,9 +225,11 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       const depProjectMap = new Map<string, any>();
       if (missingProjectIds.size > 0) {
         try {
-          const projectBatch = await fetchModrinth<Array<{ id: string }>>('/projects', {
-            ids: JSON.stringify(Array.from(missingProjectIds)),
-          });
+          // H5-4 修正: /projects も 1000 個上限 → 100 個ずつ chunk 分割
+          const projectBatch = await fetchModrinthBatch<{ id: string }>(
+            '/projects',
+            Array.from(missingProjectIds)
+          );
           projectBatch.forEach((p) => {
             if (p?.id) depProjectMap.set(p.id, p);
           });
@@ -286,7 +294,6 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     return () => {
       isCancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, profile.id]);
 
   // (2) mods 配列の変化 → 600ms デバウンスで再チェック
@@ -310,7 +317,6 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       isCancelled = true;
       clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, modsSignature]);
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)

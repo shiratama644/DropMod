@@ -267,5 +267,68 @@ export async function fetchLatestMinecraftVersions(): Promise<string[]> {
   ];
 }
 
+// -----------------------------------------------------------------------------
+// H5-4 修正: Modrinth batch endpoint (/versions?ids=[]、/projects?ids=[]、
+// /version_files POST) は 1000 個までのリクエスト上限がある。
+// 500+ Mod の大規模 ModPack で 400 Bad Request になるのを防ぐため、
+// chunkedBatchFetch で 100 個ずつ分割リクエストする共通ヘルパを提供。
+// -----------------------------------------------------------------------------
+
+const DEFAULT_BATCH_SIZE = 100;
+
+/**
+ * GET /versions?ids=[...] や GET /projects?ids=[...] を chunk 分割で呼ぶ。
+ * 各 batch のレスポンス配列を連結して返す。
+ *
+ * @param endpoint '/versions' or '/projects'
+ * @param ids       全 ID 配列 (100 個ずつに分割される)
+ * @param batchSize デフォルト 100
+ */
+export async function fetchModrinthBatch<T = any>(
+  endpoint: '/versions' | '/projects',
+  ids: string[],
+  batchSize: number = DEFAULT_BATCH_SIZE
+): Promise<T[]> {
+  if (!ids || ids.length === 0) return [];
+  const results: T[] = [];
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const chunk = ids.slice(i, i + batchSize);
+    const batch = await fetchModrinth<T[]>(endpoint, {
+      ids: JSON.stringify(chunk)
+    });
+    if (Array.isArray(batch)) results.push(...batch);
+  }
+  return results;
+}
+
+/**
+ * POST /version_files (SHA1 ハッシュ照合) を chunk 分割で呼ぶ。
+ * 各 batch の Record<sha1, ver> を merge して返す。
+ */
+export async function fetchModrinthVersionFilesBatch<T = any>(
+  hashes: string[],
+  algorithm: 'sha1' | 'sha512' = 'sha1',
+  batchSize: number = DEFAULT_BATCH_SIZE
+): Promise<Record<string, T>> {
+  if (!hashes || hashes.length === 0) return {};
+  const merged: Record<string, T> = {};
+  for (let i = 0; i < hashes.length; i += batchSize) {
+    const chunk = hashes.slice(i, i + batchSize);
+    const batch = await fetchModrinth<Record<string, T>>(
+      '/version_files',
+      {},
+      {
+        method: 'POST',
+        body: { hashes: chunk, algorithm },
+        noCache: true
+      }
+    );
+    if (batch && typeof batch === 'object') {
+      Object.assign(merged, batch);
+    }
+  }
+  return merged;
+}
+
 // 未使用インポート除去のため型を再エクスポート (呼び出し側の互換性維持)
 export type { ModrinthVersion, ModrinthProject };

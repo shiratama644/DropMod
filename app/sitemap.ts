@@ -16,8 +16,17 @@ import { fetchModrinthSearch } from '@/lib/modrinth/server';
 const PREBUILD_LIMIT = 100;
 
 function resolveBaseUrl(): string {
+  // M5-3 修正: new URL() で protocol 付き検証 → origin 取得。
+  // 以前は文字列 concat のみで NEXT_PUBLIC_SITE_URL=example.com (プロトコルなし) を
+  // 設定すると sitemap の URL が壊れていた。
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return explicit.replace(/\/$/, '');
+  if (explicit) {
+    try {
+      return new URL(explicit).origin;
+    } catch {
+      console.warn('[DropMod] NEXT_PUBLIC_SITE_URL が不正な URL:', explicit);
+    }
+  }
   const vercelUrl = process.env.VERCEL_URL;
   if (vercelUrl) return `https://${vercelUrl}`;
   return 'http://localhost:3000';

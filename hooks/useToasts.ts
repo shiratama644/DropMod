@@ -11,10 +11,13 @@ const MAX_VISIBLE_TOASTS = 5;
 export const useToasts = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = useCallback((message: string, type: 'info' | 'success' | 'warning' = 'info') => {
-    const id = 'toast-' + Date.now() + '-' + Math.random();
-    setToasts((prev) => [...prev, { id, message, type }].slice(-MAX_VISIBLE_TOASTS));
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+      const id = 'toast-' + Date.now() + '-' + Math.random();
+      setToasts((prev) => [...prev, { id, message, type }].slice(-MAX_VISIBLE_TOASTS));
+    },
+    []
+  );
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

@@ -82,7 +82,7 @@ export interface AppContextValue {
   handleDropZip: (e: React.DragEvent) => void;
 
   // Toast / Confirm
-  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void;
+  showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   confirm: (opts: ConfirmDialogOptions) => Promise<boolean>;
 
   // Modals (Header / Tab から呼び出し)

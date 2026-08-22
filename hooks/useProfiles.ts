@@ -11,7 +11,7 @@ type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 export const useProfiles = (
   theme: ThemeMode,
   setThemeState: (theme: ThemeMode) => void,
-  showToast: (message: string, type?: 'info' | 'success' | 'warning') => void,
+  showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void,
   confirmDialog: ConfirmFn
 ) => {
   const [currentProfileId, setCurrentProfileId] = useState<string>('default-profile');
@@ -176,17 +176,21 @@ export const useProfiles = (
   // 書き込むのは mcVersion / loader のみ (SSR 検索に必要な最小情報)。
   // 個人情報や大きなデータは含めない (cookie サイズ制限のため)。
   // ---------------------------------------------------------------------
+  // H5-3 修正: 以前は deps に `profiles` 全体を入れていたため、Mod 追加/削除の
+  // たびに cookie 書き込みが発火していた (cookie 内容は mcVersion/loader のみ
+  // で変化ないのに)。必要な mcVersion/loader をローカル変数に取り出し、
+  // deps を [hasHydrated, mcVersion, loader] のみに限定して過剰実行を防止。
+  const currentProfileForCookie = profiles.find((p) => p.id === currentProfileId) || profiles[0];
+  const cookieMcVersion = currentProfileForCookie?.mcVersion;
+  const cookieLoader = currentProfileForCookie?.loader;
   useEffect(() => {
     if (!hasHydrated) return;
-    const currentProfileForCookie =
-      profilesRef.current.find((p) => p.id === currentProfileIdRef.current) ||
-      profilesRef.current[0];
-    if (!currentProfileForCookie) return;
+    if (!cookieMcVersion || !cookieLoader) return;
     try {
       const value = encodeURIComponent(
         JSON.stringify({
-          mcVersion: currentProfileForCookie.mcVersion,
-          loader: currentProfileForCookie.loader
+          mcVersion: cookieMcVersion,
+          loader: cookieLoader
         })
       );
       // 1 年間有効、path=/ でサイト全体、SameSite=Lax (通常アクセスで送信)
@@ -194,7 +198,7 @@ export const useProfiles = (
     } catch (e) {
       console.warn('[DropMod] cookie 書き込みに失敗:', e);
     }
-  }, [hasHydrated, currentProfileId, profiles]);
+  }, [hasHydrated, cookieMcVersion, cookieLoader]);
 
   // ---------------------------------------------------------------------
   // profiles が空配列になった場合の安全弁

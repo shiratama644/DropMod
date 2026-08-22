@@ -61,7 +61,9 @@ function isAllowedIframeSrc(src: string | undefined): boolean {
   if (!src) return false;
   try {
     const u = new URL(src);
-    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    // L5-6 修正: HTTPS のみ許可 (http: は HTTPS ページで mixed content ブロック
+    // されるため実際は動かない → 明示的に拒否してセキュリティ姿勢を強化)
+    if (u.protocol !== 'https:') return false;
     return ALLOWED_IFRAME_HOSTS.has(u.host);
   } catch {
     return false;

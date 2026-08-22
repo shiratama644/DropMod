@@ -36,7 +36,9 @@ export interface ModrinthHit {
   display_categories: string[];
   versions: string[];
   downloads: number;
-  icon_url: string;
+  // H5-5 修正: Modrinth API はアイコン未設定プロジェクトを null で返すため
+  // null を許容する型に変更。呼び出し側で null チェック必須。
+  icon_url: string | null;
 }
 
 export interface ModrinthGalleryImage {
@@ -98,7 +100,9 @@ export interface ModrinthVersion {
 export interface Toast {
   id: string;
   message: string;
-  type: 'info' | 'success' | 'warning';
+  // M5-6 修正: 'error' 種別を追加 (削除失敗・致命的エラー時の赤系表示用)。
+  // 既存の 'warning' 系呼び出しに影響なし (追加のみ)。
+  type: 'info' | 'success' | 'warning' | 'error';
 }
 
 export interface DropdownOption {
@@ -112,4 +116,33 @@ export interface DependencyCheckData {
   optionalAvailable: Array<{ sourceMod: ModItem; targetProjectId: string }>;
   verifiedOK: Array<{ sourceMod: ModItem; message: string }>;
   depProjectMap: Map<string, ModrinthProject>;
+}
+
+// L5-1 修正: Modrinth API レスポンスの型を明示 (any を削減)
+// .mrpack (Modrinth Index) のフォーマット v1
+// https://docs.modrinth.com/docs/modpacks/format_definition/
+export interface MrpackFile {
+  path: string;
+  hashes?: { sha1?: string; sha512?: string };
+  env?: { client?: string; server?: string };
+  downloads?: string[];
+  fileSize?: number;
+}
+
+export interface MrpackDependencies {
+  minecraft?: string;
+  'fabric-loader'?: string;
+  forge?: string;
+  neoforge?: string;
+  'quilt-loader'?: string;
+}
+
+export interface MrpackIndex {
+  formatVersion: number;
+  game: 'minecraft';
+  versionId?: string;
+  name?: string;
+  summary?: string;
+  files?: MrpackFile[];
+  dependencies?: MrpackDependencies;
 }

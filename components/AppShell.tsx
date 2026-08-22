@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import type { TabName, ThemeMode } from '@/types';
 
@@ -50,14 +50,10 @@ const PATH_TO_TAB: Record<string, TabName> = {
   '/settings': 'settings'
 };
 
-const TAB_TO_PATH: Record<TabName, string> = {
-  home: '/',
-  mods: '/mods',
-  settings: '/settings'
-};
+// C5-2 修正: TAB_TO_PATH は <Link href> 化 + handleSwitchTab を scroll のみに
+// 変更したため未使用になった (削除)。旧: router.push(TAB_TO_PATH[tab]) 用途。
 
 export const AppShell: React.FC<Props> = ({ children }) => {
-  const router = useRouter();
   const pathname = usePathname();
 
   // ---------- Toast / Confirm ----------
@@ -191,6 +187,10 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     try {
       localStorage.removeItem('dropmod_state_v2');
       localStorage.removeItem('craftforge_state_v2');
+      // C5-3 修正: SSR プロファイル情報を保持する cookie も削除。
+      // これが無いと reload 後の SSR で旧プロファイル用 Mod カードが並び、
+      // ユーザーには「初期化バグ」に見える。
+      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax';
     } catch {
       /* ignore */
     }
@@ -209,18 +209,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     return PATH_TO_TAB[pathname ?? '/'] ?? 'home';
   }, [pathname]);
 
-  const handleSwitchTab = useCallback(
-    (tab: TabName) => {
-      const targetPath = TAB_TO_PATH[tab] ?? '/';
-      if (pathname === targetPath) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      router.push(targetPath);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-    [pathname, router]
-  );
+  // C5-2 修正: BottomNav/Header は <Link href> で遷移し、
+  // このハンドラはスクロールトップ処理のみを担当。
+  // 以前は router.push() を実行していたため <Link> の navigation と
+  // 二重遷移が発生していた (URL 履歴汚染 + RSC ペイロード fetch レース)。
+  //
+  // なお TAB_TO_PATH は「同じタブを再クリック時のパス判定」に依然使用するが、
+  // 実質的にはどのタブでも scrollTo するので現状は使わない。
+  const handleSwitchTab = useCallback((_tab: TabName) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // ---------- Provide context ----------
   const contextValue: AppContextValue = useMemo(

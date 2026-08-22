@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
 import { CATEGORIES } from '@/lib/constants/categories';
@@ -34,20 +33,18 @@ const SORT_OPTIONS = [
 ];
 
 interface Props {
-  /** SSR で取得した初期 24 件 (default profile 1.20.1 / Fabric ベース) */
+  /** SSR で取得した初期 24 件 (cookie ベースの実プロファイル、H4-5 で cookie 化済) */
   initialHits: ModrinthHit[];
-  /** SSR で取得した Minecraft バージョン一覧 */
-  initialMcVersions: string[];
   /** 初期絞り込みが hasMore かどうか (24 件以上ヒットしていれば true) */
   initialHasMore: boolean;
 }
+// M5-1 修正: initialMcVersions prop 削除。AppShell 側で fetchLatestMinecraftVersions を
+// Client fetch しており実質未使用 (隠しコメントでしか使われていなかった) だったため。
 
 export const HomeInteractive: React.FC<Props> = ({
   initialHits,
-  initialMcVersions,
   initialHasMore
 }) => {
-  const router = useRouter();
   const {
     currentProfile: profile,
     handleToggleMod,
@@ -212,15 +209,10 @@ export const HomeInteractive: React.FC<Props> = ({
     };
   }, []);
 
-  const handleOpenModDetail = useCallback(
-    (id: string) => {
-      router.push(`/mod/${id}`);
-    },
-    [router]
-  );
+  // C5-1 修正: ModCard に <Link> を直接持たせたため onOpenDetail は不要になった。
+  // 以前は Link と router.push の二重遷移が発生していた。
 
   const safeHits = Array.isArray(hits) ? hits : [];
-  const safeMcVersions = Array.isArray(initialMcVersions) ? initialMcVersions : [];
 
   // M4-1 修正: Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
   // Home 画面右側に emerald gradient で目立つ Mod カウント表示 + モバイル用
@@ -440,7 +432,6 @@ export const HomeInteractive: React.FC<Props> = ({
                 key={hit.project_id}
                 hit={hit}
                 profile={profile}
-                onOpenDetail={handleOpenModDetail}
                 onToggleMod={handleToggleMod}
               />
             ))}
@@ -484,11 +475,6 @@ export const HomeInteractive: React.FC<Props> = ({
             これ以上検索結果はありません
           </div>
         )}
-      </div>
-
-      {/* MC versions は Phase 5 で AppContext 側でも取得しているため参考情報 */}
-      <div hidden aria-hidden>
-        {safeMcVersions.length} MC versions preloaded from SSR
       </div>
     </section>
   );

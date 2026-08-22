@@ -59,10 +59,6 @@ build/
 *.pem
 .vscode-test
 
-# --- Next.js が自動生成する AI エージェント向けメモ (追跡不要) ---
-/AGENTS.md
-/CLAUDE.md
-
 # --- .archive/vite/ 内の pnpm 成果物 (退避元にあった node_modules 等) ---
 .archive/**/node_modules
 .archive/**/.next

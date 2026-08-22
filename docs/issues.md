@@ -1316,3 +1316,675 @@ Route (app)                  Revalidate  Expire
 ---
 
 *第4波は 2026-08-21 に計画書 (`docs/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/diff.md`)、実装の 3 者突き合わせで洗い出しました。特に diff.md でも触れられていなかった **C4-1 (USER_AGENT ハードコード)**、**H4-4 (useCallback 未使用 12 関数)**、**M4-6 (trailing slash)**、**M4-7 (dead code)**、**M4-8 (HEAD method)**、**L4-2 (テスト 0 件)** の 6 件は本波で新規発見しました。*
+
+---
+
+# 🌊 第5波: 第4波修正後の完全リサーチ (全 55 ファイル徹底検査)
+
+> **調査日:** 2026-08-22 (JST)
+> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `b6155f7` (第4波修正完了直後)
+> **調査手法:**
+> - 全 49 コードファイル (`app/`, `components/`, `hooks/`, `lib/`, `types.ts`) + 6 config ファイル計 55 個を精査
+> - `pnpm exec tsc --noEmit` → 0 エラー確認
+> - `pnpm build` → 成功 (Modrinth 到達不可の警告のみ)
+> - `pnpm audit` → 脆弱性 0 件
+> - `pnpm lint` → **失敗検出** (Next.js 16 で `next lint` 削除)
+> - useEffect deps / useCallback deps / stale closure / Rules of Hooks 全 30 個確認
+> - `<Link>` と `router.push` の二重遷移パターン検出
+> - Vite 版 tsconfig との比較 (target/lib/strict オプションの退行検出)
+> - Modrinth API 仕様 (レートリミット・endpoint 制限) との整合
+> - Cookie / LocalStorage / 環境変数の伝播経路の一貫性確認
+>
+> **本波の総件数:** 35 件 (Critical: 3 / High: 6 / Medium: 12 / Low: 14)
+>
+> **前提:** 第4波 20 件の修正がすべて完了した状態から、新たに発見された潜在バグとコード品質問題。ほとんどが「動作する Next.js アプリの中に隠れている微細な欠陥」。
+
+## 🎯 diff.md との整合性再チェック
+
+第4波修正 (`<Link>` 置換、`<Image>` 導入、cookie 対応、useCallback ラップ) により、diff.md の一部記述が **outdated** になっているかを確認:
+
+| diff.md の主張 | 実装 (第4波修正後) | 状態 |
+| --- | --- | --- |
+| §11.11 `<a href>` 数 = 0 | **5** (BottomNav 3 + Header 1 + Hero MOD 数の「確認」1) | ✅ 修正済 (diff.md 更新推奨) |
+| §11.6 `<title>` 重複バグ | 修正済 (`sodium \| DropMod`) | ✅ 修正済 |
+| §11.3 Hero「登録 MOD 数」パネル消失 | 復元済 | ✅ 修正済 |
+| §12.1 モーダル背景スクロールロック抜け | `usePathname()` 判定追加 | ✅ 修正済 |
+| §12.5 SSR ちらつき | cookie 化で解消 | ✅ 修正済 |
+| §12.13 error/loading 不在 | error.tsx/global-error.tsx/@modal loading.tsx 追加 | ✅ 修正済 |
+| §11.8 バンドルサイズ (Vite 980KB / Next 1457KB) | **未検証** (第4波追加コードでさらに増加している可能性) | ⚠️ 再測定要 |
+| §12.10 Vite `/sitemap.xml` は Home HTML | Vite 側の話なので変化なし | ✅ |
+
+**diff.md の §11 と §12 の「17項目 + 15項目 = 32項目」総括表**も 20 項目が「修正済」なので更新推奨。
+
+## 🚨 diff.md でも issues.md 第4波でも触れられていなかった新規発見
+
+以下は今回のリサーチで **初めて発見**された項目 (第4波修正時にも見落とし):
+
+---
+
+## 🔴 Critical (第5波、3件)
+
+### C5-1. ModCard の `<Link>` と `onClick={onOpenDetail}` の二重遷移バグ
+
+- **箇所:** `components/ModCard.tsx:54-58` + `components/HomeInteractive.tsx:214-219`
+- **症状:** ModCard は `<Link href={/mod/${slug || id}}>` に `onClick={() => onOpenDetail(hit.project_id)}` を併用。`onOpenDetail` は HomeInteractive で `router.push(/mod/${id})` を実行。
+  - **URL の値が不一致**: Link は `slug || id` 優先 (`sodium`), onOpenDetail は `project_id` 固定 (`AANobbMI`)
+  - **二重遷移**: `<Link>` のデフォルト navigation と `router.push()` が両方走る
+  - 結果: URL bar が一瞬 `/mod/AANobbMI` → `/mod/sodium` のように flip する可能性
+- **影響:**
+  - ブラウザ履歴に予期しないエントリが追加される
+  - `router.push()` の RSC ペイロード fetch が Link 遷移とレース状態
+  - Intercepting Route が意図通り動かないケース (2 番目の遷移で catchAll が発火する可能性)
+- **修正案 (2 択):**
+  1. **onClick を削除**: `<Link>` に任せ、`onOpenDetail` prop を廃止する (推奨、シンプル)
+  2. **onClick で preventDefault**: `<Link>` の遷移をキャンセルして `onOpenDetail` の router.push だけ実行
+- **推奨:** (1) `<Link href>` に統一。HomeInteractive の `handleOpenModDetail` 関数は不要 → 削除
+
+### C5-2. BottomNav/Header の `<Link>` + `onClick={handleSwitchTab}` 二重遷移バグ
+
+- **箇所:** `components/BottomNav.tsx:76` + `components/Header.tsx:63-64` + `components/AppShell.tsx:214-224`
+- **症状:** `<Link href="/mods">` の `onClick={() => handleTabClick('mods')}` が呼ばれ、`handleTabClick` が `onSwitchTab('mods')` を呼び、AppShell の `handleSwitchTab('mods')` が **`router.push('/mods')` を実行**。同時に Link 自身も navigation を発火 → **二重遷移**。
+- **影響:**
+  - C5-1 と同じ問題 (履歴汚染、RSC ペイロード fetch のレース)
+  - `window.scrollTo({ top: 0, behavior: 'smooth' })` は router.push の後に呼ばれるが、Link 遷移でも呼ばれるべき挙動 → 現状は onClick 側でのみ scroll
+- **修正案:**
+  - AppShell の `handleSwitchTab` から `router.push` を削除して **scroll のみを行う** ように変更
+  - Link href="/mods" のデフォルト遷移だけに任せる
+  - もしくは onClick を完全削除して Link に完全委譲 (scroll は別途 CSS `scroll-behavior: smooth` + Link の `scroll={true}` で対応可)
+- **推奨:** `handleSwitchTab` を `handleSwitchTabScroll` にリネームし scroll のみ担当、router.push は削除
+
+### C5-3. `handleResetData` が cookie を消さないため初期化しても SSR に旧プロファイルが残る
+
+- **箇所:** `components/AppShell.tsx:191-197`
+- **症状:** `handleResetData` が `localStorage.removeItem('dropmod_state_v2')` + `localStorage.removeItem('craftforge_state_v2')` を行うが、**`dropmod_active_profile` cookie を削除しない**。
+- **影響:** 
+  - データ初期化 → `window.location.reload()` → cookie は残っている
+  - `app/page.tsx` の Server Component が cookie から旧プロファイル (例: 1.21.4/Forge) の mcVersion/loader を読み取り、その条件で Modrinth fetch
+  - **初期化したはずが、SSR HTML には前のプロファイル用の Mod カードが並ぶ**
+  - Hydration 後に useProfiles が新規デフォルトプロファイル (1.20.1/Fabric) で cookie を上書きし、次回リロードで正しくなる
+  - 一時的に「初期化バグ」に見える
+- **修正:**
+  ```typescript
+  const handleResetData = useCallback(async () => {
+    const ok = await confirm({...});
+    if (!ok) return;
+    try {
+      localStorage.removeItem('dropmod_state_v2');
+      localStorage.removeItem('craftforge_state_v2');
+      // C5-3 修正: cookie も削除 (SSR プロファイル情報のリセット)
+      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax';
+    } catch { /* ignore */ }
+    window.location.reload();
+  }, [confirm]);
+  ```
+
+---
+
+## 🟠 High (第5波、6件)
+
+### H5-1. `pnpm lint` 実行不可 (Next.js 16 で `next lint` 削除)
+
+- **箇所:** `package.json:14`
+- **症状:** `"lint": "next lint"` を実行すると:
+  ```
+  $ next lint
+  Invalid project directory provided, no such directory: /home/user/DropMod/lint
+  [ELIFECYCLE] Command failed with exit code 1.
+  ```
+  Next.js 16 では `next lint` サブコマンドが削除され、ESLint は開発者側で明示 install + config が必要。
+- **影響:**
+  - CI で `pnpm lint` を組み込むと即座に失敗
+  - コードレビュー時に lint によるコード品質担保ができない
+  - `eslint-config-next` が dev deps に無く、Next 推奨 lint ルール (`@next/next/no-img-element` 等) が効かない
+- **修正:**
+  ```bash
+  pnpm add -D eslint@^9 eslint-config-next@^16
+  ```
+  そして `eslint.config.mjs` を新規作成:
+  ```javascript
+  import next from 'eslint-config-next';
+  export default [
+    ...next(),
+    { rules: { /* project-specific */ } }
+  ];
+  ```
+  `package.json` の script を `"lint": "eslint ."` に変更。
+
+### H5-2. `tsconfig.json` の `target: ES2017` が Vite 版から退行
+
+- **箇所:** `tsconfig.json:3`
+- **症状:** Vite 版は `target: ES2022`, Next 版は `target: ES2017` に**退行**。
+  - `noFallthroughCasesInSwitch: true` も Vite 版にあったが Next 版で消失
+  - Node.js 20+ は ES2022 を完全サポートしているため、`ES2017` にする必要なし
+- **影響:**
+  - 出力コードで `Object.hasOwn`, `Array.prototype.at`, top-level await などが polyfill/transpile される可能性 (バンドルサイズ増)
+  - switch 文の意図しない fallthrough が検出されない
+- **修正:**
+  ```json
+  {
+    "compilerOptions": {
+      "target": "ES2022",
+      "lib": ["ES2022", "dom", "dom.iterable"],
+      "noFallthroughCasesInSwitch": true,
+      // 他は現状維持
+    }
+  }
+  ```
+
+### H5-3. `useProfiles` の cookie 書き込み useEffect の deps に `profiles` 全体が入っており過剰再実行
+
+- **箇所:** `hooks/useProfiles.ts:197`
+- **症状:**
+  ```typescript
+  useEffect(() => {
+    // ... document.cookie = `dropmod_active_profile=${value}; ...`;
+  }, [hasHydrated, currentProfileId, profiles]);
+  ```
+  `profiles` は Mod 追加/削除 のたびに新参照になるため、cookie 書き込みが毎回発火する。しかし cookie 内容は `mcVersion` + `loader` のみで変化しないケースがほとんど。
+- **影響:**
+  - 無駄な `document.cookie` 書き込みが Mod 追加ごとに発火
+  - パフォーマンス影響は微小だが、開発時に「なぜこの effect が走ってるの?」の混乱要因
+- **修正:**
+  ```typescript
+  const currentProfile = profiles.find((p) => p.id === currentProfileId) || profiles[0];
+  useEffect(() => {
+    if (!hasHydrated || !currentProfile) return;
+    const value = encodeURIComponent(JSON.stringify({
+      mcVersion: currentProfile.mcVersion,
+      loader: currentProfile.loader
+    }));
+    document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax`;
+  }, [hasHydrated, currentProfile?.mcVersion, currentProfile?.loader]);
+  ```
+
+### H5-4. Modrinth `/versions` batch endpoint の 1000 個上限を無視
+
+- **箇所:** `hooks/useDependencyCheck.ts:33-37` + `components/DependencyCheckModal.tsx:117-119` + `hooks/useZipImport.ts:110-114`
+- **症状:** Modrinth API `/versions?ids=[]` / `/version_files` (POST) はリクエストあたり **hash / version_id 配列上限が 1000 個**。プロファイルが 1000+ Mod (稀だが可) の場合、これらの endpoint が **400 Bad Request** で失敗し、依存チェック・.jar ZIP インポートが機能不全になる。
+- **影響:**
+  - 大規模 ModPack (Modrinth の一部人気パックは 500+ Mod あり) 使用者が影響
+  - サイレント失敗 (catch でエラー吸収) → ユーザーには理由不明のバグとして映る
+- **修正:** 配列を 100 個ずつ chunk 分割してリクエストする:
+  ```typescript
+  async function fetchVersionsInBatches(ids: string[], batchSize = 100) {
+    const results: any[] = [];
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const chunk = ids.slice(i, i + batchSize);
+      const batch = await fetchModrinth<any[]>('/versions', {
+        ids: JSON.stringify(chunk)
+      });
+      results.push(...batch);
+    }
+    return results;
+  }
+  ```
+
+### H5-5. Modrinth API `icon_url` が null で返るケースを型が想定していない (`ModrinthHit.icon_url: string`)
+
+- **箇所:** `types.ts:39`
+- **症状:** Modrinth API の実際のレスポンスでは、アイコン未設定プロジェクトは `"icon_url": null` を返す。types.ts では:
+  ```typescript
+  export interface ModrinthHit {
+    icon_url: string;  // ← required 型
+  }
+  ```
+  `null` が入る可能性を型で表現していない。
+- **影響:**
+  - TypeScript strict mode でも `null` チェックが不要と誤認識される
+  - 実装で `hit.icon_url.startsWith(...)` などをしていれば実行時 `TypeError`
+  - `<Image src={hit.icon_url}>` に `null` が渡ると Next.js のエラー
+- **確認:** 現在の実装 `components/ModCard.tsx:31` は `if (hit.icon_url) { ... }` で null チェック済 → 実害は今のところ無いが型と実装のズレは危険
+- **修正:**
+  ```typescript
+  export interface ModrinthHit {
+    icon_url: string | null;
+  }
+  ```
+
+### H5-6. `.mrpack` インポートの並列実行防止機構が無い (二重取り込みで state 崩壊)
+
+- **箇所:** `hooks/useZipImport.ts:24, 173-192`
+- **症状:** `handleImportZipFile` は inFlight ガード無し。ユーザーが素早く 2 個の ZIP を drop すると:
+  1. Import A 開始 → showToast('ZIPファイルを解析中...')
+  2. Import B 開始 (並列で) → 同じ toast が 2 回発火
+  3. Import A 完了 → setPendingImportData(A のデータ)
+  4. Import B 完了 → setPendingImportData(B のデータ、A を上書き)
+  5. 新規プロファイルモーダル が B のみで開く (A は消失)
+- **影響:** 大量 mrpack を素早く drop したときに 1 つしか処理されない
+- **修正:**
+  ```typescript
+  const importInFlightRef = useRef<boolean>(false);
+  const handleImportZipFile = useCallback(async (file: File) => {
+    if (importInFlightRef.current) {
+      showToast('別の ZIP を処理中です。完了してから再試行してください', 'warning');
+      return;
+    }
+    importInFlightRef.current = true;
+    try {
+      // ... 既存のロジック
+    } finally {
+      importInFlightRef.current = false;
+    }
+  }, [...]);
+  ```
+
+---
+
+## 🟡 Medium (第5波、12件)
+
+### M5-1. `HomeInteractive.initialMcVersions` prop が実質未使用 (無駄な SSR fetch)
+
+- **箇所:** `components/HomeInteractive.tsx:47, 223, 491` + `app/page.tsx:65-67`
+- **症状:** `initialMcVersions` prop を受け取っているが、実際には隠しコメント (`{safeMcVersions.length} MC versions preloaded from SSR`) でしか使われない。UI では AppShell 側の `useEffect` が別途 `fetchLatestMinecraftVersions` を呼び出しており、**同じ endpoint を 2 回叩く**。
+- **影響:**
+  - Server → Client の props 転送に mcVersions 配列 (11 個の文字列) が含まれる → 無駄な bundle size
+  - AppShell が Client 側でも同じ endpoint を呼ぶ → 無駄な API リクエスト (キャッシュヒットするので影響小だが)
+- **修正:**
+  - `HomeInteractive` から `initialMcVersions` prop 削除
+  - `app/page.tsx` から `fetchLatestMinecraftVersions()` 呼び出し削除
+  - AppShell 側の Client fetch のみで統一
+
+### M5-2. `app/page.tsx` の `revalidate = 5400` が cookie 依存で無効化されている dead config
+
+- **箇所:** `app/page.tsx:23`
+- **症状:** `export const revalidate = 5400;` を宣言しているが、`cookies()` 使用により Next.js は **Dynamic Rendering** を選択 (build ログで `ƒ /` = Dynamic 確認済み)。`revalidate` は静的化されるページで意味を持つ設定なので、Dynamic では **完全に無視される**。
+- **影響:** コード読者が「90 分キャッシュされる」と誤解する
+- **修正:** コメント修正 or 定数削除
+  ```typescript
+  // 削除
+  // export const revalidate = 5400;
+  //
+  // 代わりに以下のコメントを追加:
+  // このページは cookies() を使うため Next.js が自動的に Dynamic Rendering に切り替える。
+  // fetch のキャッシュ (revalidate/tags) は fetchModrinthSearch 内で個別指定。
+  ```
+
+### M5-3. `app/sitemap.ts` の `NEXT_PUBLIC_SITE_URL` パース検証不足
+
+- **箇所:** `app/sitemap.ts:15-21` + `app/robots.ts:14-20`
+- **症状:** `resolveBaseUrl()` は文字列 concat のみ。ユーザーが `NEXT_PUBLIC_SITE_URL=example.com` (プロトコルなし) を設定すると、URL が `example.com/mod/xxx` になり **不正な sitemap** を出力。
+- **影響:** SEO クローラが不正 URL を index できず SEO 事故
+- **修正:**
+  ```typescript
+  function resolveBaseUrl(): string {
+    const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+    if (explicit) {
+      try {
+        return new URL(explicit).origin;  // ← プロトコル検証 + origin 取得
+      } catch {
+        console.warn('[DropMod] NEXT_PUBLIC_SITE_URL が不正:', explicit);
+      }
+    }
+    // ...
+  }
+  ```
+
+### M5-4. `NewProfileModal.handleSubmit` が `name.trim()` していない (EditProfileModal との一貫性欠如)
+
+- **箇所:** `components/NewProfileModal.tsx:81-86`
+- **症状:** `onCreate(name, version, loader, desc, initialImportData?.mods || [])` で **`name.trim()` していない**。EditProfileModal は `name.trim()` + `desc.trim()` を実行済。
+- **影響:**
+  - 空白のみのプロファイル名 (`"   "`) が保存できてしまう
+  - プロファイル一覧で空表示に見える
+- **修正:**
+  ```typescript
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      // showToast('プロファイル名を入力してください', 'warning'); ← show toast propで受け取り必要
+      return;
+    }
+    onCreate(trimmedName, version, loader, desc.trim(), initialImportData?.mods || []);
+    setName('');
+    setDesc('');
+    onClose();
+  };
+  ```
+
+### M5-5. `AppShell` の `handleImportZipInput` を Header に渡すが `useZipImport` の handleImportZipInput と関数名が同じで混乱
+
+- **箇所:** `components/AppShell.tsx:112-115, 306` + `hooks/useZipImport.ts`
+- **症状:** AppShell が `useZipImport` から `handleImportZipInput` を分割代入し、Header の `onImportZip` prop に渡す。命名の一貫性はあるが、AppShell 内で `handleImportZipInput` を再度 useCallback してもう一段ラップしていない。
+- **影響:** 実害無しだが、Header 側で「ファイル選択後に input.value をクリア」する処理と重複 (Header.tsx にも同じロジックあり)。DRY 違反。
+- **修正:** Header 内の input clear ロジック削除 (useZipImport 側で完結)
+
+### M5-6. `Toast` 型に `'error'` が無い (表現力不足)
+
+- **箇所:** `types.ts:98`
+- **症状:** `Toast.type: 'info' | 'success' | 'warning'` の 3 種のみ。削除失敗や致命的エラー時に赤系の 'error' toast が使えない。全て 'warning' で代用。
+- **影響:** UX 表現力不足。エラーと警告が視覚的に区別できない。
+- **修正:**
+  ```typescript
+  export interface Toast {
+    id: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+  }
+  ```
+  `ToastContainer.tsx` に赤系スタイル追加。
+
+### M5-7. `vercel.json` の `cleanUrls: true` が Next.js の URL 正規化と重複
+
+- **箇所:** `vercel.json:6-7`
+- **症状:** `cleanUrls: true` は Vercel が自動で `.html` を除去する機能 (静的 hosting 向け)。Next.js は自身で URL 正規化を行うため、この設定は Next.js プロジェクトでは冗長。
+  - `trailingSlash: false` も Next.js のデフォルトと同じで意味なし
+- **影響:** 実害無し。ただし設定が「不要なもの」を含んでいると保守性が落ちる。
+- **修正:**
+  ```json
+  {
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "nextjs",
+    "regions": ["hnd1"],
+    "github": { "silent": false }
+  }
+  ```
+
+### M5-8. `next.config.ts` の `optimizePackageImports` に無意味な `@fortawesome/fontawesome-free`
+
+- **箇所:** `next.config.ts:37`
+- **症状:** `@fortawesome/fontawesome-free` は **CSS-only ライブラリ** で JavaScript export が無い。`optimizePackageImports` は tree-shaking を促進するが JS import が無いパッケージには効果なし。
+- **影響:** 実害無しだが設定意図不明の cargo cult
+- **修正:**
+  ```typescript
+  optimizePackageImports: ['react-markdown']  // ← @fortawesome を削除
+  ```
+
+### M5-9. `README.md` と `docs/DEPLOY.md` の記述と実装 (H4-5 修正後) の齟齬
+
+- **箇所:** `README.md` (Home ISR 記述) + `docs/DEPLOY.md:104` (「Home では初期 24 件が SSR/ISR で流し込まれる」)
+- **症状:** H4-5 で Home が Dynamic Rendering (cookie 依存) に変わったが、ドキュメント側は「Home 初期 24 件は ISR (5 分キャッシュ)」の記述のまま。
+- **影響:**
+  - ドキュメント読者が「Home が静的化される」と誤解 → Vercel 側のキャッシュ挙動を誤診断
+  - Cookie 使用は Vercel の Edge Function/Serverless Function 課金対象になるため、コスト予測にも影響
+- **修正:** 
+  - README「Home 初期 24 件は ISR」→「Home 初期 24 件は cookie ベースの Dynamic SSR (プロファイル別)、Modrinth API 応答は fetch cache で 5 分間 revalidate」
+  - DEPLOY.md § LCP 説明も同様に更新
+
+### M5-10. `.env.example` に cookie 使用の説明が無い
+
+- **箇所:** `.env.example`
+- **症状:** H4-5 で `dropmod_active_profile` cookie を使い始めたが、`.env.example` は cookie 動作に言及なし。デバッグ時に「cookie がなぜ書き込まれてるのか」の疑問。
+- **影響:** 開発者オンボーディング時の混乱
+- **修正:** コメントで cookie 使用を明記
+
+### M5-11. `useDependencyCheck.ts` の `for (const dep of vData.dependencies)` inner ループの break 誤解
+
+- **箇所:** `hooks/useDependencyCheck.ts:52-71`
+- **症状:** inner ループ内の `if (warning) break` は inner ループしか抜けない。実装的には外側の `if (warning) break` で outer も break されるので機能は正しい。しかし読者が「dep が見つかったら inner から抜けて次の Mod へ」と誤読する可能性。
+- **影響:** 実害無し、可読性の問題
+- **修正:** コメント追加 or `label:` を使って明示
+  ```typescript
+  outer: for (const mod of profile.mods) {
+    for (const dep of vData.dependencies) {
+      if (...) { warning = true; break outer; }
+    }
+  }
+  ```
+
+### M5-12. `useZipExport` にアンマウント時 abort 用の useEffect cleanup が無い
+
+- **箇所:** `hooks/useZipExport.ts`
+- **症状:** ZIP DL 中にユーザーがページ遷移すると、`activeZipAbortRef.current.abort()` が呼ばれず fetch が継続。JSZip の圧縮も継続する可能性あり (メモリ / ネットワーク帯域の無駄)。
+- **影響:**
+  - 大規模 ZIP (100+ Mod) DL 中に他タブへ移動すると数十 MB のネットワーク帯域を消費し続ける
+  - beforeunload 警告も無いため「ZIP 生成中」に気付かず閉じる可能性
+- **修正:**
+  ```typescript
+  useEffect(() => {
+    return () => {
+      // アンマウント時に in-flight DL を abort
+      if (activeZipAbortRef.current) {
+        activeZipAbortRef.current.abort();
+        activeZipAbortRef.current = null;
+      }
+    };
+  }, []);
+  ```
+  さらに `beforeunload` イベントで「ZIP 生成中に閉じますか?」警告を追加すべき
+
+---
+
+## 🟢 Low (第5波、14件)
+
+### L5-1. 大量の `any` 型使用 (14 箇所以上)
+
+- **箇所:** `hooks/useProfiles.ts` (7), `hooks/useDependencyCheck.ts` (1), `hooks/useZipImport.ts` (2), `components/DependencyCheckModal.tsx` (2), `components/MarkdownRenderer.tsx` (2), `lib/modrinth/client.ts` (5)
+- **症状:** Modrinth API レスポンス型を厳密に定義せず `any` で受けている。TypeScript strict mode の型安全性を毀損。
+- **影響:** compile 時にプロパティ typo 検出不可、リファクタで壊れやすい
+- **修正:** `types.ts` に Modrinth API レスポンスの型を追加、`fetchModrinth<T>` の T を明示
+
+### L5-2. `useZipExport.CONCURRENCY = 4` がハードコード
+
+- **箇所:** `hooks/useZipExport.ts:7`
+- **症状:** 並列 DL 数が固定。プロファイルサイズや回線速度に応じて動的調整できない
+- **影響:** 実害小、パフォーマンスチューニング余地
+- **修正 (任意):** 環境変数 `NEXT_PUBLIC_ZIP_CONCURRENCY` で調整可能に
+
+### L5-3. `useDependencyCheck` の `versionMap.get(mod.selectedVersionId!)` の non-null assertion
+
+- **箇所:** `hooks/useDependencyCheck.ts:50`
+- **症状:** `mod.selectedVersionId` は optional (`string | undefined`) だが `!` で non-null 断言。`Map.get(undefined)` は undefined を返すだけなので実害無しだが型不安全。
+- **修正:**
+  ```typescript
+  const vData = mod.selectedVersionId ? versionMap.get(mod.selectedVersionId) : null;
+  ```
+
+### L5-4. `useModalA11y.uidCounter` は module-level global で HMR 時にリセット
+
+- **箇所:** `hooks/useModalA11y.ts:32`
+- **症状:** `let uidCounter = 0;` は module scope。Vite/webpack の HMR 時にリセットされる。dev のみの問題で production では発生しない
+- **影響:** dev モードでモーダルスタック識別衝突の可能性 (稀)
+- **修正 (任意):** `crypto.randomUUID()` で uid 生成
+
+### L5-5. Route Handler `/api/modrinth/[...path]` の `req.arrayBuffer()` コメント誤解
+
+- **箇所:** `app/api/modrinth/[...path]/route.ts:79-82`
+- **症状:** ファイルヘッダーコメントで「レスポンスは Web Streams でパススルー (arrayBuffer 全ロードしない)」と主張しているが、**リクエスト側は `arrayBuffer()` で全ロード**。読者が誤解する。
+- **影響:** 実害無し、ドキュメント整合性の問題
+- **修正:** コメント修正
+  ```typescript
+  // - リクエスト body は arrayBuffer に全ロード (fetch RequestInit 仕様上 stream body の
+  //   duplex 対応が Node.js undici で不安定なため)
+  // - レスポンスは Web Streams でパススルー (メモリ効率向上)
+  ```
+
+### L5-6. `iframe` allowlist で `http:` protocol も許可 (mixed content でブロック)
+
+- **箇所:** `components/MarkdownRenderer.tsx:64`
+- **症状:** `isAllowedIframeSrc` は `http:` と `https:` 両方許可。HTTPS ページ (Vercel Preview) 内の HTTP iframe はブラウザが mixed content でブロック → 実際は動かない
+- **影響:** 実害無し (ブロックされるだけ)、コードの意図と現実のズレ
+- **修正:**
+  ```typescript
+  if (u.protocol !== 'https:') return false;
+  ```
+
+### L5-7. `useConfirm` のアンマウント時に resolve されない Promise が残る
+
+- **箇所:** `hooks/useConfirm.ts:29-38`
+- **症状:** `resolveRef.current` が null にならないまま親コンポーネントが unmount すると、Promise は resolve されず宙吊り。GC 対象なので実害は小さいが、`await confirm(...)` を呼んだ関数が完了しない。
+- **影響:**
+  - メモリリーク (小)
+  - `useAppContext().confirm` を呼んで `await` している非同期関数が完了せず、後続処理が実行されない
+- **修正:** useEffect cleanup 追加
+  ```typescript
+  useEffect(() => {
+    return () => {
+      if (resolveRef.current) {
+        resolveRef.current(false);
+        resolveRef.current = null;
+      }
+    };
+  }, []);
+  ```
+
+### L5-8. `.gitignore` に `.turbo/` (Turbopack cache) の除外が無い
+
+- **箇所:** `.gitignore`
+- **症状:** Next.js 16 は Turbopack がデフォルト。`.turbo/` cache ディレクトリが生成される可能性 (通常は `.next/turbopack/` に統合)
+- **影響:** 現状は `.next/` 除外で includes されるので実害無し。将来 `.turbo/` が root に出るバージョンで問題化
+- **修正 (念のため):**
+  ```
+  # --- Turbopack cache ---
+  .turbo/
+  ```
+
+### L5-9. `next.config.ts` の `images.remotePatterns` が広すぎる (path 絞り込み無し)
+
+- **箇所:** `next.config.ts:17-20`
+- **症状:** `{ protocol: 'https', hostname: 'cdn.modrinth.com' }` は Modrinth CDN の全パスを許可。より安全な指定として `pathname: '/data/**'` (Modrinth の公式パス構造) で絞れる
+- **影響:** 実害小、セキュリティ強化余地
+- **修正:**
+  ```typescript
+  { protocol: 'https', hostname: 'cdn.modrinth.com', pathname: '/data/**' }
+  ```
+
+### L5-10. `sanitizeLoadedState` の `useCallback` 無し
+
+- **箇所:** `hooks/useProfiles.ts:68`
+- **症状:** `const sanitizeLoadedState = (raw: any) => {...};` は useEffect 内でしか使われないが useCallback 無し
+- **影響:** 実害無し (useEffect 内なので毎レンダー再作成しても Ref は変わらず)
+- **修正 (任意):** useCallback で包む or module-level 関数化 (state を参照しないので後者が良い)
+
+### L5-11. `Cookie` の `Secure` フラグ無し (dev では意味あり)
+
+- **箇所:** `hooks/useProfiles.ts:193`
+- **症状:** `document.cookie = 'dropmod_active_profile=...; path=/; max-age=31536000; SameSite=Lax'` に `Secure` フラグ無し。HTTPS 環境で明示的に Secure を付けるとより安全 (実際は Vercel が HTTPS 強制なので問題なし)
+- **影響:** dev (HTTP over localhost) でも cookie は送信される (localhost は Secure 要求から除外) → 実害無し
+- **修正 (任意):** 本番検出して `; Secure` を追加
+
+### L5-12. `TextEncoder` の代わりに Uint8Array 手動生成
+
+- **箇所:** `lib/utils/hash.ts:33`
+- **症状:** `Array.from(new Uint8Array(hashBuffer))` は問題なし、シンプルで読みやすい。今の実装で OK
+- **影響:** 無し (改善余地ですらない、リサーチノート)
+
+### L5-13. コード中 `Phase X` コメントが多数残存 (メンテコスト)
+
+- **箇所:** 全ての新規 Next.js コンポーネント/hook
+- **症状:** `// Phase 5 修正:` `// M4-1 修正:` などのコメントが大量。将来的に「どの Phase の話?」がわからなくなる
+- **影響:** 実害無し、可読性低下
+- **修正 (Phase 8 以降):** Phase 完了後にコメント整理
+
+### L5-14. `docs/diff.md` の集計が第4波修正後で outdated
+
+- **箇所:** `docs/diff.md` §11.11 (17 項目) + §12.15 (15 項目) + §1 サマリ
+- **症状:** 第4波で 20 項目が修正されたが diff.md には反映されていない。
+  - `<a href>` 数 = 0 → 5
+  - `<title>` 重複 → 修正済
+  - Hero「登録 MOD 数」 → 復元済
+  - ErrorBoundary → 移植済
+  - etc
+- **影響:** diff.md 読者が「これらは全部未対応の退行」と誤解
+- **修正:** diff.md §11.11 / §12.15 / §1 サマリテーブルに「修正済」列を追加、または「修正日 2026-08-22」の Note を追記
+
+---
+
+## 📊 第5波 集計サマリ
+
+| 重大度 | 件数 | 内訳 |
+| --- | ---: | --- |
+| 🔴 Critical | 3 | C5-1 (ModCard 二重遷移) / C5-2 (BottomNav 二重遷移) / C5-3 (Reset cookie 残存) |
+| 🟠 High | 6 | H5-1 (lint 不能) / H5-2 (tsconfig 退行) / H5-3 (cookie effect deps) / H5-4 (batch 1000上限) / H5-5 (icon_url型) / H5-6 (mrpack 二重取込) |
+| 🟡 Medium | 12 | M5-1〜M5-12 |
+| 🟢 Low | 14 | L5-1〜L5-14 |
+| **合計** | **35** | 新規発見バグ + ドキュメント整合性課題 |
+
+## 📊 総合集計 (第1波 〜 第5波)
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1波 (Vite バグ 一斉調査) | 4 | 7 | 11 | 10 | 32 | ✅ 全て修正済 (Vite 版) |
+| 第2波 (真っ暗の原因追跡) | 4 | 8 | 10 | 6 | 28 | ✅ 全て修正済 (Vite 版) |
+| 第3波 (追加ボタン無反応) | 4 | 3 | 3 | 0 | 10 | ✅ 全て修正済 (Vite 版) |
+| 第3.5波 (React error #310) | 1 | 0 | 0 | 0 | 1 | ✅ 修正済 (Vite 版) |
+| 第4波 (Next.js 移行後) | 2 | 6 | 8 | 8 | 24 | ✅ 20 修正済 / 4 判断留保 |
+| **第5波 (第4波後の完全再検査)** | **3** | **6** | **12** | **14** | **35** | ⏳ **要対応** |
+| **総合計** | **18** | **30** | **44** | **38** | **130** | 91 修正済 + 4 判断留保 + **35 新規** |
+
+## 🎯 修正推奨順序 (第5波)
+
+### 🔴 即時対応 (第4波 Critical 修正の副作用 — 本番デプロイ前)
+
+1. **C5-1** ModCard の二重遷移 → HomeInteractive の handleOpenModDetail 削除 (5 分)
+2. **C5-2** BottomNav/Header の二重遷移 → AppShell.handleSwitchTab から router.push 削除 (10 分)
+3. **C5-3** ResetData で cookie 残存 → cookie 削除追加 (2 分)
+
+### 🟠 短期対応
+
+4. **H5-1** ESLint 導入 (`eslint`, `eslint-config-next`, `eslint.config.mjs`) (30 分)
+5. **H5-2** tsconfig 復元 (target ES2022, noFallthroughCasesInSwitch) (2 分)
+6. **H5-3** cookie effect deps 最適化 (5 分)
+7. **H5-4** Modrinth batch endpoint chunk 分割 (30 分)
+8. **H5-5** ModrinthHit.icon_url 型 null 対応 (2 分)
+9. **H5-6** mrpack import inFlight ガード (10 分)
+
+### 🟡 中期対応
+
+10. **M5-1** initialMcVersions prop 削除 (10 分)
+11. **M5-2** app/page.tsx revalidate dead config 削除 (2 分)
+12. **M5-3** sitemap の URL 検証強化 (5 分)
+13. **M5-4** NewProfileModal name.trim() (2 分)
+14. **M5-6** Toast type に 'error' 追加 (10 分)
+15. **M5-7** vercel.json 冗長設定削除 (2 分)
+16. **M5-8** optimizePackageImports から fontawesome 削除 (2 分)
+17. **M5-9** README/DEPLOY.md の ISR 記述を Dynamic に更新 (10 分)
+18. **M5-10** .env.example に cookie 説明追加 (5 分)
+19. **M5-11** useDependencyCheck の break コメント (2 分)
+20. **M5-12** useZipExport アンマウント時 abort (10 分)
+
+### 🟢 長期対応
+
+21. **L5-1** any 型を Modrinth 型に置換 (半日)
+22. **L5-7** useConfirm アンマウント cleanup (5 分)
+23. **L5-8** .gitignore に .turbo/ 追加 (2 分)
+24. **L5-9** remotePatterns pathname 絞り込み (2 分)
+25. **L5-14** diff.md 更新 (30 分)
+26. その他 L5-2/L5-3/L5-4/L5-5/L5-6/L5-10/L5-11/L5-12/L5-13 は任意
+
+## 📚 特筆事項
+
+### diff.md 未指摘の新規発見 (issues.md 第5波で初検出)
+
+以下 20 件は diff.md でも issues.md 第4波でも触れられていなかった:
+
+- **C5-1** ModCard 二重遷移 (最重要)
+- **C5-2** BottomNav/Header 二重遷移 (最重要)
+- **C5-3** Reset で cookie 残存
+- **H5-1** ESLint 不能
+- **H5-2** tsconfig 退行
+- **H5-3** cookie effect 過剰実行
+- **H5-4** batch 1000 上限
+- **H5-5** ModrinthHit.icon_url 型
+- **H5-6** mrpack 二重取り込み
+- **M5-1** initialMcVersions dead prop
+- **M5-2** revalidate dead config
+- **M5-3** sitemap URL 検証不足
+- **M5-4** NewProfileModal.trim
+- **M5-6** Toast 'error' 型不足
+- **M5-7** vercel.json 冗長
+- **M5-8** optimizePackageImports 無効エントリ
+- **M5-11** for loop break 誤解
+- **M5-12** useZipExport アンマウント
+- **L5-3** non-null assertion
+- **L5-4** uidCounter global
+
+### diff.md の記述が第4波修正で outdated になった項目
+
+- §11.11 `<a href>` = 0 → **5**
+- §11.6 `<title>` 重複 → **修正済**
+- §11.3 Hero「登録 MOD 数」パネル消失 → **復元済**
+- §11.5 ModDetailModal フッター → variant 別ボタン挙動は現状維持
+- §12.1 モーダル背景スクロールロック → **修正済**
+- §12.2 `<a href>` = 0 → **5 に増加**
+- §12.4 `profile?.name || '未設定'` 消失 → **復元済**
+- §12.5 SSR ちらつき → **cookie 化で解消**
+- §12.6 `<Image>` 未使用 → **7 箇所 Image 化 (残 2 は Markdown/プレビュー)**
+- §12.13 loading/error boundary 不在 → **error.tsx/global-error.tsx/@modal loading.tsx 追加**
+- §12.14 theme FOUC → **inline script で対策**
+
+**推奨:** 第5波修正完了後に diff.md にも「修正済」表記を反映
+
+---
+
+*第5波は 2026-08-22 に全 55 ファイル (49 コード + 6 config) を精査し、diff.md との整合性も再確認した結果です。第4波では見落とされていた「Critical: 二重遷移 3 件」「High: ESLint 不能・tsconfig 退行 2 件」「High: Modrinth batch 上限 1 件」等、実装は動くが本番運用で顕在化する可能性がある潜在バグを新規発見しました。特に **C5-1, C5-2** は「動くが URL 履歴とレースが起きる」タイプで、動作テストでは気付きにくい重要バグです。*

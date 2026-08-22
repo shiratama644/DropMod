@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem, MrpackIndex } from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
@@ -9,6 +9,7 @@ import {
   fetchModrinthVersionFilesBatch
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
+import { useZipImportStore } from '@/lib/store/zipImport';
 
 export const useZipImport = (
   setProfiles: React.Dispatch<React.SetStateAction<Profile[]>>,
@@ -16,12 +17,11 @@ export const useZipImport = (
   setIsNewProfileModalOpen: (open: boolean) => void,
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
 ) => {
-  const [pendingImportData, setPendingImportData] = useState<{
-    name: string;
-    mods: ModItem[];
-    mcVersion?: string;
-    loader?: string;
-  } | null>(null);
+  // 9-B.2: pendingImportData を Zustand store 経由に。
+  //   NewProfileModal など下流コンポーネントが Context 経由でなく直接
+  //   useZipImportStore((s) => s.pendingImportData) で購読できるようにする。
+  const pendingImportData = useZipImportStore((s) => s.pendingImportData);
+  const setPendingImportData = useZipImportStore((s) => s.setPendingImportData);
 
   // 二重取り込み防止 (素早く複数 ZIP を drop した際、後勝ちで
   // 前の pendingImportData が消失するバグ)
@@ -196,7 +196,7 @@ export const useZipImport = (
       // inFlight ガード解除 (成功・失敗どちらでも)
       importInFlightRef.current = false;
     }
-  }, [setProfiles, setCurrentProfileId, setIsNewProfileModalOpen, showToast]);
+  }, [setProfiles, setCurrentProfileId, setIsNewProfileModalOpen, showToast, setPendingImportData]);
 
   const handleImportZipInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

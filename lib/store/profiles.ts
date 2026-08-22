@@ -17,8 +17,12 @@
 'use client';
 
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import type { Profile, ModItem, ThemeMode } from '@/types';
+
+// Sub-Phase 8-E (E-8): Zustand DevTools を dev モードのみ有効化。
+// production では devtools ラップを外して zero-cost にする。
+const enableDevtools = process.env.NODE_ENV === 'development';
 
 // ============================================================================
 // State と Actions の型
@@ -91,9 +95,11 @@ const DEFAULT_PROFILE: Profile = {
 /**
  * subscribeWithSelector で `useProfilesStore.subscribe(selector, listener)` を使えるように。
  * これは Dexie 永続化の useEffect deps 最適化に将来使える (Phase 9 検討)。
+ *
+ * dev モードでは devtools middleware も適用され、Redux DevTools 拡張から state の
+ * 履歴・タイムトラベルデバッグが可能に。
  */
-export const useProfilesStore = create<ProfilesState>()(
-  subscribeWithSelector((set, _get) => ({
+const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set, _get) => ({
     // ---- Initial state ----
     profiles: [DEFAULT_PROFILE],
     currentProfileId: DEFAULT_PROFILE.id,
@@ -205,8 +211,16 @@ export const useProfilesStore = create<ProfilesState>()(
       });
       return ok;
     }
-  }))
-);
+});
+
+// middleware chain:
+//   enableDevtools ? devtools(subscribeWithSelector(stateCreator)) : subscribeWithSelector(stateCreator)
+// devtools を外側に置くのは、内側の subscribe/set 呼び出しをすべて DevTools に流すため。
+export const useProfilesStore = enableDevtools
+  ? create<ProfilesState>()(
+      devtools(subscribeWithSelector(stateCreator), { name: 'DropMod/profiles' })
+    )
+  : create<ProfilesState>()(subscribeWithSelector(stateCreator));
 
 // ============================================================================
 // Selector helpers (再レンダー最適化用)

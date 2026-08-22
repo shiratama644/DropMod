@@ -32,17 +32,38 @@ const securityHeaders = [
   // Cross-Origin-Opener-Policy:
   //   Spectre 系 side-channel 攻撃対策として popup を同一 origin に限定。
   //   本アプリは window.open で外部 URL を新規タブに開くが noopener 付きなので影響なし。
-  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  // Sub-Phase 8-E (E-3): Content-Security-Policy を Report-Only モードで導入。
+  //   - まず違反レポートを見て何が壊れるか把握し、Phase 9 で enforce へ切り替える段階策
+  //   - Markdown 内の任意 iframe (YouTube / Vimeo / Twitch / Streamable) と Modrinth CDN 画像は許可
+  //   - script-src は 'self' + 'unsafe-inline' (theme init script) を許容
+  //   - style-src も 'unsafe-inline' 許容 (Tailwind JIT が inline を使うため)
+  //   - font-src はフォント配信元を明示 (@fontsource)
+  //   - connect-src は Modrinth API と Vercel の内部通信を許可
+  //   - report-uri は現時点未設定 (Vercel deployment 後にコンソールで確認可能)
+  {
+    key: 'Content-Security-Policy-Report-Only',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://cdn.modrinth.com https://raw.githubusercontent.com https://avatars.githubusercontent.com",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.modrinth.com https://cdn.modrinth.com",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://player.twitch.tv https://clips.twitch.tv https://streamable.com",
+      "media-src 'self' https://cdn.modrinth.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+      "upgrade-insecure-requests"
+    ].join('; ')
+  }
   // 注: Cross-Origin-Resource-Policy は当初 same-origin で全ページに付けようとしたが、
   //     favicon / icon.png / apple-icon.png / og:image などの静的リソースが Discord や
   //     Twitter などの外部 SNS からフェッチされる際にブロックされる副作用があるため、
   //     画像リソースには別途 headers() で cross-origin を付ける方式に変更。
   //     (下の headers() 関数を参照)
-  //
-  // Content-Security-Policy は Markdown 内の任意 iframe (YouTube/Vimeo/Twitch/Streamable)
-  // + rehype-raw の <div>/<span>/<a> 等を許容する必要があり、慎重な設計が必要。
-  // rehype-sanitize 側の allowlist に任せ、CSP は Report-Only モードから将来
-  // 導入検討する (現時点では未設定)。
   //
   // Cross-Origin-Embedder-Policy: require-corp は Modrinth CDN / GitHub raw の
   // 画像が CORP ヘッダを返さない限り読み込めなくなるため未設定。

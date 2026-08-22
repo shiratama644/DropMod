@@ -132,6 +132,11 @@ try {
   return (
     <html lang="ja" className="dark" suppressHydrationWarning>
       <head>
+        {/* Sub-Phase 8-E (E-6): Modrinth CDN と API への preconnect で
+            初回リクエスト時の DNS + TLS ハンドシェイクを前倒し。
+            Mod アイコン画像 (cdn.modrinth.com/data/...) の LCP 短縮に寄与。 */}
+        <link rel="preconnect" href="https://cdn.modrinth.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.modrinth.com" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">

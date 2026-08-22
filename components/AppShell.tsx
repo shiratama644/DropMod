@@ -26,6 +26,7 @@ import { ZipProgressModal } from './ZipProgressModal';
 import { AppContextProvider, type AppContextValue } from './AppContext';
 import { Providers as QueryProviders } from './Providers';
 import { OfflineBanner } from './OfflineBanner';
+import { WebVitalsReporter } from './WebVitalsReporter';
 
 // ============================================================================
 // AppShell
@@ -315,6 +316,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   return (
     <QueryProviders>
       <AppContextProvider value={contextValue}>
+        <WebVitalsReporter />
         <OfflineBanner />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 

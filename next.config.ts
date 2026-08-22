@@ -32,10 +32,13 @@ const securityHeaders = [
   // L6-1 追加: Cross-Origin-Opener-Policy
   //   Spectre 系 side-channel 攻撃対策として popup を同一 origin に限定。
   //   本アプリは window.open で外部 URL を新規タブに開くが noopener 付きなので影響なし。
-  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-  // L6-1 追加: Cross-Origin-Resource-Policy
-  //   自 origin のリソースを他 origin から埋め込み参照されないように制限。
-  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' }
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
+  // 注: Cross-Origin-Resource-Policy は当初 same-origin で全ページに付けようとしたが、
+  //     favicon / icon.png / apple-icon.png / og:image などの静的リソースが Discord や
+  //     Twitter などの外部 SNS からフェッチされる際にブロックされる副作用があるため、
+  //     画像リソースには別途 headers() で cross-origin を付ける方式に変更。
+  //     (下の headers() 関数を参照)
+  //
   // Content-Security-Policy は Markdown 内の任意 iframe (YouTube/Vimeo/Twitch/Streamable)
   // + rehype-raw の <div>/<span>/<a> 等を許容する必要があり、慎重な設計が必要。
   // rehype-sanitize 側の allowlist に任せ、CSP は Phase 8 以降で Report-Only モードから
@@ -43,6 +46,11 @@ const securityHeaders = [
   //
   // Cross-Origin-Embedder-Policy: require-corp は Modrinth CDN / GitHub raw の
   // 画像が CORP ヘッダを返さない限り読み込めなくなるため未設定。
+];
+
+// 画像・静的アイコン向けの CORP: cross-origin (SNS の og:image プレビュー等で必要)
+const imageCorsHeaders = [
+  { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
 ];
 
 const nextConfig: NextConfig = {
@@ -67,6 +75,12 @@ const nextConfig: NextConfig = {
         // 全ページに標準セキュリティヘッダを付与
         source: '/:path*',
         headers: securityHeaders
+      },
+      {
+        // 画像・アイコン・favicon などの静的リソースは SNS プレビュー等
+        // クロスオリジン参照を許可
+        source: '/:path*.(png|jpg|jpeg|gif|webp|avif|svg|ico|webmanifest)',
+        headers: imageCorsHeaders
       }
     ];
   }

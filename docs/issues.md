@@ -2583,3 +2583,46 @@ Cross-Origin-Resource-Policy: same-origin                                 ← �
 | **総合計** | **19** | **32** | **48** | **41** | **140** | **131 修正 + 9 判断留保** |
 
 *第6波修正完了時点で判断留保は依然 9 件のみ (M4-5, L4-7, M5-5, L5-2, L5-4, L5-10, L5-11, L5-12, L5-13)、いずれも実害なしを再確認済み。*
+
+---
+
+# 🔬 第6波修正後の追加検証で発見したバグ
+
+修正の副作用を徹底検証した結果、以下 **2 件の追加バグ** を検出し、同じコミットで修正しました。
+
+## 🟠 追加バグ 1: `Cross-Origin-Resource-Policy: same-origin` を画像にも付けると SNS の og:image プレビューが壊れる
+
+- **原因:** L6-1 の修正で全ページ・全リソースに `Cross-Origin-Resource-Policy: same-origin` を適用してしまうと、Discord / Twitter (X) / Slack などの外部 SNS が og:image プレビュー用に `/icon.png` や動的 OG 画像をフェッチする際、CORP ヘッダによりブロックされる。
+- **影響:** SNS 上に DropMod のリンクを貼ったとき、アイコン画像が表示されなくなる。
+- **修正:**
+  ```typescript
+  // HTML ドキュメントには CORP を付けない (デフォルト = 同一 origin only)
+  // 画像・favicon・manifest には cross-origin を明示的に付与
+  {
+    source: '/:path*.(png|jpg|jpeg|gif|webp|avif|svg|ico|webmanifest)',
+    headers: [{ key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }]
+  }
+  ```
+- **検証:**
+  - `/` (HTML) には CORP ヘッダなし ✅
+  - `/icon.png`, `/apple-icon.png`, `/favicon.ico`, `/manifest.webmanifest` には `Cross-Origin-Resource-Policy: cross-origin` ✅
+
+## 🟢 追加バグ 2: README.md に `Next.js 16.3.1` の古い記述
+
+- **原因:** H6-2 で `next` を 16.3.2 に更新した際、README.md の技術スタック表の記述を更新し忘れていた。
+- **修正:** `README.md:21` を `Next.js 16.3.2` に更新。
+
+## 追加検証項目 (副作用チェック完了)
+
+以下の観点で修正後の副作用を確認し、全て問題なしを確認:
+
+- ✅ `rehype-sanitize` の `defaultSchema.attributes.a` に `ariaDescribedBy`, `ariaLabel`, `ariaLabelledBy`, `dataFootnoteBackref` などが実在することを確認 → L6-2 修正の効果を確認
+- ✅ 全ページ HTTP status (200/404) 正常
+- ✅ `<a href>` 数: Home = 5, Mod 詳細 = 4 (第5波時点と同じ、C6-1 のシフトで h1/h2 の中身は同じ)
+- ✅ `<title>`: Home = `DropMod - Minecraft Mod Downloader`, Mod = `sodium | DropMod` (重複なし)
+- ✅ 全ページ h1 数 = 1 (Header のみ、Markdown 内は h2 以降に降格)
+- ✅ manifest.webmanifest の Content-Type = `application/manifest+json`
+- ✅ `SEARCH_LIMIT` は 3 箇所 (`lib/constants/search.ts` 定義 + `app/page.tsx` / `components/HomeInteractive.tsx` の import) で完全同期
+- ✅ `noUncheckedIndexedAccess` 有効化で他ファイル (ModCard, ModDetailModalShell, ModsPageClient, CustomDropdown, useProfiles など) の `[0]` / `[i]` アクセスは既にガード or フォールバック済みで再検証、追加型エラーなし
+- ✅ Vite 版 (`.archive/vite/`) は独立 package.json のため一切影響なし
+- ✅ `pnpm build` = 2 回とも Compiled successfully in <1s

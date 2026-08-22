@@ -18,7 +18,7 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 
 | 層 | 使用技術 |
 | --- | --- |
-| フレームワーク | Next.js 16.3.1 (App Router, Turbopack, Server Components + Route Handlers) |
+| フレームワーク | Next.js 16.3.2 (App Router, Turbopack, Server Components + Route Handlers) |
 | UI | React 19.2.8, Tailwind CSS 4.3, FontAwesome, `@fontsource/inter` + `@fontsource/jetbrains-mono` |
 | 型 | TypeScript 5 (strict) |
 | データ | Modrinth API v2 直叩き (Server 側 ISR キャッシュ + Client 側 LRU/TTL キャッシュ) |

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem } from '@/types';
+import { useZipExportStore } from '@/lib/store/zipExport';
 
 // ==========================================
 // 定数
@@ -208,14 +209,26 @@ export const useZipExport = (
   currentProfile: Profile,
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
 ) => {
-  // 5つの状態を1つのオブジェクトにまとめ、更新の整合性を担保
-  const [zipState, setZipState] = useState<ZipProgressState>(INITIAL_STATE);
-  const activeZipAbortRef = useRef<AbortController | null>(null);
+  // 9-B.1: 状態は Zustand store (useZipExportStore) に集約。
+  //   AppShell から SettingsPageClient への props 渡し (Server Component 境界超え)
+  //   を避けるため、下流コンポーネントが直接 useZipExportStore((s) => s.zipState) で
+  //   購読できるようにする。
+  //   AbortController だけは hook 内 Ref に保持 (シリアライズ不能、hook ライフサイクル依存)。
+  const zipState = useZipExportStore((s) => s.zipState);
+  const updateZipState = useZipExportStore((s) => s.updateZipState);
+  const setZipState = useCallback(
+    (nextOrUpdater: ZipProgressState | ((prev: ZipProgressState) => ZipProgressState)) => {
+      if (typeof nextOrUpdater === 'function') {
+        const prev = useZipExportStore.getState().zipState;
+        useZipExportStore.setState({ zipState: nextOrUpdater(prev) });
+      } else {
+        useZipExportStore.setState({ zipState: nextOrUpdater });
+      }
+    },
+    []
+  );
 
-  // 部分的な状態更新用ヘルパー
-  const updateZipState = useCallback((patch: Partial<ZipProgressState>) => {
-    setZipState((prev) => ({ ...prev, ...patch }));
-  }, []);
+  const activeZipAbortRef = useRef<AbortController | null>(null);
 
   const handleCancelZip = useCallback(() => {
     const wasActive = activeZipAbortRef.current !== null;
@@ -412,7 +425,7 @@ export const useZipExport = (
         activeZipAbortRef.current = null;
       }
     }
-  }, [currentProfile, showToast, updateZipState]);
+  }, [currentProfile, showToast, updateZipState, setZipState]);
 
   return {
     isZipModalOpen: zipState.isOpen,

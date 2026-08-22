@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
 import { CATEGORIES } from '@/lib/constants/categories';
 import { SEARCH_LIMIT } from '@/lib/constants/search';
+import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
 import { useAppContext } from './AppContext';
@@ -53,12 +55,16 @@ export const HomeInteractive: React.FC<Props> = ({
     openDependencyCheckModal
   } = useAppContext();
 
-  // 表示状態
-  const [hits, setHits] = useState<ModrinthHit[]>(initialHits);
-  const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
-  const [offset, setOffset] = useState<number>(initialHits.length);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // ---------------------------------------------------------------------
+  // Sub-Phase 8-B: useInfiniteQuery で検索を管理
+  //
+  //   - queryKey にフィルタ条件をすべて含めるため、フィルタ変更 = 別クエリ扱い
+  //     → TanStack Query が自動キャッシュ・自動 abort・重複 dedupe
+  //   - initialData で SSR 由来の initialHits を最初のページとして提供
+  //     (これにより初回描画時は fetch を発火せず、キャッシュヒット動作)
+  //   - Dexie persister が apiCache テーブルに 24h キャッシュを永続化
+  //     → オフライン再訪でも既読結果が表示される
+  // ---------------------------------------------------------------------
 
   // 絞り込み state
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -66,117 +72,116 @@ export const HomeInteractive: React.FC<Props> = ({
   const [searchInput, setSearchInput] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
 
-  const activeAbortRef = useRef<AbortController | null>(null);
-  const requestSeqRef = useRef<number>(0);
-  const isLoadingRef = useRef<boolean>(false);
-  const isFirstRunRef = useRef<boolean>(true);
-
-  const executeSearch = useCallback(
-    async (append: boolean, targetOffset: number) => {
-      if (append) {
-        if (isLoadingRef.current) return;
-      } else if (activeAbortRef.current) {
-        activeAbortRef.current.abort();
-      }
-
-      const mySeq = ++requestSeqRef.current;
-      const controller = new AbortController();
-      activeAbortRef.current = controller;
-
-      isLoadingRef.current = true;
-      setIsLoading(true);
-      setSearchError(null);
-
-      let indexParam = 'downloads';
-      if (sortBy === 'relevance') indexParam = 'relevance';
-      if (sortBy === 'updated') indexParam = 'updated';
-      if (sortBy === 'newest') indexParam = 'newest';
-
-      const facets: string[][] = [['project_type:mod']];
-      if (profile.mcVersion) facets.push([`versions:${profile.mcVersion}`]);
-      if (profile.loader) facets.push([`categories:${profile.loader.toLowerCase()}`]);
-      if (selectedCategory && selectedCategory !== 'All') {
-        facets.push([`categories:${selectedCategory}`]);
-      }
-
-      try {
-        const data = await fetchModrinth<{ hits: ModrinthHit[] }>(
-          '/search',
-          {
-            query: debouncedQuery.trim(),
-            facets: JSON.stringify(facets),
-            index: indexParam,
-            limit: SEARCH_LIMIT,
-            offset: targetOffset
-          },
-          { signal: controller.signal }
-        );
-
-        if (mySeq !== requestSeqRef.current) return;
-
-        isLoadingRef.current = false;
-        setIsLoading(false);
-
-        if (data && Array.isArray(data.hits)) {
-          setHasMore(data.hits.length >= SEARCH_LIMIT);
-          setOffset(targetOffset + data.hits.length);
-          if (append) {
-            setHits((prev) => {
-              const existingIds = new Set(prev.map((h) => h.project_id));
-              const uniqueNew = data.hits.filter(
-                (h) => h && h.project_id && !existingIds.has(h.project_id)
-              );
-              return [...prev, ...uniqueNew];
-            });
-          } else {
-            const seen = new Set<string>();
-            const uniq = data.hits.filter((h) => {
-              if (!h || !h.project_id) return false;
-              if (seen.has(h.project_id)) return false;
-              seen.add(h.project_id);
-              return true;
-            });
-            setHits(uniq);
-          }
-        } else {
-          if (!append) setHits([]);
-          setHasMore(false);
-        }
-      } catch (e: unknown) {
-        if (e instanceof Error && e.name === 'AbortError') return;
-        if (mySeq !== requestSeqRef.current) return;
-        isLoadingRef.current = false;
-        setIsLoading(false);
-        if (!append) {
-          setHits([]);
-          setHasMore(false);
-        }
-        setSearchError(
-          e instanceof Error ? e.message : 'Modrinthからのデータ取得に失敗しました'
-        );
-      }
-    },
-    [profile.mcVersion, profile.loader, selectedCategory, sortBy, debouncedQuery]
-  );
-
-  const executeSearchRef = useRef(executeSearch);
-  executeSearchRef.current = executeSearch;
-
-  // debounce
+  // debounce (350ms)
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchInput), 350);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  useEffect(() => {
-    if (isFirstRunRef.current) {
-      isFirstRunRef.current = false;
-      return;
+  // 現在のフィルタから canonical query params を組み立て
+  const searchParams: SearchQueryParams = useMemo(
+    () => ({
+      query: debouncedQuery,
+      mcVersion: profile.mcVersion,
+      loader: profile.loader,
+      category: selectedCategory,
+      sort: sortBy as SearchQueryParams['sort']
+    }),
+    [debouncedQuery, profile.mcVersion, profile.loader, selectedCategory, sortBy]
+  );
+
+  // "初期フィルタ" (SSR の initialHits に対応する canonical params)
+  // 初期フィルタと一致する場合のみ initialData を使う
+  const initialSearchParams: SearchQueryParams = useMemo(
+    () => ({
+      query: '',
+      mcVersion: profile.mcVersion,
+      loader: profile.loader,
+      category: 'All',
+      sort: 'popular'
+    }),
+    // profile を意図的に依存に含めず、SSR 時点のスナップショット固定にしたい所だが
+    // profile が hydration 完了で変わるとキーが変わるので依存に含める
+    [profile.mcVersion, profile.loader]
+  );
+  const initialMatches =
+    searchParams.query === initialSearchParams.query &&
+    searchParams.category === initialSearchParams.category &&
+    searchParams.sort === initialSearchParams.sort &&
+    searchParams.mcVersion === initialSearchParams.mcVersion &&
+    searchParams.loader === initialSearchParams.loader;
+
+  const query = useInfiniteQuery({
+    queryKey: queryKeys.search.of(searchParams),
+    queryFn: async ({ pageParam, signal }) => {
+      const facets: string[][] = [['project_type:mod']];
+      if (searchParams.mcVersion) facets.push([`versions:${searchParams.mcVersion}`]);
+      if (searchParams.loader) facets.push([`categories:${searchParams.loader.toLowerCase()}`]);
+      if (searchParams.category && searchParams.category !== 'All') {
+        facets.push([`categories:${searchParams.category}`]);
+      }
+      let indexParam = 'downloads';
+      if (searchParams.sort === 'relevance') indexParam = 'relevance';
+      if (searchParams.sort === 'updated') indexParam = 'updated';
+      if (searchParams.sort === 'newest') indexParam = 'newest';
+
+      const data = await fetchModrinth<{ hits: ModrinthHit[] }>(
+        '/search',
+        {
+          query: searchParams.query.trim(),
+          facets: JSON.stringify(facets),
+          index: indexParam,
+          limit: SEARCH_LIMIT,
+          offset: pageParam
+        },
+        { signal }
+      );
+      return {
+        hits: Array.isArray(data?.hits) ? data.hits : [],
+        offset: pageParam
+      };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.hits || lastPage.hits.length < SEARCH_LIMIT) return undefined;
+      return lastPage.offset + lastPage.hits.length;
+    },
+    initialData: initialMatches && initialHits.length > 0
+      ? {
+          pages: [{ hits: initialHits, offset: 0 }],
+          pageParams: [0]
+        }
+      : undefined,
+    // SSR で initialHits が空だった (Modrinth 到達不可) 場合は
+    // すぐ再取得を試みたい。initialData が無ければ通常フロー。
+    staleTime: initialMatches ? 5 * 60 * 1000 : 0
+  });
+
+  // Flatten pages → hits[] with dedup (paranoid、Modrinth API は offset ベースなので基本不要)
+  const safeHits = useMemo<ModrinthHit[]>(() => {
+    const pages = query.data?.pages;
+    if (!pages) return [];
+    const seen = new Set<string>();
+    const out: ModrinthHit[] = [];
+    for (const page of pages) {
+      for (const h of page.hits) {
+        if (!h || typeof h.project_id !== 'string') continue;
+        if (seen.has(h.project_id)) continue;
+        seen.add(h.project_id);
+        out.push(h);
+      }
     }
-    setOffset(0);
-    setHasMore(true);
-    executeSearchRef.current(false, 0);
-  }, [profile.mcVersion, profile.loader, selectedCategory, sortBy, debouncedQuery]);
+    return out;
+  }, [query.data]);
+
+  const hasMore = query.hasNextPage;
+  const isLoading = query.isFetching;
+  const searchError =
+    query.isError && !query.data
+      ? (query.error instanceof Error
+          ? query.error.message
+          : 'Modrinthからのデータ取得に失敗しました')
+      : null;
 
   // 無限スクロール
   const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
@@ -184,35 +189,26 @@ export const HomeInteractive: React.FC<Props> = ({
     setSentinelEl(node);
   }, []);
 
-  const fetchNextPageRef = useRef(() => executeSearchRef.current(true, offset));
-  fetchNextPageRef.current = () => executeSearchRef.current(true, offset);
+  // fetchNextPage は Query インスタンスの中で stable なので useEffect deps に入れて OK
+  const fetchNextPage = query.fetchNextPage;
+  const isFetchingNextPage = query.isFetchingNextPage;
 
   useEffect(() => {
     if (!sentinelEl) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        // entries[0] は可能性として undefined
         const first = entries[0];
-        if (first?.isIntersecting && hasMore && !isLoadingRef.current) {
-          fetchNextPageRef.current();
+        if (first?.isIntersecting && hasMore && !isFetchingNextPage) {
+          void fetchNextPage();
         }
       },
       { rootMargin: '800px 0px', threshold: 0.01 }
     );
     observer.observe(sentinelEl);
     return () => observer.disconnect();
-  }, [sentinelEl, hasMore]);
+  }, [sentinelEl, hasMore, isFetchingNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    return () => {
-      if (activeAbortRef.current) activeAbortRef.current.abort();
-    };
-  }, []);
-
-  // ModCard に <Link> を直接持たせたため onOpenDetail は不要になった。
-  // 以前は Link と router.push の二重遷移が発生していた。
-
-  const safeHits = Array.isArray(hits) ? hits : [];
+  // ModCard に <Link> を直接持たせたため onOpenDetail は不要。
 
   // Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
   // Home 画面右側に emerald gradient で目立つ Mod カウント表示 + モバイル用
@@ -403,11 +399,7 @@ export const HomeInteractive: React.FC<Props> = ({
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setOffset(0);
-                  setHasMore(true);
-                  executeSearchRef.current(false, 0);
-                }}
+                onClick={() => void query.refetch()}
                 className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <i className="fa-solid fa-rotate-right mr-1.5" aria-hidden />

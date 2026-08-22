@@ -23,6 +23,8 @@ import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
 import { ZipProgressModal } from './ZipProgressModal';
 import { AppContextProvider, type AppContextValue } from './AppContext';
+import { Providers as QueryProviders } from './Providers';
+import { OfflineBanner } from './OfflineBanner';
 
 // ============================================================================
 // AppShell
@@ -311,8 +313,10 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   );
 
   return (
-    <AppContextProvider value={contextValue}>
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    <QueryProviders>
+      <AppContextProvider value={contextValue}>
+        <OfflineBanner />
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <Header
         theme={theme}
@@ -374,7 +378,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         detailText={zipDetailText}
       />
 
-      <ConfirmDialog {...confirmDialogProps} />
-    </AppContextProvider>
+        <ConfirmDialog {...confirmDialogProps} />
+      </AppContextProvider>
+    </QueryProviders>
   );
 };

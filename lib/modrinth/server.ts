@@ -54,7 +54,8 @@ const MAX_RETRY_WAIT_MS = (() => {
   return DEFAULT_MAX_RETRY_WAIT_MS;
 })();
 
-function parseRetryAfterMs(headerValue: string | null): number | null {
+// テスト容易性のため export (Sub-Phase 8-D)
+export function parseRetryAfterMs(headerValue: string | null): number | null {
   if (!headerValue) return null;
   const asNumber = Number(headerValue);
   if (Number.isFinite(asNumber) && asNumber >= 0) {

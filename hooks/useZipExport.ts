@@ -28,8 +28,9 @@ interface NetworkInformationLike {
 /**
  * 実行時の並列 DL 数を Mod 数と回線速度から推定する。
  * SSR / navigator.connection 未サポート環境では DEFAULT_CONCURRENCY を返す。
+ * (テスト容易性のため export)
  */
-function computeConcurrency(totalMods: number): number {
+export function computeConcurrency(totalMods: number): number {
   let concurrency = DEFAULT_CONCURRENCY;
 
   // ---- Mod 数による補正 ----

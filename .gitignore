@@ -33,6 +33,12 @@ coverage
 *.lcov
 .nyc_output
 
+# --- Playwright (Sub-Phase 8-D) ---
+/playwright-report/
+/playwright/.cache/
+/test-results/
+/e2e/.auth/
+
 # --- TypeScript ---
 *.tsbuildinfo
 next-env.d.ts

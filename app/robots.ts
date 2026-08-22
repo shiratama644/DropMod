@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // robots.ts (App Router 標準)
 //
-// Phase 7: SEO の基本設定。
+// SEO の基本設定。
 //
 // - 全ページのクロールを許可
 // - /api/* だけは crawler に不要 (JSON エンドポイント) なので disallow
@@ -11,7 +11,7 @@
 import type { MetadataRoute } from 'next';
 
 function resolveBaseUrl(): string {
-  // M5-3 修正: new URL() で protocol 付き検証 → origin 取得。
+  // new URL() で protocol 付き検証 → origin 取得。
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
   if (explicit) {
     try {

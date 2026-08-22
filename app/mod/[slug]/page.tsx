@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const canonicalPath = `/mod/${slug}`;
   try {
     const project = await fetchModrinthProject(slug);
-    // H4-2 修正: layout.tsx の title.template = '%s | DropMod' が自動で ' | DropMod' を
+    // layout.tsx の title.template = '%s | DropMod' が自動で ' | DropMod' を
     // 付与するため、ここでは Mod タイトルのみを返す (以前は '- DropMod' も付けて重複していた)。
     // openGraph.title / twitter.title は template が効かないため明示的に " | DropMod" 付き。
     const shortTitle = project.title;

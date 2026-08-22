@@ -1,7 +1,7 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// H4-6 修正: app/error.tsx (React ツリー内例外の boundary)
+// app/error.tsx (React ツリー内例外の boundary)
 //
 // Next.js App Router 標準の error.tsx。ページ内 (RSC 含む) の描画/ライフサイクル
 // 例外を捕捉して、Next.js デフォルトの英語 500 ページの代わりに日本語 UI を出す。

@@ -12,7 +12,7 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useAppContext } from './AppContext';
 
 // -----------------------------------------------------------------------------
-// ModDetailModalShell (Phase 4)
+// ModDetailModalShell
 //
 // 既存 Vite 版 `src/components/ModDetailModal.tsx` の JSX を流用し、以下 2 系統の
 // 表示バリアントを 1 コンポーネントで扱う:
@@ -75,14 +75,17 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   const handleClose = useCallback(() => {
     if (!isModal) return;
-    // Home からのソフトナビの場合 router.back() で URL 復元、
-    // 直接 hard navigate の場合は back スタックが無いので Home へ push。
-    // window.history の長さで判定 (SSR ガードあり)。
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/');
-    }
+    // 以前は router.back() を優先していたが、
+    //   Home → Mod A → 閉じる → Mod B → 閉じる → 戻る
+    // を繰り返すと履歴に /mod/A, /mod/B が積み重なり、
+    // ブラウザバック連打で 5〜9 回戻らないと元サイトに戻れない
+    // (履歴スタック汚染) 問題があった。
+    //
+    // 対策として router.replace('/') に統一。モーダル履歴エントリを
+    // Home で上書きし、次のモーダルオープン時にはクリーンな状態から始める。
+    // これで Home → Mod A (push) → 閉じる (replace('/')) → Mod B (push)
+    // → 閉じる (replace('/')) → 戻る = 前サイト、が実現する。
+    router.replace('/');
   }, [isModal, router]);
 
   // Esc キー・focus trap は modal バリアント時のみ有効
@@ -93,6 +96,20 @@ export const ModDetailModalShell: React.FC<Props> = ({
     setIsVersionsExpanded(true);
     setSelectedGalleryImg(null);
   }, [slug]);
+
+  // variant="page" (フルページ) の時、body に `mod-fullpage`
+  // クラスを付与して AppShell の Header と BottomNav を非表示にする。
+  // (Home 上のモーダル表示 = variant="modal" では付与しないので、
+  //  グローバル Header は残る。)
+  // アンマウント時に必ずクラスを剥がすので、他ページ遷移で消え残らない。
+  useEffect(() => {
+    if (isModal) return;
+    if (typeof document === 'undefined') return;
+    document.body.classList.add('mod-fullpage');
+    return () => {
+      document.body.classList.remove('mod-fullpage');
+    };
+  }, [isModal]);
 
   const handleJarDownload = useCallback(
     async (file: ModrinthVersionFile) => {
@@ -117,12 +134,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
       try {
         await handleToggleMod(projectId, e);
         // 追加/削除操作後、モーダル表示中はそのまま閉じる (Vite 版と同じ UX)
+        // handleClose と同じ理由で router.replace('/') に統一。
         if (isModal) {
-          if (typeof window !== 'undefined' && window.history.length > 1) {
-            router.back();
-          } else {
-            router.push('/');
-          }
+          router.replace('/');
         }
       } finally {
         setIsTogglePending(false);
@@ -185,7 +199,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-12 h-12 rounded-2xl bg-slate-800/80 p-1 flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700/50 relative">
             {project.icon_url ? (
-              // H4-3 修正: <img> → next/image (WebP + srcset)
+              // <img> → next/image (WebP + srcset)
               <Image
                 src={project.icon_url}
                 alt={project.title}
@@ -270,7 +284,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                   onClick={() => setSelectedGalleryImg(img.url)}
                   className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative"
                 >
-                  {/* H4-3 修正: <img> → next/image (fill mode で可変サイズ対応) */}
+                  {/* <img> ではなく next/image (fill mode で可変サイズ対応) */}
                   <Image
                     src={img.url}
                     alt={img.title || 'Gallery image'}
@@ -304,7 +318,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 閉じる ✕
               </button>
             </div>
-            {/* H4-3 修正: 拡大プレビューは width/height 未確定 (画像アスペクト比依存)
+            {/* 拡大プレビューは width/height 未確定 (画像アスペクト比依存)
                 のため next/image の layout=intrinsic 相当が使えない。
                 object-contain + max-h-72 の伸縮レイアウトを維持するため <img> のまま。
                 CDN 経由なので lazy load + async decoding を明示。 */}
@@ -414,7 +428,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
             閉じる
           </button>
         ) : (
-          // H4-1 修正: <button router.push> → <Link href> に変更
+          // <button router.push> → <Link href> に変更
           <Link
             href="/"
             className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
@@ -508,7 +522,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
       <div className="mb-3">
-        {/* H4-1 修正: <button router.push> → <Link href> に変更 */}
+        {/* <button router.push> ではなく <Link href> で戻る (SEO/新規タブ対応) */}
         <Link
           href="/"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"

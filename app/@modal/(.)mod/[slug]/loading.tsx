@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// M4-4 修正: Intercepting Modal ISR MISS 時の Suspense fallback (スケルトン)
+// Intercepting Modal ISR MISS 時の Suspense fallback (スケルトン)
 //
 // Home でクリック直後、キャッシュ MISS 時に RSC ペイロード fetch (通常 200-500ms)
 // を待つ間の無音を回避。モーダル外枠 (fixed inset-0 + backdrop) 込みの skeleton

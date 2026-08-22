@@ -24,7 +24,7 @@ import { ZipProgressModal } from './ZipProgressModal';
 import { AppContextProvider, type AppContextValue } from './AppContext';
 
 // ============================================================================
-// AppShell (Phase 5 版)
+// AppShell
 //
 // Vite 版 App.tsx (300+ 行) の全 hook / モーダル / ヘッダー / ボトムナビを集約。
 // Root Layout の Client 直下に 1 インスタンスだけ配置され、内部で AppContext
@@ -50,7 +50,7 @@ const PATH_TO_TAB: Record<string, TabName> = {
   '/settings': 'settings'
 };
 
-// C5-2 修正: TAB_TO_PATH は <Link href> 化 + handleSwitchTab を scroll のみに
+// TAB_TO_PATH は <Link href> 化 + handleSwitchTab を scroll のみに
 // 変更したため未使用になった (削除)。旧: router.push(TAB_TO_PATH[tab]) 用途。
 
 export const AppShell: React.FC<Props> = ({ children }) => {
@@ -146,7 +146,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
 
   // ---------- Modal-open scroll lock ----------
-  // C4-2 修正: /mod/[slug] Parallel Route モーダル表示中も背景スクロールをロック。
+  // /mod/[slug] Parallel Route モーダル表示中も背景スクロールをロック。
   // Vite 版 App.tsx にあった isModDetailModalOpen ガードが Next.js 版で消失していた
   // 回帰バグを usePathname() ベースで復元 (URL が /mod/* かどうかで判定)。
   const isModDetailOpen = pathname?.startsWith('/mod/') ?? false;
@@ -187,10 +187,12 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     try {
       localStorage.removeItem('dropmod_state_v2');
       localStorage.removeItem('craftforge_state_v2');
-      // C5-3 修正: SSR プロファイル情報を保持する cookie も削除。
+      // SSR プロファイル情報を保持する cookie も削除。
       // これが無いと reload 後の SSR で旧プロファイル用 Mod カードが並び、
       // ユーザーには「初期化バグ」に見える。
-      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax';
+      // 書き込み側と同じく Secure フラグを付けて削除リクエスト
+      // (localhost では自動的に無視される)
+      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
     } catch {
       /* ignore */
     }
@@ -202,14 +204,14 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   // 「Mod 詳細を開く前にいた画面」に相当するタブを active にしたい。
   // 単純化のため、詳細画面時は home をアクティブ扱いにする (Home からのソフト
   // ナビが最も一般的な導線のため)。
-  // M4-7 修正: dead code だった PATH_TO_TAB テーブルを実際に使う (可読性向上)。
+  // dead code だった PATH_TO_TAB テーブルを実際に使う (可読性向上)。
   // /mod/[slug] などマッチしないパスは 'home' にフォールバック (Home が最も
   // 一般的な起点タブのため、Mod 詳細画面でも Home が active 表示になる)。
   const activeTab: TabName = useMemo(() => {
     return PATH_TO_TAB[pathname ?? '/'] ?? 'home';
   }, [pathname]);
 
-  // C5-2 修正: BottomNav/Header は <Link href> で遷移し、
+  // BottomNav/Header は <Link href> で遷移し、
   // このハンドラはスクロールトップ処理のみを担当。
   // 以前は router.push() を実行していたため <Link> の navigation と
   // 二重遷移が発生していた (URL 履歴汚染 + RSC ペイロード fetch レース)。

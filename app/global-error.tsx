@@ -1,7 +1,7 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// H4-6 修正: app/global-error.tsx (Root Layout 自体が壊れた時の最終フォールバック)
+// app/global-error.tsx (Root Layout 自体が壊れた時の最終フォールバック)
 //
 // app/error.tsx は Root Layout 内で発生した例外を boundary するが、
 // Root Layout (app/layout.tsx) の <html>/<body> レンダー自体が失敗した場合は

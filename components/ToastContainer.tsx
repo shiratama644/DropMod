@@ -13,7 +13,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
   return (
     <div
       id="toast-container"
-      // L4-8 修正: safe-area-inset-bottom を持つ端末 (iPhone 14 Pro 等) で
+      // safe-area-inset-bottom を持つ端末 (iPhone 14 Pro 等) で
       // BottomNav (bottom-0 + h-16=64px + safe-area) と Toast (bottom-20=80px)
       // が近接・重複する問題を解消。BottomNav の実効高 + マージンで固定。
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}
@@ -81,7 +81,7 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
     bgClass = 'glass-panel border-amber-500/60';
     icon = 'fa-triangle-exclamation theme-text-amber';
   } else if (toast.type === 'error') {
-    // M5-6 修正: error 種別を新設 (削除失敗・致命的エラー時の赤系表示)
+    // error 種別を新設 (削除失敗・致命的エラー時の赤系表示)
     bgClass = 'glass-panel border-red-500/60';
     icon = 'fa-circle-xmark theme-text-red';
   }

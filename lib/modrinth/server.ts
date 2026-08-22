@@ -41,7 +41,7 @@ export const REVALIDATE = {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-// H6-1 修正: Vercel の Serverless Function timeout に合わせて Retry-After 上限を絞る。
+// Vercel の Serverless Function timeout に合わせて Retry-After 上限を絞る。
 //   - Hobby: 10s, Pro: 60s, Enterprise: 900s
 // Hobby プランでも動くよう、既定は 8s (10s - 2s の安全マージン) とし、
 // より上位プランを使う場合は環境変数 MODRINTH_MAX_RETRY_WAIT_MS で上書き可能。

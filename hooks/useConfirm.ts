@@ -28,7 +28,7 @@ export function useConfirm() {
   const [state, setState] = useState<ConfirmState>(INITIAL_STATE);
   const resolveRef = useRef<((v: boolean) => void) | null>(null);
 
-  // L5-7 修正: コンポーネントアンマウント時に pending Promise を false で resolve。
+  // コンポーネントアンマウント時に pending Promise を false で resolve。
   // これが無いと `await confirm({...})` を呼んだ非同期関数が完了せずメモリリーク +
   // 後続処理が実行されないバグになる。
   useEffect(() => {

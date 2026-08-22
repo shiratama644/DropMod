@@ -1,19 +1,19 @@
 // ============================================================================
-// Home ページ (Phase 5 版 + H4-5 + M5-1/M5-2 修正)
+// Home ページ
 //
 // Server Component として初期 24 件を Modrinth /search から SSR 取得 →
 // Client Component (<HomeInteractive />) にハイドレート。
 //
-// H4-5 修正: cookies() で dropmod_active_profile を読み取り、ユーザーの実際の
+// cookies() で dropmod_active_profile を読み取り、ユーザーの実際の
 // プロファイルの mcVersion/loader で SSR fetch する。これで hydration 後に
 // LocalStorage から復元されたプロファイルと SSR 結果がミスマッチして
 // 「ちらつき」が起きる問題が解消される。
 // cookie が無い or 無効なら SSR_DEFAULT (1.20.1 / Fabric) で fetch。
 //
-// M5-1 修正: initialMcVersions props は AppShell 側で別途 fetch しており
+// initialMcVersions props は AppShell 側で別途 fetch しており
 // 実質未使用だったため削除。Server → Client の props 転送を最小化。
 //
-// M5-2 修正: revalidate 定数削除。cookies() を使う時点で Next.js は自動的に
+// revalidate 定数削除。cookies() を使う時点で Next.js は自動的に
 // Dynamic Rendering に切り替えるため、revalidate 定数は無視される dead config。
 // fetch のキャッシュ (revalidate/tags) は fetchModrinthSearch 内で個別指定。
 // ============================================================================

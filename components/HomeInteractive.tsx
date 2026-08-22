@@ -11,13 +11,12 @@ import { ModCard } from './ModCard';
 import { useAppContext } from './AppContext';
 
 // ============================================================================
-// HomeInteractive (Phase 5 版)
+// HomeInteractive
 //
 // Home ページの検索 / カテゴリ / ソート / 無限スクロール + Hero Banner の
 // プロファイル操作 (編集 / 複製 / 依存チェック起動) を担う。
 //
-// Phase 3: profile / handleToggleMod は props で受け取っていた
-// Phase 5: AppContext から取得 (useProfiles と統合)
+// profile / handleToggleMod は AppContext から取得 (useProfiles と統合)。
 //
 // SSR で取得した initialHits はマウント時点の "現在プロファイル" とほぼ
 // 一致する想定 (アクティブプロファイルの mcVersion/loader は LocalStorage
@@ -34,12 +33,12 @@ const SORT_OPTIONS = [
 ];
 
 interface Props {
-  /** SSR で取得した初期 24 件 (cookie ベースの実プロファイル、H4-5 で cookie 化済) */
+  /** SSR で取得した初期 24 件 (cookie ベースの実プロファイル) */
   initialHits: ModrinthHit[];
   /** 初期絞り込みが hasMore かどうか (24 件以上ヒットしていれば true) */
   initialHasMore: boolean;
 }
-// M5-1 修正: initialMcVersions prop 削除。AppShell 側で fetchLatestMinecraftVersions を
+// initialMcVersions prop 削除。AppShell 側で fetchLatestMinecraftVersions を
 // Client fetch しており実質未使用 (隠しコメントでしか使われていなかった) だったため。
 
 export const HomeInteractive: React.FC<Props> = ({
@@ -192,7 +191,7 @@ export const HomeInteractive: React.FC<Props> = ({
     if (!sentinelEl) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        // L6-3 (noUncheckedIndexedAccess) 対応: entries[0] は可能性として undefined
+        // entries[0] は可能性として undefined
         const first = entries[0];
         if (first?.isIntersecting && hasMore && !isLoadingRef.current) {
           fetchNextPageRef.current();
@@ -210,12 +209,12 @@ export const HomeInteractive: React.FC<Props> = ({
     };
   }, []);
 
-  // C5-1 修正: ModCard に <Link> を直接持たせたため onOpenDetail は不要になった。
+  // ModCard に <Link> を直接持たせたため onOpenDetail は不要になった。
   // 以前は Link と router.push の二重遷移が発生していた。
 
   const safeHits = Array.isArray(hits) ? hits : [];
 
-  // M4-1 修正: Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
+  // Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
   // Home 画面右側に emerald gradient で目立つ Mod カウント表示 + モバイル用
   // 「確認」ボタン (Home → Mods タブへのショートカット)。
   const modCount = profile?.mods?.length || 0;
@@ -234,7 +233,7 @@ export const HomeInteractive: React.FC<Props> = ({
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-1.5">
-              {/* M4-2 修正: profile?.mcVersion || '未設定' 等のフォールバックを Vite 版から復元 */}
+              {/* profile?.mcVersion || '未設定' 等のフォールバック (Vite 版と同挙動) */}
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30 shrink-0">
                 Minecraft {profile?.mcVersion || '未設定'}
               </span>
@@ -277,7 +276,7 @@ export const HomeInteractive: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* M4-1 修正: 登録 MOD 数パネル (Vite 版から復元) */}
+          {/* 登録 MOD 数パネル (Vite 版と同構造) */}
           <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-3.5 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-md ring-1 ring-white/20 shrink-0">

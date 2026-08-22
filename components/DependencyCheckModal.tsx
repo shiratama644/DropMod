@@ -118,7 +118,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
       if (versionIds.length > 0) {
         try {
-          // H5-4 修正: /versions は 1000 個上限 → 100 個ずつ chunk 分割
+          // /versions は 1000 個上限 → 100 個ずつ chunk 分割
           const batchVersions = await fetchModrinthBatch<{ id: string }>(
             '/versions',
             versionIds
@@ -225,7 +225,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       const depProjectMap = new Map<string, any>();
       if (missingProjectIds.size > 0) {
         try {
-          // H5-4 修正: /projects も 1000 個上限 → 100 個ずつ chunk 分割
+          // /projects も 1000 個上限 → 100 個ずつ chunk 分割
           const projectBatch = await fetchModrinthBatch<{ id: string }>(
             '/projects',
             Array.from(missingProjectIds)
@@ -677,7 +677,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
-                            // H4-3 修正: <img> → next/image
+                            // <img> → next/image
                             <Image
                               src={pInfo.icon_url}
                               alt={title}
@@ -742,7 +742,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {pInfo?.icon_url ? (
-                            // H4-3 修正: <img> → next/image
+                            // <img> → next/image
                             <Image
                               src={pInfo.icon_url}
                               alt={title}

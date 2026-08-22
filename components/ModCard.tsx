@@ -37,7 +37,7 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
   }, [hit.icon_url]);
   const showIcon = hit.icon_url && !iconFailed;
 
-  // H4-1 修正: <div onClick> → <Link href> に変更 (SEO/新規タブ対応)。
+  // <div onClick> → <Link href> に変更 (SEO/新規タブ対応)。
   // 詳細 URL は slug 優先 (人間可読)、fallback で project_id。
   const detailPath = `/mod/${hit.slug || hit.project_id}`;
 
@@ -48,7 +48,7 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
     e.preventDefault();
   };
 
-  // C5-1 修正: onOpenDetail prop を廃止し <Link> の href に完全委譲。
+  // onOpenDetail prop を廃止し <Link> の href に完全委譲。
   // 以前は Link (`/mod/${slug || id}`) と onOpenDetail (`/mod/${project_id}`) の
   // 二重遷移で URL 履歴汚染 + RSC ペイロード fetch レースが発生していた。
   return (
@@ -60,7 +60,7 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {showIcon && hit.icon_url ? (
-              // H4-3 修正: <img> → next/image で WebP/AVIF 自動変換 + srcset
+              // <img> → next/image で WebP/AVIF 自動変換 + srcset
               <Image
                 src={hit.icon_url}
                 alt={hit.title}

@@ -8,6 +8,79 @@ import { generateId } from '@/lib/utils/id';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
+// -------------------------------------------------------------------
+// 破損 LocalStorage への防御関数を module-level pure function
+// として外出し。以前は useProfiles 内部に定義していたが、
+//   - state / props を一切参照しない (完全な pure function)
+//   - useEffect 内でしか使用されない
+// ため、レンダーごとに関数インスタンスを作り直す必要がなかった。
+// module-level に置くことで再生成コストをゼロにし、他ファイルからも
+// テストしやすい形式になる。
+//
+// - profiles が配列でない / 空配列 の場合はデフォルトへフォールバック
+// - 各 profile が必要フィールドを欠く場合は補完
+// - currentProfileId が存在しないプロファイルを指す場合は先頭に戻す
+// これにより、外部要因で壊れたデータでもアプリ全体クラッシュしない。
+// -------------------------------------------------------------------
+export function sanitizeLoadedState(raw: unknown): {
+  theme?: ThemeMode;
+  currentProfileId?: string;
+  profiles?: Profile[];
+} | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const src = raw as {
+    profiles?: unknown;
+    theme?: unknown;
+    currentProfileId?: unknown;
+  };
+
+  let normalizedProfiles: Profile[] | undefined;
+  if (Array.isArray(src.profiles)) {
+    normalizedProfiles = (src.profiles as unknown[])
+      .filter(
+        (p): p is Record<string, unknown> =>
+          !!p && typeof p === 'object' && typeof (p as { id?: unknown }).id === 'string'
+      )
+      .map((p) => ({
+        id: String(p.id),
+        name: typeof p.name === 'string' ? p.name : '(名称未設定)',
+        mcVersion: typeof p.mcVersion === 'string' ? p.mcVersion : '1.20.1',
+        loader: typeof p.loader === 'string' ? p.loader : 'Fabric',
+        description: typeof p.description === 'string' ? p.description : '',
+        mods: Array.isArray(p.mods)
+          ? (p.mods as unknown[]).filter(
+              (m): m is ModItem =>
+                !!m &&
+                typeof m === 'object' &&
+                typeof (m as { id?: unknown }).id === 'string'
+            )
+          : []
+      }));
+    if (normalizedProfiles.length === 0) {
+      normalizedProfiles = undefined;
+    }
+  }
+
+  let normalizedTheme: ThemeMode | undefined;
+  if (src.theme === 'dark' || src.theme === 'light') normalizedTheme = src.theme;
+
+  let normalizedCurrentId: string | undefined;
+  if (typeof src.currentProfileId === 'string') {
+    const target = src.currentProfileId;
+    if (normalizedProfiles && normalizedProfiles.some((p) => p.id === target)) {
+      normalizedCurrentId = target;
+    } else if (normalizedProfiles && normalizedProfiles[0]) {
+      normalizedCurrentId = normalizedProfiles[0].id;
+    }
+  }
+
+  return {
+    theme: normalizedTheme,
+    currentProfileId: normalizedCurrentId,
+    profiles: normalizedProfiles
+  };
+}
+
 export const useProfiles = (
   theme: ThemeMode,
   setThemeState: (theme: ThemeMode) => void,
@@ -57,58 +130,8 @@ export const useProfiles = (
   // ------------------------------------------------------------------
   const [hasHydrated, setHasHydrated] = useState<boolean>(false);
 
-  // -------------------------------------------------------------------
-  // 破損 LocalStorage への防御
-  //
-  // - profiles が配列でない / 空配列 の場合はデフォルトへフォールバック
-  // - 各 profile が必要フィールドを欠く場合は補完
-  // - currentProfileId が存在しないプロファイルを指す場合は先頭に戻す
-  // これにより、外部要因で壊れたデータでもアプリ全体クラッシュしない。
-  // -------------------------------------------------------------------
-  const sanitizeLoadedState = (raw: any): {
-    theme?: ThemeMode;
-    currentProfileId?: string;
-    profiles?: Profile[];
-  } | null => {
-    if (!raw || typeof raw !== 'object') return null;
-
-    let normalizedProfiles: Profile[] | undefined;
-    if (Array.isArray(raw.profiles)) {
-      normalizedProfiles = raw.profiles
-        .filter((p: any) => p && typeof p === 'object' && typeof p.id === 'string')
-        .map((p: any) => ({
-          id: String(p.id),
-          name: typeof p.name === 'string' ? p.name : '(名称未設定)',
-          mcVersion: typeof p.mcVersion === 'string' ? p.mcVersion : '1.20.1',
-          loader: typeof p.loader === 'string' ? p.loader : 'Fabric',
-          description: typeof p.description === 'string' ? p.description : '',
-          mods: Array.isArray(p.mods)
-            ? p.mods.filter((m: any) => m && typeof m === 'object' && typeof m.id === 'string')
-            : []
-        }));
-      if (normalizedProfiles && normalizedProfiles.length === 0) {
-        normalizedProfiles = undefined;
-      }
-    }
-
-    let normalizedTheme: ThemeMode | undefined;
-    if (raw.theme === 'dark' || raw.theme === 'light') normalizedTheme = raw.theme;
-
-    let normalizedCurrentId: string | undefined;
-    if (typeof raw.currentProfileId === 'string') {
-      if (normalizedProfiles && normalizedProfiles.some((p) => p.id === raw.currentProfileId)) {
-        normalizedCurrentId = raw.currentProfileId;
-      } else if (normalizedProfiles && normalizedProfiles[0]) {
-        normalizedCurrentId = normalizedProfiles[0].id;
-      }
-    }
-
-    return {
-      theme: normalizedTheme,
-      currentProfileId: normalizedCurrentId,
-      profiles: normalizedProfiles
-    };
-  };
+  // sanitizeLoadedState は module-level pure function に外出し済み
+  // (ファイル上部を参照)。
 
   // LocalStorage から復元 (旧キー `craftforge_state_v2` からの自動移行を含む)
   useEffect(() => {
@@ -167,7 +190,7 @@ export const useProfiles = (
   }, [hasHydrated, theme, currentProfileId, profiles]);
 
   // ---------------------------------------------------------------------
-  // H4-5 修正: SSR プロファイル固定によるちらつき解消のため cookie に書き込み
+  // SSR プロファイル固定によるちらつき解消のため cookie に書き込み
   //
   // Home ページの SSR (Server Component) は cookies() でこの値を読み取り、
   // 実際のユーザープロファイル (LocalStorage 由来) に合わせた初期 24 件を返す。
@@ -176,7 +199,7 @@ export const useProfiles = (
   // 書き込むのは mcVersion / loader のみ (SSR 検索に必要な最小情報)。
   // 個人情報や大きなデータは含めない (cookie サイズ制限のため)。
   // ---------------------------------------------------------------------
-  // H5-3 修正: 以前は deps に `profiles` 全体を入れていたため、Mod 追加/削除の
+  // 以前は deps に `profiles` 全体を入れていたため、Mod 追加/削除の
   // たびに cookie 書き込みが発火していた (cookie 内容は mcVersion/loader のみ
   // で変化ないのに)。必要な mcVersion/loader をローカル変数に取り出し、
   // deps を [hasHydrated, mcVersion, loader] のみに限定して過剰実行を防止。
@@ -194,7 +217,11 @@ export const useProfiles = (
         })
       );
       // 1 年間有効、path=/ でサイト全体、SameSite=Lax (通常アクセスで送信)
-      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax`;
+      // Secure フラグを常時付与。
+      //   - 本番 (Vercel) では HTTPS 強制なので必須ではないが、明示することで
+      //     セキュリティ姿勢を強化 & 万一 HTTPS でない代替ホスティングにも耐性
+      //   - localhost dev はブラウザ仕様上 Secure 要件から除外されるので副作用なし
+      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax; Secure`;
     } catch (e) {
       console.warn('[DropMod] cookie 書き込みに失敗:', e);
     }
@@ -240,7 +267,7 @@ export const useProfiles = (
     };
 
   // ------------------------------------------------------------------
-  // H4-4 修正: 全 handle* 関数を useCallback でラップ
+  // 全 handle* 関数を useCallback でラップ
   //
   // これらは AppShell の contextValue useMemo の deps に入るため、
   // useCallback しないと毎レンダー新参照 → contextValue も毎レンダー新規
@@ -364,7 +391,7 @@ export const useProfiles = (
 
     if (existsIndex >= 0) {
       // --- 削除 ---
-      // L6-3 (noUncheckedIndexedAccess) 対応: 配列アクセスの結果を optional chaining で扱う
+      // 配列アクセスの結果を optional chaining で扱う
       const removed = latestProfile.mods[existsIndex];
       setProfiles((prev) =>
         prev.map((p) =>
@@ -406,7 +433,7 @@ export const useProfiles = (
         const primaryFile =
           targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
 
-        // L6-3 (noUncheckedIndexedAccess) 対応: 上で files.length===0 は既に return しているが
+        // 上で files.length===0 は既に return しているが
         // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
         if (!primaryFile) {
           if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');

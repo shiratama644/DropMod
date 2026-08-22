@@ -11,7 +11,7 @@ import { downloadAsBlob } from '@/lib/utils/download';
 import { useAppContext } from './AppContext';
 
 // ============================================================================
-// ModsPageClient (Phase 5)
+// ModsPageClient
 //
 // Vite 版 `src/components/ModsTab.tsx` の完全移植。差分:
 //   - 引数 profile / handleToggleMod / handleUpdateModVersion / ...
@@ -216,7 +216,7 @@ export const ModsPageClient: React.FC = () => {
 // -----------------------------------------------------------------------------
 
 function EmptyState() {
-  // H4-1 修正: <button router.push> → <Link href> に変更 (SEO/新規タブ対応)
+  // <button router.push> → <Link href> に変更 (SEO/新規タブ対応)
   return (
     <div id="empty-mods-state" className="p-8 sm:p-12 text-center">
       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full theme-sub-box flex items-center justify-center mx-auto theme-text-muted text-xl sm:text-2xl mb-3">
@@ -285,7 +285,7 @@ function DesktopTable({
                     onClick={() => onOpenDetail(mod)}
                   >
                     {mod.icon_url ? (
-                      // H4-3 修正: <img> → next/image (WebP 自動変換 + srcset)
+                      // <img> → next/image (WebP 自動変換 + srcset)
                       <Image
                         src={mod.icon_url}
                         alt={mod.title}
@@ -380,7 +380,7 @@ function MobileList({
                 onClick={() => onOpenDetail(mod)}
               >
                 {mod.icon_url ? (
-                  // H4-3 修正: <img> → next/image (WebP 自動変換 + srcset)
+                  // <img> → next/image (WebP 自動変換 + srcset)
                   <Image
                     src={mod.icon_url}
                     alt={mod.title}

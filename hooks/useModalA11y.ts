@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 // ------------------------------------------------------------------
 // モーダル共通アクセシビリティフック
@@ -30,7 +30,6 @@ const FOCUSABLE_SELECTOR = [
 // モーダルスタック (グローバル)。同一フックインスタンスIDを LIFO で積む。
 // 最上位 (末尾) のモーダルだけが Escape を処理する。
 const modalStack: string[] = [];
-let uidCounter = 0;
 
 export function useModalA11y(
   isOpen: boolean,
@@ -38,7 +37,16 @@ export function useModalA11y(
   containerRef: React.RefObject<HTMLElement | null>
 ): void {
   const previousActiveElement = useRef<HTMLElement | null>(null);
-  const uidRef = useRef<string>(`modal-${++uidCounter}`);
+  // 以前は module-level `let uidCounter = 0` を ++ で進めていたが、
+  //   dev モードの HMR で counter がリセットされる可能性があり
+  //   モーダル識別の衝突リスクがあった。
+  //   React 18+ の `useId()` は SSR/CSR で安定した一意 ID を返し、
+  //   HMR や Strict Mode ダブルレンダーの影響を受けない。
+  const uidRef = useRef<string>('');
+  const generatedId = useId();
+  if (uidRef.current === '') {
+    uidRef.current = `modal-${generatedId}`;
+  }
 
   // モーダルスタックへの登録
   useEffect(() => {
@@ -81,7 +89,7 @@ export function useModalA11y(
 
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
-      // L6-3 (noUncheckedIndexedAccess) 対応: length===0 は上で return したが
+      // length===0 は上で return したが
       // 配列インデックスの戻り値は T | undefined 型なので明示ガード。
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;

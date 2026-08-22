@@ -232,7 +232,7 @@ export async function fetchStableModVersion(
 
   if (!versions || versions.length === 0) return null;
 
-  // L6-3 (noUncheckedIndexedAccess) 対応: versions[0] は T | undefined
+  // versions[0] は T | undefined
   const stableVersion = versions.find((v) => v.version_type === 'release') || versions[0];
   if (!stableVersion) return null;
   return { targetVersion: stableVersion, allVersions: versions };
@@ -270,7 +270,7 @@ export async function fetchLatestMinecraftVersions(): Promise<string[]> {
 }
 
 // -----------------------------------------------------------------------------
-// H5-4 修正: Modrinth batch endpoint (/versions?ids=[]、/projects?ids=[]、
+// Modrinth batch endpoint (/versions?ids=[]、/projects?ids=[]、
 // /version_files POST) は 1000 個までのリクエスト上限がある。
 // 500+ Mod の大規模 ModPack で 400 Bad Request になるのを防ぐため、
 // chunkedBatchFetch で 100 個ずつ分割リクエストする共通ヘルパを提供。

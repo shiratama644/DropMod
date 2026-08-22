@@ -34,7 +34,7 @@ const sanitizeSchema = {
     'center',
     'font'
   ],
-  // L6-2 修正: defaultSchema.attributes をタグ単位でも spread して継承。
+  // defaultSchema.attributes をタグ単位でも spread して継承。
   //   以前は各タグを完全上書きしていたため、将来 rehype-sanitize の
   //   defaultSchema にセキュリティ属性 (例: aria-*, id, referrerpolicy 等) が
   //   追加された際に喪失するリスクがあった。
@@ -100,7 +100,7 @@ function isAllowedIframeSrc(src: string | undefined): boolean {
   if (!src) return false;
   try {
     const u = new URL(src);
-    // L5-6 修正: HTTPS のみ許可 (http: は HTTPS ページで mixed content ブロック
+    // HTTPS のみ許可 (http: は HTTPS ページで mixed content ブロック
     // されるため実際は動かない → 明示的に拒否してセキュリティ姿勢を強化)
     if (u.protocol !== 'https:') return false;
     return ALLOWED_IFRAME_HOSTS.has(u.host);
@@ -112,7 +112,7 @@ function isAllowedIframeSrc(src: string | undefined): boolean {
 function getYouTubeVideoId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
-  // L6-3 (noUncheckedIndexedAccess) 対応: match[2] は可能性として undefined
+  // match[2] は可能性として undefined
   const videoId = match?.[2];
   return videoId && videoId.length === 11 ? videoId : null;
 }
@@ -184,7 +184,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             );
           },
           // 画像スタイリング
-          // H4-3 判断: Markdown 内画像は width/height が未知 (任意サイズ)
+          // Markdown 内画像は width/height が未知 (任意サイズ)
           // かつ src の origin もユーザー生成コンテンツで多様。
           // next/image の remotePatterns に事前追加できない性質のため <img> を維持。
           // lazy loading + async decoding + no-img-element の eslint disable で明示。
@@ -202,7 +202,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
             );
           },
           // 見出し
-          // C6-1 修正: Header の <h1>DropMod</h1> と重複しないよう、
+          // Header の <h1>DropMod</h1> と重複しないよう、
           // Markdown 本文の見出しは h1 → h2, h2 → h3, h3 → h4 と一段ずつ降格。
           // (SEO/A11y: 1 ページに h1 は 1 個が原則)
           h1: ({ node, children, ...props }) => (

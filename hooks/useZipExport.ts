@@ -7,7 +7,66 @@ import { Profile, ModItem } from '@/types';
 // ==========================================
 // 定数
 // ==========================================
-const CONCURRENCY = 4;
+
+// 並列 DL 数を「Mod 数 × 回線速度」で自動判定する。
+//   - デフォルト 4 は多くの環境で妥当だが、
+//     * 100 Mod 超のプロファイル + 高速回線では並列数不足でスループットが伸びない
+//     * 貧弱な回線 (2g/3g) では並列多いとタイムアウト頻発
+//   - navigator.connection (NetworkInformation API) は Chromium 系のみだが、
+//     未対応環境ではデフォルト値にフォールバックするので副作用なし。
+//   - 上限 10、下限 2 でクランプ (Modrinth CDN への過負荷 & 極端な遅さを防止)。
+const DEFAULT_CONCURRENCY = 4;
+const CONCURRENCY_MIN = 2;
+const CONCURRENCY_MAX = 10;
+
+interface NetworkInformationLike {
+  effectiveType?: '2g' | '3g' | '4g' | 'slow-2g';
+  downlink?: number; // Mbps
+  saveData?: boolean;
+}
+
+/**
+ * 実行時の並列 DL 数を Mod 数と回線速度から推定する。
+ * SSR / navigator.connection 未サポート環境では DEFAULT_CONCURRENCY を返す。
+ */
+function computeConcurrency(totalMods: number): number {
+  let concurrency = DEFAULT_CONCURRENCY;
+
+  // ---- Mod 数による補正 ----
+  if (totalMods >= 100) {
+    concurrency += 2;
+  } else if (totalMods >= 50) {
+    concurrency += 1;
+  } else if (totalMods < 10) {
+    concurrency -= 1;
+  }
+
+  // ---- 回線速度による補正 (Chromium 系のみ) ----
+  if (typeof navigator !== 'undefined') {
+    const conn = (navigator as unknown as { connection?: NetworkInformationLike })
+      .connection;
+    if (conn) {
+      // データセーバー ON → 最小限に
+      if (conn.saveData) {
+        concurrency = CONCURRENCY_MIN;
+      } else {
+        const et = conn.effectiveType;
+        const dl = typeof conn.downlink === 'number' ? conn.downlink : null;
+        if (et === 'slow-2g' || et === '2g') {
+          concurrency -= 3;
+        } else if (et === '3g' || (dl !== null && dl < 2)) {
+          concurrency -= 2;
+        } else if (et === '4g' && dl !== null && dl >= 10) {
+          concurrency += 2;
+        }
+      }
+    }
+  }
+
+  // クランプ
+  return Math.max(CONCURRENCY_MIN, Math.min(CONCURRENCY_MAX, concurrency));
+}
+
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 const URL_REVOKE_DELAY_MS = 10000;
@@ -170,7 +229,7 @@ export const useZipExport = (
     }
   }, [showToast, updateZipState]);
 
-  // M5-12 修正: アンマウント時に in-flight DL を abort。
+  // アンマウント時に in-flight DL を abort。
   // ZIP 生成中にユーザーがページ遷移 (or リロード) すると abort されずに
   // fetch が継続し、ネットワーク帯域を無駄に消費する問題を解消。
   useEffect(() => {
@@ -182,7 +241,7 @@ export const useZipExport = (
     };
   }, []);
 
-  // H4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため参照安定化)。
+  // useCallback ラップ (AppContext の useMemo deps に入るため参照安定化)。
   // currentProfile は上位で変化するので deps に含める必要があるが、少なくとも
   // profile 変化なしのレンダー間では同一参照を維持できる。
   const handleDownloadZip = useCallback(async () => {
@@ -250,7 +309,7 @@ export const useZipExport = (
           if (signal.aborted) throw new Error('Aborted');
 
           const index = currentIndex++;
-          // L6-3 (noUncheckedIndexedAccess) 対応: 配列インデックスは T | undefined。
+          // 配列インデックスは T | undefined。
           // while 条件で範囲内は保証されているが、型システムに明示ガードを与える。
           const mod = currentProfile.mods[index];
           if (!mod) {
@@ -291,7 +350,9 @@ export const useZipExport = (
       };
 
       // 並列ワーカーの起動
-      const workerCount = Math.min(CONCURRENCY, totalMods);
+      // Mod 数と回線速度 (navigator.connection) から自動判定
+      const dynamicConcurrency = computeConcurrency(totalMods);
+      const workerCount = Math.min(dynamicConcurrency, totalMods);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
       if (signal.aborted) throw new Error('Aborted');

@@ -31,7 +31,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
 
       if (versionIds.length > 0) {
         try {
-          // H5-4 修正: Modrinth /versions は 1000 個上限 → 100 個ずつ chunk 分割
+          // Modrinth /versions は 1000 個上限 → 100 個ずつ chunk 分割
           const batchVersions = await fetchModrinthBatch<any>('/versions', versionIds);
           batchVersions.forEach((v) => versionMap.set(v.id, v));
         } catch (_e) {
@@ -45,9 +45,9 @@ export const useDependencyCheck = (currentProfile: Profile) => {
         if (m.slug) installedProjectSet.add(m.slug);
       });
 
-      // M5-11 修正: outer break は明示的にラベルで示す (以前は inner break のみで
+      // outer break は明示的にラベルで示す (以前は inner break のみで
       // outer は `if (warning) break;` に依存していて可読性が低かった)
-      // L5-3 修正: mod.selectedVersionId! の non-null assertion → 明示的 undefined チェック
+      // mod.selectedVersionId! の non-null assertion → 明示的 undefined チェック
       let warning = false;
       outer: for (const mod of profile.mods) {
         const vData = mod.selectedVersionId ? versionMap.get(mod.selectedVersionId) : undefined;

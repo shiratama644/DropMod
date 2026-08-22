@@ -38,25 +38,28 @@ export const Header: React.FC<HeaderProps> = ({
     return safeProfiles.map((p) => ({ label: p.name || '名称未設定', value: p.id }));
   }, [profiles]);
 
-  // Wrap file input change to clear value after import (allows re-importing the same zip)
+  // 以前は入力後の input.value クリアを Header 側でも実行していたが、
+  //   useZipImport.handleImportZipInput 側でも同じクリア処理があり、
+  //   完全な二重実行 (両方空文字設定なので実害はなし) の DRY 違反だった。
+  //   実際のクリアは useZipImport 側に一元化し、Header はそのまま渡すだけにする。
+  //   同一 ZIP の再インポートも useZipImport 側のクリアで問題なく動作する。
   const handleFileImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (typeof onImportZip === 'function') {
         onImportZip(e);
       }
-      e.target.value = '';
     },
     [onImportZip]
   );
 
-  // H4-1 修正: <Link> はネイティブに Enter/Space キーで発火するため、
+  // <Link> はネイティブに Enter/Space キーで発火するため、
   // 以前あった handleLogoKeyDown は不要になった。
 
   return (
     <header id="app-header" className="sticky top-0 z-30 glass-panel">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center justify-between">
-          {/* H4-1 修正: <div role="button"> → <Link> に変更 (SEO/新規タブ対応) */}
+          {/* <div role="button"> ではなく <Link> でロゴを実装 (SEO/新規タブ対応) */}
           <Link
             href="/"
             onClick={() => onSwitchTab('home')}

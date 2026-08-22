@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { Toast } from '@/types';
 
-// L4-5 修正: Toast 保持上限を 3 → 5 に緩和。
+// Toast 保持上限を 3 → 5 に緩和。
 // AutoFix や依存チェックのような連続 toast 発火が多いユースケースで
 // 4-5 個目のメッセージが失われる問題を軽減。
 const MAX_VISIBLE_TOASTS = 5;

@@ -6,7 +6,7 @@ import type { Profile, ThemeMode } from '@/types';
 import type { ConfirmDialogOptions } from './ConfirmDialog';
 
 // ============================================================================
-// AppContext (Phase 5)
+// AppContext
 //
 // Vite 版の App.tsx がトップレベルで持っていた:
 //   - useProfiles (プロファイル状態 + CRUD + Mod トグル + LocalStorage 永続化)
@@ -23,7 +23,7 @@ import type { ConfirmDialogOptions } from './ConfirmDialog';
 //   - Next.js App Router 下で Server Component (page.tsx) と Client
 //     Component の混在があるため、Client 側の共有 state を props で
 //     bucket brigade するのは現実的でない
-//   - Zustand / Jotai を導入せずとも Phase 8 まで React 標準で十分
+//   - Zustand / Jotai を導入せずとも React 標準 (Context) で十分
 //     (計画書 §5 の判断)
 //   - useProfiles は 1 セッション 1 インスタンス必須 (LocalStorage の
 //     hydration ガードのため二重マウントを避ける)

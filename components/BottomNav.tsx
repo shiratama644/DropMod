@@ -19,7 +19,7 @@ interface NavItemConfig {
   showBadge?: boolean;
 }
 
-// H4-1 修正: <button onClick> ではなく <Link href> ベースに変更。
+// <button onClick> ではなく <Link href> ベースに変更。
 // 右クリック/中クリックで新規タブ、SEO クローラが辿れる、Next.js の自動 prefetch が
 // 効くようになる。onClick は Link と併用可能 (スクロール制御のため残存)。
 const NAV_ITEMS: readonly NavItemConfig[] = [

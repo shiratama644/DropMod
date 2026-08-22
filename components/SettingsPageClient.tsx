@@ -5,7 +5,7 @@ import type { ThemeMode } from '@/types';
 import { useAppContext } from './AppContext';
 
 // ============================================================================
-// SettingsPageClient (Phase 5)
+// SettingsPageClient
 //
 // Vite 版 `src/components/SettingsTab.tsx` の完全移植。
 // AppContext 経由で theme / profile CRUD / ZIP import/export / データ初期化

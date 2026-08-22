@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic';
 
 const MODRINTH_HOST = 'api.modrinth.com';
 const MODRINTH_BASE = 'https://api.modrinth.com/v2';
-// C4-1 修正: MODRINTH_USER_AGENT 環境変数を参照 (lib/modrinth/server.ts と同じ挙動)。
+// MODRINTH_USER_AGENT 環境変数を参照 (lib/modrinth/server.ts と同じ挙動)。
 // Vercel Environment Variables で設定した meaningful UA が Route Handler 経由の
 // 全リクエストにも反映されるようにする (Modrinth 規約遵守 + レートリミット緩和)。
 const USER_AGENT =
@@ -113,7 +113,7 @@ async function handler(
   }
 }
 
-// M4-8 修正: HEAD method を追加 (監視ツール = UptimeRobot / Vercel Health Check 等
+// HEAD method を追加 (監視ツール = UptimeRobot / Vercel Health Check 等
 // が HEAD リクエストを送るため。body 無しで status + headers のみを返す)。
 async function headHandler(
   req: Request,

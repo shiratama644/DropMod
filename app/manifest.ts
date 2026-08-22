@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * M6-4 修正: PWA `manifest.json` を App Router 標準の `app/manifest.ts` で提供。
+ * PWA `manifest.json` を App Router 標準の `app/manifest.ts` で提供。
  *
  * - `name` / `short_name`: ホーム画面追加時の表示名
  * - `theme_color`: emerald-600 (#059669) DropMod のブランドカラー

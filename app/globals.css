@@ -274,3 +274,25 @@ code, input, textarea {
 @media (prefers-reduced-motion: reduce) {
     .mod-card-item { animation: none; }
 }
+
+/* ---------------------------------------------------------------
+ * L4-7 修正: /mod/[slug] のフルページ表示時は
+ *   グローバル Header と BottomNav を非表示にし、モーダルアプリ風の
+ *   詳細画面 UX を提供する。
+ *
+ *   ・variant="page" の ModDetailModalShell がマウントされている間だけ
+ *     body に `mod-fullpage` クラスが付与される (アンマウントで剥がれる)
+ *   ・Home 上のモーダル (variant="modal") では付与されないので、
+ *     グローバル Header はそのまま残る (背景の Home で操作可能)
+ *
+ *   ページ側は独自の「ホームに戻る」リンクを提供済み。
+ * --------------------------------------------------------------- */
+body.mod-fullpage #app-header,
+body.mod-fullpage #bottom-nav {
+    display: none;
+}
+/* Header/BottomNav が消える分、body の pb-28 パディングを緩和して
+   詳細カードが画面下部に無駄なスペースを作らないようにする */
+body.mod-fullpage {
+    padding-bottom: 0;
+}

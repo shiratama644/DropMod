@@ -50,7 +50,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       if (initialImportData.mcVersion && mcVersions.includes(initialImportData.mcVersion)) {
         setVersion(initialImportData.mcVersion);
       } else {
-        // L6-3 (noUncheckedIndexedAccess) 対応: mcVersions[0] は string | undefined
+        // mcVersions[0] は string | undefined
         const first = mcVersions[0];
         if (first) setVersion(first);
       }
@@ -82,7 +82,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // M5-4 修正: name / desc を trim() (EditProfileModal と一貫性)。
+    // name / desc を trim() (EditProfileModal と一貫性)。
     // 空白のみのプロファイル名を防ぐ。
     const trimmedName = name.trim();
     if (!trimmedName) {

@@ -23,13 +23,13 @@ export const useZipImport = (
     loader?: string;
   } | null>(null);
 
-  // H5-6 修正: 二重取り込み防止 (素早く複数 ZIP を drop した際、後勝ちで
+  // 二重取り込み防止 (素早く複数 ZIP を drop した際、後勝ちで
   // 前の pendingImportData が消失するバグ)
   const importInFlightRef = useRef<boolean>(false);
 
-  // H4-4/L4-4 修正: useCallback ラップ (AppContext の useMemo deps に入るため)。
+  // useCallback ラップ (AppContext の useMemo deps に入るため)。
   const handleImportZipFile = useCallback(async (file: File) => {
-    // H5-6 修正: inFlight ガード
+    // inFlight ガード
     if (importInFlightRef.current) {
       showToast('別の ZIP を処理中です。完了してから再試行してください', 'warning');
       return;
@@ -43,7 +43,7 @@ export const useZipImport = (
       // 1. .mrpack (Modrinth Index ZIP) インポート: モーダルは開かずダイレクト追加
       if (mrpackFile) {
         const text = await mrpackFile.async('string');
-        // L5-1 修正: MrpackIndex 型で受ける (any → 明示型)
+        // MrpackIndex 型で受ける (any → 明示型)
         const mrpackData = JSON.parse(text) as MrpackIndex;
         const mcVer = mrpackData.dependencies?.minecraft || '1.20.1';
         // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
@@ -59,7 +59,7 @@ export const useZipImport = (
           for (const f of mrpackData.files) {
             const downloadUrl = f.downloads && f.downloads[0] ? f.downloads[0] : '';
             const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
-            // L6-3 (noUncheckedIndexedAccess) 対応: 配列インデックスは T | undefined。
+            // 配列インデックスは T | undefined。
             // split の結果は空配列にはならないが型システムには保証されない。
             const filename = pathParts[pathParts.length - 1] || 'mod.jar';
 
@@ -90,7 +90,7 @@ export const useZipImport = (
       }
 
       // 2. .jar 詰め合わせ ZIP インポート (.jarハッシュ照合 ➔ プロファイル作成モーダル開く)
-      // L6-3 (noUncheckedIndexedAccess) 対応: zip.files[name] は T | undefined
+      // zip.files[name] は T | undefined
       const jarEntries = Object.keys(zip.files).filter((name) => {
         const entry = zip.files[name];
         return !!entry && !entry.dir && name.toLowerCase().endsWith('.jar');
@@ -116,7 +116,7 @@ export const useZipImport = (
       const hashes: string[] = [];
       try {
         for (const entryName of jarEntries) {
-          // L6-3 (noUncheckedIndexedAccess) 対応
+          // 配列インデックスは T | undefined 型なので明示ガード
           const zipEntry = zip.files[entryName];
           if (!zipEntry) continue;
           const fileBuffer = await zipEntry.async('arraybuffer');
@@ -131,7 +131,7 @@ export const useZipImport = (
         throw e;
       }
 
-      // H5-4 修正: /version_files POST は 1000 個の hash 上限 → 100 個ずつ chunk 分割
+      // /version_files POST は 1000 個の hash 上限 → 100 個ずつ chunk 分割
       const versionMap = await fetchModrinthVersionFilesBatch<any>(hashes, 'sha1');
 
       const foundVersions = Object.values(versionMap);
@@ -140,7 +140,7 @@ export const useZipImport = (
         return;
       }
 
-      // H5-4 修正: /projects も 1000 個上限 → chunk 分割
+      // /projects も 1000 個上限 → chunk 分割
       const projectIds = Array.from(new Set(foundVersions.map((v) => v.project_id)));
       const projects = await fetchModrinthBatch<any>('/projects', projectIds);
       const projectMap = new Map<string, any>();
@@ -193,7 +193,7 @@ export const useZipImport = (
         showToast('ZIPファイルの解析またはModrinthとの照合に失敗しました', 'warning');
       }
     } finally {
-      // H5-6 修正: inFlight ガード解除 (成功・失敗どちらでも)
+      // inFlight ガード解除 (成功・失敗どちらでも)
       importInFlightRef.current = false;
     }
   }, [setProfiles, setCurrentProfileId, setIsNewProfileModalOpen, showToast]);

@@ -23,7 +23,7 @@ import '@fontsource/jetbrains-mono/700.css';
 import '@fontsource/jetbrains-mono/800.css';
 
 // -----------------------------------------------------------------------------
-// metadataBase の解決 (Phase 7)
+// metadataBase の解決
 //
 // og:image などの相対 URL を絶対 URL に展開するため必須。優先順位:
 //   1. NEXT_PUBLIC_SITE_URL (ユーザーが Vercel Environment Variables で
@@ -32,7 +32,7 @@ import '@fontsource/jetbrains-mono/800.css';
 //   3. http://localhost:3000 (ローカル dev のフォールバック)
 // -----------------------------------------------------------------------------
 function resolveMetadataBase(): URL {
-  // M4-6 修正: NEXT_PUBLIC_SITE_URL に末尾スラッシュがあると canonical URL 生成時に
+  // NEXT_PUBLIC_SITE_URL に末尾スラッシュがあると canonical URL 生成時に
   // '//' (二重スラッシュ) になる可能性があるため事前に除去。sitemap.ts / robots.ts の
   // resolveBaseUrl と同じ挙動に統一。
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     description:
       'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
   },
-  // M6-4 修正: manifest.json (`app/manifest.ts`) と各種アイコンを明示的にリンク。
+  // manifest.json (`app/manifest.ts`) と各種アイコンを明示的にリンク。
   //   - favicon.ico は `app/favicon.ico` から自動的に <link rel="icon"> として注入されるが、
   //     PWA / iOS Safari 用の追加サイズは metadata.icons で補う。
   manifest: '/manifest.webmanifest',
@@ -94,12 +94,12 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root Layout (Phase 4 版)
+ * Root Layout
  *
  * AppShell (Client Component) が Toast/Confirm/theme を管理し、
  * その内側で children (各ページ) を描画する。
  *
- * Phase 4 で `@modal` Parallel Route slot を追加:
+ * `@modal` Parallel Route slot の役割:
  *   - `/mod/[slug]` を Home からクリック時 → `@modal/(.)mod/[slug]` に
  *     インターセプトされ、Home ページの上にモーダルとして重ねて描画
  *   - 直接 URL アクセス時 → 通常の `/mod/[slug]/page.tsx` がフルページ描画
@@ -113,7 +113,7 @@ export default function RootLayout({
   children: ReactNode;
   modal: ReactNode;
 }) {
-  // M4-3 修正: theme FOUC (SSR dark → hydration 後 light) を回避する inline script。
+  // theme FOUC (SSR dark → hydration 後 light) を回避する inline script。
   // hydration 前に LocalStorage を読み取り、'light' が保存されていれば
   // <html> の dark クラスを外す。これで hydration 時にちらつきが起きない。
   // dangerouslySetInnerHTML は script タグ挿入の Next.js 推奨方法。

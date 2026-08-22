@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // sitemap.ts (App Router 標準の動的 sitemap)
 //
-// Phase 7: SEO スコア 100 と検索エンジン発見性のため追加。
+// SEO スコア 100 と検索エンジン発見性のため追加。
 //
 // - 静的ルート (/, /mods, /settings) を必ず出力
 // - 人気 Mod 100 件の /mod/[slug] を動的に追加 (build/ISR 時に生成)
@@ -16,7 +16,7 @@ import { fetchModrinthSearch } from '@/lib/modrinth/server';
 const PREBUILD_LIMIT = 100;
 
 function resolveBaseUrl(): string {
-  // M5-3 修正: new URL() で protocol 付き検証 → origin 取得。
+  // new URL() で protocol 付き検証 → origin 取得。
   // 以前は文字列 concat のみで NEXT_PUBLIC_SITE_URL=example.com (プロトコルなし) を
   // 設定すると sitemap の URL が壊れていた。
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;

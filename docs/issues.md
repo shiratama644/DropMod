@@ -2626,3 +2626,100 @@ Cross-Origin-Resource-Policy: same-origin                                 ← �
 - ✅ `noUncheckedIndexedAccess` 有効化で他ファイル (ModCard, ModDetailModalShell, ModsPageClient, CustomDropdown, useProfiles など) の `[0]` / `[i]` アクセスは既にガード or フォールバック済みで再検証、追加型エラーなし
 - ✅ Vite 版 (`.archive/vite/`) は独立 package.json のため一切影響なし
 - ✅ `pnpm build` = 2 回とも Compiled successfully in <1s
+
+---
+
+# 🎯 判断留保 9 件の一括対応 (2026-08-22 実施)
+
+第6波修正完了後、ユーザーとクイズ形式で 1 件ずつ判断を確認し、9 件全てに決着をつけた。
+
+## 対応結果サマリ
+
+| ID | 元判定 | ユーザー判断 | 実装内容 |
+| --- | --- | --- | --- |
+| **M4-5** | 判断留保 (UX Trade-off) | ✅ 修正 | `handleClose` を `router.replace('/')` に統一し履歴汚染を解消 |
+| **L4-7** | 判断留保 (デザイン判断) | ✅ 修正 | `variant="page"` 時に `body.mod-fullpage` クラスを付与 → CSS で Header/BottomNav を非表示 |
+| **M5-5** | 判断留保 (実害なし) | ✅ 修正 | Header 側の `input.value = ''` を削除、`useZipImport` に一元化 |
+| **L5-2** | 判断留保 (YAGNI) | ✅ **修正 (自動判定)** | `computeConcurrency(totalMods)` を新設。Mod 数 + `navigator.connection` の effectiveType/downlink/saveData から並列 DL 数を自動算出 (2〜10 でクランプ) |
+| **L5-4** | 判断留保 (dev only) | ✅ 修正 | `let uidCounter` を撤去、React 18 の `useId()` に置換 |
+| **L5-10** | 判断留保 (実害なし) | ✅ 修正 | `sanitizeLoadedState` を module-level pure function に外出し (export 化でテスト容易性も向上) |
+| **L5-11** | 判断留保 (Vercel HTTPS) | ✅ 修正 | Cookie 書き込み/削除の両方に `; Secure` を常時付与 (localhost は仕様上除外) |
+| **L5-12** | 判断留保 (改善余地なし) | 📝 **確定** | 実装変更なし。改善余地無しをユーザーが再確認 |
+| **L5-13** | 判断留保 (Phase 8 以降) | ✅ 修正 | 86 箇所の `Phase X / M#-# 修正:` プレフィックスを一括削除 (WHY 説明は保存)、`{/* ... */}` JSX コメントも手動整理 |
+
+## 詳細実装
+
+### M4-5: 履歴スタック汚染の解消
+```typescript
+// components/ModDetailModalShell.tsx handleClose
+router.replace('/');  // 以前は router.back() → 履歴上書きに変更
+```
+モーダル閉じで必ずホームエントリに上書きされるため、
+`Home → Mod A → 閉じる → Mod B → 閉じる → 戻る = 前サイト` が実現。
+
+### L4-7: Mod 詳細フルページで Header/BottomNav 非表示
+```typescript
+// ModDetailModalShell.tsx (variant="page" のみ発火する useEffect)
+document.body.classList.add('mod-fullpage');
+```
+```css
+/* app/globals.css */
+body.mod-fullpage #app-header,
+body.mod-fullpage #bottom-nav { display: none; }
+body.mod-fullpage { padding-bottom: 0; }
+```
+モーダル (`variant="modal"`) では付与されないので、Home 上のモーダル表示時は
+グローバル Header はそのまま残る (デグレなし)。
+
+### L5-2: 並列 DL 数の自動判定
+```typescript
+// hooks/useZipExport.ts
+function computeConcurrency(totalMods: number): number {
+  let concurrency = 4;  // デフォルト
+  if (totalMods >= 100) concurrency += 2;
+  else if (totalMods >= 50) concurrency += 1;
+  else if (totalMods < 10) concurrency -= 1;
+
+  const conn = navigator.connection;
+  if (conn) {
+    if (conn.saveData) concurrency = 2;
+    else if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') concurrency -= 3;
+    else if (conn.effectiveType === '3g' || (conn.downlink && conn.downlink < 2)) concurrency -= 2;
+    else if (conn.effectiveType === '4g' && conn.downlink >= 10) concurrency += 2;
+  }
+  return Math.max(2, Math.min(10, concurrency));  // 2〜10 でクランプ
+}
+```
+- Chromium 系のみサポート、非対応 (Firefox/Safari) は静かにデフォルト 4 でフォールバック
+- Modrinth CDN への過負荷防止として上限 10、極端遅延防止で下限 2
+
+### L5-13: 履歴コメント整理の方針
+- **削除**: `// M4-4 修正:`, `// C6-1 修正:`, `// Phase 5 版:`, `{/* H4-1 修正: */}` などのプレフィックス
+- **保存**: WHY を説明する本文 (以前は XXX していたが YYY に変更、など)
+- **保存**: TODO, `⚠️` 警告、`Ref:` 外部リンク、Design decision の説明
+- **結果**: 86 行を 33 ファイルで整理。`grep -rn -E "Phase [0-9]+|[CHML][0-9]+-[0-9]+"` = **0 件**
+
+## 検証
+
+- ✅ `pnpm exec tsc --noEmit` = 0 error
+- ✅ `pnpm lint` = 0 error / 0 warning
+- ✅ `pnpm build` = ✓ Compiled successfully in 1122ms
+- ✅ 全ページ HTTP status 期待通り (`/`, `/mods`, `/settings`, `/mod/sodium` = 200; `/nonexistent` = 404)
+- ✅ 全ページ h1 数 = 1 (Header のみ、C6-1 の解消も継続)
+- ✅ セキュリティヘッダ全て付与 (HSTS/COOP/CORP)
+- ✅ Cookie 書き込みに `Secure` フラグ付与を JS バンドル内で確認
+- ✅ `useId()` 導入、`computeConcurrency` バンドル内で `effectiveType` 参照を確認
+- ✅ `body.mod-fullpage` CSS ルールがバンドル済み CSS に含まれる
+- ✅ Vite 版 (`.archive/vite/`) 非破壊
+
+## 更新後の集計
+
+| 波 | Critical | High | Medium | Low | 計 | 状態 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 第1〜3.5波 | 13 | 18 | 24 | 16 | 71 | ✅ 全て修正済 (Vite 版) |
+| 第4波 | 2 | 6 | 8 | 8 | 24 | ✅ 22 修正 / 2 判断留保 → **24 修正済** (M4-5, L4-7 追加対応) |
+| 第5波 | 3 | 6 | 12 | 14 | 35 | ✅ 31 修正 / 4 判断留保 → **35 修正済** (M5-5, L5-2, L5-4, L5-10, L5-11, L5-13 追加対応、L5-12 は改善不要確定) |
+| 第6波 | 1 | 2 | 4 | 3 | 10 | ✅ 全 10 件 + 追加 2 件 修正済 |
+| **総合計** | **19** | **32** | **48** | **41** | **140** | **139 修正 + 1 確定 (改善不要)** |
+
+*判断留保はゼロに。Phase 8 に安心して進める状態。*

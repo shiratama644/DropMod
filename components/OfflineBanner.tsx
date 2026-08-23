@@ -45,7 +45,8 @@ export function OfflineBanner() {
       aria-live="polite"
       className="sticky top-0 z-50 w-full bg-amber-500/90 backdrop-blur-md text-slate-950 text-xs sm:text-sm font-semibold text-center py-2 px-3 shadow-md"
     >
-      <i className="fa-solid fa-wifi-slash mr-1.5" aria-hidden />
+      {/* Phase 10-A: fa-wifi-slash は FA 7 Free に存在しないため fa-plug-circle-xmark に差し替え */}
+      <i className="fa-solid fa-plug-circle-xmark mr-1.5" aria-hidden />
       オフライン中: キャッシュされた情報を表示しています
     </div>
   );

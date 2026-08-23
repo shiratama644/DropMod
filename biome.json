@@ -19,7 +19,8 @@
       "!test-results",
       "!next-env.d.ts",
       "!*.tsbuildinfo",
-      "!public"
+      "!public",
+      "!styles/fontawesome-subset.css"
     ]
   },
   "formatter": {

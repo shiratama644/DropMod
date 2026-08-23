@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 
-import type { TabName, ThemeMode } from '@/types';
+import type { TabName } from '@/types';
 
 import { useToasts } from '@/hooks/useToasts';
 import { useConfirm } from '@/hooks/useConfirm';

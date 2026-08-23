@@ -1,9 +1,9 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// MenuBottomSheet (Phase 9.5-A)
+// MenuBottomSheet (Phase 9.5-A → 9.5-D で 2 カラム + 小型化)
 //
-// BottomNav 右端のハンバーガーボタンを押した時に下から出てくる Sheet。
+// BottomNav 右端のハンバーガーボタン用 Sheet。
 // 添付画像の Modrinth モバイル UI (Sign in / Settings / Change theme) を
 // DropMod 用に翻訳:
 //   Sign in     → 🟢 ZIP 保存 (primary、DropMod の目玉機能)
@@ -11,6 +11,12 @@
 //   Change theme → Change theme (現在の theme で fa-moon / fa-sun 切替)
 //   (追加)      → ZIP 読込 (hidden file input trigger)
 //
+// 【9.5-D 変更点】(ユーザー要望):
+//   - 縦積み大型ボタン → 2 カラム grid + 小型ボタン
+//   - primary ボタン (ZIP 保存) は 2 カラム片方に配置 (Modrinth の Sign in が
+//     フル幅 primary だったのを 2 カラム化に合わせ調整、色で primary 感を維持)
+//   - z-index / onCloseAnimationComplete などの props を親から受け取り、
+//     Sheet 重ね置き対応
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
@@ -22,6 +28,8 @@ import { BottomSheet } from './BottomSheet';
 interface MenuBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  onCloseAnimationComplete?: () => void;
+  zIndexClass?: string;
   theme: ThemeMode;
   onToggleTheme: () => void;
   onDownloadZip: () => void;
@@ -31,6 +39,8 @@ interface MenuBottomSheetProps {
 export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
   isOpen,
   onClose,
+  onCloseAnimationComplete,
+  zIndexClass,
   theme,
   onToggleTheme,
   onDownloadZip,
@@ -50,7 +60,6 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       onImportZip(e);
-      // useZipImport 側で input 値クリア済み。Sheet は close。
       onClose();
     },
     [onImportZip, onClose]
@@ -58,55 +67,70 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
 
   const handleToggleThemeClick = useCallback(() => {
     onToggleTheme();
-    // theme 切替は Sheet 開いたまま UI 変化を見せる (計画書 §4.4 特殊挙動)
+    // theme 切替は Sheet 開いたまま UI 変化を見せる
   }, [onToggleTheme]);
 
-  // 現在の theme に応じてアイコンとラベルを出し分け
   const themeIcon = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-  const themeLabel = theme === 'dark' ? 'ライトモード' : 'ダークモード';
+  const themeLabel = theme === 'dark' ? 'ライト' : 'ダーク';
 
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
+      onCloseAnimationComplete={onCloseAnimationComplete}
       ariaLabel="メニュー"
-      maxHeightClass="max-h-[70vh]"
+      maxHeightClass="max-h-[45vh]"
+      zIndexClass={zIndexClass}
     >
-      <div className="space-y-3">
-        {/* Primary: ZIP 保存 (DropMod の目玉機能) */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {/* Primary: ZIP 保存 (DropMod の目玉機能、色で primary 感) */}
         <button
           type="button"
           onClick={handleDownloadClick}
-          className="btn-hover-effect w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-base font-bold shadow-md shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="btn-hover-effect flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-md shadow-emerald-600/30 min-h-[76px]"
         >
-          <i className="fa-solid fa-file-zipper text-lg" aria-hidden />
-          <span>ZIP 保存 (全 .jar)</span>
+          <i className="fa-solid fa-file-zipper text-base" aria-hidden />
+          <span className="font-bold text-xs text-center leading-tight">
+            ZIP 保存
+          </span>
         </button>
 
         {/* Settings */}
         <Link
           href="/settings"
           onClick={onClose}
-          className="flex items-center justify-center gap-3 w-full px-6 py-4 rounded-2xl glass-card border-2 border-transparent hover:border-emerald-500/40 active:scale-[0.98] transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
         >
-          <i className="fa-solid fa-gear text-lg" aria-hidden />
-          <span className="text-base font-bold">Settings</span>
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+            <i className="fa-solid fa-gear" aria-hidden />
+          </div>
+          <span className="font-semibold text-xs text-center leading-tight">
+            設定
+          </span>
         </Link>
 
-        {/* Change theme (Sheet は閉じない、UI 変化を見せる) */}
+        {/* Change theme */}
         <button
           type="button"
           onClick={handleToggleThemeClick}
-          className="flex items-center justify-center gap-3 w-full px-6 py-4 rounded-2xl glass-card border-2 border-transparent hover:border-emerald-500/40 active:scale-[0.98] transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
         >
-          <i className={`${themeIcon} text-lg`} aria-hidden />
-          <span className="text-base font-bold">{themeLabel}</span>
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+            <i className={themeIcon} aria-hidden />
+          </div>
+          <span className="font-semibold text-xs text-center leading-tight">
+            {themeLabel}モード
+          </span>
         </button>
 
         {/* ZIP 読込 (hidden input trigger) */}
-        <label className="flex items-center justify-center gap-3 w-full px-6 py-4 rounded-2xl glass-card border-2 border-transparent hover:border-emerald-500/40 active:scale-[0.98] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500">
-          <i className="fa-solid fa-file-import text-lg" aria-hidden />
-          <span className="text-base font-bold">ZIP 読込</span>
+        <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[76px]">
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+            <i className="fa-solid fa-file-import" aria-hidden />
+          </div>
+          <span className="font-semibold text-xs text-center leading-tight">
+            ZIP 読込
+          </span>
           <input
             ref={fileInputRef}
             type="file"

@@ -1,28 +1,13 @@
 // ============================================================================
-// Landing Page (/) — Phase 9.5-C 完成版
+// Landing Page (/) — Phase 9.5-D 過渡的状態
 //
-// 6 セクション構成:
-//   ├─ 1. Hero            (Three.js 3D シーン背景 + h1 + CTA)
-//   ├─ 2. Feature Grid    (4 個、scroll-reveal + stagger)
-//   ├─ 3. Stats Counter   (3 個、count-up アニメ)
-//   ├─ 4. Screenshot Showcase (SVG placeholder、9.5-D で実キャプチャに置換予定)
-//   ├─ 5. Community       (GitHub リンク、star 数は静的表示)
-//   └─ 6. Final CTA       (大型 CTA + fine print)
-//
-// 【重要】Phase 9.5 の絶対原則:
-//   - このページ (/) のみ AppShell 側で Header が非表示になる
-//   - BottomNav は表示継続、ハンバーガーメニュー等はランディングでも使える
-//   - SSR HTML に <h1>DropMod</h1> が必ず含まれる (SEO)
-//   - 各セクションに適切な <h2>/<h3> 階層 (SEO + a11y)
-//   - Reduced Motion 環境では全アニメスキップ (WCAG 2.1 SC 2.3.3)
-//
-// Client 経由の要素 (Hero3D / scroll-reveal / count-up) は個別 Client
-// コンポーネントに切り出し、この page.tsx 自体は Server Component として
-// 静的レンダリング可能なままにする (SEO ベース HTML の完全性維持)。
+// 【重要】9.5-D では Sheet 全面リニューアルに集中。LP 本体は 9.5-F で
+// Modrinth 風 (完全オリジナル文言・配色) に全面刷新予定。
+// このコミット時点では既存 6 セクション骨組み + Anime.js scroll reveal +
+// Stats count-up をそのまま維持し、Three.js 3D 依存の HeroBackground だけ削除。
 // ============================================================================
 
 import Link from 'next/link';
-import { HeroBackground } from '@/components/landing/HeroBackground';
 import { RevealSection } from '@/components/landing/RevealSection';
 import { AnimatedStats } from '@/components/landing/AnimatedStats';
 
@@ -51,8 +36,7 @@ export default function LandingPage() {
               'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15), transparent 60%), radial-gradient(ellipse at bottom left, rgba(59, 130, 246, 0.08), transparent 50%)'
           }}
         />
-        {/* Three.js 3D シーン (Client only、dynamic import) */}
-        <HeroBackground />
+        {/* 9.5-D: Three.js 3D 削除。9.5-F の LP 全面刷新で新方針の Hero に置換予定。 */}
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8">
           {/* ロゴアイコン (前景) */}

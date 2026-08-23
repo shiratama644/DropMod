@@ -1,14 +1,18 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// BrowseBottomSheet (Phase 9.5-A、Phase 11 準備)
+// BrowseBottomSheet (Phase 9.5-A → 9.5-D で 2 カラム + 小型化)
 //
-// BottomNav の「探す」ボタンを押した時に下から出てくる Sheet。
-// Phase 11 で対応する 4 カテゴリ (Mods / Modpacks / ResourcePacks / Shaders)
-// を大きなカードで選択させる。
+// BottomNav の「探す」ボタン用 Sheet。Phase 11 で対応する 4 カテゴリ
+// (Mods / Modpacks / ResourcePacks / Shaders) を 2×2 grid でコンパクトに配置。
 //
-// 各カード → `/mods?type=xxx` へ遷移。実際の facets 対応は Phase 11 で。
-// (Phase 9.5 の時点では `type=mod` 以外は Modrinth 検索側で無視される)
+// 各ボタン → `/mods?type=xxx` へ遷移。
+//
+// 【9.5-D 変更点】(ユーザー要望):
+//   - 縦積み大型ボタン → 2 カラム grid + 小型ボタン
+//   - 右矢印 chevron 削除 (小さくするため)
+//   - z-index / onCloseAnimationComplete などの props を親から受け取り、
+//     Sheet 重ね置き対応
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
@@ -18,6 +22,8 @@ import { BottomSheet } from './BottomSheet';
 interface BrowseBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  onCloseAnimationComplete?: () => void;
+  zIndexClass?: string;
 }
 
 interface CategoryItem {
@@ -28,12 +34,7 @@ interface CategoryItem {
 }
 
 const CATEGORIES: readonly CategoryItem[] = [
-  {
-    id: 'mod',
-    label: 'Mods',
-    icon: 'fa-solid fa-cube',
-    href: '/mods',
-  },
+  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', href: '/mods' },
   {
     id: 'modpack',
     label: 'Modpacks',
@@ -57,32 +58,32 @@ const CATEGORIES: readonly CategoryItem[] = [
 export const BrowseBottomSheet: React.FC<BrowseBottomSheetProps> = ({
   isOpen,
   onClose,
+  onCloseAnimationComplete,
+  zIndexClass,
 }) => {
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
+      onCloseAnimationComplete={onCloseAnimationComplete}
       ariaLabel="カテゴリを選択"
-      maxHeightClass="max-h-[60vh]"
+      maxHeightClass="max-h-[45vh]"
+      zIndexClass={zIndexClass}
     >
-      <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2.5">
         {CATEGORIES.map((cat) => (
           <Link
             key={cat.id}
             href={cat.href}
             onClick={onClose}
-            className="flex items-center gap-4 w-full px-5 py-4 rounded-2xl glass-card border-2 border-transparent hover:border-emerald-500/50 active:scale-[0.98] transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
           >
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/15 theme-text-brand flex items-center justify-center text-xl shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 theme-text-brand flex items-center justify-center text-base shrink-0">
               <i className={cat.icon} aria-hidden />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm sm:text-base">{cat.label}</div>
+            <div className="font-semibold text-xs text-center leading-tight">
+              {cat.label}
             </div>
-            <i
-              className="fa-solid fa-chevron-right theme-text-muted text-xs"
-              aria-hidden
-            />
           </Link>
         ))}
       </div>

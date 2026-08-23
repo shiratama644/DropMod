@@ -1,20 +1,21 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// BottomNav (Phase 9.5-A で再設計)
+// BottomNav (Phase 9.5-A → 9.5-D で Sheet Stack 管理を追加)
 //
 // 従来 (Phase 9-F): 4 タブ全てが <Link>
 //   Home / 探す / 現在のMod / 設定
 //
-// 新 (Phase 9.5): 3 主タブ (<Link>) + 2 疑似タブ (<button> で BottomSheet トリガー)
+// Phase 9.5-A 版: 3 主タブ (<Link>) + 2 疑似タブ (<button> で BottomSheet トリガー)
 //   Home (Link) / 探す (button → BrowseSheet) / 現在のMod (Link) / メニュー (button → MenuSheet)
 //
-// 添付画像の Modrinth モバイル UI 準拠:
-//   - 右端をハンバーガー化 (isMenuOpen で ≡ ⇔ ✕ 切替)
-//   - 「探す」も同じ Sheet UX で 4 カテゴリ (Mods/Modpacks/RP/Shader) を選択
-//     (Phase 11 の 4 カテゴリ対応の準備)
+// 【9.5-D 追加要件】(ユーザー要望):
+//   - Sheet を開いてる時に他 Sheet ボタンを押すと、旧 Sheet を close アニメ
+//     走らせつつ mount 継続、新 Sheet は上に重ねる (z-index 一段上)
+//   - 旧 Sheet は close アニメ完了で unmount
+//   - Sheet の背景は BottomNav とページの間から出る (BottomSheet 側で bottom-16 で調整)
 //
-// ⚠️ Rules of Hooks: hook は「早期 return より前」に全部書く (React error #310 対策)。
+// ⚠️ Rules of Hooks: hook は「早期 return より前」に全部書く。
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
@@ -29,14 +30,12 @@ interface BottomNavProps {
   onSwitchTab: (tab: TabName) => void;
   modCount: number;
   hasDepWarning: boolean;
-  // Phase 9.5-A 追加: MenuBottomSheet 用
   theme: ThemeMode;
   onToggleTheme: () => void;
   onDownloadZip: () => void;
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-/** Link ベースの nav item (Home / 現在のMod) */
 interface LinkNavItem {
   kind: 'link';
   id: TabName;
@@ -46,17 +45,28 @@ interface LinkNavItem {
   showBadge?: boolean;
 }
 
-/** Sheet トリガーの nav item (探す / メニュー) */
 interface SheetNavItem {
   kind: 'sheet';
   id: 'browse' | 'menu';
   label: string;
   icon: string;
   activeIcon?: string;
-  matchTabs?: TabName[]; // どの TabName の時に active 表示するか
+  matchTabs?: TabName[];
 }
 
 type NavItem = LinkNavItem | SheetNavItem;
+
+/**
+ * Sheet Stack 内の各エントリの状態:
+ *   - isOpen: true = open アニメ状態 or 開いた状態
+ *             false = close アニメ中 (mount 継続)、完了で unmount 予定
+ *   - key:    再 mount 判定用の unique key (連続開閉で同じ Sheet を再アニメ)
+ */
+interface SheetEntry {
+  id: 'browse' | 'menu';
+  key: number;
+  isOpen: boolean;
+}
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
@@ -68,42 +78,93 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onDownloadZip,
   onImportZip,
 }) => {
-  const [isBrowseOpen, setIsBrowseOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Sheet Stack: 手前 (末尾) が最新に開いた Sheet
+  const [sheetStack, setSheetStack] = useState<SheetEntry[]>([]);
+  // 各 Sheet mount の key を単調増加させる (連続開閉で React に別要素と認識させる)
+  const [nextKey, setNextKey] = useState(1);
 
   const safeModCount = Number.isFinite(modCount) ? Math.max(0, Math.floor(modCount)) : 0;
   const displayModCount = safeModCount > 999 ? '999+' : safeModCount.toString();
 
+  /** 指定 Sheet を close 遷移させる (isOpen = false にして close アニメ待ち) */
+  const requestClose = useCallback((id: 'browse' | 'menu') => {
+    setSheetStack((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, isOpen: false } : entry
+      )
+    );
+  }, []);
+
+  /** close アニメ完了通知 → 該当 entry を stack から除去 */
+  const handleCloseAnimationComplete = useCallback(
+    (id: 'browse' | 'menu', key: number) => {
+      setSheetStack((prev) =>
+        prev.filter((entry) => !(entry.id === id && entry.key === key))
+      );
+    },
+    []
+  );
+
+  /** Sheet トリガーボタン (探す / メニュー) を押した時の挙動 */
+  const handleSheetButtonClick = useCallback(
+    (id: 'browse' | 'menu') => {
+      setSheetStack((prev) => {
+        // top (末尾) が同じ id かつ open → 閉じる (toggle)
+        const top = prev[prev.length - 1];
+        if (top && top.id === id && top.isOpen) {
+          return prev.map((entry) =>
+            entry === top ? { ...entry, isOpen: false } : entry
+          );
+        }
+        // それ以外: 既存の同じ id エントリがあれば isOpen=false (二重 open 防止)、
+        //   新規 entry を末尾に追加
+        const closingOthers = prev.map((entry) =>
+          entry.id === id || entry.isOpen === false
+            ? entry
+            : { ...entry, isOpen: false } // 他の open 中 Sheet を closing 状態に
+        );
+        // ただし「同じ id は既存 entry を破棄して新規 mount」させたい
+        //   (mount 済みの Sheet を再利用すると変な状態になる可能性を回避)
+        const withoutSameId = closingOthers.filter((entry) => entry.id !== id);
+        setNextKey((n) => n + 1);
+        return [
+          ...withoutSameId,
+          { id, key: nextKey, isOpen: true },
+        ];
+      });
+    },
+    [nextKey]
+  );
+
+  /** Link タブクリック時: 全 Sheet を close 遷移させる */
   const handleLinkClick = useCallback(
     (tabId: TabName) => {
-      // 別 Sheet が開いていたら閉じる
-      setIsBrowseOpen(false);
-      setIsMenuOpen(false);
+      setSheetStack((prev) => prev.map((entry) => ({ ...entry, isOpen: false })));
       onSwitchTab(tabId);
     },
     [onSwitchTab]
   );
 
-  const handleBrowseToggle = useCallback(() => {
-    setIsMenuOpen(false); // 排他制御
-    setIsBrowseOpen((prev) => !prev);
-  }, []);
+  const handleBrowseToggle = useCallback(
+    () => handleSheetButtonClick('browse'),
+    [handleSheetButtonClick]
+  );
+  const handleMenuToggle = useCallback(
+    () => handleSheetButtonClick('menu'),
+    [handleSheetButtonClick]
+  );
 
-  const handleMenuToggle = useCallback(() => {
-    setIsBrowseOpen(false); // 排他制御
-    setIsMenuOpen((prev) => !prev);
-  }, []);
+  // どの Sheet が「最前面で open」か (BottomNav のアイコン切替判定に使う)
+  const topOpenId: 'browse' | 'menu' | null = (() => {
+    for (let i = sheetStack.length - 1; i >= 0; i--) {
+      const entry = sheetStack[i];
+      if (entry?.isOpen) return entry.id;
+    }
+    return null;
+  })();
 
-  // "探す" は URL /mods 系の時に active。"メニュー" は /settings の時に active。
-  // これで従来 4 タブから 2 タブが sheet に移動しても UX 上の連続性を保つ。
   const NAV_ITEMS: readonly NavItem[] = [
-    {
-      kind: 'link',
-      id: 'home',
-      label: 'ホーム',
-      icon: 'fa-solid fa-house',
-      href: '/',
-    },
+    { kind: 'link', id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
     {
       kind: 'sheet',
       id: 'browse',
@@ -181,13 +242,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             }
 
             // Sheet トリガー item
-            const isOpen =
-              (item.id === 'browse' && isBrowseOpen) ||
-              (item.id === 'menu' && isMenuOpen);
-            const isActive =
-              isOpen ||
-              (item.matchTabs?.includes(activeTab) ?? false);
-            const iconClass = isOpen && item.activeIcon ? item.activeIcon : item.icon;
+            const isTopOpen = topOpenId === item.id;
+            const isActive = isTopOpen || (item.matchTabs?.includes(activeTab) ?? false);
+            const iconClass =
+              isTopOpen && item.activeIcon ? item.activeIcon : item.icon;
             const onClick =
               item.id === 'browse' ? handleBrowseToggle : handleMenuToggle;
             return (
@@ -195,7 +253,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 key={item.id}
                 type="button"
                 onClick={onClick}
-                aria-expanded={isOpen}
+                aria-expanded={isTopOpen}
                 aria-controls={
                   item.id === 'browse' ? 'browse-bottom-sheet' : 'menu-bottom-sheet'
                 }
@@ -205,7 +263,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               >
                 <div className="relative flex items-center justify-center">
                   <i
-                    className={`${iconClass} text-base sm:text-lg transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                    className={`${iconClass} text-base sm:text-lg transition-transform duration-200 ${isTopOpen ? 'rotate-90' : ''}`}
                     aria-hidden="true"
                   />
                 </div>
@@ -216,19 +274,42 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </div>
       </nav>
 
-      {/* Bottom Sheets */}
-      <BrowseBottomSheet
-        isOpen={isBrowseOpen}
-        onClose={() => setIsBrowseOpen(false)}
-      />
-      <MenuBottomSheet
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        theme={theme}
-        onToggleTheme={onToggleTheme}
-        onDownloadZip={onDownloadZip}
-        onImportZip={onImportZip}
-      />
+      {/* Sheet Stack: 手前 (末尾) ほど上に重ねる。z-index を stack index で加算。
+          各 Sheet は自前で slide アニメ、close 完了で親に通知して unmount させる。
+          Tailwind JIT scan の都合で動的クラスは使わず、明示マッピングで解決。 */}
+      {sheetStack.map((entry, idx) => {
+        // idx: 0 → z-[50], 1 → z-[52], 2 → z-[54] (通常 2 段まで、それ以上は同 z)
+        const zIndexClass =
+          idx === 0 ? 'z-[50]' : idx === 1 ? 'z-[52]' : 'z-[54]';
+        if (entry.id === 'browse') {
+          return (
+            <BrowseBottomSheet
+              key={`browse-${entry.key}`}
+              isOpen={entry.isOpen}
+              onClose={() => requestClose('browse')}
+              onCloseAnimationComplete={() =>
+                handleCloseAnimationComplete('browse', entry.key)
+              }
+              zIndexClass={zIndexClass}
+            />
+          );
+        }
+        return (
+          <MenuBottomSheet
+            key={`menu-${entry.key}`}
+            isOpen={entry.isOpen}
+            onClose={() => requestClose('menu')}
+            onCloseAnimationComplete={() =>
+              handleCloseAnimationComplete('menu', entry.key)
+            }
+            zIndexClass={zIndexClass}
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onDownloadZip={onDownloadZip}
+            onImportZip={onImportZip}
+          />
+        );
+      })}
     </>
   );
 };

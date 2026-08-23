@@ -73,3 +73,6 @@ build/
 .archive/**/.next
 .archive/**/dist
 .archive/**/.vite
+
+# --- Agent が調査目的で保存する参考画像 (コード成果物ではない) ---
+/image-search

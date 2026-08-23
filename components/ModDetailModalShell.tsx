@@ -9,7 +9,7 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 
 // -----------------------------------------------------------------------------
@@ -65,12 +65,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
 }) => {
   const router = useRouter();
   // Phase 9-A.4: useAppContext 撤去、Zustand + appActions 直接参照
-  const profileFromSelector = useProfilesStore(selectCurrentProfile);
-  const firstProfile = useProfilesStore((s) => s.profiles[0]);
-  const currentProfile = profileFromSelector ?? firstProfile ?? {
-    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
-    description: '', mods: []
-  };
+  // B33 修正: 共通 hook (useCurrentProfileWithFallback) に集約、
+  // fallback リテラルの参照安定化と 3 コンポーネント間の DRY を実現。
+  const currentProfile = useCurrentProfileWithFallback();
   const handleToggleMod = useAppAction('handleToggleMod');
 
   // -------- Hook 群 (早期 return より前に全て) --------

@@ -11,7 +11,7 @@ import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
 import { CacheStatusBadge } from './CacheStatusBadge';
-import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 
 // ============================================================================
@@ -50,12 +50,8 @@ export const HomeInteractive: React.FC<Props> = ({
   initialHasMore
 }) => {
   // Phase 9-A.3: useAppContext 撤去、Zustand + appActions 直接参照
-  const profileFromSelector = useProfilesStore(selectCurrentProfile);
-  const firstProfile = useProfilesStore((s) => s.profiles[0]);
-  const profile = profileFromSelector ?? firstProfile ?? {
-    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
-    description: '', mods: []
-  };
+  // B33 修正: 3 コンポーネントで重複していた fallback パターンを共通 hook に集約
+  const profile = useCurrentProfileWithFallback();
   const handleToggleMod = useAppAction('handleToggleMod');
   const handleDuplicateProfile = useAppAction('handleDuplicateProfile');
   const openEditProfileModal = useAppAction('openEditProfileModal');

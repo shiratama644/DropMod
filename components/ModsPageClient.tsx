@@ -8,7 +8,7 @@ import type { ModItem, ModrinthVersion, Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 
 // ============================================================================
@@ -30,13 +30,9 @@ export const ModsPageClient: React.FC = () => {
 
   // ---- Zustand: currentProfile を selector で計算 (profiles/currentProfileId の
   //      どちらかが変わった時のみ再レンダー) ----
-  //   fallback は先頭 profile。profiles が完全に空なら不変なダミーを使う。
-  const profileFromSelector = useProfilesStore(selectCurrentProfile);
-  const firstProfile = useProfilesStore((s) => s.profiles[0]);
-  const profile = profileFromSelector ?? firstProfile ?? {
-    id: 'empty', name: '(未初期化)', mcVersion: '1.20.1', loader: 'Fabric',
-    description: '', mods: []
-  };
+  //   B33 修正: 共通 hook (useCurrentProfileWithFallback) に集約、
+  //   fallback リテラルの参照安定化と 3 コンポーネント間の DRY を実現。
+  const profile = useCurrentProfileWithFallback();
 
   // ---- appActionsStore 経由 ----
   const handleToggleMod = useAppAction('handleToggleMod');

@@ -176,8 +176,6 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   // variant="page" (フルページ) の時、body に `mod-fullpage`
   // クラスを付与して AppShell の Header と BottomNav を非表示にする。
-  // (Home 上のモーダル表示 = variant="modal" では付与しないので、
-  //  グローバル Header は残る。)
   // アンマウント時に必ずクラスを剥がすので、他ページ遷移で消え残らない。
   //
   // 注: Phase 10-P1 で /mods/[slug] フルページ経路は ModDetailPageView に
@@ -189,6 +187,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
     document.body.classList.add('mod-fullpage');
     return () => {
       document.body.classList.remove('mod-fullpage');
+    };
+  }, [isModal]);
+
+  // インターセプト詳細モーダル中はモバイル BottomNav を隠す。
+  // BottomNav は z-[60]、従来のモーダル overlay は z-50 だったため
+  // ナビが前面に出て操作できてしまう不具合があった。
+  useEffect(() => {
+    if (!isModal) return;
+    if (typeof document === 'undefined') return;
+    document.body.classList.add('mod-detail-modal');
+    return () => {
+      document.body.classList.remove('mod-detail-modal');
     };
   }, [isModal]);
 
@@ -258,7 +268,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
         // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
           onClick={handleClose}
         >
@@ -579,7 +589,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
       // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
+        className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
         style={{ backgroundColor: 'var(--modal-overlay)' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();

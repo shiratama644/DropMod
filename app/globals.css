@@ -327,6 +327,13 @@ body.mod-fullpage {
     padding-bottom: 0;
 }
 
+/* インターセプト詳細モーダル中はモバイル BottomNav を隠す。
+   overlay は z-[70] で BottomNav (z-[60]) より上だが、ナビ自体も消して
+   タップ貫通・読み上げ対象に残らないようにする。 */
+body.mod-detail-modal #bottom-nav {
+    display: none;
+}
+
 /* -----------------------------------------------------------------
  * Phase 9.5-F: LP の人気 Mod 横スクロール marquee 用 keyframes
  *   - CSS animation で GPU 加速、JS で毎フレーム更新しない

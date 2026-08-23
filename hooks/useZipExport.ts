@@ -3,7 +3,10 @@
 import { useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { Profile, ModItem } from '@/types';
-import { useZipExportStore } from '@/lib/store/zipExport';
+// B5 修正: ZipProgressState 型は lib/store/zipExport.ts に一本化。
+//   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
+//   を削除し、store から import して名前空間衝突リスクを排除。
+import { useZipExportStore, type ZipProgressState } from '@/lib/store/zipExport';
 
 // ==========================================
 // 定数
@@ -74,23 +77,8 @@ const RETRY_DELAY_MS = 1000;
 const URL_REVOKE_DELAY_MS = 10000;
 
 // ==========================================
-// 型定義
+// 型定義は lib/store/zipExport.ts に一本化 (B5 / D18 修正)
 // ==========================================
-export interface ZipProgressState {
-  isOpen: boolean;
-  progress: number;
-  statusText: string;
-  statusCount: string;
-  detailText: string;
-}
-
-const INITIAL_STATE: ZipProgressState = {
-  isOpen: false,
-  progress: 0,
-  statusText: '',
-  statusCount: '',
-  detailText: '',
-};
 
 // ==========================================
 // 純粋ヘルパー関数 (テスト・保守が容易な領域)
@@ -214,6 +202,13 @@ export const useZipExport = (
   //   を避けるため、下流コンポーネントが直接 useZipExportStore((s) => s.zipState) で
   //   購読できるようにする。
   //   AbortController だけは hook 内 Ref に保持 (シリアライズ不能、hook ライフサイクル依存)。
+  //
+  // B7 修正: cancelRequested / requestCancel / clearCancelRequest を実装で活用。
+  //   従来 store には定義されていたが hook で subscribe / 呼び出しをしておらず dead code だった。
+  //   → handleCancelZip で requestCancel() を呼び、DL worker loop で cancelRequested を
+  //     確認して abort する 2 層 cancel フローに (AbortController + Zustand フラグ)。
+  //   → 外部から `useZipExportStore.getState().requestCancel()` を呼んでも
+  //     DL loop に伝わるようになり、store の action が意味を持つ。
   const zipState = useZipExportStore((s) => s.zipState);
   const updateZipState = useZipExportStore((s) => s.updateZipState);
   const setZipState = useCallback(
@@ -236,6 +231,8 @@ export const useZipExport = (
       activeZipAbortRef.current.abort();
       activeZipAbortRef.current = null;
     }
+    // B7 修正: Zustand cancelRequested フラグも立てる (DL loop が subscribe で停止判定)
+    useZipExportStore.getState().requestCancel();
     updateZipState({ isOpen: false });
     // 完了直後のモーダル閉じで toast が二重表示されるのを回避
     if (wasActive) {
@@ -269,6 +266,13 @@ export const useZipExport = (
     const abortController = new AbortController();
     activeZipAbortRef.current = abortController;
     const { signal } = abortController;
+
+    // B7 修正: 開始前に cancelRequested フラグをクリア (前回セッションの残置対策)
+    useZipExportStore.getState().clearCancelRequest();
+
+    // cancel 判定ヘルパ (AbortController + Zustand フラグ両方チェック)
+    const isCancelled = () =>
+      signal.aborted || useZipExportStore.getState().cancelRequested;
 
     // 初期状態の設定
     setZipState({
@@ -320,7 +324,8 @@ export const useZipExport = (
       // ワーカー定義
       const worker = async () => {
         while (currentIndex < totalMods) {
-          if (signal.aborted) throw new Error('Aborted');
+          // B7 修正: AbortController + Zustand cancelRequested 両方を確認
+          if (isCancelled()) throw new Error('Aborted');
 
           const index = currentIndex++;
           // 配列インデックスは T | undefined。
@@ -369,7 +374,7 @@ export const useZipExport = (
       const workerCount = Math.min(dynamicConcurrency, totalMods);
       await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
-      if (signal.aborted) throw new Error('Aborted');
+      if (isCancelled()) throw new Error('Aborted');
 
       // README を実ファイル名 (dedup後) で最後に追加
       zip.file('README.txt', generateReadmeText(currentProfile, actualFilenames));
@@ -381,16 +386,36 @@ export const useZipExport = (
         detailText: '圧縮パッケージ生成中',
       });
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
-        if (signal.aborted) return;
-        const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
-        updateZipState({
-          progress: compressPercent,
-          detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
+      // B28 修正: JSZip.generateAsync は AbortSignal を native サポートしていないため、
+      //   Promise.race で cancel を検知して throw する形にする。
+      //   これにより cancel 後に JSZip の圧縮ループが継続実行される (CPU 消費) 問題を排除。
+      const abortPromise = new Promise<never>((_resolve, reject) => {
+        const checkInterval = setInterval(() => {
+          if (isCancelled()) {
+            clearInterval(checkInterval);
+            reject(new Error('Aborted'));
+          }
+        }, 100);
+        // cleanup (generateAsync が先に完走した場合)
+        signal.addEventListener('abort', () => {
+          clearInterval(checkInterval);
+          reject(new Error('Aborted'));
         });
       });
 
-      if (signal.aborted) throw new Error('Aborted');
+      const zipBlob = await Promise.race([
+        zip.generateAsync({ type: 'blob' }, (metadata) => {
+          if (isCancelled()) return;
+          const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
+          updateZipState({
+            progress: compressPercent,
+            detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
+          });
+        }),
+        abortPromise
+      ]);
+
+      if (isCancelled()) throw new Error('Aborted');
 
       updateZipState({ progress: 100 });
 
@@ -421,6 +446,8 @@ export const useZipExport = (
       updateZipState({ isOpen: false });
       showToast('ZIPの生成に失敗しました', 'warning');
     } finally {
+      // B7 修正: 完了時 cancelRequested をリセット (次回セッションに影響しないように)
+      useZipExportStore.getState().clearCancelRequest();
       if (activeZipAbortRef.current === abortController) {
         activeZipAbortRef.current = null;
       }

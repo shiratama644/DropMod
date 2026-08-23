@@ -225,6 +225,70 @@ describe('useZipExport', () => {
     expect(useZipExportStore.getState().zipState.isOpen).toBe(false);
   });
 
+  it('B7 修正: handleCancelZip が Zustand cancelRequested フラグを立てる', () => {
+    const showToast = vi.fn();
+    const profile = makeProfile([]);
+    const { result } = renderHook(() => useZipExport(profile, showToast));
+
+    // 手動でモーダルを開き、activeZipAbortRef 相当を setup
+    // (handleCancelZip は wasActive=false なら toast も出ないが、フラグは立つ)
+    useZipExportStore.getState().clearCancelRequest();
+    expect(useZipExportStore.getState().cancelRequested).toBe(false);
+
+    act(() => {
+      result.current.handleCancelZip();
+    });
+
+    // B7 修正後: handleCancelZip 呼び出しで cancelRequested=true になる
+    expect(useZipExportStore.getState().cancelRequested).toBe(true);
+  });
+
+  it('B7 修正: 開始時に前回の cancelRequested がクリアされる', async () => {
+    const showToast = vi.fn();
+    const profile = makeProfile([]);
+    const { result } = renderHook(() => useZipExport(profile, showToast));
+
+    // 前回セッションの残置を模倣
+    act(() => {
+      useZipExportStore.getState().requestCancel();
+    });
+    expect(useZipExportStore.getState().cancelRequested).toBe(true);
+
+    // Mod 0 個で早期 return するので clearCancelRequest は呼ばれない (0-mod ガードで先)
+    // → Mod あり profile で handleDownloadZip を呼ぶ必要がある
+    // 別 test で 0-mod のケースは扱っているので、ここでは直接 profile を渡す
+    const profileWithMods = makeProfile([
+      {
+        id: 'p-cancel',
+        title: 'CancelTest',
+        description: '',
+        fileUrl: 'https://cdn.modrinth.com/data/cancel/mod.jar',
+        filename: 'cancel.jar'
+      }
+    ]);
+    server.use(
+      http.get('https://cdn.modrinth.com/data/cancel/mod.jar', () =>
+        new HttpResponse(new Uint8Array([1]), { status: 200 })
+      )
+    );
+
+    const showToast2 = vi.fn();
+    const { result: r2 } = renderHook(() =>
+      useZipExport(profileWithMods, showToast2)
+    );
+
+    await act(async () => {
+      await r2.current.handleDownloadZip();
+    });
+
+    // 開始時に clearCancelRequest が呼ばれて false になり、
+    // 完了 finally でも clearCancelRequest が呼ばれて false のまま
+    await waitFor(
+      () => expect(useZipExportStore.getState().cancelRequested).toBe(false),
+      { timeout: 2000 }
+    );
+  });
+
   it('hook 戻り値の zipProgress/isZipModalOpen は store と同期', async () => {
     const showToast = vi.fn();
     const profile = makeProfile([]);

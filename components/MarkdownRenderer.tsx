@@ -190,7 +190,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           // lazy loading + async decoding + no-img-element の eslint disable で明示。
           img: ({ node, src, alt, ...props }) => {
             return (
-              // eslint-disable-next-line @next/next/no-img-element
+              // Phase 10-P5 (a11y/perf): Modrinth の Markdown 内 <img> は
+              //   width/height 不定・任意 origin なので next/image 化不可。
+              //   lazy loading + async decoding で最低限のパフォーマンス対応。
+              // biome-ignore lint/performance/noImgElement: Markdown 内画像で aspect ratio / origin 不定
               <img
                 src={typeof src === 'string' ? src : undefined}
                 alt={alt || ''}

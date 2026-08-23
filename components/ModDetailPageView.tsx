@@ -484,8 +484,12 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                     <span className="font-bold theme-text-brand">プレビュー</span>
                     <span className="theme-text-muted">クリックで閉じる</span>
                   </div>
-                  {/* aspect 未確定なので次/image ではなく通常 img */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {/* Phase 10-P5 (a11y/perf): 拡大プレビューは width/height 未確定
+                      (画像アスペクト比依存) のため next/image の layout=intrinsic
+                      相当が使えない。object-contain + max-h の伸縮レイアウトを
+                      維持するため <img> のまま。CDN 経由なので lazy load +
+                      async decoding を明示。 */}
+                  {/* biome-ignore lint/performance/noImgElement: aspect ratio 未確定で next/image 不可 */}
                   <img
                     src={selectedGalleryImg}
                     alt="ギャラリー画像プレビュー"

@@ -61,6 +61,16 @@ export const handlers = [
     });
   }),
 
+  // ---------- /project/{slug or id}/members ----------
+  ...both('get', '/project/:slug/members', ({ params }) => {
+    return HttpResponse.json([
+      {
+        role: 'Owner',
+        user: { username: `author-${params.slug}`, name: `Author ${params.slug}` }
+      }
+    ]);
+  }),
+
   // ---------- /project/{slug or id}/version (list) ----------
   // B35 修正: msw v2 は path-to-regexp で specific path を自動優先するため
   //   登録順は matching に影響しない。しかしコード可読性のため specific → generic

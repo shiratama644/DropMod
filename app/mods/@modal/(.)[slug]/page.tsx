@@ -15,7 +15,11 @@
 // `<ModDetailModalShell variant="modal">` に流し込む。
 // -----------------------------------------------------------------------------
 
-import { fetchModrinthProject, fetchModrinthProjectVersions } from '@/lib/modrinth/server';
+import {
+  fetchModrinthProject,
+  fetchModrinthProjectAuthor,
+  fetchModrinthProjectVersions
+} from '@/lib/modrinth/server';
 import { ModDetailModalShell } from '@/components/ModDetailModalShell';
 
 // モーダル側も 1 時間 ISR (フルページと同一 TTL)
@@ -28,7 +32,7 @@ interface Params {
 export default async function InterceptedModsModalPage({ params }: Params) {
   const { slug } = await params;
 
-  const [project, versions] = await Promise.all([
+  const [project, versions, author] = await Promise.all([
     fetchModrinthProject(slug).catch((e) => {
       console.warn('[DropMod] intercepted /mods modal project fetch failed:', e);
       return null;
@@ -36,12 +40,13 @@ export default async function InterceptedModsModalPage({ params }: Params) {
     fetchModrinthProjectVersions(slug).catch((e) => {
       console.warn('[DropMod] intercepted /mods modal versions fetch failed:', e);
       return [];
-    })
+    }),
+    fetchModrinthProjectAuthor(slug).catch(() => null)
   ]);
 
   return (
     <ModDetailModalShell
-      project={project}
+      project={project ? { ...project, author: author ?? project.author } : null}
       versions={versions}
       variant="modal"
       slug={slug}

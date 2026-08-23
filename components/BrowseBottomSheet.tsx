@@ -39,19 +39,19 @@ const CATEGORIES: readonly CategoryItem[] = [
     id: 'modpack',
     label: 'Modpacks',
     icon: 'fa-solid fa-boxes-stacked',
-    href: '/mods?type=modpack',
+    href: '/modpack',
   },
   {
     id: 'resourcepack',
     label: 'Resource Packs',
     icon: 'fa-solid fa-palette',
-    href: '/mods?type=resourcepack',
+    href: '/resourcepack',
   },
   {
     id: 'shader',
     label: 'Shaders',
     icon: 'fa-solid fa-wand-sparkles',
-    href: '/mods?type=shader',
+    href: '/shader',
   },
 ];
 

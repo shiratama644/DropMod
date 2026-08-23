@@ -12,7 +12,7 @@
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import type { Profile, ThemeMode } from '@/types';
+import type { Profile, TabName, ThemeMode } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 
 interface HeaderProps {
@@ -25,7 +25,7 @@ interface HeaderProps {
   onRunDependencyCheck: () => void;
   onDownloadZip: () => void;
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSwitchTab: (tab: 'home' | 'mods' | 'settings') => void;
+  onSwitchTab: (tab: TabName) => void;
   hasDepWarning: boolean;
 }
 

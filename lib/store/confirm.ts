@@ -1,18 +1,12 @@
 /**
- * confirm dialog Zustand store (Sub-Phase 8-C Step 2 + L7-2 修正)
+ * confirm dialog Zustand store (Sub-Phase 8-C Step 2 + L7-2 + B18 キュー化)
  *
  * ダイアログを Promise ベースで扱うための state を管理。
  * `resolve` 関数自体は Zustand state に入れない (シリアライズ不能、DevTools が壊れる)
- * ので module-level の Map に持たせる。
+ * ので module-level に持たせる。
  *
- * ⚠️ 1 セッション同時に開けるダイアログは 1 つのみ (既存 useConfirm の仕様と同じ)。
- * 2 個目の confirm(...) を呼ぶと 1 個目の resolve は false になる。
- *
- * L7-2 修正: 以前は cleanup が全 pending resolve を無条件で false にしていたため、
- *   複数コンポーネントから useConfirm が使われた際に、1 hook の unmount だけで
- *   他 hook が開いた dialog も強制キャンセルされていた。
- *   → 「開いた hook の owner ID」を管理し、cleanup は自 hook が開いた dialog
- *      のみ対象とする方式に変更。
+ * B18: 2 個目以降の confirm() は 1 個目を false で潰さずキューに積む。
+ * 前の dialog が閉じたあと FIFO で次を開く。
  */
 
 'use client';
@@ -39,48 +33,50 @@ interface ConfirmStoreState {
    */
   confirm: (options: ConfirmDialogOptions, ownerId?: symbol) => Promise<boolean>;
 
-  /**
-   * OK ボタン押下時 (ConfirmDialog の onConfirm から呼ぶ)。
-   */
   handleConfirm: () => void;
-
-  /**
-   * Cancel/Escape/背景クリック時 (ConfirmDialog の onCancel から呼ぶ)。
-   */
   handleCancel: () => void;
 
   /**
-   * hook unmount 時に、その hook が開いた dialog のみ false で resolve するためのフック。
-   * ownerId が未指定 (undefined) の場合は自 hook 経由の呼び出しがなかったので何もしない。
+   * hook unmount 時に、その hook が開いた dialog / キュー項目のみ false で resolve する。
    */
   cleanup: (ownerId?: symbol) => void;
 }
 
-// module-level: resolve 関数と owner id を state に入れない (Zustand DevTools が破損するため)
+interface PendingConfirm {
+  options: ConfirmDialogOptions;
+  ownerId: symbol | null;
+  resolve: (v: boolean) => void;
+}
+
 let pendingResolve: ((v: boolean) => void) | null = null;
 let pendingOwner: symbol | null = null;
+const confirmQueue: PendingConfirm[] = [];
+
+function openNext(set: (partial: Partial<ConfirmStoreState> | ((s: ConfirmStoreState) => Partial<ConfirmStoreState>)) => void) {
+  const next = confirmQueue.shift();
+  if (!next) {
+    pendingResolve = null;
+    pendingOwner = null;
+    set((s) => ({ state: { ...s.state, isOpen: false } }));
+    return;
+  }
+  pendingResolve = next.resolve;
+  pendingOwner = next.ownerId;
+  set({ state: { ...next.options, isOpen: true } });
+}
 
 export const useConfirmStore = create<ConfirmStoreState>((set) => ({
   state: INITIAL_STATE,
 
   confirm: (options, ownerId) =>
     new Promise<boolean>((resolve) => {
-      // 前のダイアログが残っていれば false でクローズ (owner に関係なく: 同一 UI で
-      // 複数 dialog を同時表示する仕様ではないため)
-      //
-      // ⚠️ B18 (仕様上の注意): 前の confirm を silent に false 化する。
-      //    呼び出し元は「ユーザーがキャンセルした」と区別不能。
-      //    → Promise.all([confirm(opt1), confirm(opt2)]) のような並列使用は非推奨。
-      //    現状は同一 UI 排他仕様のため実害無しだが、将来並列 confirm が必要になれば
-      //    キュー化を検討 (docs/audit/issues-phase9.md B18 参照)。
       if (pendingResolve) {
-        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
-          console.warn(
-            '[DropMod] 前の confirm() が resolve 前に上書きされました。' +
-              '前の呼び出しは false で resolve されます。並列使用は非推奨。'
-          );
-        }
-        pendingResolve(false);
+        confirmQueue.push({
+          options,
+          ownerId: ownerId ?? null,
+          resolve
+        });
+        return;
       }
       pendingResolve = resolve;
       pendingOwner = ownerId ?? null;
@@ -93,7 +89,7 @@ export const useConfirmStore = create<ConfirmStoreState>((set) => ({
       pendingResolve = null;
       pendingOwner = null;
     }
-    set((s) => ({ state: { ...s.state, isOpen: false } }));
+    openNext(set);
   },
 
   handleCancel: () => {
@@ -102,18 +98,26 @@ export const useConfirmStore = create<ConfirmStoreState>((set) => ({
       pendingResolve = null;
       pendingOwner = null;
     }
-    set((s) => ({ state: { ...s.state, isOpen: false } }));
+    openNext(set);
   },
 
   cleanup: (ownerId) => {
-    // L7-2 修正: 自 hook が開いた dialog のみを対象にする。
-    //   ownerId 未指定 or owner が異なる場合は何もしない (他 hook の dialog を尊重)。
+    if (ownerId === undefined) return;
+
+    // キューに残っている自 hook の項目を false で捨てる
+    for (let i = confirmQueue.length - 1; i >= 0; i--) {
+      const item = confirmQueue[i];
+      if (item && item.ownerId === ownerId) {
+        item.resolve(false);
+        confirmQueue.splice(i, 1);
+      }
+    }
+
     if (!pendingResolve) return;
-    if (ownerId === undefined || pendingOwner === null) return;
     if (pendingOwner !== ownerId) return;
     pendingResolve(false);
     pendingResolve = null;
     pendingOwner = null;
-    set({ state: INITIAL_STATE });
+    openNext(set);
   }
 }));

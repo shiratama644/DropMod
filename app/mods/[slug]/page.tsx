@@ -19,6 +19,7 @@ import { notFound } from 'next/navigation';
 
 import {
   fetchModrinthProject,
+  fetchModrinthProjectAuthor,
   fetchModrinthProjectVersions,
   fetchModrinthSearch
 } from '@/lib/modrinth/server';
@@ -105,12 +106,19 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ModDetailPage({ params }: Params) {
   const { slug } = await params;
 
-  const [project, versions] = await Promise.all([
+  const [project, versions, author] = await Promise.all([
     fetchModrinthProject(slug).catch(() => null),
-    fetchModrinthProjectVersions(slug).catch(() => [])
+    fetchModrinthProjectVersions(slug).catch(() => []),
+    fetchModrinthProjectAuthor(slug).catch(() => null)
   ]);
 
   if (!project) notFound();
 
-  return <ModDetailPageView project={project} versions={versions} slug={slug} />;
+  return (
+    <ModDetailPageView
+      project={{ ...project, author: author ?? project.author }}
+      versions={versions}
+      slug={slug}
+    />
+  );
 }

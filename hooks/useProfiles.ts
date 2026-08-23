@@ -316,6 +316,17 @@ export const useProfiles = (
     }
   }, [hasHydrated, cookieMcVersion, cookieLoader]);
 
+  // LocalStorage バックアップ期限切れ後も FOUC しないよう theme を cookie に残す
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC 用 cookie (cookieStore は Safari 未対応)
+      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+    } catch (e) {
+      console.warn('[DropMod] theme cookie 書き込みに失敗:', e);
+    }
+  }, [hasHydrated, theme]);
+
   // ---------------------------------------------------------------------
   // profiles が空配列になった場合の安全弁
   //

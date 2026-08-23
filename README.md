@@ -148,4 +148,4 @@ Vite + Hono から Next.js 16 + Vercel への段階的移行 (2025-08〜2026-08)
 
 ## ライセンス
 
-TBD (プライベートリポジトリ)。
+MIT License。詳細は [`LICENSE`](./LICENSE) を参照してください。

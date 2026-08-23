@@ -284,8 +284,15 @@ export function BottomSheet({ isOpen, onClose, children, ariaLabel }: BottomShee
 
 ### 4.3 「探す」ボタンの Bottom Sheet 内容 (成果物 B-1)
 
-**Phase 11 準備**: 4 カテゴリを大きなカードで選択できる UI。各カード → 対応する
-`/mods?type=xxx` にリンク (Phase 11 で fetchModrinthSearch に facets を追加)。
+**Phase 11 / 12 準備**: 4 カテゴリを大きなカードで選択できる UI。
+
+- Mods → `/mods` (現行検索)
+- Modpacks → **`/modpack`** (Phase 12 予約ハブ。`/mods?type=modpack` へリダイレクトしない)
+- Resource Packs → **`/resourcepack`** (Phase 11 予約ハブ)
+- Shaders → **`/shader`** (Phase 11 予約ハブ)
+
+暫定の Modrinth 検索は予約ページ内の「Modrinth で探す」から `/mods?type=` へ。
+詳細は `docs/planning/PHASE11_PLAN.md` §1.2.1。
 
 ```text
 ┌────────────────────────────────────────┐

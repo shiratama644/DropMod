@@ -129,13 +129,24 @@ export default function RootLayout({
   // dangerouslySetInnerHTML は script タグ挿入の Next.js 推奨方法。
   const themeInitScript = `
 try {
-  var raw = localStorage.getItem('dropmod_state_v2') || localStorage.getItem('craftforge_state_v2');
-  if (raw) {
-    var s = JSON.parse(raw);
-    if (s && s.theme === 'light') {
-      document.documentElement.classList.remove('dark');
+  var cookieTheme = '';
+  var parts = document.cookie ? document.cookie.split('; ') : [];
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].indexOf('dropmod_theme=') === 0) {
+      cookieTheme = decodeURIComponent(parts[i].slice('dropmod_theme='.length));
+      break;
     }
   }
+  var theme = cookieTheme;
+  if (theme !== 'light' && theme !== 'dark') {
+    var raw = localStorage.getItem('dropmod_state_v2') || localStorage.getItem('craftforge_state_v2');
+    if (raw) {
+      var s = JSON.parse(raw);
+      if (s && (s.theme === 'light' || s.theme === 'dark')) theme = s.theme;
+    }
+  }
+  if (theme === 'light') document.documentElement.classList.remove('dark');
+  else document.documentElement.classList.add('dark');
 } catch (e) { /* noop */ }
   `.trim();
 

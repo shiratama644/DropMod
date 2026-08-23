@@ -233,6 +233,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       //   cookieStore API は Safari 未対応 (2026 時点 experimental) なので直接操作。
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 cookie 削除 (max-age=0)
       document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
+      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC cookie 削除
+      document.cookie = 'dropmod_theme=; path=/; max-age=0; SameSite=Lax; Secure';
     } catch (e) {
       console.warn('[DropMod] データ初期化中に例外:', e);
     }

@@ -63,6 +63,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.3
+    },
+    {
+      url: `${baseUrl}/modpack`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5
+    },
+    {
+      url: `${baseUrl}/resourcepack`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5
+    },
+    {
+      url: `${baseUrl}/shader`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5
     }
   ];
 

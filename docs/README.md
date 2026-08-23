@@ -132,4 +132,17 @@ docs/
 
 ---
 
+## 🔗 予約 URL
+
+| URL | Phase | 用途 |
+|---|---|---|
+| `/resourcepack` | 11 | Resource Pack ハブ |
+| `/shader` | 11 | Shader ハブ |
+| `/modpack` | 12 | Modrinth Modpack ハブ |
+
+`/mods?type=` は検索フィルタ専用。予約 URL をそちらへリダイレクトしないこと。
+詳細は [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) §1.2.1。
+
+---
+
 *このドキュメント索引は 2026-08-24 のドキュメント整理 (Phase 9-F 後) 時点の構造です。Phase 10 以降で新規追加された場合は本 README を更新してください。*

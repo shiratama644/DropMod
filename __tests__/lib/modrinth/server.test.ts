@@ -11,6 +11,7 @@ import { server } from '../../mocks/server';
 import {
   fetchModrinthSearch,
   fetchModrinthProject,
+  fetchModrinthProjectAuthor,
   fetchModrinthProjectVersions,
   fetchLatestMinecraftVersions,
   slimVersion,
@@ -144,6 +145,22 @@ describe('lib/modrinth/server', () => {
         )
       );
       await expect(fetchModrinthProject('nope')).rejects.toThrow(/HTTP 404/);
+    });
+  });
+
+  describe('fetchModrinthProjectAuthor', () => {
+    it('members から Owner 名を返す', async () => {
+      const author = await fetchModrinthProjectAuthor('sodium');
+      expect(author).toBe('Author sodium');
+    });
+
+    it('members 失敗時は null', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          new HttpResponse('down', { status: 500 })
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBeNull();
     });
   });
 

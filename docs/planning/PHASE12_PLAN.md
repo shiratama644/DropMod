@@ -599,6 +599,15 @@ CurseForge `.zip` を Import しようとした場合:
 
 ## 6. UI / UX 仕様
 
+### 5.1 予約 URL `/modpack`
+
+`/modpack` は **Phase 12 の Modrinth Modpack ハブ** として予約済み
+(`docs/planning/PHASE11_PLAN.md` §1.2.1)。
+
+- **やってはいけない**: `/mods?type=modpack` へのリダイレクト、ルート削除
+- **やること**: `.mrpack` Import、Modpack 更新検知、専用 UI をこの URL に載せる
+- `/mods?type=modpack` は Modrinth 検索の暫定フィルタとして残す
+
 ### 6.1 Profile 作成モーダルの経路拡張
 
 Phase 11 の 2 経路に **経路 C (Modpack)** を追加:

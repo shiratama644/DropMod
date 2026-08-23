@@ -97,6 +97,24 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
           </span>
         </button>
 
+        {/* ZIP 読込 (hidden input trigger) */}
+        <label className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[52px]">
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
+            <i className="fa-solid fa-file-import" aria-hidden />
+          </div>
+          <span className="font-semibold text-sm leading-tight truncate">
+            ZIP 読込
+          </span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip,.mrpack,application/zip"
+            className="hidden"
+            onChange={handleFileChange}
+            onClick={handleImportClick}
+          />
+        </label>
+
         {/* Settings */}
         <Link
           href="/settings"
@@ -124,24 +142,6 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
             {themeLabel}モード
           </span>
         </button>
-
-        {/* ZIP 読込 (hidden input trigger) */}
-        <label className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[52px]">
-          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
-            <i className="fa-solid fa-file-import" aria-hidden />
-          </div>
-          <span className="font-semibold text-sm leading-tight truncate">
-            ZIP 読込
-          </span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".zip,.mrpack,application/zip"
-            className="hidden"
-            onChange={handleFileChange}
-            onClick={handleImportClick}
-          />
-        </label>
       </div>
     </BottomSheet>
   );

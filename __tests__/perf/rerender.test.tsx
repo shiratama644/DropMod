@@ -191,7 +191,7 @@ const useCtxToastCountRender = () => {
 function ThemeToggler() {
   const { toggleTheme } = useLegacyCtx();
   return (
-    <button data-testid="ctx-toggle" onClick={toggleTheme}>
+    <button type="button" data-testid="ctx-toggle" onClick={toggleTheme}>
       toggle
     </button>
   );
@@ -199,7 +199,7 @@ function ThemeToggler() {
 function ToastAdder() {
   const { addToast } = useLegacyCtx();
   return (
-    <button data-testid="ctx-toast-btn" onClick={() => addToast('hi')}>
+    <button type="button" data-testid="ctx-toast-btn" onClick={() => addToast('hi')}>
       addToast
     </button>
   );
@@ -207,7 +207,7 @@ function ToastAdder() {
 function ZipProgressAdvancer() {
   const { tickZipProgress } = useLegacyCtx();
   return (
-    <button data-testid="ctx-zip-tick" onClick={tickZipProgress}>
+    <button type="button" data-testid="ctx-zip-tick" onClick={tickZipProgress}>
       tick
     </button>
   );

@@ -120,6 +120,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             {initialImportData ? 'ZIPからプロファイル作成' : '新規プロファイル作成'}
           </h3>
           <button
+            type="button"
             onClick={onClose}
             aria-label="閉じる"
             className="theme-text-muted hover:text-emerald-500 p-2 focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg"

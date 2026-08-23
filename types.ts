@@ -63,8 +63,12 @@ export interface ModrinthProject {
   description: string;
   body?: string;
   gallery?: ModrinthGalleryImage[];
-  categories: string[];
-  display_categories: string[];
+  // Phase 10-P1 修正: Modrinth API では稀に categories / display_categories が
+  // 欠落した状態で返る (aggregator project / モデレーション中の project など)。
+  // 従来 required としていたがプレンダー失敗の原因となったため optional に変更。
+  // 参照側は `?? []` で defensive に扱うこと。
+  categories?: string[];
+  display_categories?: string[];
   downloads: number;
   icon_url?: string;
   published: string;

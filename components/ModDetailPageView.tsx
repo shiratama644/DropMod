@@ -62,28 +62,33 @@ interface Props {
 // ヘルパー (ModDetailModalShell と重複しているが、両者は今後別々に進化する想定
 // なので DRY 化はあえて避けている。小さい pure 関数なので影響なし。)
 // -----------------------------------------------------------------------------
-function formatDownloads(num: number): string {
-  if (!num) return '0';
+function formatDownloads(num: number | undefined | null): string {
+  if (!num || !Number.isFinite(num)) return '0';
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
   return num.toString();
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | undefined | null): string {
+  if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('ja-JP', {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('ja-JP', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   } catch {
-    return iso;
+    return '—';
   }
 }
 
 function pickPrimaryFile(v: ModrinthVersion | null): ModrinthVersionFile | null {
-  if (!v || !v.files || v.files.length === 0) return null;
-  return v.files.find((f) => f.primary) || v.files[0] || null;
+  if (!v) return null;
+  const files = v.files ?? [];
+  if (files.length === 0) return null;
+  return files.find((f) => f.primary) || files[0] || null;
 }
 
 // Modrinth の loader 名を日本語風に整える (先頭大文字化のみ)
@@ -198,9 +203,14 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   }
 
   // 派生データ
-  const latestVersion = versions[0] ?? null;
+  // Phase 10-P1 修正: Modrinth API は array 系フィールドが欠落 (undefined) して返る
+  // ことがある (categories / display_categories / gallery / files など)。ISR プレンダー中に
+  // /mods/iris /mods/oculus 等で `Cannot read properties of undefined (reading 'length')`
+  // で落ちたため、全ての配列アクセスを defensive にする。
+  const safeVersions = versions ?? [];
+  const latestVersion = safeVersions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
-  const isAdded = currentProfile.mods.some(
+  const isAdded = (currentProfile.mods ?? []).some(
     (m) => m.id === project.id || (project.slug && m.slug === project.slug)
   );
   const externalLinks = collectExternalLinks(project);
@@ -215,9 +225,19 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   const loaderList = Array.from(loaderSet);
   const mcVersionList = Array.from(mcVersionSet);
 
+  // カテゴリは display_categories を優先、なければ categories、両方 undefined でも空配列
+  const categoriesList =
+    (project.display_categories && project.display_categories.length > 0
+      ? project.display_categories
+      : project.categories) ?? [];
+
+  const galleryList = project.gallery ?? [];
+
   // バージョン表示件数 (初期は最新 5 件、ボタンで全件展開)
   const VERSIONS_INITIAL = 5;
-  const displayedVersions = showAllVersions ? versions : versions.slice(0, VERSIONS_INITIAL);
+  const displayedVersions = showAllVersions
+    ? safeVersions
+    : safeVersions.slice(0, VERSIONS_INITIAL);
 
   const clientSide = project.client_side
     ? CLIENT_SERVER_LABEL[project.client_side]
@@ -410,17 +430,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
         {/* ---- 左カラム: 本文 + ギャラリー ---- */}
         <div className="space-y-4 min-w-0">
           {/* ギャラリー */}
-          {project.gallery && project.gallery.length > 0 && (
+          {galleryList.length > 0 && (
             <section className="glass-panel rounded-3xl border shadow-lg p-5 sm:p-6">
               <h2 className="text-sm font-bold uppercase tracking-wider theme-text-muted mb-3 flex items-center gap-2">
                 <i className="fa-solid fa-images theme-text-brand" aria-hidden />
                 ギャラリー
                 <span className="theme-text-muted font-normal">
-                  {`(${project.gallery.length})`}
+                  {`(${galleryList.length})`}
                 </span>
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {project.gallery.map((img) => (
+                {galleryList.map((img) => (
                   <button
                     key={img.url}
                     type="button"
@@ -497,7 +517,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
         <aside className="space-y-4 min-w-0">
           {/* 対応バージョン */}
           <SidebarCard title="対応バージョン" icon="fa-solid fa-code-branch">
-            {versions.length === 0 ? (
+            {safeVersions.length === 0 ? (
               <p className="text-xs theme-text-muted">
                 このプロファイル向けの対応バージョンは見つかりませんでした。
               </p>
@@ -522,7 +542,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                     </span>
                   ))}
                 </div>
-                {versions.length > VERSIONS_INITIAL && (
+                {safeVersions.length > VERSIONS_INITIAL && (
                   <button
                     type="button"
                     onClick={() => setShowAllVersions(!showAllVersions)}
@@ -531,7 +551,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                     <span>
                       {showAllVersions
                         ? '折りたたむ'
-                        : `すべて表示 (${versions.length} 件)`}
+                        : `すべて表示 (${safeVersions.length} 件)`}
                     </span>
                     <i
                       className={`fa-solid fa-chevron-${showAllVersions ? 'up' : 'down'} text-[10px]`}
@@ -544,13 +564,10 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           </SidebarCard>
 
           {/* カテゴリ */}
-          {(project.categories.length > 0 || project.display_categories.length > 0) && (
+          {categoriesList.length > 0 && (
             <SidebarCard title="カテゴリ" icon="fa-solid fa-tags">
               <div className="flex flex-wrap gap-1.5">
-                {(project.display_categories.length > 0
-                  ? project.display_categories
-                  : project.categories
-                ).map((c) => (
+                {categoriesList.map((c) => (
                   <span
                     key={c}
                     className="px-2 py-1 rounded-lg theme-sub-box border border-slate-500/30 text-[11px] font-semibold"

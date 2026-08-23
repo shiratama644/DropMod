@@ -4,6 +4,27 @@
 > **対象:** Phase 9-A 〜 Phase 9-E 完了時点 (HEAD `5a3bde1`)
 > **監査範囲:** Phase 9 で追加・改修された全ファイル (lib/store/, hooks/, components/, __tests__/, next.config.ts, vitest.config.ts, docs/)
 > **修正方針:** **本監査では修正は行わず、発見したバグを全てここに列挙する** (ユーザー判断で優先度付け後に別セッションで修正)
+>
+> ## ✅ 修正完了 (2026-08-24 追記、HEAD `847f760`)
+>
+> 以下 22 件を独立コミットで修正し push 済み。全 test 継続 pass、typecheck / lint clean。
+>
+> | 修正 commit | 対応 issue |
+> |---|---|
+> | `ae82d6f` fix(useProfiles) | **B24 (Critical)**, B4, B10, B8, B11 |
+> | `b391c52` fix(useDependencyCheck) | **B22 (High)**, B23 |
+> | `389ca27` fix(appActions/AppShell) | **B19 (High)**, B1 |
+> | `1c25371` fix(useZipExport) | **B7 (High)**, B5, B28 |
+> | `9503aca` fix(B33 共通 hook 化) | B33 (× 3 components) |
+> | `8a6242c` fix(CacheStatusBadge/HomeInteractive) | B12, B13, B31 (UX) |
+> | `9fd5192` fix(useModalA11y) | B32 |
+> | `6e0376e` fix(store/mocks) | B16, B18, B35 |
+> | `847f760` fix(perf test B36) | B36 |
+> | `381931f` docs (仕様書齟齬) | D4, D7, D14, D15, D16, DOC-1, DOC-6, B27 |
+>
+> **未修正 (Low、実害無いため放置)**: B2, B3, B6, B9, B14, B15, B17, B20, B21, B25, B26, B29, B30, B34, B37, B38, B39 (全て「確認済み無害」or「別バグとの重複」or「実運用で発生しない edge case」)
+>
+> **仕様書齟齬 (diff/phase9.md 側で管理)**: D1〜D20 のうち D1/D2/D3/D5/D6/D8-D11 は「意図的な設計変更」として許容、D4/D7/D14/D15/D16 は docs 更新で解決、D12/D13/D17-D20 は影響小のため許容 or docs 反映済み
 
 ---
 

@@ -41,17 +41,25 @@ Vercel Hobby プランは無料だが以下の**厳しい上限**があり、開
 3. Modrinth API との実通信を伴う機能検証はローカル `next dev` で完結させる
 4. **全項目完了・ユーザー最終確認済み**の状態で、初めて Vercel Preview → Production に deploy
 
-### Phase 11 (ローカル Minecraft 環境連携) との関係
+### Phase 11 / 12 / 13 との関係
 
-Phase 11 の設計書 `docs/planning/PHASE11_PLAN.md` にも「Phase 10 完了後」と
-記載していたが、**厳密には「Phase 10 の Vercel デプロイ以外の全項目完了後」**
-に読み替える。Phase 11 も Vercel デプロイ前の完了が理想 (deploy 後だと本番
-リスクが高まる):
+ChatGPT レビュー (2026-08-24) に基づき、ローカル Minecraft 環境連携は
+**3 Phase に分割** された:
+
+- **Phase 11** (`docs/planning/PHASE11_PLAN.md`): Read-only Import & Analysis
+- **Phase 12** (`docs/planning/PHASE12_PLAN.md`): Sync (書き込み) + Modrinth Modpack
+- **Phase 13** (`docs/planning/PHASE13_PLAN.md`): CurseForge 完全対応
+
+これらすべて Vercel デプロイ前に完了する (deploy 後だと本番リスクが高まる):
 
 ```
 [今]  Phase 10 の残タスク (bundle / cleanup / test / UI polish)
   ↓
-[次]  Phase 11 (ローカル Minecraft 環境連携) — showDirectoryPicker 等
+[次]  Phase 11 (Read-only Import & Analysis) — 4〜6 週
+  ↓
+      Phase 12 (Sync + Modrinth Modpack) — 4〜5 週
+  ↓
+      Phase 13 (CurseForge 完全対応) — 2〜3 週
   ↓
 [最後] Vercel 本番 Production Deploy — 全機能揃った状態で公開
 ```
@@ -116,8 +124,8 @@ Phase 11 の設計書 `docs/planning/PHASE11_PLAN.md` にも「Phase 10 完了�
 
 **⚠️ タイミング方針の変更 (2026-08-24 決定)**:
 従来「Phase 10 の最優先項目」だったが、**Vercel Hobby プランのリソース制約**
-により Phase 10 (および Phase 11) の全項目完了後の**最終ステップ**に位置付け直し。
-詳細は本ドキュメント冒頭の「【重要方針】」節を参照。
+により Phase 10 + Phase 11 + Phase 12 + Phase 13 の全項目完了後の**最終ステップ**に
+位置付け直し。詳細は本ドキュメント冒頭の「【重要方針】」節を参照。
 
 **着手前チェックリスト** (これらが全て ✅ になってから deploy):
 - [ ] FontAwesome subset 化 (bundle 900 KB 目標達成)
@@ -125,7 +133,9 @@ Phase 11 の設計書 `docs/planning/PHASE11_PLAN.md` にも「Phase 10 完了�
 - [ ] Markdown 内 `<Image>` 化 (LCP 改善)
 - [ ] E2E カバレッジ拡張 (zip-export / zip-import / dep-check)
 - [ ] shimmer skeleton (UX 磨き上げ)
-- [ ] Phase 11 (ローカル Minecraft 環境連携) 完了
+- [ ] Phase 11 (Read-only Import & Analysis) 完了
+- [ ] Phase 12 (Sync + Modrinth Modpack) 完了
+- [ ] Phase 13 (CurseForge 完全対応) 完了
 - [ ] `pnpm build` がローカルで完全 clean (0 warning)
 - [ ] Modrinth API rate limit テスト (localhost で `generateStaticParams` を
       複数回叩いても 429 回避できる)
@@ -148,7 +158,7 @@ Phase 11 の設計書 `docs/planning/PHASE11_PLAN.md` にも「Phase 10 完了�
 - 想定外の消費増を検知した場合は **一時的に production を pause** する運用手順を
   README に整備
 
-**優先度**: 🔴 最終ステップ (Phase 10 + Phase 11 の全項目完了後に実施)
+**優先度**: 🔴 最終ステップ (Phase 10 + Phase 11 + Phase 12 + Phase 13 の全項目完了後に実施)
 
 ---
 
@@ -233,7 +243,7 @@ Phase 1-9 の PLAN / COMPLETE / PHASE_PROFILER / issues.md 等を `docs/history/
 ## 🎯 Phase 10 実施順の推奨 (2026-08-24 更新: Vercel を最後に配置)
 
 **方針変更**: Vercel Hobby プランのリソース制約により、Vercel 本番デプロイは
-Phase 10 の他全項目 + Phase 11 完了後の**最終ステップ**として実施する
+Phase 10 の他全項目 + Phase 11 + Phase 12 + Phase 13 完了後の**最終ステップ**として実施する
 (冒頭「【重要方針】」節参照)。
 
 **推奨実施順**:
@@ -243,12 +253,14 @@ Phase 10 の他全項目 + Phase 11 完了後の**最終ステップ**として�
 3. **9-E.2 Markdown 内 `<Image>` 化** (LCP 改善) 🟡
 4. **E2E カバレッジ拡張** (zip-export / zip-import / dep-check) 🟡
 5. **9-E.3 shimmer skeleton** (UX 磨き上げ) 🟢
-6. *(Phase 11 完了)*
-7. **🚀 Vercel 本番デプロイ** — 最終ステップ、全項目完了・ユーザー最終確認済み
+6. *(Phase 11: Read-only Import & Analysis 完了)*
+7. *(Phase 12: Sync + Modrinth Modpack 完了)*
+8. *(Phase 13: CurseForge 完全対応 完了)*
+9. **🚀 Vercel 本番デプロイ** — 最終ステップ、全項目完了・ユーザー最終確認済み
    の状態でのみ実施 🔴
 
 **理由の再掲**:
-- 上記 1〜5 と Phase 11 の開発中は **ローカル + CI のみで検証**
+- 上記 1〜5 と Phase 11 / 12 / 13 の開発中は **ローカル + CI のみで検証**
 - 全機能揃った状態で Vercel Preview → Production の 2 段階 deploy
 - Hobby プランの上限 (100k Function Invocations / 月, 100 GB Bandwidth / 月)
   を意図せぬ消費で使い切るリスクを最小化

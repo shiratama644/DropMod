@@ -15,6 +15,7 @@ docs/
 │   ├── PHASE9_PLAN.md                 # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)
 │   ├── PHASE09_5_PLAN.md              # Phase 9.5 (ランディングページ刷新 + BottomNav 再設計)
 │   ├── PHASE10_CANDIDATES.md          # Phase 10 実施候補と優先度
+│   ├── PHASE10_PLAN.md                # Phase 10 実施計画書 (FontAwesome subset / AppContext 削除 / Image / E2E / shimmer)
 │   ├── PHASE11_PLAN.md                # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
 │   └── PHASE13_PLAN.md                # Phase 13 (CurseForge 完全対応)

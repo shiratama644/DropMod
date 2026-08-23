@@ -7,6 +7,7 @@ import type { Profile, ModItem } from '@/types';
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。
 import { useZipExportStore, type ZipProgressState } from '@/lib/store/zipExport';
+import { contentCategoryOf } from '@/lib/utils/contentCategory';
 
 // ==========================================
 // 定数
@@ -89,7 +90,16 @@ const getModFileName = (mod: ModItem): string => {
   if (mod.filename) return mod.filename;
   const version = mod.selectedVersionNumber ? `-${mod.selectedVersionNumber}` : '';
   const identifier = mod.slug || mod.id;
-  return `${identifier}${version}.jar`;
+  const cat = contentCategoryOf(mod);
+  const ext = cat === 'mod' ? 'jar' : 'zip';
+  return `${identifier}${version}.${ext}`;
+};
+
+const zipSubdirFor = (mod: ModItem): 'mods' | 'resourcepacks' | 'shaderpacks' => {
+  const cat = contentCategoryOf(mod);
+  if (cat === 'resourcepack') return 'resourcepacks';
+  if (cat === 'shader') return 'shaderpacks';
+  return 'mods';
 };
 
 /** ファイル名用の文字列サニタイズ */
@@ -285,7 +295,11 @@ export const useZipExport = (
 
     try {
       const zip = new JSZip();
-      const modsFolder = zip.folder('mods');
+      const folderCache = {
+        mods: zip.folder('mods'),
+        resourcepacks: zip.folder('resourcepacks'),
+        shaderpacks: zip.folder('shaderpacks')
+      };
 
       // テキスト・JSONメタデータの追加 (profile.json は先、README.txt は
       // 全 Mod の実ファイル名 (dedup後) が確定してから最後に書く)
@@ -345,7 +359,7 @@ export const useZipExport = (
             const blob = await downloadModFile(mod.fileUrl, signal);
             if (blob) {
               const uniqueName = dedupeFileName(getModFileName(mod));
-              modsFolder?.file(uniqueName, blob);
+              folderCache[zipSubdirFor(mod)]?.file(uniqueName, blob);
               actualFilenames.set(mod.id, uniqueName);
               successCount++;
             } else {

@@ -590,6 +590,7 @@ export const HomeInteractive: React.FC<Props> = ({
                 hit={hit}
                 profile={profile}
                 onToggleMod={handleToggleMod}
+                layout={layout}
               />
             ))}
             {isLoading &&

@@ -17,3 +17,23 @@ export function contentCategoryFromProject(
   }
   return 'mod';
 }
+
+/** .mrpack / ZIP 内の相対パスからカテゴリを推定 */
+export function contentCategoryFromPath(path: string | undefined | null): ContentCategory {
+  const normalized = (path ?? '').replace(/\\/g, '/').toLowerCase();
+  if (
+    normalized.startsWith('shaderpacks/') ||
+    normalized.includes('/shaderpacks/') ||
+    normalized === 'shaderpacks'
+  ) {
+    return 'shader';
+  }
+  if (
+    normalized.startsWith('resourcepacks/') ||
+    normalized.includes('/resourcepacks/') ||
+    normalized === 'resourcepacks'
+  ) {
+    return 'resourcepack';
+  }
+  return 'mod';
+}

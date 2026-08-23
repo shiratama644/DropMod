@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { HomeInteractive } from '@/components/HomeInteractive';
 import {
@@ -64,12 +65,14 @@ export default async function DiscoverTypePage({
 
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
-      <HomeInteractive
-        initialHits={hits}
-        initialHasMore={initialHasMore}
-        initialQuery={initialQuery}
-        initialProjectType={projectType}
-      />
+      <Suspense fallback={null}>
+        <HomeInteractive
+          initialHits={hits}
+          initialHasMore={initialHasMore}
+          initialQuery={initialQuery}
+          initialProjectType={projectType}
+        />
+      </Suspense>
     </main>
   );
 }

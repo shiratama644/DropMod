@@ -48,6 +48,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { discoverPathFromProjectType, modrinthProjectUrl } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // Props
@@ -118,7 +119,7 @@ function collectExternalLinks(project: ModrinthProject): ExternalLink[] {
   // Modrinth 上のプロジェクトページへのリンクは必ず提供する
   links.push({
     label: 'Modrinth で見る',
-    href: `https://modrinth.com/mod/${project.slug}`,
+    href: modrinthProjectUrl(project.slug, project.project_type),
     icon: 'fa-solid fa-arrow-up-right-from-square'
   });
   if (project.source_url) {
@@ -191,11 +192,11 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           {`Mod 情報を読み込めませんでした (slug: ${slug})。`}
         </p>
         <Link
-          href="/discover/mods"
+          href={discoverPathFromProjectType(undefined)}
           className="mt-4 inline-flex items-center gap-1.5 text-xs theme-text-brand hover:underline"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
-          Mod 一覧に戻る
+          検索に戻る
         </Link>
       </main>
     );
@@ -379,7 +380,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                 </button>
               )}
               <a
-                href={`https://modrinth.com/mod/${project.slug}`}
+                href={modrinthProjectUrl(project.slug, project.project_type)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 rounded-xl theme-sub-box text-sm font-semibold hover:bg-slate-700/40 transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"

@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion } from '@/types';
+import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion, ContentCategory } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
-import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { contentCategoryFromProject, contentCategoryOf } from '@/lib/utils/contentCategory';
 import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
@@ -574,13 +574,17 @@ export const useProfiles = (
           profilesRef.current.find((p) => p.id === currentProfileIdRef.current) ||
           latestProfile;
 
-        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch);
+        const skipLoader =
+          project.project_type === 'resourcepack' || project.project_type === 'shader';
+        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch, {
+          skipLoader
+        });
 
         if (
           !versionRes?.targetVersion?.files ||
           versionRes.targetVersion.files.length === 0
         ) {
-          if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
+          if (!silent) showToast('利用可能なファイルが見つかりませんでした', 'warning');
           return;
         }
 
@@ -591,7 +595,7 @@ export const useProfiles = (
         // 上で files.length===0 は既に return しているが
         // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
         if (!primaryFile) {
-          if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
+          if (!silent) showToast('利用可能なファイルが見つかりませんでした', 'warning');
           return;
         }
 
@@ -704,23 +708,42 @@ export const useProfiles = (
     [showToast, setProfiles, queryClient]
   );
 
-  const handleRemoveAllMods = useCallback(async () => {
+  const handleRemoveAllMods = useCallback(async (category?: ContentCategory) => {
     const latestId = currentProfileIdRef.current;
     const latest =
       profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
-    if (!latest || latest.mods.length === 0) return;
+    if (!latest) return;
+    const targets = category
+      ? latest.mods.filter((m) => contentCategoryOf(m) === category)
+      : latest.mods;
+    if (targets.length === 0) return;
+    const label =
+      category === 'resourcepack'
+        ? 'Resource Pack'
+        : category === 'shader'
+          ? 'Shader'
+          : 'Mod';
     const ok = await confirmDialog({
-      title: '全てのModを削除しますか？',
-      message: `プロファイル「${latest.name}」から ${latest.mods.length} 個のModを全て削除します。\nこの操作は取り消せません。`,
+      title: `${label}をすべて削除しますか？`,
+      message: `プロファイル「${latest.name}」から ${targets.length} 個の${label}を削除します。\\nこの操作は取り消せません。`,
       confirmLabel: 'すべて削除',
       cancelLabel: 'キャンセル',
       danger: true
     });
     if (!ok) return;
     setProfiles((prev) =>
-      prev.map((p) => (p.id === currentProfileIdRef.current ? { ...p, mods: [] } : p))
+      prev.map((p) =>
+        p.id === currentProfileIdRef.current
+          ? {
+              ...p,
+              mods: category
+                ? p.mods.filter((m) => contentCategoryOf(m) !== category)
+                : []
+            }
+          : p
+      )
     );
-    showToast('すべてのModを削除しました', 'info');
+    showToast(`すべての${label}を削除しました`, 'info');
   }, [showToast, confirmDialog, setProfiles]);
 
   return {

@@ -10,6 +10,17 @@ import {
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
+import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
+
+function normalizeImportedLoader(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const s = raw.toLowerCase();
+  if (s.includes('quilt')) return 'Quilt';
+  if (s.includes('neoforge')) return 'NeoForge';
+  if (s.includes('forge')) return 'Forge';
+  if (s.includes('fabric')) return 'Fabric';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
 
 export const useZipImport = (
   setProfiles: React.Dispatch<React.SetStateAction<Profile[]>>,
@@ -50,6 +61,7 @@ export const useZipImport = (
         //   fabric-loader / forge / neoforge / quilt-loader
         // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
         let loader = 'Fabric';
+        if (mrpackData.dependencies?.['fabric-loader']) loader = 'Fabric';
         if (mrpackData.dependencies?.forge) loader = 'Forge';
         if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
         if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
@@ -109,6 +121,9 @@ export const useZipImport = (
               description: proj?.description || 'Imported from .mrpack',
               icon_url: proj?.icon_url,
               author: proj?.author,
+              projectType: proj
+                ? contentCategoryFromProject(proj)
+                : contentCategoryFromPath(f.path),
               selectedVersionId: matched?.id,
               selectedVersionNumber: matched?.version_number || 'mrpack',
               versionType: matched?.version_type || 'release',
@@ -207,6 +222,7 @@ export const useZipImport = (
             description: proj.description,
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
+            projectType: contentCategoryFromProject(proj),
             category:
               (proj.display_categories?.[0]) ||
               (proj.categories?.[0]) ||
@@ -227,9 +243,7 @@ export const useZipImport = (
         name: defaultName,
         mods: initialMods,
         mcVersion: firstVer?.game_versions ? firstVer.game_versions[0] : undefined,
-        loader: firstVer?.loaders?.[0]
-          ? firstVer.loaders[0].charAt(0).toUpperCase() + firstVer.loaders[0].slice(1)
-          : undefined
+        loader: normalizeImportedLoader(firstVer?.loaders?.[0])
       });
       setIsNewProfileModalOpen(true);
       showToast(`Modrinth上で ${initialMods.length} 個のModを特定しました。プロファイルを作成してください。`, 'success');

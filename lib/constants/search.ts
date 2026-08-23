@@ -44,6 +44,24 @@ export function parseDiscoverSegment(raw: string | string[] | undefined | null):
   return null;
 }
 
+/** 詳細ページの「一覧に戻る」用。未知は Mods 検索へ。 */
+export function discoverPathFromProjectType(raw: string | undefined | null): string {
+  return discoverPathForType(parseProjectType(raw));
+}
+
+const MODRINTH_SITE_SEGMENT: Record<ProjectType, string> = {
+  mod: 'mod',
+  modpack: 'modpack',
+  resourcepack: 'resourcepack',
+  shader: 'shader'
+};
+
+/** Modrinth 公式サイトのプロジェクト URL（種別を間違えると 404） */
+export function modrinthProjectUrl(slug: string, projectType?: string | null): string {
+  const type = parseProjectType(projectType);
+  return `https://modrinth.com/${MODRINTH_SITE_SEGMENT[type]}/${slug}`;
+}
+
 export function sanitizeSearchQuery(raw: string | string[] | undefined | null): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== 'string') return '';

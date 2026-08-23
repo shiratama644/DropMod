@@ -236,7 +236,7 @@ export const ModsPageClient: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={handleRemoveAllMods}
+            onClick={() => handleRemoveAllMods(activeTab)}
             className="btn-hover-effect flex-1 sm:flex-none justify-center px-3.5 py-2 text-xs font-semibold rounded-xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 theme-text-red border border-red-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-trash-can" aria-hidden />

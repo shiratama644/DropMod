@@ -11,6 +11,7 @@ import { downloadAsBlob } from '@/lib/utils/download';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { discoverPathFromProjectType } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell
@@ -533,11 +534,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
           // Phase 9-F: フルページ (variant="page") 時の戻り先は /mods (Mod 一覧) に。
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
-            href="/discover/mods"
+            href={discoverPathFromProjectType(project.project_type)}
             className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
-            Mod 一覧に戻る
+            検索に戻る
           </Link>
         )}
         {latestFile && (
@@ -631,11 +632,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <div className="mb-3">
         {/* <button router.push> ではなく <Link href> で戻る (SEO/新規タブ対応) */}
         <Link
-          href="/discover/mods"
+          href={discoverPathFromProjectType(project.project_type)}
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
-          Mod 一覧に戻る
+          検索に戻る
         </Link>
       </div>
       {innerCard}

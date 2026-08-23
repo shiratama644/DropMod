@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   discoverPathForType,
+  discoverPathFromProjectType,
+  modrinthProjectUrl,
   parseDiscoverSegment,
   parseProjectType,
   parseSearchLayout,
@@ -58,6 +60,15 @@ describe('discover paths', () => {
     expect(parseDiscoverSegment('mods')).toBe('mod');
     expect(parseDiscoverSegment('shader')).toBe('shader');
     expect(parseDiscoverSegment('plugin')).toBeNull();
+  });
+
+  it('project_type から正しい検索パスと Modrinth URL を返す', () => {
+    expect(discoverPathFromProjectType('shader')).toBe('/discover/shader');
+    expect(discoverPathFromProjectType('resourcepack')).toBe('/discover/resourcepack');
+    expect(modrinthProjectUrl('complementary-reimagined', 'shader')).toBe(
+      'https://modrinth.com/shader/complementary-reimagined'
+    );
+    expect(modrinthProjectUrl('sodium', 'mod')).toBe('https://modrinth.com/mod/sodium');
   });
 });
 

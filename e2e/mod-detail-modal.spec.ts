@@ -63,7 +63,7 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     //     (旧: body に mod-fullpage クラスが付いて Header 非表示、を撤廃)
     //   - 上部にブレッドクラム的な「Mod 一覧に戻る」リンクがある
     //   - dialog role は付いていない (モーダルではないため)
-    await expect(page.getByRole('link', { name: /Mod 一覧に戻る/ })).toBeVisible({
+    await expect(page.getByRole('link', { name: /検索に戻る|Mod 一覧に戻る/ })).toBeVisible({
       timeout: 15_000
     });
     // モバイルは Header、PC は DesktopSidebar が表示されたまま

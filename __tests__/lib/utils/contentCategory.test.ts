@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { contentCategoryFromProject, contentCategoryOf } from '@/lib/utils/contentCategory';
+import {
+  contentCategoryFromPath,
+  contentCategoryFromProject,
+  contentCategoryOf
+} from '@/lib/utils/contentCategory';
 
 describe('contentCategoryOf', () => {
   it('未指定は mod', () => {
@@ -9,6 +13,14 @@ describe('contentCategoryOf', () => {
   it('resourcepack / shader をそのまま返す', () => {
     expect(contentCategoryOf({ projectType: 'resourcepack' })).toBe('resourcepack');
     expect(contentCategoryOf({ projectType: 'shader' })).toBe('shader');
+  });
+});
+
+describe('contentCategoryFromPath', () => {
+  it('shaderpacks / resourcepacks パスを判定する', () => {
+    expect(contentCategoryFromPath('shaderpacks/foo.zip')).toBe('shader');
+    expect(contentCategoryFromPath('overrides/resourcepacks/bar.zip')).toBe('resourcepack');
+    expect(contentCategoryFromPath('mods/sodium.jar')).toBe('mod');
   });
 });
 

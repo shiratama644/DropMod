@@ -53,7 +53,7 @@ export interface AppActions {
     projectId: string, e?: React.MouseEvent, silent?: boolean
   ) => Promise<void>;
   handleUpdateModVersion: (projectId: string, versionId: string) => void | Promise<void>;
-  handleRemoveAllMods: () => void | Promise<void>;
+  handleRemoveAllMods: (category?: import('@/types').ContentCategory) => void | Promise<void>;
 
   // Dep check (useDependencyCheck hook 由来)
   runBackgroundDepCheck: () => void;

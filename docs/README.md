@@ -13,7 +13,8 @@ docs/
 │   ├── NEXTJS_MIGRATION_PLAN.md       # Vite → Next.js 16 段階的移行計画 (Phase 0-7)
 │   ├── PHASE8_PLAN.md                 # Phase 8 (Dexie/TSQ/Zustand + テスト土台)
 │   ├── PHASE9_PLAN.md                 # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)
-│   └── PHASE10_CANDIDATES.md          # Phase 10 実施候補と優先度
+│   ├── PHASE10_CANDIDATES.md          # Phase 10 実施候補と優先度
+│   └── PHASE11_PLAN.md                # Phase 11 (ローカル Minecraft 環境連携)
 ├── complete/                          # 完了レポート
 │   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
 │   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ
@@ -48,6 +49,7 @@ docs/
 | 見る順 | ドキュメント | 内容 |
 |---:|---|---|
 | 1 | [`planning/PHASE10_CANDIDATES.md`](planning/PHASE10_CANDIDATES.md) | Phase 10 実施候補と優先度、次に着手すべきタスクの提案 |
+| 2 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | Phase 11: ローカル Minecraft 環境連携 (Import/Sync)、DropMod の核心価値拡張 |
 | 2 | [`audit/issues-phase9.md`](audit/issues-phase9.md) | 未修正の Low 優先度バグ (17 件、実害なしで放置中) |
 | 3 | [`audit/diff-phase9.md`](audit/diff-phase9.md) | Phase 9 実装と計画書の意図的な齟齬 (背景理解に有用) |
 

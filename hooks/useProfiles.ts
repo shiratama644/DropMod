@@ -306,6 +306,10 @@ export const useProfiles = (
       //   - 本番 (Vercel) では HTTPS 強制なので必須ではないが、明示することで
       //     セキュリティ姿勢を強化 & 万一 HTTPS でない代替ホスティングにも耐性
       //   - localhost dev はブラウザ仕様上 Secure 要件から除外されるので副作用なし
+      // Phase 10-P5 (noDocumentCookie): SSR が cookie 経由で active profile を
+      //   読むため client 側 cookie 書き込みが必須。cookieStore API は
+      //   Safari 未対応 (2026 時点 experimental) なので document.cookie 直接操作。
+      // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 active profile cookie 書き込み (cookieStore は Safari 未対応)
       document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax; Secure`;
     } catch (e) {
       console.warn('[DropMod] cookie 書き込みに失敗:', e);

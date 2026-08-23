@@ -49,8 +49,9 @@ async function resetAll() {
   if (typeof localStorage !== 'undefined') {
     localStorage.clear();
   }
-  // cookie reset
+  // cookie reset (Phase 10-P5: テストセットアップのため直接操作)
   if (typeof document !== 'undefined') {
+    // biome-ignore lint/suspicious/noDocumentCookie: テストセットアップの cookie クリア
     document.cookie = 'dropmod_active_profile=; path=/; max-age=0';
   }
 }

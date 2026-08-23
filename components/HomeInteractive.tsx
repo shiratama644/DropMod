@@ -113,6 +113,19 @@ export const HomeInteractive: React.FC<Props> = ({
     searchParams.mcVersion === initialSearchParams.mcVersion &&
     searchParams.loader === initialSearchParams.loader;
 
+  // B31 補助: SSR fetch 時刻を client mount 時に固定して initialDataUpdatedAt に使う。
+  //   Date.now() は React 19 rule で render/useMemo 中に呼べないため、
+  //   useState + useEffect で mount 時に 1 回だけ計算してセット。
+  //   初回 render (SSR + client 1st) は 0 → CacheStatusBadge は非表示、
+  //   client mount 完了で Date.now() をセット → 「今取得」表示に切り替わる。
+  const [initialDataUpdatedAt, setInitialDataUpdatedAt] = useState<number>(0);
+  useEffect(() => {
+    if (initialMatches && initialHits.length > 0) {
+      setInitialDataUpdatedAt(Date.now());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 意図的に mount 時のみ
+  }, []);
+
   const query = useInfiniteQuery({
     queryKey: queryKeys.search.of(searchParams),
     queryFn: async ({ pageParam, signal }) => {
@@ -155,12 +168,8 @@ export const HomeInteractive: React.FC<Props> = ({
         }
       : undefined,
     // B31 修正: initialDataUpdatedAt を SSR fetch 時刻としてセット。
-    //   従来 initialData を渡した際 dataUpdatedAt が 0 のままだったため、
-    //   CacheStatusBadge は非表示 (SSR キャッシュヒットの透明性が損なわれる)。
-    //   → Date.now() (client 初回 render 時刻) を SSR fetch 相当としてセット。
-    //     厳密には SSR 完了時刻とは違うが、staleTime 5 分の判定精度としては十分。
-    //   → CacheStatusBadge に「今取得」バッジが SSR 直後にも表示される。
-    initialDataUpdatedAt: initialMatches && initialHits.length > 0 ? Date.now() : 0,
+    //   (Date.now() は impure なので useMemo で初回のみ、上で計算)
+    initialDataUpdatedAt,
     // SSR で initialHits が空だった (Modrinth 到達不可) 場合は
     // すぐ再取得を試みたい。initialData が無ければ通常フロー。
     staleTime: initialMatches ? 5 * 60 * 1000 : 0

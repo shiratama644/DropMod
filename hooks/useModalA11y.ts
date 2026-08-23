@@ -29,7 +29,14 @@ const FOCUSABLE_SELECTOR = [
 
 // モーダルスタック (グローバル)。同一フックインスタンスIDを LIFO で積む。
 // 最上位 (末尾) のモーダルだけが Escape を処理する。
+//
+// B32 修正: React 19 Strict Mode の double-invoke で
+//   「push → cleanup → push」 の連続で uid が重複、あるいは
+//   別モーダルとの pop 順序が入れ替わる問題があった。
+//   → array に加えて Set (mountedUids) で「現在マウント中の uid」を
+//     追跡し、重複 push を抑止する。
 const modalStack: string[] = [];
+const mountedUids: Set<string> = new Set();
 
 export function useModalA11y(
   isOpen: boolean,
@@ -49,11 +56,24 @@ export function useModalA11y(
   }
 
   // モーダルスタックへの登録
+  //
+  // B32 修正: React 19 Strict Mode double-invoke で uid が重複 push される
+  //   問題を Set (mountedUids) で防止。
+  //   - push 前に既に mounted なら早期 return (cleanup は必ず走るので pop 対称性維持)
+  //   - cleanup で必ず Set からも削除
   useEffect(() => {
     if (!isOpen) return;
     const uid = uidRef.current;
+    // 既に stack に載っている場合は double-push しない (Strict Mode 対策)
+    if (mountedUids.has(uid)) {
+      return () => {
+        // 何もしない (cleanup も対称的に skip)
+      };
+    }
+    mountedUids.add(uid);
     modalStack.push(uid);
     return () => {
+      mountedUids.delete(uid);
       const idx = modalStack.lastIndexOf(uid);
       if (idx >= 0) modalStack.splice(idx, 1);
     };

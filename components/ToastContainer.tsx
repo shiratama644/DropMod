@@ -36,6 +36,14 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
 
+  // toast.id が変わる度のみ、タイマーとアニメを再初期化する。
+  // 親再レンダーでのタイマーリセットを防ぐため onDismiss を deps から除外し、
+  // onDismissRef.current 経由で常に最新の関数を呼ぶ設計。
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): toast.id 自体は effect 本体で
+  //   直接参照していないが、「toast.id 変更 = 別 toast」という意味で
+  //   タイマー再初期化トリガーとして意図的に含めている。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: toast.id はタイマー再初期化トリガーとして意図的
   useEffect(() => {
     const el = elRef.current;
     if (el) {
@@ -68,8 +76,6 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
       clearTimeout(timer);
       if (el) gsap.killTweensOf(el);
     };
-    // toast.id が変わる度のみ、タイマーとアニメを再初期化する
-    // (親再レンダーでのタイマーリセットを防ぐため onDismiss を deps から除外)
   }, [toast.id]);
 
   let bgClass = 'glass-panel border-slate-500/40';

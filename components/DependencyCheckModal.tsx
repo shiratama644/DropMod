@@ -294,6 +294,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     .join(',');
 
   // (1) 初回オープン / プロファイル本体切替 → 即時
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): profile.id を deps に含めるのは
+  //   「プロファイル本体が切り替わった時に再チェックする」意図トリガー。
+  //   effect 本体では ref 経由の runCheckRef.current() だけ呼ぶので profile.id は
+  //   直接参照していないが、これは仕様通り。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: プロファイル切替検知トリガーとして意図的
   useEffect(() => {
     if (!isOpen) return;
     let isCancelled = false;
@@ -305,7 +311,11 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
   // (2) mods 配列の変化 → 600ms デバウンスで再チェック
   //     デバウンスすることで連続追加/削除中に API を叩きすぎない
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): modsSignature (string 化) を
+  //   deps に含めて内容 diff を検知。effect 本体では未参照だが、これは意図通り。
   const isFirstModsSignatureRun = useRef<boolean>(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mods 内容 diff 検知トリガー (signature 化)
   useEffect(() => {
     if (!isOpen) {
       isFirstModsSignatureRun.current = true;

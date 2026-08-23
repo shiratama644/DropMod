@@ -32,7 +32,13 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
     'mod';
 
   // 画像読み込み失敗時にプレースホルダーへ差し替え (L-10)
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): 意図的に hit.icon_url を deps に含める。
+  //   effect 本体 (setIconFailed(false)) では icon_url を参照していないが、
+  //   目的は「icon_url が変わったら失敗フラグを一度リセットする」こと。
+  //   Biome は本体未参照 dependency を「不要」と判定するが、これは仕様通り。
   const [iconFailed, setIconFailed] = useState<boolean>(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: icon_url 変更検知トリガーとして意図的
   useEffect(() => {
     setIconFailed(false);
   }, [hit.icon_url]);

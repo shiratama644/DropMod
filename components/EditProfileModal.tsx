@@ -45,7 +45,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   // 以前は deps に profile 全体が入っており、モーダルを開いている最中に
   // 別経路で profile が更新される (Mod 追加/削除など) と入力中の値が
   // 突然リセットされる不具合があった。
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): profile.* を deps に含めないのは
+  //   上記バグ回避のため意図的。wasEditOpenRef で「開いた瞬間のみ」1 回だけ
+  //   実行する制御を effect 内で行っている。stale profile 参照になる可能性は
+  //   あるが、モーダルが開いた時点の profile snapshot が正解 (以降の外部変更
+  //   は無視すべき)。
   const wasEditOpenRef = useRef<boolean>(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ profile snapshot をロード (詳細は上コメント)
   useEffect(() => {
     if (!isOpen) {
       wasEditOpenRef.current = false;
@@ -60,7 +67,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setLoader(profile.loader || 'Fabric');
       setDesc(profile.description || '');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)

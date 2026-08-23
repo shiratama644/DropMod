@@ -134,6 +134,13 @@ export const useDependencyCheck = (currentProfile: Profile) => {
     .map((m) => `${m.id || m.slug || '?'}@${m.selectedVersionId || 'latest'}`)
     .join(',');
 
+  // Phase 10-P5 (useExhaustiveDependencies): 意図的な冗長依存パターン。
+  //   effect 本体は runBackgroundDepCheck() を呼ぶだけで、4 依存全部を
+  //   Biome は「未参照」と判定する。しかし runBackgroundDepCheck 内部で
+  //   currentProfile 全体を capture 参照するため、mcVersion / loader /
+  //   modsSignature の変化をトリガーに再実行させる必要がある
+  //   (signature 化で mods 内容 diff を検知)。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: プロファイル構成変化トリガー (詳細は上コメント)
   useEffect(() => {
     const timer = setTimeout(() => {
       runBackgroundDepCheck();

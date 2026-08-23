@@ -46,12 +46,28 @@ export const ModsPageClient: React.FC = () => {
     new Map()
   );
 
+  // Phase 10-P5 (useExhaustiveDependencies): プロファイルが切り替わった時
+  //   (id 変更) or 対応 MC/Loader が変わった時 (別プロファイル環境相当) に
+  //   modVersionsMap を全リセットする意図トリガー。effect 本体では 3 依存を
+  //   参照しないが、これは仕様通り。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: プロファイル切り替え検知トリガーとして意図的
   useEffect(() => {
     setModVersionsMap(new Map());
   }, [profile.id, profile.mcVersion, profile.loader]);
 
   const modIdsSignature = profile.mods.map((m) => m.id).join(',');
 
+  // Phase 10-P5 (useExhaustiveDependencies): 意図的な複合パターン
+  //   1. modIdsSignature: mods 配列の内容変化を string 化で diff 検知
+  //      (profile.mods 直接 deps だと参照変化毎に発火するため signature 化)
+  //   2. profile.mcVersion / profile.loader: fetchStableModVersion に渡す
+  //      profile capture の更新検知として明示 (Biome は "signature より generic"
+  //      と警告するが、effect 内で使うのは profile 全体で mcVersion/loader も含む)
+  //   3. modVersionsMap.has: 内部で参照しているが deps に入れると無限ループ
+  //      (この effect が modVersionsMap を setState するため)
+  //
+  // 従来 eslint-disable-next-line で無視していた。Biome も同じ意図で ignore。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: signature 化 + 無限ループ回避のため意図的
   useEffect(() => {
     let active = true;
     const missingMods = profile.mods.filter(
@@ -104,7 +120,6 @@ export const ModsPageClient: React.FC = () => {
     return () => {
       active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modIdsSignature, profile.mcVersion, profile.loader]);
 
   const handleDirectJarDownload = useCallback(async (mod: ModItem) => {

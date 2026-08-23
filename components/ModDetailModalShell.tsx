@@ -109,6 +109,12 @@ export const ModDetailModalShell: React.FC<Props> = ({
   useModalA11y(isModal, handleClose, dialogRef);
 
   // page バリアントに切り替わったタイミングでギャラリー展開をリセット
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): slug を deps に含めるのは
+  //   「slug が変わったら (別 Mod に切り替わったら) ギャラリー展開状態と
+  //    選択中プレビュー画像をリセット」する意図トリガーのため。effect 本体で
+  //    slug を参照しないので Biome は「不要」と判定するが、これは仕様通り。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: slug 変更検知トリガーとして意図的
   useEffect(() => {
     setIsVersionsExpanded(true);
     setSelectedGalleryImg(null);

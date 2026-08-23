@@ -141,11 +141,15 @@ export const HomeInteractive: React.FC<Props> = ({
   //   初回 render (SSR + client 1st) は 0 → CacheStatusBadge は非表示、
   //   client mount 完了で Date.now() をセット → 「今取得」表示に切り替わる。
   const [initialDataUpdatedAt, setInitialDataUpdatedAt] = useState<number>(0);
+  // Phase 10-P5 (useExhaustiveDependencies): 意図的に mount 時 1 回のみ実行。
+  //   initialMatches / initialHits.length は「SSR fetch 時点」のスナップショット
+  //   なので、client 側で変わっても再評価しない。deps に含めると client mount 後
+  //   の状態変化で誤って現在時刻に更新されてしまう。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount 時 1 回のみ実行 (SSR スナップショット固定)
   useEffect(() => {
     if (initialMatches && initialHits.length > 0) {
       setInitialDataUpdatedAt(Date.now());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 意図的に mount 時のみ
   }, []);
 
   const query = useInfiniteQuery({

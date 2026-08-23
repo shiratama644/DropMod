@@ -36,7 +36,13 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   //     mcVersions のAPI非同期完了や親の再レンダーで initialImportData の
   //     参照が新しくなった際に、開いたままのモーダルで入力中の値が
   //     突然リセットされる不具合があった。
+  //
+  // Phase 10-P5 (useExhaustiveDependencies): mcVersions / initialImportData.* を
+  //   deps に含めないのは上記バグ回避のため意図的。wasOpenRef で「開いた瞬間
+  //   のみ」1 回だけ実行する制御を effect 内で行っている。stale 参照になる
+  //   可能性はあるが、モーダルが開いた時点の snapshot が正解。
   const wasOpenRef = useRef<boolean>(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード (詳細は上コメント)
   useEffect(() => {
     if (!isOpen) {
       wasOpenRef.current = false;
@@ -66,7 +72,6 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       setLoader('Fabric');
       setDesc('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // a11y: role/aria + Escape + フォーカストラップ

@@ -110,7 +110,7 @@ function isAllowedIframeSrc(src: string | undefined): boolean {
 }
 
 function getYouTubeVideoId(url: string): string | null {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   // match[2] は可能性として undefined
   const videoId = match?.[2];

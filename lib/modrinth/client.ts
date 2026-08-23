@@ -170,7 +170,7 @@ export async function fetchModrinth<T = any>(
     if (res.status === 429 && attempt < MAX_RETRY_ON_429) {
       const retryAfterMs =
         parseRetryAfterMs(res.headers.get('Retry-After')) ??
-        DEFAULT_RETRY_AFTER_MS * Math.pow(2, attempt); // fallback: 指数バックオフ
+        DEFAULT_RETRY_AFTER_MS * 2 ** attempt; // fallback: 指数バックオフ
       console.warn(
         `[DropMod] Modrinth rate-limited (429). Waiting ${retryAfterMs}ms before retry ${
           attempt + 1

@@ -320,9 +320,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
               {`ギャラリー・スクリーンショット (${project.gallery.length})`}
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {project.gallery.map((img, idx) => (
+              {project.gallery.map((img) => (
                 <div
-                  key={`${img.url}-${idx}`}
+                  key={img.url}
                   onClick={() => setSelectedGalleryImg(img.url)}
                   className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative"
                 >

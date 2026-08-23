@@ -36,6 +36,25 @@ const SORT_OPTIONS = [
   { label: '新着順', value: 'newest' }
 ];
 
+// スケルトン UI の key 用の module-level 定数配列。
+// 「並び順が変わらない/追加削除もない固定 length ループ」なので index を key に
+// しても実害はないが、Biome の lint/suspicious/noArrayIndexKey に引っかかる
+// (React 一般ルールとしては index key は避けるのが正)。
+// 事前に一意な文字列を持つ配列を用意し、それを map するパターンで解消。
+const INITIAL_SKELETON_KEYS = [
+  'initial-skeleton-a',
+  'initial-skeleton-b',
+  'initial-skeleton-c',
+  'initial-skeleton-d',
+  'initial-skeleton-e',
+  'initial-skeleton-f'
+] as const;
+const PAGINATION_SKELETON_KEYS = [
+  'pagination-skeleton-a',
+  'pagination-skeleton-b',
+  'pagination-skeleton-c'
+] as const;
+
 interface Props {
   /** SSR で取得した初期 24 件 (cookie ベースの実プロファイル) */
   initialHits: ModrinthHit[];
@@ -401,9 +420,9 @@ export const HomeInteractive: React.FC<Props> = ({
       {/* Mod Grid */}
       <div id="mod-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {isLoading && safeHits.length === 0 ? (
-          Array.from({ length: 6 }).map((_, i) => (
+          INITIAL_SKELETON_KEYS.map((k) => (
             <div
-              key={`initial-skeleton-${i}`}
+              key={k}
               className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
             >
               <div className="flex items-center gap-3">
@@ -457,9 +476,9 @@ export const HomeInteractive: React.FC<Props> = ({
               />
             ))}
             {isLoading &&
-              Array.from({ length: 3 }).map((_, i) => (
+              PAGINATION_SKELETON_KEYS.map((k) => (
                 <div
-                  key={`pagination-skeleton-${i}`}
+                  key={k}
                   className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
                 >
                   <div className="flex items-center gap-3">

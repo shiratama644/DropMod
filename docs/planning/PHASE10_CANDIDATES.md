@@ -53,9 +53,11 @@ ChatGPT レビュー (2026-08-24) に基づき、ローカル Minecraft 環境�
 これらすべて Vercel デプロイ前に完了する (deploy 後だと本番リスクが高まる):
 
 ```
-[今]  Phase 10 の残タスク (bundle / cleanup / test / UI polish)
+[今]  Phase 9.5 (ランディング刷新 + BottomNav 再設計) — 3〜4 週
   ↓
-[次]  Phase 11 (Read-only Import & Analysis) — 4〜6 週
+      Phase 10 の残タスク (bundle / cleanup / test / UI polish)
+  ↓
+      Phase 11 (Read-only Import & Analysis) — 4〜6 週
   ↓
       Phase 12 (Sync + Modrinth Modpack) — 4〜5 週
   ↓
@@ -63,6 +65,10 @@ ChatGPT レビュー (2026-08-24) に基づき、ローカル Minecraft 環境�
   ↓
 [最後] Vercel 本番 Production Deploy — 全機能揃った状態で公開
 ```
+
+**Phase 9.5 の位置付け**: Phase 10 開始前に「見た目」と「ナビゲーション骨格」を
+確定させる必要があるため、番号としては Phase 10 より前に位置付ける。詳細は
+`docs/planning/PHASE09_5_PLAN.md` 参照。
 
 ---
 

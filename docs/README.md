@@ -13,6 +13,7 @@ docs/
 │   ├── NEXTJS_MIGRATION_PLAN.md       # Vite → Next.js 16 段階的移行計画 (Phase 0-7)
 │   ├── PHASE8_PLAN.md                 # Phase 8 (Dexie/TSQ/Zustand + テスト土台)
 │   ├── PHASE9_PLAN.md                 # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)
+│   ├── PHASE09_5_PLAN.md              # Phase 9.5 (ランディングページ刷新 + BottomNav 再設計)
 │   ├── PHASE10_CANDIDATES.md          # Phase 10 実施候補と優先度
 │   ├── PHASE11_PLAN.md                # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
@@ -50,10 +51,11 @@ docs/
 
 | 見る順 | ドキュメント | 内容 |
 |---:|---|---|
-| 1 | [`planning/PHASE10_CANDIDATES.md`](planning/PHASE10_CANDIDATES.md) | Phase 10 実施候補と優先度、次に着手すべきタスクの提案 |
-| 2 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | Phase 11: Read-only Import & Analysis (ChatGPT レビュー #1 反映で Sync と分離) |
-| 3 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | Phase 12: Sync (双方向書き込み) & Modrinth Modpack、Managed File Ownership Model |
-| 4 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | Phase 13: CurseForge 完全対応 (Murmur2 fingerprint + Modpack) |
+| 1 | [`planning/PHASE09_5_PLAN.md`](planning/PHASE09_5_PLAN.md) | Phase 9.5: ランディングページ Modrinth 風刷新 + BottomNav ハンバーガー化 + Phase 11 準備 |
+| 2 | [`planning/PHASE10_CANDIDATES.md`](planning/PHASE10_CANDIDATES.md) | Phase 10 実施候補と優先度、次に着手すべきタスクの提案 |
+| 3 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | Phase 11: Read-only Import & Analysis (ChatGPT レビュー #1 反映で Sync と分離) |
+| 4 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | Phase 12: Sync (双方向書き込み) & Modrinth Modpack、Managed File Ownership Model |
+| 5 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | Phase 13: CurseForge 完全対応 (Murmur2 fingerprint + Modpack) |
 | 2 | [`audit/issues-phase9.md`](audit/issues-phase9.md) | 未修正の Low 優先度バグ (17 件、実害なしで放置中) |
 | 3 | [`audit/diff-phase9.md`](audit/diff-phase9.md) | Phase 9 実装と計画書の意図的な齟齬 (背景理解に有用) |
 

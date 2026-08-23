@@ -141,6 +141,11 @@ try {
             Mod アイコン画像 (cdn.modrinth.com/data/...) の LCP 短縮に寄与。 */}
         <link rel="preconnect" href="https://cdn.modrinth.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.modrinth.com" />
+        {/* Phase 10-P5 (security/noDangerouslySetInnerHtml): theme FOUC 対策の
+            定番パターン。__html はハードコード (ユーザー入力なし) なので XSS
+            リスクなし。next/script では hydration 前実行が保証されず FOUC が
+            戻るため、dangerouslySetInnerHTML を意図的に使用。 */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme FOUC 対策のハードコード script */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">

@@ -70,6 +70,26 @@ describe('lib/modrinth/server', () => {
       expect(url.searchParams.get('index')).toBe('relevance');
     });
 
+    it('projectType: shader なら facets が project_type:shader になり loader は付けない', async () => {
+      let captured = '';
+      server.use(
+        http.get('https://api.modrinth.com/v2/search', ({ request }) => {
+          captured = request.url;
+          return HttpResponse.json({ hits: [], total_hits: 0, offset: 0, limit: 24 });
+        })
+      );
+      await fetchModrinthSearch({
+        projectType: 'shader',
+        loader: 'Fabric',
+        mcVersion: '1.20.1'
+      });
+      const url = new URL(captured);
+      const facets = JSON.parse(url.searchParams.get('facets') ?? '[]');
+      expect(facets).toContainEqual(['project_type:shader']);
+      expect(facets).toContainEqual(['versions:1.20.1']);
+      expect(facets).not.toContainEqual(['categories:fabric']);
+    });
+
     it('category が All なら facets に追加しない', async () => {
       let captured = '';
       server.use(

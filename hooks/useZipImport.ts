@@ -56,20 +56,64 @@ export const useZipImport = (
 
         const importedMods: ModItem[] = [];
         if (mrpackData.files) {
+          const hashes = mrpackData.files
+            .map((f) => f.hashes?.sha1)
+            .filter((h): h is string => typeof h === 'string' && h.length > 0);
+          let versionByHash: Record<string, ModrinthVersion> = {};
+          if (hashes.length > 0) {
+            try {
+              versionByHash = await fetchModrinthVersionFilesBatch<ModrinthVersion>(
+                hashes,
+                'sha1'
+              );
+            } catch {
+              versionByHash = {};
+            }
+          }
+
+          const resolvedProjectIds = Array.from(
+            new Set(
+              Object.values(versionByHash)
+                .map((v) => v.project_id)
+                .filter((id): id is string => Boolean(id))
+            )
+          );
+          const projectMap = new Map<string, ModrinthProject>();
+          if (resolvedProjectIds.length > 0) {
+            try {
+              const projects = await fetchModrinthBatch<ModrinthProject>(
+                '/projects',
+                resolvedProjectIds
+              );
+              for (const p of projects) {
+                projectMap.set(p.id, p);
+              }
+            } catch {
+              // メタ取得失敗でも fileUrl があれば ZIP エクスポートは可能
+            }
+          }
+
           for (const f of mrpackData.files) {
             const downloadUrl = f.downloads?.[0] ? f.downloads[0] : '';
             const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
-            // 配列インデックスは T | undefined。
-            // split の結果は空配列にはならないが型システムには保証されない。
             const filename = pathParts[pathParts.length - 1] || 'mod.jar';
+            const matched = f.hashes?.sha1 ? versionByHash[f.hashes.sha1] : undefined;
+            const proj = matched?.project_id ? projectMap.get(matched.project_id) : undefined;
+            const primaryFile =
+              matched?.files?.find((file) => file.primary) || matched?.files?.[0];
 
             importedMods.push({
-              id: generateId('mrpack'),
-              title: filename.replace('.jar', ''),
-              description: 'Imported from .mrpack',
-              fileUrl: downloadUrl,
-              filename: filename,
-              selectedVersionNumber: 'mrpack'
+              id: matched?.project_id || generateId('mrpack'),
+              slug: proj?.slug,
+              title: proj?.title || filename.replace('.jar', ''),
+              description: proj?.description || 'Imported from .mrpack',
+              icon_url: proj?.icon_url,
+              author: proj?.author,
+              selectedVersionId: matched?.id,
+              selectedVersionNumber: matched?.version_number || 'mrpack',
+              versionType: matched?.version_type || 'release',
+              fileUrl: downloadUrl || primaryFile?.url || '',
+              filename
             });
           }
         }

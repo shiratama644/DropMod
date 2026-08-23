@@ -251,10 +251,10 @@ function EmptyState() {
       </div>
       <h3 className="text-sm sm:text-base font-bold">Modが選択されていません</h3>
       <p className="text-xs theme-text-muted mt-1 max-w-sm mx-auto">
-        「ホーム」タブからModrinthのModを検索して、このプロファイルに追加してください。
+        「探す」タブからModrinthのModを検索して、このプロファイルに追加してください。
       </p>
       <Link
-        href="/"
+        href="/mods"
         className="inline-block mt-4 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
         Modを探しに行く

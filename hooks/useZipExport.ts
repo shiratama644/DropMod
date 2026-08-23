@@ -388,32 +388,39 @@ export const useZipExport = (
 
       // B28 修正: JSZip.generateAsync は AbortSignal を native サポートしていないため、
       //   Promise.race で cancel を検知して throw する形にする。
-      //   これにより cancel 後に JSZip の圧縮ループが継続実行される (CPU 消費) 問題を排除。
+      //   generateAsync が先に完走した場合も interval を必ず止める (リーク防止)。
+      let compressWatch: ReturnType<typeof setInterval> | undefined;
       const abortPromise = new Promise<never>((_resolve, reject) => {
-        const checkInterval = setInterval(() => {
+        compressWatch = setInterval(() => {
           if (isCancelled()) {
-            clearInterval(checkInterval);
             reject(new Error('Aborted'));
           }
         }, 100);
-        // cleanup (generateAsync が先に完走した場合)
-        signal.addEventListener('abort', () => {
-          clearInterval(checkInterval);
-          reject(new Error('Aborted'));
-        });
+        signal.addEventListener(
+          'abort',
+          () => {
+            reject(new Error('Aborted'));
+          },
+          { once: true }
+        );
       });
 
-      const zipBlob = await Promise.race([
-        zip.generateAsync({ type: 'blob' }, (metadata) => {
-          if (isCancelled()) return;
-          const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
-          updateZipState({
-            progress: compressPercent,
-            detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
-          });
-        }),
-        abortPromise
-      ]);
+      let zipBlob: Blob;
+      try {
+        zipBlob = await Promise.race([
+          zip.generateAsync({ type: 'blob' }, (metadata) => {
+            if (isCancelled()) return;
+            const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
+            updateZipState({
+              progress: compressPercent,
+              detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
+            });
+          }),
+          abortPromise
+        ]);
+      } finally {
+        if (compressWatch !== undefined) clearInterval(compressWatch);
+      }
 
       if (isCancelled()) throw new Error('Aborted');
 

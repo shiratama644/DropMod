@@ -20,6 +20,8 @@ export interface SearchQueryParams {
   loader: string;
   category: string; // 'All' or Modrinth category name
   sort: 'popular' | 'relevance' | 'updated' | 'newest';
+  /** Modrinth project_type。未指定時は mod */
+  projectType?: 'mod' | 'modpack' | 'resourcepack' | 'shader';
 }
 
 // ============================================================================
@@ -38,7 +40,8 @@ export const searchKey = (params: SearchQueryParams) =>
       mcVersion: params.mcVersion,
       loader: params.loader,
       category: params.category,
-      sort: params.sort
+      sort: params.sort,
+      projectType: params.projectType ?? 'mod'
     }
   ] as const;
 

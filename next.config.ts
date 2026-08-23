@@ -130,6 +130,22 @@ const nextConfig: NextConfig = {
         source: '/mod/:slug',
         destination: '/mods/:slug',
         permanent: true
+      },
+      // BrowseSheet 旧リンク (存在しない単独ルート) → /mods?type=
+      {
+        source: '/modpack',
+        destination: '/mods?type=modpack',
+        permanent: false
+      },
+      {
+        source: '/resourcepack',
+        destination: '/mods?type=resourcepack',
+        permanent: false
+      },
+      {
+        source: '/shader',
+        destination: '/mods?type=shader',
+        permanent: false
       }
     ];
   }

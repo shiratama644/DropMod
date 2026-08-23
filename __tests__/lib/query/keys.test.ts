@@ -24,6 +24,17 @@ describe('query keys', () => {
       expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     });
 
+    it('defaults projectType to mod and differs when type changes', () => {
+      const base = {
+        query: 'x', mcVersion: '1.20.1', loader: 'Fabric',
+        category: 'All', sort: 'popular' as const
+      };
+      expect(searchKey(base)[1].projectType).toBe('mod');
+      expect(JSON.stringify(searchKey(base))).not.toBe(
+        JSON.stringify(searchKey({ ...base, projectType: 'shader' }))
+      );
+    });
+
     it('differs when any single field changes', () => {
       const base = {
         query: 'x', mcVersion: '1.20.1', loader: 'Fabric',

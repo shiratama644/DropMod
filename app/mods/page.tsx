@@ -23,7 +23,7 @@
 import { cookies } from 'next/headers';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { HomeInteractive } from '@/components/HomeInteractive';
-import { SEARCH_LIMIT } from '@/lib/constants/search';
+import { SEARCH_LIMIT, parseProjectType, sanitizeSearchQuery } from '@/lib/constants/search';
 
 // cookie が無い時のフォールバック
 const SSR_DEFAULT_MC_VERSION = '1.20.1';
@@ -62,23 +62,31 @@ export const metadata = {
     'Modrinth から Mod を検索・追加できます。カテゴリ・並び順・Minecraft バージョン・ローダーで絞り込み可能。'
 };
 
-export default async function ModsListPage() {
-  // Next.js 15+ では cookies() は async
+export default async function ModsListPage({
+  searchParams
+}: {
+  searchParams: Promise<{ q?: string; type?: string }>;
+}) {
+  // Next.js 15+ では cookies() / searchParams は async
   const cookieStore = await cookies();
+  const urlParams = await searchParams;
   const activeProfileCookie = cookieStore.get('dropmod_active_profile')?.value;
   const parsed = parseActiveProfileCookie(activeProfileCookie);
 
   const mcVersion = parsed?.mcVersion || SSR_DEFAULT_MC_VERSION;
   const loader = parsed?.loader || SSR_DEFAULT_LOADER;
+  const initialQuery = sanitizeSearchQuery(urlParams.q);
+  const initialProjectType = parseProjectType(urlParams.type);
 
   const searchResult = await fetchModrinthSearch({
-    query: '',
+    query: initialQuery,
     mcVersion,
     loader,
     category: 'All',
     sortBy: 'popular',
     offset: 0,
-    limit: SEARCH_LIMIT
+    limit: SEARCH_LIMIT,
+    projectType: initialProjectType
   }).catch((e) => {
     console.warn('[DropMod] /mods SSR search failed:', e);
     return { hits: [], total_hits: 0, offset: 0, limit: SEARCH_LIMIT };
@@ -91,6 +99,8 @@ export default async function ModsListPage() {
       <HomeInteractive
         initialHits={searchResult.hits}
         initialHasMore={initialHasMore}
+        initialQuery={initialQuery}
+        initialProjectType={initialProjectType}
       />
     </main>
   );

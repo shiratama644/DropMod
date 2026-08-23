@@ -187,6 +187,8 @@ export interface SearchParams {
   sortBy?: 'popular' | 'relevance' | 'updated' | 'newest';
   offset?: number;
   limit?: number;
+  /** 未指定時は mod。LP / BrowseSheet の type= に対応 */
+  projectType?: 'mod' | 'modpack' | 'resourcepack' | 'shader';
 }
 
 export interface SearchResult {
@@ -210,9 +212,12 @@ export async function fetchModrinthSearch(
   params: SearchParams,
   signal?: AbortSignal
 ): Promise<SearchResult> {
-  const facets: string[][] = [['project_type:mod']];
+  const projectType = params.projectType ?? 'mod';
+  const facets: string[][] = [[`project_type:${projectType}`]];
   if (params.mcVersion) facets.push([`versions:${params.mcVersion}`]);
-  if (params.loader) facets.push([`categories:${params.loader.toLowerCase()}`]);
+  if (params.loader && (projectType === 'mod' || projectType === 'modpack')) {
+    facets.push([`categories:${params.loader.toLowerCase()}`]);
+  }
   if (params.category && params.category !== 'All')
     facets.push([`categories:${params.category}`]);
 

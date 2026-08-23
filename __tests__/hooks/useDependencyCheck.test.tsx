@@ -193,7 +193,7 @@ describe('useDependencyCheck', () => {
     expect(idsParam).toBe(JSON.stringify(['v-b']));
   });
 
-  it('/versions が 500 を返しても throw しない (実装は warning=false 側に倒す)', async () => {
+  it('B22 修正: /versions が 500 を返しても前回の hasDepWarning を保持する', async () => {
     // proxy + direct の両方を 500 で落とす (client の fallback 経路を封じる)
     server.use(
       http.get('/api/modrinth/versions', () =>
@@ -213,13 +213,28 @@ describe('useDependencyCheck', () => {
     await act(async () => {
       await result.current.runBackgroundDepCheck();
     });
-    // 現行実装は catch で無音失敗するが、その後 outer ループを空 versionMap で
-    // 走らせて `setHasDepWarning(false)` を呼ぶ。throw しないこと & isChecking が
-    // 落ちること & lastCheckAt が更新されることを検証する。
+    // B22 修正後: catch で早期 return され、前回値 true が保持される
     expect(useDepCheckStore.getState().isChecking).toBe(false);
     expect(useDepCheckStore.getState().lastCheckAt).not.toBeNull();
-    // (前回値保持ではなく false になる = 現状の実装挙動)
-    expect(useDepCheckStore.getState().hasDepWarning).toBe(false);
+    // ✅ 前回値 true が保持される (仕様修正)
+    expect(useDepCheckStore.getState().hasDepWarning).toBe(true);
+  });
+
+  it('B23 修正: 全 mod が selectedVersionId="latest" のとき前回警告を保持', async () => {
+    useDepCheckStore.getState().setHasDepWarning(true); // 前回警告あり
+    const profile = makeProfile([
+      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'latest' },
+      { id: 'proj-b', title: 'B', description: '', selectedVersionId: 'latest' }
+    ]);
+    const { result } = renderHook(() => useDependencyCheck(profile), {
+      wrapper: createQueryWrapper()
+    });
+    await act(async () => {
+      await result.current.runBackgroundDepCheck();
+    });
+    // versionIds が空 → 判定不能 → 前回値 (true) を保持
+    expect(useDepCheckStore.getState().hasDepWarning).toBe(true);
+    expect(useDepCheckStore.getState().lastCheckAt).not.toBeNull();
   });
 
   it('runBackgroundDepCheck 完了で isChecking が false / lastCheckAt が更新される', async () => {

@@ -43,23 +43,38 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       const versionIds = profile.mods
         .map((m) => m.selectedVersionId)
         .filter((id) => id && id !== 'latest') as string[];
+
+      // B23 修正: versionIds が空 = 全 mod が 'latest' を選択している状態。
+      //   従来はこのケースで空 versionMap のまま outer loop → warning=false
+      //   → 前回警告が消されていた。
+      //   → 依存情報が取れない = 判定不能なので、前回値を保持して早期 return。
+      if (versionIds.length === 0) {
+        // 前回値は setHasDepWarning を呼ばない = 保持
+        markChecked();
+        return;
+      }
+
       const versionMap = new Map<string, any>();
 
-      if (versionIds.length > 0) {
-        try {
-          // C7-2 修正: canonical query key で 5 分キャッシュ。
-          //   versionIds はソートして key の安定性を確保 (order によって key が変わらないように)
-          const sortedIds = [...versionIds].sort();
-          const batchKey = ['versions-batch', sortedIds.join(',')] as const;
-          const batchVersions = await queryClient.fetchQuery({
-            queryKey: batchKey,
-            queryFn: () => fetchModrinthBatch<any>('/versions', versionIds),
-            staleTime: 5 * 60 * 1000 // 5 分
-          });
-          batchVersions.forEach((v: any) => versionMap.set(v.id, v));
-        } catch (_e) {
-          // レートリミット等: 前回の hasDepWarning を保持して無音失敗
-        }
+      // B22 修正: fetch 失敗時は「前回の hasDepWarning を保持」するのが
+      //   コメント通りの意図。従来は catch 後に空 versionMap で outer loop
+      //   を走らせて warning=false にしていたが、これは前回警告状態を消す。
+      //   → catch で早期 return して setHasDepWarning を呼ばず前回値を保持。
+      try {
+        // C7-2 修正: canonical query key で 5 分キャッシュ。
+        //   versionIds はソートして key の安定性を確保 (order によって key が変わらないように)
+        const sortedIds = [...versionIds].sort();
+        const batchKey = ['versions-batch', sortedIds.join(',')] as const;
+        const batchVersions = await queryClient.fetchQuery({
+          queryKey: batchKey,
+          queryFn: () => fetchModrinthBatch<any>('/versions', versionIds),
+          staleTime: 5 * 60 * 1000 // 5 分
+        });
+        batchVersions.forEach((v: any) => versionMap.set(v.id, v));
+      } catch (_e) {
+        // B22 修正: レートリミット / 500 等 → 前回の hasDepWarning を保持し早期 return
+        // (finally の markChecked は実行される)
+        return;
       }
 
       const installedProjectSet = new Set<string>();

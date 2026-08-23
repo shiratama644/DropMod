@@ -65,8 +65,11 @@ interface Props {
 // Client fetch しており実質未使用 (隠しコメントでしか使われていなかった) だったため。
 
 export const HomeInteractive: React.FC<Props> = ({
-  initialHits,
-  initialHasMore
+  initialHits
+  // Phase 10-P5: initialHasMore は Props 型に残しつつ destructure だけ削除。
+  //   将来のページネーション「initial は hasMore かどうか」実装で
+  //   復活させやすくするため型シグネチャは維持 (呼び出し側 app/mods/page.tsx も
+  //   引き続き渡している)。
 }) => {
   // Phase 9-A.3: useAppContext 撤去、Zustand + appActions 直接参照
   // B33 修正: 3 コンポーネントで重複していた fallback パターンを共通 hook に集約

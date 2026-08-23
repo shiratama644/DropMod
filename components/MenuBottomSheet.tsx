@@ -1,22 +1,17 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// MenuBottomSheet (Phase 9.5-A → 9.5-D で 2 カラム + 小型化)
+// MenuBottomSheet (Phase 9.5-A → 9.5-D で 2 カラム + 小型化 → 9.5-G で二重 close 修正)
 //
 // BottomNav 右端のハンバーガーボタン用 Sheet。
-// 添付画像の Modrinth モバイル UI (Sign in / Settings / Change theme) を
-// DropMod 用に翻訳:
-//   Sign in     → 🟢 ZIP 保存 (primary、DropMod の目玉機能)
-//   Settings    → Settings (Link へ)
-//   Change theme → Change theme (現在の theme で fa-moon / fa-sun 切替)
-//   (追加)      → ZIP 読込 (hidden file input trigger)
 //
-// 【9.5-D 変更点】(ユーザー要望):
-//   - 縦積み大型ボタン → 2 カラム grid + 小型ボタン
-//   - primary ボタン (ZIP 保存) は 2 カラム片方に配置 (Modrinth の Sign in が
-//     フル幅 primary だったのを 2 カラム化に合わせ調整、色で primary 感を維持)
-//   - z-index / onCloseAnimationComplete などの props を親から受け取り、
-//     Sheet 重ね置き対応
+// 【9.5-G 修正】
+//   - hidden file input の `onClick={handleImportClick}` を削除
+//     (label が既に file dialog を開くので不要、かつ input.click() を
+//      自分の onClick で呼ぶと無限ループ危険)
+//   - <Link href="/settings"> の onClick={onClose} を削除
+//     (URL 変化を BottomSheet 側の pathname watcher が検知して自動 close するので
+//      onClose を明示すると close アニメが 2 回走る)
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
@@ -52,10 +47,6 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
     onDownloadZip();
     onClose();
   }, [onDownloadZip, onClose]);
-
-  const handleImportClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +88,7 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
           </span>
         </button>
 
-        {/* ZIP 読込 (hidden input trigger) */}
+        {/* ZIP 読込 (label で hidden input を trigger、input の onClick は付けない) */}
         <label className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[52px]">
           <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
             <i className="fa-solid fa-file-import" aria-hidden />
@@ -111,14 +102,12 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
             accept=".zip,.mrpack,application/zip"
             className="hidden"
             onChange={handleFileChange}
-            onClick={handleImportClick}
           />
         </label>
 
-        {/* Settings */}
+        {/* Settings (URL 変化で pathname watcher が自動 close するので onClick 不要) */}
         <Link
           href="/settings"
-          onClick={onClose}
           className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[52px]"
         >
           <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">

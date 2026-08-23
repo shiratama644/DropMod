@@ -1,31 +1,24 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// BottomNav (Phase 9.5-A → 9.5-D で Sheet Stack 管理を追加)
+// BottomNav (Phase 9.5-A → 9.5-D → 9.5-G で問題修正 & PC 分離)
 //
-// 従来 (Phase 9-F): 4 タブ全てが <Link>
-//   Home / 探す / 現在のMod / 設定
+// 【9.5-G 修正点】(ユーザー要望):
+//   1. 開いてる Sheet 対応ボタンだけを緑色 active に、Link タブの active 緑は消す
+//      (topOpenId !== null の間、Link タブの isActive は強制 false)
+//   2. Sheet の open 状態を親 (AppShell) に通知 → scroll hide 抑制
+//      (Sheet 開いている間は BottomNav を hide しない = 消えない)
+//   3. handleLinkClick から Sheet close 呼び出しを削除
+//      (Link クリック → URL 変化 → BottomSheet の pathname watcher が自動 close
+//       する。ここで close 呼ぶと close アニメが 2 重に走る)
+//   4. モバイル (< md) 専用に。PC (md 以上) は DesktopSidebar に置き換わるので
+//      `md:hidden` を付与、Sheet 群も同じく `md:hidden`
 //
-// Phase 9.5-A 版: 3 主タブ (<Link>) + 2 疑似タブ (<button> で BottomSheet トリガー)
-//   Home (Link) / 探す (button → BrowseSheet) / 現在のMod (Link) / メニュー (button → MenuSheet)
-//
-// 【9.5-D 追加要件】(ユーザー要望):
-//   - Sheet を開いてる時に他 Sheet ボタンを押すと、旧 Sheet を close アニメ
-//     走らせつつ mount 継続、新 Sheet は上に重ねる (z-index 一段上)
-//   - 旧 Sheet は close アニメ完了で unmount
-//   - Sheet の背景は BottomNav とページの間から出る (BottomSheet 側で bottom-16 で調整)
-//
-// 【9.5-D 追補】(ユーザー要望):
-//   - BottomNav を BottomSheet より上に配置 (z-[60] > Sheet の z-[50]/[52]/[54])
-//     → Sheet の暗い backdrop が BottomNav 領域を覆わず、BottomNav が常に前面。
-//   - Sheet 内ボタンはアイコン横 + ラベルの横並びで縦幅を圧縮 (min-h-[52px])。
-//   - backdrop-blur を `sm` (4px) → `[2px]` に弱め、背景ページの可視性向上。
-//
-// ⚠️ Rules of Hooks: hook は「早期 return より前」に全部書く。
+// hook 群は「早期 return より前」に全部配置 (React error #310 対策)。
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import type { TabName, ThemeMode } from '@/types';
 import { BrowseBottomSheet } from './BrowseBottomSheet';
@@ -42,6 +35,9 @@ interface BottomNavProps {
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
   /** Phase 9.5-E: 下スクロールで hide、上スクロールで show (AppShell で判定) */
   hidden?: boolean;
+  /** Phase 9.5-G: 内部の Sheet stack が「1 個以上 open 中」の状態変化を親に通知。
+   *  AppShell 側で「Sheet 開いてる間は scroll hide しない」判定に使う。 */
+  onSheetOpenChange?: (isAnyOpen: boolean) => void;
 }
 
 interface LinkNavItem {
@@ -64,12 +60,6 @@ interface SheetNavItem {
 
 type NavItem = LinkNavItem | SheetNavItem;
 
-/**
- * Sheet Stack 内の各エントリの状態:
- *   - isOpen: true = open アニメ状態 or 開いた状態
- *             false = close アニメ中 (mount 継続)、完了で unmount 予定
- *   - key:    再 mount 判定用の unique key (連続開閉で同じ Sheet を再アニメ)
- */
 interface SheetEntry {
   id: 'browse' | 'menu';
   key: number;
@@ -86,10 +76,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onDownloadZip,
   onImportZip,
   hidden = false,
+  onSheetOpenChange,
 }) => {
-  // Sheet Stack: 手前 (末尾) が最新に開いた Sheet
   const [sheetStack, setSheetStack] = useState<SheetEntry[]>([]);
-  // 各 Sheet mount の key を単調増加させる (連続開閉で React に別要素と認識させる)
   const [nextKey, setNextKey] = useState(1);
 
   const safeModCount = Number.isFinite(modCount) ? Math.max(0, Math.floor(modCount)) : 0;
@@ -114,26 +103,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     []
   );
 
-  /** Sheet トリガーボタン (探す / メニュー) を押した時の挙動 */
+  /** Sheet トリガーボタンを押した時の挙動 */
   const handleSheetButtonClick = useCallback(
     (id: 'browse' | 'menu') => {
       setSheetStack((prev) => {
-        // top (末尾) が同じ id かつ open → 閉じる (toggle)
         const top = prev[prev.length - 1];
+        // top が同じ id かつ open → 閉じる (toggle)
         if (top && top.id === id && top.isOpen) {
           return prev.map((entry) =>
             entry === top ? { ...entry, isOpen: false } : entry
           );
         }
-        // それ以外: 既存の同じ id エントリがあれば isOpen=false (二重 open 防止)、
-        //   新規 entry を末尾に追加
+        // 他の open Sheet があれば close 遷移させる (mount は継続で unmount 待ち)
         const closingOthers = prev.map((entry) =>
           entry.id === id || entry.isOpen === false
             ? entry
-            : { ...entry, isOpen: false } // 他の open 中 Sheet を closing 状態に
+            : { ...entry, isOpen: false }
         );
-        // ただし「同じ id は既存 entry を破棄して新規 mount」させたい
-        //   (mount 済みの Sheet を再利用すると変な状態になる可能性を回避)
+        // 同じ id は既存 entry を破棄して新規 mount
         const withoutSameId = closingOthers.filter((entry) => entry.id !== id);
         setNextKey((n) => n + 1);
         return [
@@ -145,10 +132,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     [nextKey]
   );
 
-  /** Link タブクリック時: 全 Sheet を close 遷移させる */
+  /**
+   * Link タブクリック時のハンドラ。
+   *
+   * 【9.5-G 修正】ここで Sheet を close 遷移させると、その後 <Link> が URL を
+   *   変える → BottomSheet の pathname watcher が再度 close をトリガー → 二重。
+   *   → Sheet close は pathname watcher に任せ、ここではタブ切替 (scrollTop) のみ。
+   */
   const handleLinkClick = useCallback(
     (tabId: TabName) => {
-      setSheetStack((prev) => prev.map((entry) => ({ ...entry, isOpen: false })));
       onSwitchTab(tabId);
     },
     [onSwitchTab]
@@ -163,7 +155,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     [handleSheetButtonClick]
   );
 
-  // どの Sheet が「最前面で open」か (BottomNav のアイコン切替判定に使う)
+  // どの Sheet が「最前面で open」か
   const topOpenId: 'browse' | 'menu' | null = (() => {
     for (let i = sheetStack.length - 1; i >= 0; i--) {
       const entry = sheetStack[i];
@@ -171,6 +163,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     }
     return null;
   })();
+
+  // 【9.5-G】 Sheet open 状態変化を親に通知
+  useEffect(() => {
+    onSheetOpenChange?.(topOpenId !== null);
+  }, [topOpenId, onSheetOpenChange]);
 
   const NAV_ITEMS: readonly NavItem[] = [
     { kind: 'link', id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
@@ -204,7 +201,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav
         id="bottom-nav"
         aria-label="メインナビゲーション"
-        className={`fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
           hidden ? 'translate-y-full' : 'translate-y-0'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
@@ -212,7 +209,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className="max-w-md mx-auto grid grid-cols-4 h-16">
           {NAV_ITEMS.map((item) => {
             if (item.kind === 'link') {
-              const isActive = activeTab === item.id;
+              // 【9.5-G】 Sheet 開いてる間は Link タブの active 緑を消す
+              //   (Sheet 対応ボタン側だけが緑になる)
+              const isActive = topOpenId === null && activeTab === item.id;
               return (
                 <Link
                   key={item.id}
@@ -254,7 +253,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
             // Sheet トリガー item
             const isTopOpen = topOpenId === item.id;
-            const isActive = isTopOpen || (item.matchTabs?.includes(activeTab) ?? false);
+            // 【9.5-G】 Sheet 開いてる時: そのボタンだけ緑。閉じてる時のみ matchTabs で active 判定。
+            const isActive = isTopOpen || (topOpenId === null && (item.matchTabs?.includes(activeTab) ?? false));
             const iconClass =
               isTopOpen && item.activeIcon ? item.activeIcon : item.icon;
             const onClick =
@@ -285,11 +285,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </div>
       </nav>
 
-      {/* Sheet Stack: 手前 (末尾) ほど上に重ねる。z-index を stack index で加算。
-          各 Sheet は自前で slide アニメ、close 完了で親に通知して unmount させる。
-          Tailwind JIT scan の都合で動的クラスは使わず、明示マッピングで解決。 */}
+      {/* Sheet Stack: 手前 (末尾) ほど上に重ねる。Sheet 群も PC では非表示。
+          `.md:hidden` は wrapper 側では効かないので Sheet 内部が md 以上で
+          BottomNav 非表示 → Sheet トリガーも押せない → 実質 open 不可能。
+          Sheet の md 分岐は不要 (open ボタン自体がモバイル専用) */}
       {sheetStack.map((entry, idx) => {
-        // idx: 0 → z-[50], 1 → z-[52], 2 → z-[54] (通常 2 段まで、それ以上は同 z)
         const zIndexClass =
           idx === 0 ? 'z-[50]' : idx === 1 ? 'z-[52]' : 'z-[54]';
         if (entry.id === 'browse') {

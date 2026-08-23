@@ -1,5 +1,16 @@
 'use client';
 
+// -----------------------------------------------------------------------------
+// Header (Phase 9.5-G: PC はロゴのみ、モバイルは従来通り)
+//
+// - モバイル (< md): 従来通りロゴ + テーマ切替 + 各種ボタン + プロファイル切替
+// - PC (md 以上): ロゴ**のみ** 表示 (ボタン類はすべて DesktopSidebar へ集約)
+//   → 各ボタン/dropdown ラッパーに `md:hidden` を付与
+//
+// - AppShell 側で `pathname !== '/'` のみ mount (LP は Header なし)
+// - `hidden` prop でスクロール hide (モバイル UX)
+// -----------------------------------------------------------------------------
+
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -36,17 +47,11 @@ export const Header: React.FC<HeaderProps> = ({
   hasDepWarning,
   hidden = false,
 }) => {
-  // Safely transform profiles with fallback guard
   const profileOptions = useMemo(() => {
     const safeProfiles = Array.isArray(profiles) ? profiles : [];
     return safeProfiles.map((p) => ({ label: p.name || '名称未設定', value: p.id }));
   }, [profiles]);
 
-  // 以前は入力後の input.value クリアを Header 側でも実行していたが、
-  //   useZipImport.handleImportZipInput 側でも同じクリア処理があり、
-  //   完全な二重実行 (両方空文字設定なので実害はなし) の DRY 違反だった。
-  //   実際のクリアは useZipImport 側に一元化し、Header はそのまま渡すだけにする。
-  //   同一 ZIP の再インポートも useZipImport 側のクリアで問題なく動作する。
   const handleFileImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (typeof onImportZip === 'function') {
@@ -56,12 +61,9 @@ export const Header: React.FC<HeaderProps> = ({
     [onImportZip]
   );
 
-  // <Link> はネイティブに Enter/Space キーで発火するため、
-  // 以前あった handleLogoKeyDown は不要になった。
-
   return (
     // Phase 9.5-E: hidden=true で上方向に slide out (下スクロール時)。
-    //   transition-transform で smooth 動作、will-change で GPU 加速。
+    // Phase 9.5-G: PC でも表示するが、内部ボタン類は md:hidden で全非表示。
     <header
       id="app-header"
       className={`sticky top-0 z-30 glass-panel transition-transform duration-300 will-change-transform ${
@@ -70,7 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center justify-between">
-          {/* <div role="button"> ではなく <Link> でロゴを実装 (SEO/新規タブ対応) */}
           <Link
             href="/"
             onClick={() => onSwitchTab('home')}
@@ -88,7 +89,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </Link>
 
-          <div className="flex items-center gap-1.5">
+          {/* テーマ切替 + モバイルアクション (PC では非表示) */}
+          <div className="flex items-center gap-1.5 md:hidden">
             <button
               type="button"
               onClick={onToggleTheme}
@@ -104,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </button>
 
-            {/* Mobile actions */}
+            {/* Mobile actions (sm 未満のみ) */}
             <div className="flex sm:hidden items-center gap-1.5">
               <button
                 type="button"
@@ -146,8 +148,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Profile dropdown and Desktop actions */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+        {/* Profile dropdown and Desktop actions (PC では全て非表示 → Sidebar へ) */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto md:hidden">
           <div className="flex items-center rounded-xl p-1 theme-sub-box flex-1 sm:flex-none">
             <i className="fa-solid fa-layer-group theme-text-brand text-xs ml-2 mr-1" aria-hidden="true" />
             <div className="w-full sm:w-[190px]">
@@ -169,6 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
+          {/* Desktop actions (sm 以上 かつ md 未満のみ、= タブレット横向き) */}
           <div className="hidden sm:flex items-center gap-1.5">
             <button
               type="button"

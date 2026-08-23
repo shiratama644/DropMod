@@ -20,6 +20,7 @@ import { ToastContainer } from './ToastContainer';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
+import { DesktopSidebar } from './DesktopSidebar';
 import { NewProfileModal } from './NewProfileModal';
 import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
@@ -201,8 +202,15 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   // Phase 9.5-E: 全ページで Header + BottomNav をスクロール hide
   //   - 下スクロールで hide、上スクロールで show
   //   - モーダル open 中は hide しない (誤操作防止)
+  //
+  // 【9.5-G 追加】 BottomSheet が open 中は hide 抑制。
+  //   従来: スクロール↑で BottomNav 表示 → Sheet 開く → 直前の scroll direction
+  //         次第で急に hidden に戻り、BottomNav が消える不具合。
+  //   対策: BottomNav から Sheet open 状態を受け取り、shouldHideNav の条件に追加。
   const scrollDirection = useScrollDirection();
-  const shouldHideNav = scrollDirection === 'down' && !isAnyModalOpen;
+  const [isAnySheetOpen, setIsAnySheetOpen] = useState(false);
+  const shouldHideNav =
+    scrollDirection === 'down' && !isAnyModalOpen && !isAnySheetOpen;
 
   // ---------- Reset data ----------
   const handleResetData = useCallback(async () => {
@@ -346,10 +354,25 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       <OfflineBanner />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Phase 9.5-B: ランディングページ (/) では Header を非表示。
-          他ページ (/mods, /profile, /settings, /mods/[slug]) は従来通り表示。
-          ランディングでもグローバル UI (Toast/Confirm/BottomNav/Providers)
-          は AppShell 経由で提供される。 */}
+      {/* PC (md 以上): 左固定サイドバー。全ページで表示 (LP でも表示) */}
+      <DesktopSidebar
+        activeTab={activeTab}
+        onSwitchTab={handleSwitchTab}
+        modCount={currentProfile.mods.length}
+        hasDepWarning={hasDepWarning}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        profiles={profiles}
+        currentProfileId={currentProfileId}
+        onSwitchProfile={handleSwitchProfile}
+        onOpenNewProfileModal={openNewProfileModal}
+        onRunDependencyCheck={openDependencyCheckModal}
+        onDownloadZip={handleDownloadZip}
+        onImportZip={handleImportZipInput}
+      />
+
+      {/* モバイル (< md) 専用の上部 Header。LP は Header 非表示 (BottomNav のみ)。
+          Header は md:hidden 指定済み。 */}
       {pathname !== '/' && (
         <Header
           theme={theme}
@@ -367,8 +390,12 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         />
       )}
 
-      {children}
+      {/* コンテンツ area: PC は左サイドバー分の余白 (pl-64)。
+          既存ページの構造 (max-w-* mx-auto など) は保持。 */}
+      <div className="md:pl-64">{children}</div>
 
+      {/* モバイル (< md) 専用の下部 BottomNav。md:hidden 指定済み。
+          Sheet open 状態を親に通知 → shouldHideNav の抑制条件に使う。 */}
       <BottomNav
         activeTab={activeTab}
         onSwitchTab={handleSwitchTab}
@@ -379,6 +406,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onToggleTheme={toggleTheme}
         onDownloadZip={handleDownloadZip}
         onImportZip={handleImportZipInput}
+        onSheetOpenChange={setIsAnySheetOpen}
       />
 
       {/* --- グローバル モーダル群 --- */}

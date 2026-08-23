@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { Profile } from '@/types';
+import type { Profile, ModrinthVersion } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchModrinthBatch } from '@/lib/modrinth/client';
 import { useDepCheckStore } from '@/lib/store/depCheck';
@@ -54,7 +54,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
         return;
       }
 
-      const versionMap = new Map<string, any>();
+      const versionMap = new Map<string, ModrinthVersion>();
 
       // B22 修正: fetch 失敗時は「前回の hasDepWarning を保持」するのが
       //   コメント通りの意図。従来は catch 後に空 versionMap で outer loop
@@ -67,13 +67,13 @@ export const useDependencyCheck = (currentProfile: Profile) => {
         const batchKey = ['versions-batch', sortedIds.join(',')] as const;
         const batchVersions = await queryClient.fetchQuery({
           queryKey: batchKey,
-          queryFn: () => fetchModrinthBatch<any>('/versions', versionIds),
+          queryFn: () => fetchModrinthBatch<ModrinthVersion>('/versions', versionIds),
           staleTime: 5 * 60 * 1000 // 5 分
         });
         // Phase 10-P5 (suspicious/useIterableCallbackReturn):
         //   Map.set() は Map を返すので arrow の暗黙 return を回避するため
         //   block-body にして void を返す。
-        batchVersions.forEach((v: any) => {
+        batchVersions.forEach((v) => {
           versionMap.set(v.id, v);
         });
       } catch (_e) {

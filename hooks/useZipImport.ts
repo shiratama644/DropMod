@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import type { Profile, ModItem, MrpackIndex } from '@/types';
+import type { Profile, ModItem, MrpackIndex, ModrinthProject, ModrinthVersion } from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
 import {
   fetchModrinthBatch,
@@ -132,7 +132,7 @@ export const useZipImport = (
       }
 
       // /version_files POST は 1000 個の hash 上限 → 100 個ずつ chunk 分割
-      const versionMap = await fetchModrinthVersionFilesBatch<any>(hashes, 'sha1');
+      const versionMap = await fetchModrinthVersionFilesBatch<ModrinthVersion>(hashes, 'sha1');
 
       const foundVersions = Object.values(versionMap);
       if (foundVersions.length === 0) {
@@ -142,8 +142,8 @@ export const useZipImport = (
 
       // /projects も 1000 個上限 → chunk 分割
       const projectIds = Array.from(new Set(foundVersions.map((v) => v.project_id)));
-      const projects = await fetchModrinthBatch<any>('/projects', projectIds);
-      const projectMap = new Map<string, any>();
+      const projects = await fetchModrinthBatch<ModrinthProject>('/projects', projectIds);
+      const projectMap = new Map<string, ModrinthProject>();
       // Phase 10-P5 (suspicious/useIterableCallbackReturn):
       //   Map.set() は Map を返すので arrow の暗黙 return を回避するため
       //   block-body にして void を返す。
@@ -155,7 +155,7 @@ export const useZipImport = (
       for (const ver of foundVersions) {
         const proj = projectMap.get(ver.project_id);
         if (proj) {
-          const primaryFile = ver.files.find((f: any) => f.primary) || ver.files[0];
+          const primaryFile = ver.files.find((f) => f.primary) || ver.files[0];
           initialMods.push({
             id: proj.id,
             slug: proj.slug,

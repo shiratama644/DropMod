@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Profile, ModItem, ThemeMode } from '@/types';
+import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
@@ -536,7 +536,7 @@ export const useProfiles = (
         const projectPromise = queryClient.fetchQuery({
           queryKey: queryKeys.project(projectId),
           queryFn: ({ signal }) =>
-            fetchModrinth<any>(`/project/${projectId}`, undefined, { signal }),
+            fetchModrinth<ModrinthProject>(`/project/${projectId}`, undefined, { signal }),
           staleTime: 15 * 60 * 1000
         });
 
@@ -561,7 +561,7 @@ export const useProfiles = (
 
         const targetVersion = versionRes.targetVersion;
         const primaryFile =
-          targetVersion.files.find((f: any) => f.primary) || targetVersion.files[0];
+          targetVersion.files.find((f) => f.primary) || targetVersion.files[0];
 
         // 上で files.length===0 は既に return しているが
         // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
@@ -637,11 +637,15 @@ export const useProfiles = (
         const versionData = await queryClient.fetchQuery({
           queryKey: queryKeys.version(versionId),
           queryFn: ({ signal }) =>
-            fetchModrinth<any>(`/version/${versionId}`, undefined, { signal }),
+            fetchModrinth<ModrinthVersion>(`/version/${versionId}`, undefined, { signal }),
           staleTime: 60 * 60 * 1000 // 1h (version は project より変わりにくい)
         });
         if (versionData?.files && versionData.files.length > 0) {
-          const primaryFile = versionData.files.find((f: any) => f.primary) || versionData.files[0];
+          const primaryFile = versionData.files.find((f) => f.primary) || versionData.files[0];
+          // Phase 10-P5 (any→型付け化で発覚): 上のガードで files.length>=1 は保証されるが
+          //   noUncheckedIndexedAccess 有効時 files[0] は T | undefined。型システムを
+          //   満たしつつ実行時にも safety net として null check を追加。
+          if (!primaryFile) return;
 
           setProfiles((prev) =>
             prev.map((p) =>

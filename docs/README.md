@@ -23,7 +23,8 @@ docs/
 │   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
 │   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ
 │   ├── PHASE9_C_COMPLETE.md           # Phase 9-C (テスト強化) 単独スナップショット
-│   └── PHASE9_PROFILER.md             # Phase 9-D 再レンダー計測レポート
+│   ├── PHASE9_PROFILER.md             # Phase 9-D 再レンダー計測レポート
+│   └── PHASE10_COMPLETE.md            # Phase 10 全 5 サブフェーズ完了 (FA subset / AppContext 削除 / Image / E2E / shimmer)
 ├── audit/                             # 差分・バグ監査
 │   ├── diff-vite-vs-nextjs.md         # Vite 版と Next.js 版の全ファイル差分
 │   ├── diff-phase8.md                 # Phase 8 実装と計画書との齟齬

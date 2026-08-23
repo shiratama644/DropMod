@@ -151,7 +151,6 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
 
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
-  const [showAllVersions, setShowAllVersions] = useState(false);
   const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
 
   const handleJarDownload = useCallback(
@@ -232,12 +231,6 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
       : project.categories) ?? [];
 
   const galleryList = project.gallery ?? [];
-
-  // バージョン表示件数 (初期は最新 5 件、ボタンで全件展開)
-  const VERSIONS_INITIAL = 5;
-  const displayedVersions = showAllVersions
-    ? safeVersions
-    : safeVersions.slice(0, VERSIONS_INITIAL);
 
   const clientSide = project.client_side
     ? CLIENT_SERVER_LABEL[project.client_side]
@@ -529,44 +522,25 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                 このプロファイル向けの対応バージョンは見つかりませんでした。
               </p>
             ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {displayedVersions.map((v) => (
-                    <span
-                      key={v.id}
-                      className="px-2 py-1 rounded-lg theme-badge text-[11px] font-mono flex items-center gap-1 shadow-sm"
-                    >
-                      <span>{v.version_number}</span>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                          v.version_type === 'release'
-                            ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
-                            : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
-                        }`}
-                      >
-                        {v.version_type}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-                {safeVersions.length > VERSIONS_INITIAL && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllVersions(!showAllVersions)}
-                    className="mt-3 text-xs font-bold theme-text-brand hover:underline flex items-center gap-1"
+              <div className="flex flex-wrap gap-1.5 max-h-72 overflow-y-auto overscroll-contain pr-1">
+                {safeVersions.map((v) => (
+                  <span
+                    key={v.id}
+                    className="px-2 py-1 rounded-lg theme-badge text-[11px] font-mono flex items-center gap-1 shadow-sm"
                   >
-                    <span>
-                      {showAllVersions
-                        ? '折りたたむ'
-                        : `すべて表示 (${safeVersions.length} 件)`}
+                    <span>{v.version_number}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                        v.version_type === 'release'
+                          ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
+                          : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
+                      }`}
+                    >
+                      {v.version_type}
                     </span>
-                    <i
-                      className={`fa-solid fa-chevron-${showAllVersions ? 'up' : 'down'} text-[10px]`}
-                      aria-hidden
-                    />
-                  </button>
-                )}
-              </>
+                  </span>
+                ))}
+              </div>
             )}
           </SidebarCard>
 

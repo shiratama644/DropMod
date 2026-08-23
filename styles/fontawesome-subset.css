@@ -6,7 +6,7 @@
  * License: https://fontawesome.com/license/free
  *
  * 使用 icon 数:
- *   - fa-solid:  60
+ *   - fa-solid:  64
  *   - fa-brands: 2
  *
  * 追加/削除時は本ファイルを直接編集せず、リポジトリの JSX で
@@ -35,12 +35,13 @@
  */
 :host,:root{--fa-family-classic:"Font Awesome 7 Free";--fa-font-solid:normal 900 1em/1 var(--fa-family-classic);--fa-style-family-classic:var(--fa-family-classic)}@font-face{font-family:"Font Awesome 7 Free";font-style:normal;font-weight:900;font-display:block;src:url(/webfonts/fa-solid-900.woff2)}.fas{--fa-style:900}.fa-classic,.fas{--fa-family:var(--fa-family-classic)}.fa-solid{--fa-style:900}
 
-/* Solid icon rules (58 個、DropMod で使用中のもののみ) */
+/* Solid icon rules (62 個、DropMod で使用中のもののみ) */
 .fa-magic-wand-sparkles,.fa-wand-magic-sparkles{--fa:"\e2ca"}
 .fa-cubes-stacked{--fa:"\e4e6"}
 .fa-plug-circle-xmark{--fa:"\e560"}
 .fa-magnifying-glass,.fa-search{--fa:"\f002"}
 .fa-heart{--fa:"\f004"}
+.fa-table-cells-large,.fa-th-large{--fa:"\f009"}
 .fa-check{--fa:"\f00c"}
 .fa-close,.fa-multiply,.fa-remove,.fa-times,.fa-xmark{--fa:"\f00d"}
 .fa-cog,.fa-gear{--fa:"\f013"}
@@ -50,6 +51,7 @@
 .fa-tag{--fa:"\f02b"}
 .fa-tags{--fa:"\f02c"}
 .fa-book{--fa:"\f02d"}
+.fa-image{--fa:"\f03e"}
 .fa-edit,.fa-pen-to-square{--fa:"\f044"}
 .fa-circle-question,.fa-question-circle{--fa:"\f059"}
 .fa-circle-info,.fa-info-circle{--fa:"\f05a"}
@@ -59,6 +61,7 @@
 .fa-chevron-up{--fa:"\f077"}
 .fa-chevron-down{--fa:"\f078"}
 .fa-folder,.fa-folder-blank{--fa:"\f07b"}
+.fa-folder-open{--fa:"\f07c"}
 .fa-arrow-up-right-from-square,.fa-external-link{--fa:"\f08e"}
 .fa-globe{--fa:"\f0ac"}
 .fa-chain,.fa-link{--fa:"\f0c1"}
@@ -67,6 +70,7 @@
 .fa-cloud-arrow-up,.fa-cloud-upload,.fa-cloud-upload-alt{--fa:"\f0ee"}
 .fa-spinner{--fa:"\f110"}
 .fa-code-branch{--fa:"\f126"}
+.fa-ellipsis,.fa-ellipsis-h{--fa:"\f141"}
 .fa-compass{--fa:"\f14e"}
 .fa-file-alt,.fa-file-lines,.fa-file-text{--fa:"\f15c"}
 .fa-arrow-down-wide-short,.fa-sort-amount-asc,.fa-sort-amount-down{--fa:"\f160"}

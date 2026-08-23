@@ -26,3 +26,39 @@ export function sanitizeSearchQuery(raw: string | string[] | undefined | null): 
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, 200);
 }
+
+/** 検索結果カードの表示形式 */
+export const SEARCH_LAYOUTS = ['max', '1', '2', '3', 'auto'] as const;
+export type SearchLayout = (typeof SEARCH_LAYOUTS)[number];
+
+export const SEARCH_LAYOUT_OPTIONS: ReadonlyArray<{ label: string; value: SearchLayout }> = [
+  { label: '最大 (ヘッダー画像あり)', value: 'max' },
+  { label: '1カラム', value: '1' },
+  { label: '2カラム', value: '2' },
+  { label: '3カラム', value: '3' },
+  { label: '自動', value: 'auto' }
+];
+
+export const SEARCH_LAYOUT_STORAGE_KEY = 'dropmod_search_layout';
+
+export function parseSearchLayout(raw: string | null | undefined): SearchLayout {
+  if (raw && (SEARCH_LAYOUTS as readonly string[]).includes(raw)) {
+    return raw as SearchLayout;
+  }
+  return '3';
+}
+
+export function searchGridClass(layout: SearchLayout): string {
+  switch (layout) {
+    case 'max':
+      return 'grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4';
+    case '1':
+      return 'grid grid-cols-1 gap-3 sm:gap-4';
+    case '2':
+      return 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4';
+    case 'auto':
+      return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 auto-rows-auto';
+    default:
+      return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4';
+  }
+}

@@ -6,6 +6,7 @@ import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion } fr
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
+import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
@@ -409,10 +410,19 @@ export const useProfiles = (
       mcVersion: string,
       loader: string,
       description: string,
-      mods: ModItem[] = []
+      mods: ModItem[] = [],
+      loaderVersion?: string
     ) => {
       const newId = generateId('profile');
-      const newProfile: Profile = { id: newId, name, mcVersion, loader, description, mods };
+      const newProfile: Profile = {
+        id: newId,
+        name,
+        mcVersion,
+        loader,
+        loaderVersion: loaderVersion || undefined,
+        description,
+        mods
+      };
       setProfiles((prev) => [...prev, newProfile]);
       setCurrentProfileId(newId);
       showToast(
@@ -442,14 +452,18 @@ export const useProfiles = (
   }, [showToast, setProfiles, setCurrentProfileId]);
 
   const handleSaveEditedProfile = useCallback(
-    (name: string, mcVersion: string, loader: string, description: string) => {
+    (name: string, mcVersion: string, loader: string, description: string, loaderVersion?: string) => {
       const targetId = currentProfileIdRef.current;
       const before = profilesRef.current.find((p) => p.id === targetId);
       const compatChanged =
         before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
 
       setProfiles((prev) =>
-        prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
+        prev.map((p) =>
+          p.id === targetId
+            ? { ...p, name, mcVersion, loader, loaderVersion: loaderVersion || undefined, description }
+            : p
+        )
       );
       showToast('プロファイルを更新しました', 'success');
       if (compatChanged) {
@@ -588,6 +602,7 @@ export const useProfiles = (
           description: project.description,
           icon_url: project.icon_url,
           author: project.author || 'Modrinth',
+          projectType: contentCategoryFromProject(project),
           category:
             (project.display_categories?.[0]) ||
             (project.categories?.[0]) ||

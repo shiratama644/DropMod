@@ -35,6 +35,21 @@ describe('NewProfileModal', () => {
     expect(screen.getByText('新規プロファイル作成')).toBeInTheDocument();
   });
 
+  it('フォルダ選択・MC/ローダー/ローダーバージョンの UI がある', () => {
+    render(
+      <NewProfileModal
+        isOpen
+        onClose={() => {}}
+        mcVersions={mcVersions}
+        onCreate={() => {}}
+      />
+    );
+    expect(screen.getByText(/Minecraft フォルダ/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Minecraftバージョン')).toBeInTheDocument();
+    expect(screen.getByLabelText('Modローダー')).toBeInTheDocument();
+    expect(screen.getByLabelText('ローダーバージョン')).toBeInTheDocument();
+  });
+
   it('initialImportData がある場合は「ZIPから」ヘッダを表示', () => {
     render(
       <NewProfileModal

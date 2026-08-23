@@ -32,8 +32,8 @@ test('/profile (選択中プロファイル一覧) renders and shows profile inf
   // タイトル
   await expect(page).toHaveTitle(/DropMod/);
 
-  // 「選択中のMod一覧」見出しが見える
-  await expect(page.getByText(/選択中のMod一覧/)).toBeVisible();
+  // 「選択中一覧」見出しが見える
+  await expect(page.getByText(/選択中一覧/)).toBeVisible();
 });
 
 test('settings page renders', async ({ page }) => {

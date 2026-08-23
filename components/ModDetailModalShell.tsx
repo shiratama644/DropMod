@@ -57,6 +57,64 @@ function pickPrimaryFile(v: ModrinthVersion | null): ModrinthVersionFile | null 
   return v.files.find((f) => f.primary) || v.files[0] || null;
 }
 
+function ModalStats({ project }: { project: ModrinthProject }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 text-xs">
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">ダウンロード数</span>
+        <span className="font-bold theme-text-brand font-mono text-sm">
+          {formatDownloads(project.downloads)}
+        </span>
+      </div>
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">最終更新日</span>
+        <span className="font-semibold font-mono text-sm">
+          {new Date(project.updated).toLocaleDateString()}
+        </span>
+      </div>
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">カテゴリ</span>
+        <span className="font-semibold text-sm capitalize truncate block">
+          {project.categories && project.categories.length > 0
+            ? project.categories.join(', ')
+            : 'mod'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function VersionList({ versions }: { versions: ModrinthVersion[] }) {
+  if (versions.length === 0) {
+    return (
+      <p className="text-xs theme-text-muted">
+        このプロファイル向けの対応バージョンは見つかりませんでした。
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto overscroll-contain pt-1 pr-1">
+      {versions.map((v) => (
+        <span
+          key={v.id}
+          className="px-2.5 py-1 rounded-lg theme-badge text-xs font-mono flex items-center gap-1 shadow-sm"
+        >
+          <span>{v.version_number}</span>
+          <span
+            className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+              v.version_type === 'release'
+                ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
+                : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
+            }`}
+          >
+            {v.version_type}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export const ModDetailModalShell: React.FC<Props> = ({
   project,
   versions,
@@ -75,7 +133,6 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const titleId = useId();
   const isModal = variant === 'modal';
 
-  const [isVersionsExpanded, setIsVersionsExpanded] = useState(true);
   const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
@@ -116,7 +173,6 @@ export const ModDetailModalShell: React.FC<Props> = ({
   //    slug を参照しないので Biome は「不要」と判定するが、これは仕様通り。
   // biome-ignore lint/correctness/useExhaustiveDependencies: slug 変更検知トリガーとして意図的
   useEffect(() => {
-    setIsVersionsExpanded(true);
     setSelectedGalleryImg(null);
   }, [slug]);
 
@@ -204,7 +260,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
         // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
           onClick={handleClose}
         >
@@ -223,7 +279,6 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   const latestVersion = versions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
-  const displayedVersions = isVersionsExpanded ? versions : [];
 
   const isAdded = currentProfile.mods.some(
     (m) => m.id === project.id || (project.slug && m.slug === project.slug)
@@ -256,9 +311,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
     <div
       ref={dialogRef}
       {...dialogProps}
-      className={
+        className={
         isModal
-          ? 'modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
+          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
           : 'modal-card glass-panel w-full max-w-3xl mx-auto rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden'
       }
       onClick={(e) => {
@@ -307,12 +362,19 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <div
         className={
           isModal
-            ? 'flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
+            ? 'flex-1 min-h-0 overflow-y-auto md:overflow-hidden md:flex overscroll-contain'
             : 'p-4 sm:p-6 space-y-4'
         }
       >
-        {/* 統計バー */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+        <div
+          className={
+            isModal
+              ? 'p-4 sm:p-6 space-y-4 md:flex-1 md:min-h-0 md:overflow-y-auto'
+              : 'space-y-4'
+          }
+        >
+        {/* 統計バー (モバイル。PC モーダルは右ペイン) */}
+        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs ${isModal ? 'md:hidden' : ''}`}>
           <div className="theme-sub-box p-2.5 rounded-xl">
             <span className="text-xs theme-text-muted block font-semibold">
               ダウンロード数
@@ -434,66 +496,26 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* 対応バージョン一覧 */}
-        <div className="space-y-2 pt-2 border-t border-slate-500/10">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
-              {`対応バージョン一覧 (${versions.length})`}
-            </span>
-            {versions.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsVersionsExpanded(!isVersionsExpanded)}
-                className="text-xs font-bold theme-text-brand hover:underline flex items-center gap-1"
-              >
-                <span>
-                  {isVersionsExpanded
-                    ? '折りたたむ'
-                    : `すべて表示 (${versions.length}件)`}
-                </span>
-                <i
-                  className={`fa-solid fa-chevron-${
-                    isVersionsExpanded ? 'up' : 'down'
-                  } text-[10px]`}
-                  aria-hidden
-                />
-              </button>
-            )}
-          </div>
-
-          {isVersionsExpanded && displayedVersions.length > 0 && (
-            <div
-              className={
-                isModal
-                  ? 'flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pt-1 hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
-                  : 'flex flex-wrap gap-1.5 pt-1'
-              }
-            >
-              {displayedVersions.map((v) => (
-                <span
-                  key={v.id}
-                  className="px-2.5 py-1 rounded-lg theme-badge text-xs font-mono flex items-center gap-1 shadow-sm"
-                >
-                  <span>{v.version_number}</span>
-                  <span
-                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                      v.version_type === 'release'
-                        ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
-                        : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
-                    }`}
-                  >
-                    {v.version_type}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-          {versions.length === 0 && (
-            <p className="text-xs theme-text-muted">
-              このプロファイル向けの対応バージョンは見つかりませんでした。
-            </p>
-          )}
+        {/* 対応バージョン一覧 (モバイル。PC モーダルは右ペイン) */}
+        <div className={`space-y-2 pt-2 border-t border-slate-500/10 ${isModal ? 'md:hidden' : ''}`}>
+          <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
+            {`対応バージョン一覧 (${versions.length})`}
+          </span>
+          <VersionList versions={versions} />
         </div>
+        </div>
+
+        {isModal && (
+          <aside className="hidden md:flex w-80 shrink-0 flex-col gap-4 p-6 border-l border-slate-500/15 overflow-y-auto overscroll-contain min-h-0">
+            <ModalStats project={project} />
+            <div className="space-y-2 pt-1 border-t border-slate-500/10">
+              <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
+                {`対応バージョン (${versions.length})`}
+              </span>
+              <VersionList versions={versions} />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* 固定フッターアクション */}

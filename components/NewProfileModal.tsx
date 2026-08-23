@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import type { ModItem } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { supportsDirectoryPicker } from '@/lib/env/capabilities';
+import { getLoaderVersions, LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
 
 interface NewProfileModalProps {
   isOpen: boolean;
@@ -15,8 +17,16 @@ interface NewProfileModalProps {
     mods: ModItem[];
     mcVersion?: string;
     loader?: string;
+    loaderVersion?: string;
   } | null;
-  onCreate: (name: string, mcVersion: string, loader: string, desc: string, mods?: ModItem[]) => void;
+  onCreate: (
+    name: string,
+    mcVersion: string,
+    loader: string,
+    desc: string,
+    mods?: ModItem[],
+    loaderVersion?: string
+  ) => void;
 }
 
 export const NewProfileModal: React.FC<NewProfileModalProps> = ({
@@ -29,59 +39,78 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const [name, setName] = useState('');
   const [version, setVersion] = useState(mcVersions[0] || '1.21.4');
   const [loader, setLoader] = useState('Fabric');
+  const [loaderVersion, setLoaderVersion] = useState('');
   const [desc, setDesc] = useState('');
+  const [folderName, setFolderName] = useState<string | null>(null);
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [canPickFolder, setCanPickFolder] = useState(() => supportsDirectoryPicker());
 
-  // ⚠️ 「モーダルが開いた瞬間のみ」フォームをリセットする。
-  //     以前は deps に mcVersions / initialImportData を含めており、
-  //     mcVersions のAPI非同期完了や親の再レンダーで initialImportData の
-  //     参照が新しくなった際に、開いたままのモーダルで入力中の値が
-  //     突然リセットされる不具合があった。
-  //
-  // Phase 10-P5 (useExhaustiveDependencies): mcVersions / initialImportData.* を
-  //   deps に含めないのは上記バグ回避のため意図的。wasOpenRef で「開いた瞬間
-  //   のみ」1 回だけ実行する制御を effect 内で行っている。stale 参照になる
-  //   可能性はあるが、モーダルが開いた時点の snapshot が正解。
   const wasOpenRef = useRef<boolean>(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード (詳細は上コメント)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード
   useEffect(() => {
     if (!isOpen) {
       wasOpenRef.current = false;
       return;
     }
-    // 既に開いていた (open→openの再レンダー) 場合はスキップ
     if (wasOpenRef.current) return;
     wasOpenRef.current = true;
+
+    setCanPickFolder(supportsDirectoryPicker());
+    setFolderName(null);
+    setFolderError(null);
 
     if (initialImportData) {
       setName(initialImportData.name);
       if (initialImportData.mcVersion && mcVersions.includes(initialImportData.mcVersion)) {
         setVersion(initialImportData.mcVersion);
       } else {
-        // mcVersions[0] は string | undefined
         const first = mcVersions[0];
         if (first) setVersion(first);
       }
       if (initialImportData.loader) {
         setLoader(initialImportData.loader);
       }
+      const versions = getLoaderVersions(initialImportData.loader || 'Fabric');
+      const importedLoaderVer = initialImportData.loaderVersion;
+      setLoaderVersion(
+        importedLoaderVer && versions.includes(importedLoaderVer)
+          ? importedLoaderVer
+          : (versions[0] ?? '')
+      );
       setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
     } else {
       setName('');
       const first = mcVersions[0];
       if (first) setVersion(first);
       setLoader('Fabric');
+      setLoaderVersion(getLoaderVersions('Fabric')[0] ?? '');
       setDesc('');
     }
   }, [isOpen]);
 
-  // a11y: role/aria + Escape + フォーカストラップ
+  const loaderVersionOptions = getLoaderVersions(loader).map((v) => ({
+    label: v,
+    value: v
+  }));
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const versions = getLoaderVersions(loader);
+    if (versions.length === 0) {
+      setLoaderVersion('');
+      return;
+    }
+    if (!versions.includes(loaderVersion)) {
+      setLoaderVersion(versions[0] ?? '');
+    }
+  }, [loader, isOpen, loaderVersion]);
+
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  // Phase 10-P5 (a11y/noLabelWithoutControl): 各フィールドに id を紐付けるため
-  // useId() を活用。CustomDropdown は id prop を受け付ける (10-P5 で追加)。
   const nameInputId = useId();
   const versionSelectId = useId();
   const loaderSelectId = useId();
+  const loaderVersionSelectId = useId();
   const descInputId = useId();
   useModalA11y(isOpen, onClose, dialogRef);
 
@@ -92,25 +121,46 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     value: v
   }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // name / desc を trim() (EditProfileModal と一貫性)。
-    // 空白のみのプロファイル名を防ぐ。
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      // 空欄チェックは HTML5 required 属性が担うが二重防御
+  const handlePickFolder = async () => {
+    setFolderError(null);
+    if (!supportsDirectoryPicker()) {
+      setFolderError('このブラウザではフォルダ選択できません。Chrome / Edge をご利用ください。');
       return;
     }
-    onCreate(trimmedName, version, loader, desc.trim(), initialImportData?.mods || []);
+    const pick = window.showDirectoryPicker;
+    if (!pick) {
+      setFolderError('このブラウザではフォルダ選択できません。Chrome / Edge をご利用ください。');
+      return;
+    }
+    try {
+      const handle = await pick({ mode: 'read' });
+      setFolderName(handle.name);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setFolderError('フォルダを開けませんでした。');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return;
+    }
+    onCreate(
+      trimmedName,
+      version,
+      loader,
+      desc.trim(),
+      initialImportData?.mods || [],
+      loaderVersion || undefined
+    );
     setName('');
     setDesc('');
     onClose();
   };
 
   return (
-    // Phase 10-P5 (a11y): モーダル背景は Escape (useModalA11y) で閉じる設計、
-    //   キーボードで背景をクリックする必要はない。onClick は背景タップ→閉じる
-    //   モバイル UX 用。
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる)
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
@@ -123,8 +173,6 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
         if (e.target === e.currentTarget) e.preventDefault();
       }}
     >
-      {/* Phase 10-P5 (a11y): innerCard の onClick は背景 onClick への
-          バブル遮断が目的 (stopPropagation)。keyboard の相当操作は不要。 */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: dialog 内バブル遮断のみ */}
       <div
         ref={dialogRef}
@@ -178,6 +226,35 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
               className="w-full rounded-xl px-3 py-2 text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             />
           </div>
+
+          <div>
+            <span className="block text-xs font-semibold theme-text-secondary mb-1">
+              Minecraft フォルダ (任意・読み取り専用)
+            </span>
+            <button
+              type="button"
+              onClick={() => void handlePickFolder()}
+              disabled={!canPickFolder}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl theme-sub-box text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <i className="fa-solid fa-folder-open theme-text-brand" aria-hidden />
+                <span className="truncate">
+                  {folderName ? folderName : canPickFolder ? 'フォルダを選択' : 'このブラウザでは非対応'}
+                </span>
+              </span>
+              <i className="fa-solid fa-ellipsis theme-text-muted" aria-hidden />
+            </button>
+            <p className="mt-1 text-[11px] theme-text-muted leading-relaxed">
+              {canPickFolder
+                ? 'Chrome / Edge で .minecraft または Prism インスタンスを選べます。解析取り込みは Phase 11 で実装します。'
+                : 'Firefox / Safari / モバイルはフォルダ選択非対応です。ZIP 読込をご利用ください。'}
+            </p>
+            {folderError && (
+              <p className="mt-1 text-[11px] theme-text-amber">{folderError}</p>
+            )}
+          </div>
+
           <div>
             <label
               htmlFor={versionSelectId}
@@ -203,16 +280,31 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             </label>
             <CustomDropdown
               id={loaderSelectId}
-              options={[
-                { label: 'Fabric', value: 'Fabric' },
-                { label: 'Forge', value: 'Forge' },
-                { label: 'NeoForge', value: 'NeoForge' },
-                { label: 'Quilt', value: 'Quilt' }
-              ]}
+              options={LOADER_DROPDOWN_OPTIONS}
               selectedValue={loader}
               onChange={setLoader}
               customClass="w-full"
               label="Modローダー"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={loaderVersionSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              ローダーバージョン
+            </label>
+            <CustomDropdown
+              id={loaderVersionSelectId}
+              options={
+                loaderVersionOptions.length > 0
+                  ? loaderVersionOptions
+                  : [{ label: '未指定', value: '' }]
+              }
+              selectedValue={loaderVersion}
+              onChange={setLoaderVersion}
+              customClass="w-full"
+              label="ローダーバージョン"
             />
           </div>
           <div>

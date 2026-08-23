@@ -40,11 +40,13 @@ export interface AppActions {
   handleSwitchProfile: (id: string) => void;
   handleCreateProfile: (
     name: string, mcVersion: string, loader: string, description: string,
-    mods?: ModItem[]
+    mods?: ModItem[],
+    loaderVersion?: string
   ) => void;
   handleDuplicateProfile: () => void;
   handleSaveEditedProfile: (
-    name: string, mcVersion: string, loader: string, description: string
+    name: string, mcVersion: string, loader: string, description: string,
+    loaderVersion?: string
   ) => void;
   handleDeleteProfile: (id: string) => void | Promise<void>;
   handleToggleMod: (

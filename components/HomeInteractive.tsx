@@ -2,11 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
-import { CATEGORIES } from '@/lib/constants/categories';
-import { SEARCH_LIMIT, type ProjectType } from '@/lib/constants/search';
+import { categoriesForProjectType } from '@/lib/constants/categories';
+import {
+  SEARCH_LIMIT,
+  SEARCH_LAYOUT_OPTIONS,
+  SEARCH_LAYOUT_STORAGE_KEY,
+  parseProjectType,
+  parseSearchLayout,
+  searchGridClass,
+  type ProjectType,
+  type SearchLayout
+} from '@/lib/constants/search';
 import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
@@ -104,11 +114,60 @@ export const HomeInteractive: React.FC<Props> = ({
   // ---------------------------------------------------------------------
 
   // 絞り込み state
+  const router = useRouter();
+  const pathname = usePathname();
+  const urlSearchParams = useSearchParams();
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<string>('popular');
   const [searchInput, setSearchInput] = useState<string>(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState<string>(initialQuery);
   const [projectType, setProjectType] = useState<ProjectType>(initialProjectType);
+  const [layout, setLayout] = useState<SearchLayout>('3');
+
+  useEffect(() => {
+    try {
+      setLayout(parseSearchLayout(localStorage.getItem(SEARCH_LAYOUT_STORAGE_KEY)));
+    } catch {
+      /* private mode 等 */
+    }
+  }, []);
+
+  useEffect(() => {
+    const fromUrl = parseProjectType(urlSearchParams.get('type'));
+    setProjectType(fromUrl);
+  }, [urlSearchParams]);
+
+  const typeCategories = categoriesForProjectType(projectType);
+
+  useEffect(() => {
+    if (!typeCategories.some((c) => c.id === selectedCategory)) {
+      setSelectedCategory('All');
+    }
+  }, [typeCategories, selectedCategory]);
+
+  const handleProjectTypeChange = useCallback(
+    (next: ProjectType) => {
+      setProjectType(next);
+      setSelectedCategory('All');
+      const params = new URLSearchParams(urlSearchParams.toString());
+      if (next === 'mod') params.delete('type');
+      else params.set('type', next);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, urlSearchParams]
+  );
+
+  const handleLayoutChange = useCallback((value: string) => {
+    const next = parseSearchLayout(value);
+    setLayout(next);
+    try {
+      localStorage.setItem(SEARCH_LAYOUT_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // debounce (350ms)
   useEffect(() => {
@@ -405,6 +464,18 @@ export const HomeInteractive: React.FC<Props> = ({
                 label="並び順"
               />
             </div>
+            <span className="text-xs font-medium theme-text-muted whitespace-nowrap shrink-0 flex items-center gap-1">
+              <i className="fa-solid fa-table-cells-large" aria-hidden />
+              <span>表示:</span>
+            </span>
+            <div className="w-full sm:w-auto min-w-[10rem]">
+              <CustomDropdown
+                options={[...SEARCH_LAYOUT_OPTIONS]}
+                selectedValue={layout}
+                onChange={handleLayoutChange}
+                label="表示形式"
+              />
+            </div>
           </div>
         </div>
 
@@ -415,7 +486,7 @@ export const HomeInteractive: React.FC<Props> = ({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setProjectType(tab.id)}
+                onClick={() => handleProjectTypeChange(tab.id)}
                 aria-pressed={isActive}
                 className={`btn-hover-effect px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   isActive
@@ -432,7 +503,7 @@ export const HomeInteractive: React.FC<Props> = ({
         {/* Category Filter */}
         <div className="scroll-fade-container">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 hide-scrollbar -mx-1 px-1 touch-pan-x">
-            {CATEGORIES.map((cat) => {
+            {typeCategories.map((cat) => {
               const isActive = selectedCategory === cat.id;
               return (
                 <button
@@ -466,7 +537,7 @@ export const HomeInteractive: React.FC<Props> = ({
       </div>
 
       {/* Mod Grid */}
-      <div id="mod-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div id="mod-grid" className={searchGridClass(layout)}>
         {isLoading && safeHits.length === 0 ? (
           INITIAL_SKELETON_KEYS.map((k) => (
             <div

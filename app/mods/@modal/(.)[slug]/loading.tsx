@@ -9,7 +9,7 @@
 export default function InterceptedModsModalLoading() {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       aria-hidden="true"
     >

@@ -1,16 +1,17 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import type { ModItem, ModrinthVersion, Profile } from '@/types';
+import type { ContentCategory, ModItem, ModrinthVersion } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { contentCategoryOf } from '@/lib/utils/contentCategory';
 
 // ============================================================================
 // ModsPageClient (Phase 9-A.2: useAppContext 撤去)
@@ -26,8 +27,34 @@ import { useAppAction } from '@/lib/store/appActions';
 //   - handleXxx 群は appActionsStore 経由 (useAppAction)
 // ============================================================================
 
+const PROFILE_TABS: ReadonlyArray<{
+  id: ContentCategory;
+  label: string;
+  icon: string;
+  emptyHref: string;
+  emptyLabel: string;
+}> = [
+  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', emptyHref: '/mods', emptyLabel: 'Modを探しに行く' },
+  {
+    id: 'resourcepack',
+    label: 'Resource Packs',
+    icon: 'fa-solid fa-palette',
+    emptyHref: '/resourcepack',
+    emptyLabel: 'Resource Pack ハブへ'
+  },
+  {
+    id: 'shader',
+    label: 'Shaders',
+    icon: 'fa-solid fa-wand-sparkles',
+    emptyHref: '/shader',
+    emptyLabel: 'Shader ハブへ'
+  }
+];
+
 export const ModsPageClient: React.FC = () => {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ContentCategory>('mod');
+  const [listQuery, setListQuery] = useState('');
 
   // ---- Zustand: currentProfile を selector で計算 (profiles/currentProfileId の
   //      どちらかが変わった時のみ再レンダー) ----
@@ -158,6 +185,24 @@ export const ModsPageClient: React.FC = () => {
     []
   );
 
+  const tabCounts = useMemo(() => {
+    const counts: Record<ContentCategory, number> = { mod: 0, resourcepack: 0, shader: 0 };
+    for (const mod of profile.mods) {
+      counts[contentCategoryOf(mod)] += 1;
+    }
+    return counts;
+  }, [profile.mods]);
+
+  const visibleMods = useMemo(() => {
+    const q = listQuery.trim().toLowerCase();
+    return profile.mods.filter((mod) => {
+      if (contentCategoryOf(mod) !== activeTab) return false;
+      if (!q) return true;
+      const hay = `${mod.title} ${mod.author ?? ''} ${mod.filename ?? ''} ${mod.slug ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [profile.mods, activeTab, listQuery]);
+
   const handleOpenModDetail = useCallback(
     (mod: ModItem) => {
       // Phase 9-F: /mod/[slug] → /mods/[slug] (URL 再設計)
@@ -174,10 +219,10 @@ export const ModsPageClient: React.FC = () => {
         <div>
           <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
             <i className="fa-solid fa-cubes-stacked theme-text-brand" aria-hidden />
-            選択中のMod一覧
+            選択中一覧
           </h2>
           <p className="text-xs theme-text-muted mt-0.5">
-            登録済みのModの安定バージョン変更や、個別・一括ダウンロードが行えます。
+            Mods / Resource Packs / Shaders を切り替え、名前で絞り込めます。
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
@@ -209,12 +254,64 @@ export const ModsPageClient: React.FC = () => {
       </div>
 
       <div className="glass-panel rounded-2xl border overflow-hidden">
-        {profile.mods.length === 0 ? (
-          <EmptyState />
+        <div className="p-3 sm:p-4 space-y-3 border-b border-slate-500/15">
+          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1" role="tablist" aria-label="コンテンツ種別">
+            {PROFILE_TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`btn-hover-effect px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                    isActive
+                      ? 'bg-emerald-600 text-slate-950 font-bold shadow'
+                      : 'theme-sub-box theme-text-secondary hover:text-emerald-500'
+                  }`}
+                >
+                  <i className={tab.icon} aria-hidden />
+                  <span>{tab.label}</span>
+                  <span className="font-mono opacity-80">{tabCounts[tab.id]}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="relative">
+            <i
+              className="fa-solid fa-magnifying-glass theme-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={listQuery}
+              onChange={(e) => setListQuery(e.target.value)}
+              placeholder="選択中の名前・作者で検索..."
+              className="w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            />
+            {listQuery && (
+              <button
+                type="button"
+                onClick={() => setListQuery('')}
+                aria-label="検索内容をクリア"
+                className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:text-emerald-500 text-xs p-1"
+              >
+                <i className="fa-solid fa-xmark" aria-hidden />
+              </button>
+            )}
+          </div>
+        </div>
+        {visibleMods.length === 0 ? (
+          <EmptyState
+            tab={activeTab}
+            hasAny={tabCounts[activeTab] > 0}
+            query={listQuery}
+          />
         ) : (
           <>
             <DesktopTable
-              profile={profile}
+              items={visibleMods}
               modVersionsMap={modVersionsMap}
               buildVersionOptions={buildVersionOptions}
               onOpenDetail={handleOpenModDetail}
@@ -223,7 +320,7 @@ export const ModsPageClient: React.FC = () => {
               onUpdateModVersion={handleUpdateModVersion}
             />
             <MobileList
-              profile={profile}
+              items={visibleMods}
               modVersionsMap={modVersionsMap}
               buildVersionOptions={buildVersionOptions}
               onOpenDetail={handleOpenModDetail}
@@ -242,29 +339,51 @@ export const ModsPageClient: React.FC = () => {
 // 内部小コンポーネント
 // -----------------------------------------------------------------------------
 
-function EmptyState() {
-  // <button router.push> → <Link href> に変更 (SEO/新規タブ対応)
+function EmptyState({
+  tab,
+  hasAny,
+  query
+}: {
+  tab: ContentCategory;
+  hasAny: boolean;
+  query: string;
+}) {
+  const meta = PROFILE_TABS.find((t) => t.id === tab) ?? PROFILE_TABS[0];
+  if (!meta) return null;
+  if (hasAny && query.trim()) {
+    return (
+      <div id="empty-mods-state" className="p-8 sm:p-12 text-center">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full theme-sub-box flex items-center justify-center mx-auto theme-text-muted text-xl sm:text-2xl mb-3">
+          <i className="fa-solid fa-magnifying-glass" aria-hidden />
+        </div>
+        <h3 className="text-sm sm:text-base font-bold">一致する項目がありません</h3>
+        <p className="text-xs theme-text-muted mt-1 max-w-sm mx-auto">
+          検索語を変えるか、クリアして一覧に戻ってください。
+        </p>
+      </div>
+    );
+  }
   return (
     <div id="empty-mods-state" className="p-8 sm:p-12 text-center">
       <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full theme-sub-box flex items-center justify-center mx-auto theme-text-muted text-xl sm:text-2xl mb-3">
         <i className="fa-solid fa-box-open" aria-hidden />
       </div>
-      <h3 className="text-sm sm:text-base font-bold">Modが選択されていません</h3>
+      <h3 className="text-sm sm:text-base font-bold">{`${meta.label} はまだありません`}</h3>
       <p className="text-xs theme-text-muted mt-1 max-w-sm mx-auto">
-        「探す」タブからModrinthのModを検索して、このプロファイルに追加してください。
+        「探す」から追加するか、Phase 11 のフォルダ取り込みで自動検出できます。
       </p>
       <Link
-        href="/mods"
+        href={meta.emptyHref}
         className="inline-block mt-4 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
-        Modを探しに行く
+        {meta.emptyLabel}
       </Link>
     </div>
   );
 }
 
 interface RowProps {
-  profile: Profile;
+  items: ModItem[];
   modVersionsMap: Map<string, ModrinthVersion[]>;
   buildVersionOptions: (
     mod: ModItem,
@@ -281,7 +400,7 @@ interface RowProps {
 }
 
 function DesktopTable({
-  profile,
+  items,
   modVersionsMap,
   buildVersionOptions,
   onOpenDetail,
@@ -301,7 +420,7 @@ function DesktopTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-500/10 text-sm">
-          {profile.mods.map((mod) => {
+          {items.map((mod) => {
             const availableVersions = modVersionsMap.get(mod.id) || [];
             const versionOptions = buildVersionOptions(mod, availableVersions);
             return (
@@ -387,7 +506,7 @@ function DesktopTable({
 }
 
 function MobileList({
-  profile,
+  items,
   modVersionsMap,
   buildVersionOptions,
   onOpenDetail,
@@ -397,7 +516,7 @@ function MobileList({
 }: RowProps) {
   return (
     <div className="block md:hidden p-3 space-y-3">
-      {profile.mods.map((mod) => {
+      {items.map((mod) => {
         const availableVersions = modVersionsMap.get(mod.id) || [];
         const versionOptions = buildVersionOptions(mod, availableVersions);
         return (

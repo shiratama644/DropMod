@@ -22,7 +22,12 @@ import {
   fetchModrinthProjectVersions,
   fetchModrinthSearch
 } from '@/lib/modrinth/server';
-import { ModDetailModalShell } from '@/components/ModDetailModalShell';
+// Phase 10-P1: 詳細フルページ専用の刷新デザインコンポーネント。
+// Phase 9-F までは ModDetailModalShell を variant="page" で兼用していたが、
+// モーダルを引き伸ばしただけの体裁だったため、SEO / PC ワイド活用のため
+// 独立コンポーネント (ModDetailPageView) に切り出した。
+// モーダル (/mods からのインターセプト) は引き続き ModDetailModalShell を使う。
+import { ModDetailPageView } from '@/components/ModDetailPageView';
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -107,12 +112,5 @@ export default async function ModDetailPage({ params }: Params) {
 
   if (!project) notFound();
 
-  return (
-    <ModDetailModalShell
-      project={project}
-      versions={versions}
-      variant="page"
-      slug={slug}
-    />
-  );
+  return <ModDetailPageView project={project} versions={versions} slug={slug} />;
 }

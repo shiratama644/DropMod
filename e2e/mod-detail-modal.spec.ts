@@ -58,11 +58,20 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     // 直接 URL アクセス → Intercepting Route は発火せず、フルページ描画
     await page.goto('/mods/sodium');
 
-    // フルページなので Header は非表示 (body に mod-fullpage クラスが付く)
-    // 上部にブレッドクラム的な「Mod 一覧に戻る」リンクがある
+    // Phase 10-P1: 詳細ページを ModDetailPageView に刷新。
+    //   - Header と BottomNav は「通常ページ」として表示されたままにする
+    //     (旧: body に mod-fullpage クラスが付いて Header 非表示、を撤廃)
+    //   - 上部にブレッドクラム的な「Mod 一覧に戻る」リンクがある
+    //   - dialog role は付いていない (モーダルではないため)
     await expect(page.getByRole('link', { name: /Mod 一覧に戻る/ })).toBeVisible({
       timeout: 15_000
     });
+    // Header が表示されたまま
+    await expect(page.locator('#app-header')).toBeVisible();
+    // dialog は無い (フルページなのでモーダルではない)
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // ページ h1 = Mod タイトル (SEO 継続)
+    await expect(page.locator('h1').first()).toBeVisible();
   });
 
   test('legacy /mod/[slug] URL redirects to /mods/[slug] (SEO 保全)', async ({

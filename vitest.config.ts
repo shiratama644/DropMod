@@ -70,6 +70,10 @@ export default defineConfig({
         'components/HomeInteractive.tsx',
         'components/ModsPageClient.tsx',
         'components/ModDetailModalShell.tsx',
+        // Phase 10-P1: /mods/[slug] フルページ用の刷新デザインコンポーネント。
+        // ModDetailModalShell と同じく Zustand + fa-icon + next/image を
+        // 大量に使うため単体テスト ROI 低、E2E (mod-detail-modal / smoke) で担保。
+        'components/ModDetailPageView.tsx',
         'components/SettingsPageClient.tsx',
 
         // ---- Presentational-only Client Components (単体テスト ROI 低) ----

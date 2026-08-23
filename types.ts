@@ -70,6 +70,29 @@ export interface ModrinthProject {
   published: string;
   updated: string;
   author?: string;
+  // ---- Phase 10-P1: 詳細ページ用の追加メタデータ (Modrinth API 応答準拠) ----
+  // これらは Modrinth /project レスポンスに含まれる公式フィールド。
+  // 全て optional (msw のモックや古い project レスポンスで欠落する可能性がある)。
+  source_url?: string | null;
+  issues_url?: string | null;
+  wiki_url?: string | null;
+  discord_url?: string | null;
+  donation_urls?: Array<{
+    id: string;
+    platform: string;
+    url: string;
+  }> | null;
+  license?: {
+    id: string;
+    name?: string;
+    url?: string | null;
+  } | null;
+  client_side?: 'required' | 'optional' | 'unsupported' | 'unknown';
+  server_side?: 'required' | 'optional' | 'unsupported' | 'unknown';
+  loaders?: string[];
+  game_versions?: string[];
+  followers?: number;
+  color?: number | null;
 }
 
 export interface ModrinthVersionFile {

@@ -360,6 +360,10 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onSwitchTab={handleSwitchTab}
         modCount={currentProfile.mods.length}
         hasDepWarning={hasDepWarning}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onDownloadZip={handleDownloadZip}
+        onImportZip={handleImportZipInput}
       />
 
       {/* --- グローバル モーダル群 --- */}

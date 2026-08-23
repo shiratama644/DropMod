@@ -356,4 +356,64 @@ describe('useProfiles', () => {
     );
     expect(warningCall?.[0]).toContain('失敗');
   });
+
+  // ------------------------------------------------------------------
+  // B4 修正の回帰防止テスト (currentProfile 参照安定化)
+  // ------------------------------------------------------------------
+  it('B4: currentProfile は再 render で同一参照を返す (useMemo による安定化)', async () => {
+    const h = makeHarness();
+    const { result, rerender } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    const first = result.current.currentProfile;
+    rerender();
+    const second = result.current.currentProfile;
+    expect(first).toBe(second); // 同一参照
+
+    // profiles=[] + missing currentProfileId で fallback に落ちるケースでも同一参照
+    await act(async () => {
+      useProfilesStore.setState({ profiles: [], currentProfileId: 'missing' });
+    });
+    // hydration 完了後は recovery useEffect が発火して profiles が復旧するが、
+    // その 1 tick 前の transient-fallback は module-level 定数なので同一参照
+    // (実際には復旧後の profile が入ってくるので厳密比較は不要、id='transient-fallback' の
+    //  参照安定性を確認するため独立 render で検証)
+    const fallback = result.current.currentProfile;
+    rerender();
+    expect(result.current.currentProfile).toBe(fallback);
+  });
+
+  // ------------------------------------------------------------------
+  // B24 修正の回帰防止テスト (幽霊 currentProfileId の防御)
+  // ------------------------------------------------------------------
+  it('B24: Dexie に幽霊 currentProfileId が保存されている場合、profiles[0].id にフォールバック', async () => {
+    // Dexie に profiles として ['real-1'] を、meta currentProfileId として 'ghost-id' を保存
+    await db.profiles.bulkPut([
+      {
+        id: 'real-1',
+        name: 'Real Profile',
+        mcVersion: '1.20.1',
+        loader: 'Fabric',
+        description: '',
+        mods: [],
+        updatedAt: Date.now()
+      }
+    ]);
+    await db.meta.put({ key: 'currentProfileId', value: 'ghost-id' });
+    await db.meta.put({ key: 'migratedAt', value: String(Date.now()) });
+
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    // currentProfileId は 'ghost-id' ではなく 'real-1' にフォールバック
+    expect(result.current.currentProfileId).toBe('real-1');
+    expect(result.current.currentProfile?.id).toBe('real-1');
+  });
 });

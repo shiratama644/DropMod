@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
@@ -20,9 +20,21 @@ import {
 } from '@/lib/db/migrate';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { queryKeys } from '@/lib/query/keys';
-import { DEFAULT_STALE_TIME_MS } from '@/lib/query/client';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
+
+// B4 修正: hydration 中の transient fallback は module-level 定数に固定。
+//   render のたびに新規オブジェクトを生成しないことで、AppShell register
+//   useEffect の deps 比較で「変化なし」判定され、無駄な register/unregister
+//   サイクル (B19 と組み合わせて発生する window 問題) を回避する。
+const TRANSIENT_FALLBACK_PROFILE: Profile = Object.freeze({
+  id: 'transient-fallback',
+  name: '既定プロファイル',
+  mcVersion: '1.20.1',
+  loader: 'Fabric',
+  description: '',
+  mods: []
+}) as Profile;
 
 // `sanitizeLoadedState` は lib/state/sanitize.ts に集約 (第7波 M7-2 修正)。
 // 以前は互換のため useProfiles からも re-export していたが、参照 0 の dead code
@@ -139,8 +151,21 @@ export const useProfiles = (
           setThemeState(savedTheme);
         }
 
+        // B24 修正 (Critical): 幽霊 currentProfileId の防御
+        //   savedCurrentId が dbProfiles に存在するか検証してからセット。
+        //   存在しない場合 (別セッションで削除された ID 等) は dbProfiles[0] に
+        //   フォールバック、それも無ければセットしない (currentProfile 側の
+        //   transient-fallback に任せる)。
+        //   これが無いと currentProfileId は 存在しない ID のまま state に残り、
+        //   handleToggleMod 等の p.id === currentProfileId 判定で全操作が
+        //   silent 失敗する。
         if (savedCurrentId) {
-          setCurrentProfileId(savedCurrentId);
+          const validId = dbProfiles.some((p) => p.id === savedCurrentId)
+            ? savedCurrentId
+            : (dbProfiles[0]?.id ?? null);
+          if (validId) {
+            setCurrentProfileId(validId);
+          }
         }
       } catch (e) {
         // Dexie が使えない環境 (Safari プライベート等) では LocalStorage を直接読む
@@ -157,8 +182,16 @@ export const useProfiles = (
               if (sanitized.profiles && sanitized.profiles.length > 0) {
                 setProfiles(sanitized.profiles);
               }
-              if (sanitized.currentProfileId) {
-                setCurrentProfileId(sanitized.currentProfileId);
+              // B24 修正: LocalStorage フォールバックも同様に存在検証
+              if (sanitized.currentProfileId && sanitized.profiles) {
+                const validId = sanitized.profiles.some(
+                  (p) => p.id === sanitized.currentProfileId
+                )
+                  ? sanitized.currentProfileId
+                  : (sanitized.profiles[0]?.id ?? null);
+                if (validId) {
+                  setCurrentProfileId(validId);
+                }
               }
             }
           }
@@ -185,41 +218,60 @@ export const useProfiles = (
   //     → 期限切れ後は cleanupExpiredBackup が消すので、二重書きは自動で止まる
   //
   // 失敗時 (QuotaExceededError 等) は console.warn のみでアプリはクラッシュさせない。
+  //
+  // B11 修正: 高頻度 setProfiles (bulk Mod 追加等) で Dexie transaction queue が
+  //   溜まる問題を防ぐため、500ms debounce をかけて最後の変更のみ書き出す。
+  //   setTimeout で timerRef を保持し、次の変更でクリア。
   // ---------------------------------------------------------------------
+  const dexieSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!hasHydrated) return;
 
-    // Dexie 保存 (非同期、失敗時はログのみ)
-    void (async () => {
-      try {
-        await dexieSyncProfiles(profiles);
-        await Promise.all([
-          dexieSetMeta(META_KEYS.THEME, theme),
-          dexieSetMeta(META_KEYS.CURRENT_PROFILE_ID, currentProfileId)
-        ]);
-      } catch (e) {
-        console.warn('[DropMod] Dexie への保存に失敗:', e);
-      }
-    })();
+    // 既存の pending 書き込みをキャンセル (B11: debounce)
+    if (dexieSaveTimerRef.current) {
+      clearTimeout(dexieSaveTimerRef.current);
+    }
 
-    // LocalStorage への並行バックアップ (バックアップ期限内 or 期限未設定なら)
-    // 期限切れ後は cleanupExpiredBackup が meta と LocalStorage を消すので
-    // ここでの再作成を避けるため getMeta で確認してから書く。
-    void (async () => {
-      try {
-        const backupExpiry = await dexieGetMeta(META_KEYS.BACKUP_EXPIRES_AT);
-        // バックアップ期限が未来 or (レア: hydrate と同時実行で meta 未設定) の場合のみ書く
-        if (backupExpiry && Date.now() < Number(backupExpiry)) {
-          localStorage.setItem(
-            LOCAL_STORAGE_KEYS.CURRENT,
-            JSON.stringify({ theme, currentProfileId, profiles })
-          );
+    dexieSaveTimerRef.current = setTimeout(() => {
+      // Dexie 保存 (非同期、失敗時はログのみ)
+      void (async () => {
+        try {
+          await dexieSyncProfiles(profiles);
+          await Promise.all([
+            dexieSetMeta(META_KEYS.THEME, theme),
+            dexieSetMeta(META_KEYS.CURRENT_PROFILE_ID, currentProfileId)
+          ]);
+        } catch (e) {
+          console.warn('[DropMod] Dexie への保存に失敗:', e);
         }
-      } catch (e) {
-        // QuotaExceededError 等: 保存できなくてもアプリはクラッシュさせない
-        console.warn('[DropMod] LocalStorage バックアップ書き込みに失敗:', e);
+      })();
+
+      // LocalStorage への並行バックアップ (バックアップ期限内 or 期限未設定なら)
+      // 期限切れ後は cleanupExpiredBackup が meta と LocalStorage を消すので
+      // ここでの再作成を避けるため getMeta で確認してから書く。
+      void (async () => {
+        try {
+          const backupExpiry = await dexieGetMeta(META_KEYS.BACKUP_EXPIRES_AT);
+          // バックアップ期限が未来 or (レア: hydrate と同時実行で meta 未設定) の場合のみ書く
+          if (backupExpiry && Date.now() < Number(backupExpiry)) {
+            localStorage.setItem(
+              LOCAL_STORAGE_KEYS.CURRENT,
+              JSON.stringify({ theme, currentProfileId, profiles })
+            );
+          }
+        } catch (e) {
+          // QuotaExceededError 等: 保存できなくてもアプリはクラッシュさせない
+          console.warn('[DropMod] LocalStorage バックアップ書き込みに失敗:', e);
+        }
+      })();
+    }, 500);
+
+    return () => {
+      // アンマウント / 次の変更でクリア (最新の書き込みを優先)
+      if (dexieSaveTimerRef.current) {
+        clearTimeout(dexieSaveTimerRef.current);
       }
-    })();
+    };
   }, [hasHydrated, theme, currentProfileId, profiles]);
 
   // ---------------------------------------------------------------------
@@ -269,10 +321,17 @@ export const useProfiles = (
   // が undefined になり、その後 currentProfile.mods.length などで
   // アプリ全体が TypeError → 真っ暗になる。
   // ここでフォールバックのデフォルトプロファイルを自動生成して復旧する。
+  //
+  // B8 修正: React Strict Mode の double-invoke で 2 個の復旧プロファイル
+  //   が生成される (uuid が違うので上書きされない) or 復旧 toast が 2 回
+  //   出るのを防ぐため、in-flight フラグ (recoveryInFlightRef) で二重実行
+  //   を排除する。
   // ---------------------------------------------------------------------
+  const recoveryInFlightRef = useRef<boolean>(false);
   useEffect(() => {
     if (!hasHydrated) return;
-    if (profiles.length === 0) {
+    if (profiles.length === 0 && !recoveryInFlightRef.current) {
+      recoveryInFlightRef.current = true;
       const fallbackProfile: Profile = {
         id: generateId('default-profile-recovered'),
         name: '既定プロファイル',
@@ -284,20 +343,29 @@ export const useProfiles = (
       setProfiles([fallbackProfile]);
       setCurrentProfileId(fallbackProfile.id);
       showToast('プロファイルが失われたため既定を復旧しました', 'warning');
+      // 復旧完了後、少し待ってフラグ解除 (通常 setProfiles 反映後は
+      // profiles.length === 1 になるので二重実行はされない)
+      queueMicrotask(() => {
+        recoveryInFlightRef.current = false;
+      });
     }
   }, [profiles.length, hasHydrated, showToast, setProfiles, setCurrentProfileId]);
 
-  // 常に非 undefined を保証: find が失敗しても最低限のフォールバックを返す
-  const currentProfile: Profile =
-    profiles.find((p) => p.id === currentProfileId) ||
-    profiles[0] || {
-      id: 'transient-fallback',
-      name: '既定プロファイル',
-      mcVersion: '1.20.1',
-      loader: 'Fabric',
-      description: '',
-      mods: []
-    };
+  // B4 修正: transient fallback を module-level 定数に固定して参照安定化。
+  //   従来は render のたびに新規オブジェクト生成 → useEffect deps に
+  //   currentProfile を入れている AppShell register useEffect が毎レンダー
+  //   発火 → appActionsStore 更新の連鎖に。
+  //   fallback は「hydration 完了までの 1 tick」のみ使用される想定なので
+  //   固定 object で問題ない (実際の profile は hydration 完了で必ず入る)。
+  //
+  //   useMemo でラップして、deps (profiles / currentProfileId) が変わらない
+  //   限り同一参照を返す。
+  const currentProfile: Profile = useMemo(
+    () => profiles.find((p) => p.id === currentProfileId) ||
+      profiles[0] ||
+      TRANSIENT_FALLBACK_PROFILE,
+    [profiles, currentProfileId]
+  );
 
   // ------------------------------------------------------------------
   // 全 handle* 関数を useCallback でラップ
@@ -411,12 +479,28 @@ export const useProfiles = (
     if (toggleInFlightRef.current.has(projectId)) return;
     toggleInFlightRef.current.add(projectId);
 
+    // B10 修正: 削除フローの race 対策。
+    //   従来は削除フロー (同期) でも try/finally で lock を即解放していたが、
+    //   setProfiles → React の state 反映 → profilesRef.current 更新 の
+    //   タイミング race で、2 回目クリックが「まだ削除されていない」と
+    //   判定してしまい削除 toast が二重発火する可能性があった。
+    //   → 削除完了後の unlock を microtask (queueMicrotask) 経由で遅延させ、
+    //     少なくとも 1 tick 待って ref が更新されてから解放する。
+    const releaseLock = () => {
+      queueMicrotask(() => {
+        toggleInFlightRef.current.delete(projectId);
+      });
+    };
+
     try {
       // --- Ref 経由で常に最新の profiles / currentProfileId を読む (stale closure 対策) ---
       const latestProfileId = currentProfileIdRef.current;
       const latestProfile =
         profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
-      if (!latestProfile) return;
+      if (!latestProfile) {
+        releaseLock();
+        return;
+      }
 
       const existsIndex = latestProfile.mods.findIndex(
         (m) => m.id === projectId || m.slug === projectId
@@ -434,6 +518,9 @@ export const useProfiles = (
         )
       );
       if (!silent) showToast(`「${removed?.title || 'Mod'}」を削除しました`, 'info');
+      // B10 修正: 削除フローは microtask 経由で unlock、race 回避
+      releaseLock();
+      return;
     } else {
       // --- 追加 ---
       if (!silent) showToast('ModrinthからMod情報を取得中...', 'info');
@@ -528,7 +615,8 @@ export const useProfiles = (
       }
     }
     } finally {
-      toggleInFlightRef.current.delete(projectId);
+      // B10 修正: 追加フローも microtask 経由で unlock 統一
+      releaseLock();
     }
   }, [showToast, setProfiles, queryClient]);
 

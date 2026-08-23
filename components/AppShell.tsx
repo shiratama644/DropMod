@@ -25,7 +25,6 @@ import { NewProfileModal } from './NewProfileModal';
 import { EditProfileModal } from './EditProfileModal';
 import { DependencyCheckModal } from './DependencyCheckModal';
 import { ZipProgressModal } from './ZipProgressModal';
-import { AppContextProvider } from './AppContext';
 import { useAppActionsStore } from '@/lib/store/appActions';
 // QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
 // AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)
@@ -36,8 +35,10 @@ import { WebVitalsReporter } from './WebVitalsReporter';
 // AppShell
 //
 // Vite 版 App.tsx (300+ 行) の全 hook / モーダル / ヘッダー / ボトムナビを集約。
-// Root Layout の Client 直下に 1 インスタンスだけ配置され、内部で AppContext
-// を提供する。ページ (children / modal slot) は Context から必要な値を取得。
+// Root Layout の Client 直下に 1 インスタンスだけ配置。
+// 下流コンポーネント (Settings/Mods/Home/ModDetail) は Zustand
+// (useProfilesStore / useAppActionsStore 等) を直接参照する。
+// (Phase 10-B: AppContext 完全削除)
 //
 // タブ切替:
 //   - Vite 版は setActiveTab() で内部 state を切り替えていた
@@ -275,15 +276,14 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // ---------- (Phase 9-A.5) contextValue useMemo は撤去 ----------
+  // ---------- (Phase 9-A.5 / 10-B) contextValue useMemo は撤去済み ----------
   //   従来 30+ フィールドを含む Fat Context を作っていたが、Phase 9-A で全 4 消費者
-  //   コンポーネントを Zustand + appActionsStore 直接参照に移行したため不要に。
-  //   AppContextProvider は pass-through な stub (children を返すだけ) として維持し、
-  //   Phase 10 で完全削除予定。
+  //   コンポーネントを Zustand + appActionsStore 直接参照に移行 → Phase 10-B で
+  //   AppContext.tsx 自体を完全削除。
 
   // Phase 9-A: appActionsStore への登録
-  //   下流コンポーネント (Settings/Mods/Home/ModDetail) が useAppContext ではなく
-  //   Zustand 直接参照で action を取得できるようにする。
+  //   下流コンポーネント (Settings/Mods/Home/ModDetail) が Zustand 直接参照で
+  //   action を取得できるようにする。
   //   AppShell がマウントされている間だけ有効。
   //
   // B19 修正: 従来は cleanup で unregisterAppActions() を呼んでいたため、
@@ -349,7 +349,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   }, [unregisterAppActions]);
 
   return (
-    <AppContextProvider>
+    <>
       <WebVitalsReporter />
       <OfflineBanner />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -447,6 +447,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       />
 
       <ConfirmDialog {...confirmDialogProps} />
-    </AppContextProvider>
+    </>
   );
 };

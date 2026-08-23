@@ -339,19 +339,25 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       <OfflineBanner />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <Header
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        profiles={profiles}
-        currentProfileId={currentProfileId}
-        onSwitchProfile={handleSwitchProfile}
-        onOpenNewProfileModal={openNewProfileModal}
-        onRunDependencyCheck={openDependencyCheckModal}
-        onDownloadZip={handleDownloadZip}
-        onImportZip={handleImportZipInput}
-        onSwitchTab={handleSwitchTab}
-        hasDepWarning={hasDepWarning}
-      />
+      {/* Phase 9.5-B: ランディングページ (/) では Header を非表示。
+          他ページ (/mods, /profile, /settings, /mods/[slug]) は従来通り表示。
+          ランディングでもグローバル UI (Toast/Confirm/BottomNav/Providers)
+          は AppShell 経由で提供される。 */}
+      {pathname !== '/' && (
+        <Header
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          profiles={profiles}
+          currentProfileId={currentProfileId}
+          onSwitchProfile={handleSwitchProfile}
+          onOpenNewProfileModal={openNewProfileModal}
+          onRunDependencyCheck={openDependencyCheckModal}
+          onDownloadZip={handleDownloadZip}
+          onImportZip={handleImportZipInput}
+          onSwitchTab={handleSwitchTab}
+          hasDepWarning={hasDepWarning}
+        />
+      )}
 
       {children}
 

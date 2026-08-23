@@ -10,6 +10,7 @@ import { SEARCH_LIMIT } from '@/lib/constants/search';
 import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
+import { CacheStatusBadge } from './CacheStatusBadge';
 import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
 import { useAppAction } from '@/lib/store/appActions';
 
@@ -372,6 +373,17 @@ export const HomeInteractive: React.FC<Props> = ({
             })}
           </div>
         </div>
+      </div>
+
+      {/* Search メタ (件数 + キャッシュ状態バッジ) - Phase 9-E.1 (E-2) */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs theme-text-muted">
+          {safeHits.length > 0 && `${safeHits.length} 件${hasMore ? '+' : ''}`}
+        </span>
+        <CacheStatusBadge
+          dataUpdatedAt={query.dataUpdatedAt}
+          isFetching={query.isFetching}
+        />
       </div>
 
       {/* Mod Grid */}

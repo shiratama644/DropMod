@@ -346,7 +346,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     // biome-ignore lint/a11y/useKeyWithClickEvents: 背景クリックのみ、Escape は自前
     <div
       ref={backdropRef}
-      className={`fixed inset-0 ${zIndexClass} flex flex-col justify-end backdrop-blur-sm pointer-events-auto`}
+      className={`fixed inset-0 ${zIndexClass} flex flex-col justify-end backdrop-blur-[2px] pointer-events-auto`}
       style={{ backgroundColor: 'var(--modal-overlay)', opacity: 0 }}
       onClick={handleBackdropClick}
     >

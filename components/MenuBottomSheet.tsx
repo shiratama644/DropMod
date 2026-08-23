@@ -79,18 +79,20 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
       onClose={onClose}
       onCloseAnimationComplete={onCloseAnimationComplete}
       ariaLabel="メニュー"
-      maxHeightClass="max-h-[45vh]"
+      maxHeightClass="max-h-[35vh]"
       zIndexClass={zIndexClass}
     >
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         {/* Primary: ZIP 保存 (DropMod の目玉機能、色で primary 感) */}
         <button
           type="button"
           onClick={handleDownloadClick}
-          className="btn-hover-effect flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-md shadow-emerald-600/30 min-h-[76px]"
+          className="btn-hover-effect flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-md shadow-emerald-600/30 min-h-[52px]"
         >
-          <i className="fa-solid fa-file-zipper text-base" aria-hidden />
-          <span className="font-bold text-xs text-center leading-tight">
+          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center text-base shrink-0">
+            <i className="fa-solid fa-file-zipper" aria-hidden />
+          </div>
+          <span className="font-bold text-sm leading-tight truncate">
             ZIP 保存
           </span>
         </button>
@@ -99,12 +101,12 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
         <Link
           href="/settings"
           onClick={onClose}
-          className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
+          className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[52px]"
         >
-          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
             <i className="fa-solid fa-gear" aria-hidden />
           </div>
-          <span className="font-semibold text-xs text-center leading-tight">
+          <span className="font-semibold text-sm leading-tight truncate">
             設定
           </span>
         </Link>
@@ -113,22 +115,22 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
         <button
           type="button"
           onClick={handleToggleThemeClick}
-          className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
+          className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[52px]"
         >
-          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
             <i className={themeIcon} aria-hidden />
           </div>
-          <span className="font-semibold text-xs text-center leading-tight">
+          <span className="font-semibold text-sm leading-tight truncate">
             {themeLabel}モード
           </span>
         </button>
 
         {/* ZIP 読込 (hidden input trigger) */}
-        <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[76px]">
-          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base">
+        <label className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[52px]">
+          <div className="w-9 h-9 rounded-lg bg-slate-500/15 flex items-center justify-center text-base shrink-0">
             <i className="fa-solid fa-file-import" aria-hidden />
           </div>
-          <span className="font-semibold text-xs text-center leading-tight">
+          <span className="font-semibold text-sm leading-tight truncate">
             ZIP 読込
           </span>
           <input

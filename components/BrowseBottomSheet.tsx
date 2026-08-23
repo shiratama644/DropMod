@@ -67,21 +67,21 @@ export const BrowseBottomSheet: React.FC<BrowseBottomSheetProps> = ({
       onClose={onClose}
       onCloseAnimationComplete={onCloseAnimationComplete}
       ariaLabel="カテゴリを選択"
-      maxHeightClass="max-h-[45vh]"
+      maxHeightClass="max-h-[35vh]"
       zIndexClass={zIndexClass}
     >
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         {CATEGORIES.map((cat) => (
           <Link
             key={cat.id}
             href={cat.href}
             onClick={onClose}
-            className="flex flex-col items-center justify-center gap-1.5 px-3 py-3.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[76px]"
+            className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 min-h-[52px]"
           >
             <div className="w-9 h-9 rounded-lg bg-emerald-500/15 theme-text-brand flex items-center justify-center text-base shrink-0">
               <i className={cat.icon} aria-hidden />
             </div>
-            <div className="font-semibold text-xs text-center leading-tight">
+            <div className="font-semibold text-sm leading-tight truncate">
               {cat.label}
             </div>
           </Link>

@@ -15,6 +15,12 @@
 //   - 旧 Sheet は close アニメ完了で unmount
 //   - Sheet の背景は BottomNav とページの間から出る (BottomSheet 側で bottom-16 で調整)
 //
+// 【9.5-D 追補】(ユーザー要望):
+//   - BottomNav を BottomSheet より上に配置 (z-[60] > Sheet の z-[50]/[52]/[54])
+//     → Sheet の暗い backdrop が BottomNav 領域を覆わず、BottomNav が常に前面。
+//   - Sheet 内ボタンはアイコン横 + ラベルの横並びで縦幅を圧縮 (min-h-[52px])。
+//   - backdrop-blur を `sm` (4px) → `[2px]` に弱め、背景ページの可視性向上。
+//
 // ⚠️ Rules of Hooks: hook は「早期 return より前」に全部書く。
 // -----------------------------------------------------------------------------
 
@@ -198,7 +204,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav
         id="bottom-nav"
         aria-label="メインナビゲーション"
-        className={`fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
+        className={`fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
           hidden ? 'translate-y-full' : 'translate-y-0'
         }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}

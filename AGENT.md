@@ -226,13 +226,8 @@ pnpm install --frozen-lockfile
 - `BottomNav` (モバイル): **`z-[60]`（Sheet の上に来る = Sheet の暗い backdrop が BottomNav 領域を覆わない）**
 - モーダル (`ConfirmDialog`, `NewProfileModal` 等): アプリ最上位 (`z-[100]+` 相当)
 
-#### 6.6.5 スクロール hide の抑制条件
-`AppShell` の `shouldHideNav` は以下 3 条件全てを満たす時のみ true:
-1. `scrollDirection === 'down'`
-2. `!isAnyModalOpen`
-3. `!isAnySheetOpen`（BottomNav → `onSheetOpenChange` callback で通知）
-
-「Sheet 開いてる間に BottomNav が消える」不具合を防ぐため 3 番目は必須。
+#### 6.6.5 スクロール hide はしない
+Header / BottomNav はスクロール方向に関わらず**常時表示**する。`shouldHideNav` / `hidden` prop / `useScrollDirection` による hide は撤回済み。再導入しない。
 
 ### 6.7 FontAwesome subset 化の運用（Phase 10-A 導入）
 - `@fortawesome/fontawesome-free/css/all.min.css` の全読込は撤去済み。`styles/fontawesome-subset.css` (自動生成) を `app/layout.tsx` で import。

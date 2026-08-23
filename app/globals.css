@@ -159,7 +159,10 @@ code, input, textarea {
 
 .custom-dropdown-container {
     position: relative;
-    display: inline-block;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .custom-dropdown-trigger {
@@ -178,6 +181,18 @@ code, input, textarea {
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     user-select: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+.custom-dropdown-trigger .trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.custom-dropdown-trigger .chevron-icon {
+    flex-shrink: 0;
 }
 .custom-dropdown-trigger:hover, .custom-dropdown-trigger:focus-visible {
     border-color: #10b981;

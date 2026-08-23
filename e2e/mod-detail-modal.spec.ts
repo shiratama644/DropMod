@@ -26,8 +26,8 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     const firstCard = page.locator('.mod-card-item').first();
     await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
 
-    // Header は常に表示
-    await expect(page.locator('#app-header')).toBeVisible();
+    // モバイルは Header、PC は DesktopSidebar が常時表示
+    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
 
     // Mod カードクリック前の URL は /mods
     await expect(page).toHaveURL('/mods');
@@ -66,8 +66,8 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(page.getByRole('link', { name: /Mod 一覧に戻る/ })).toBeVisible({
       timeout: 15_000
     });
-    // Header が表示されたまま
-    await expect(page.locator('#app-header')).toBeVisible();
+    // モバイルは Header、PC は DesktopSidebar が表示されたまま
+    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
     // dialog は無い (フルページなのでモーダルではない)
     await expect(page.getByRole('dialog')).toHaveCount(0);
     // ページ h1 = Mod タイトル (SEO 継続)

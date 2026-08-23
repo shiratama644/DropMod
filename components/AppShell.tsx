@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { useScrollDirection } from '@/hooks/useScrollDirection';
 
 import type { TabName } from '@/types';
 
@@ -200,18 +199,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     };
   }, [isAnyModalOpen]);
 
-  // Phase 9.5-E: 全ページで Header + BottomNav をスクロール hide
-  //   - 下スクロールで hide、上スクロールで show
-  //   - モーダル open 中は hide しない (誤操作防止)
-  //
-  // 【9.5-G 追加】 BottomSheet が open 中は hide 抑制。
-  //   従来: スクロール↑で BottomNav 表示 → Sheet 開く → 直前の scroll direction
-  //         次第で急に hidden に戻り、BottomNav が消える不具合。
-  //   対策: BottomNav から Sheet open 状態を受け取り、shouldHideNav の条件に追加。
-  const scrollDirection = useScrollDirection();
-  const [isAnySheetOpen, setIsAnySheetOpen] = useState(false);
-  const shouldHideNav =
-    scrollDirection === 'down' && !isAnyModalOpen && !isAnySheetOpen;
+  // Header / BottomNav は常時表示 (スクロール hide は撤回)。
 
   // ---------- Reset data ----------
   const handleResetData = useCallback(async () => {
@@ -371,8 +359,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onImportZip={handleImportZipInput}
       />
 
-      {/* モバイル (< md) 専用の上部 Header。LP は Header 非表示 (BottomNav のみ)。
-          Header は md:hidden 指定済み。 */}
+      {/* モバイル (< md) 専用の上部 Header。PC は DesktopSidebar のみ。
+          LP は Header 非表示 (BottomNav のみ)。Header 自体も md:hidden。 */}
       {pathname !== '/' && (
         <Header
           theme={theme}
@@ -386,7 +374,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           onImportZip={handleImportZipInput}
           onSwitchTab={handleSwitchTab}
           hasDepWarning={hasDepWarning}
-          hidden={shouldHideNav}
         />
       )}
 
@@ -394,19 +381,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           既存ページの構造 (max-w-* mx-auto など) は保持。 */}
       <div className="md:pl-64">{children}</div>
 
-      {/* モバイル (< md) 専用の下部 BottomNav。md:hidden 指定済み。
-          Sheet open 状態を親に通知 → shouldHideNav の抑制条件に使う。 */}
+      {/* モバイル (< md) 専用の下部 BottomNav。md:hidden 指定済み。常時表示。 */}
       <BottomNav
         activeTab={activeTab}
         onSwitchTab={handleSwitchTab}
         modCount={currentProfile.mods.length}
         hasDepWarning={hasDepWarning}
-        hidden={shouldHideNav}
         theme={theme}
         onToggleTheme={toggleTheme}
         onDownloadZip={handleDownloadZip}
         onImportZip={handleImportZipInput}
-        onSheetOpenChange={setIsAnySheetOpen}
       />
 
       {/* --- グローバル モーダル群 --- */}

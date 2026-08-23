@@ -6,8 +6,7 @@
 // 【9.5-G 修正点】(ユーザー要望):
 //   1. 開いてる Sheet 対応ボタンだけを緑色 active に、Link タブの active 緑は消す
 //      (topOpenId !== null の間、Link タブの isActive は強制 false)
-//   2. Sheet の open 状態を親 (AppShell) に通知 → scroll hide 抑制
-//      (Sheet 開いている間は BottomNav を hide しない = 消えない)
+//   2. スクロール hide は撤回。BottomNav は常時表示。
 //   3. handleLinkClick から Sheet close 呼び出しを削除
 //      (Link クリック → URL 変化 → BottomSheet の pathname watcher が自動 close
 //       する。ここで close 呼ぶと close アニメが 2 重に走る)
@@ -18,7 +17,7 @@
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { TabName, ThemeMode } from '@/types';
 import { BrowseBottomSheet } from './BrowseBottomSheet';
@@ -33,11 +32,6 @@ interface BottomNavProps {
   onToggleTheme: () => void;
   onDownloadZip: () => void;
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  /** Phase 9.5-E: 下スクロールで hide、上スクロールで show (AppShell で判定) */
-  hidden?: boolean;
-  /** Phase 9.5-G: 内部の Sheet stack が「1 個以上 open 中」の状態変化を親に通知。
-   *  AppShell 側で「Sheet 開いてる間は scroll hide しない」判定に使う。 */
-  onSheetOpenChange?: (isAnyOpen: boolean) => void;
 }
 
 interface LinkNavItem {
@@ -75,8 +69,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onToggleTheme,
   onDownloadZip,
   onImportZip,
-  hidden = false,
-  onSheetOpenChange,
 }) => {
   const [sheetStack, setSheetStack] = useState<SheetEntry[]>([]);
   const [nextKey, setNextKey] = useState(1);
@@ -164,11 +156,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     return null;
   })();
 
-  // 【9.5-G】 Sheet open 状態変化を親に通知
-  useEffect(() => {
-    onSheetOpenChange?.(topOpenId !== null);
-  }, [topOpenId, onSheetOpenChange]);
-
   const NAV_ITEMS: readonly NavItem[] = [
     { kind: 'link', id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
     {
@@ -201,9 +188,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav
         id="bottom-nav"
         aria-label="メインナビゲーション"
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
-          hidden ? 'translate-y-full' : 'translate-y-0'
-        }`}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="max-w-md mx-auto grid grid-cols-4 h-16">

@@ -484,7 +484,7 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
       useProfilesStore.getState().setTheme('dark');
       useProfilesStore.getState().setTheme('dark');
     });
-    expect(counter.counts['c']).toBe(0);
+    expect(counter.counts.c).toBe(0);
   });
 
   it('Zustand: selector が異なる field でも独立して subscribe できる', () => {
@@ -504,14 +504,14 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
     act(() => {
       useProfilesStore.getState().setTheme('light');
     });
-    expect(counter.counts['theme']).toBe(1);
-    expect(counter.counts['dep']).toBe(0);
+    expect(counter.counts.theme).toBe(1);
+    expect(counter.counts.dep).toBe(0);
 
     // dep 変更 → dep のみ再レンダー
     act(() => {
       useDepCheckStore.getState().setHasDepWarning(true);
     });
-    expect(counter.counts['theme']).toBe(1); // 変わらず
-    expect(counter.counts['dep']).toBe(1);
+    expect(counter.counts.theme).toBe(1); // 変わらず
+    expect(counter.counts.dep).toBe(1);
   });
 });

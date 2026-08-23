@@ -63,8 +63,8 @@ export function useVersionsQuery(
       : ['versions', 'null'],
     queryFn: async ({ signal }) => {
       const params: Record<string, string> = {};
-      if (options.mcVersion) params['game_versions'] = JSON.stringify([options.mcVersion]);
-      if (options.loader) params['loaders'] = JSON.stringify([options.loader.toLowerCase()]);
+      if (options.mcVersion) params.game_versions = JSON.stringify([options.mcVersion]);
+      if (options.loader) params.loaders = JSON.stringify([options.loader.toLowerCase()]);
       return fetchModrinth<ModrinthVersion[]>(
         `/project/${slugOrId}/version`,
         params,

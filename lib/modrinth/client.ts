@@ -99,7 +99,7 @@ export async function fetchModrinth<T = any>(
 ): Promise<T> {
   const method = options.method || 'GET';
   const cacheKey =
-    endpoint + '?' + stableStringify(params) + method + stableStringify(options.body || {});
+    `${endpoint}?${stableStringify(params)}${method}${stableStringify(options.body || {})}`;
 
   if (!options.noCache) {
     const cached = cacheGet(cacheKey);

@@ -76,7 +76,7 @@ export const useZipImport = (
 
         const newProfile: Profile = {
           id: generateId('mrpack'),
-          name: (mrpackData.name || 'Modrinth Pack') + ' (インポート)',
+          name: `${mrpackData.name || 'Modrinth Pack'} (インポート)`,
           mcVersion: mcVer,
           loader: loader,
           description: 'Modrinth .mrpack からインポート',

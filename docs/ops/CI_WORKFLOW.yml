@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================================================
+  # 型・lint・ユニットテスト (最速で fail を検出する軽量ジョブ)
+  # ==========================================================================
+  static-checks:
+    name: Type / Lint / Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript type check (main + test tsconfig)
+        run: pnpm typecheck
+
+      - name: Biome lint (Phase 10-P5: ESLint から移行)
+        run: pnpm lint
+
+      - name: Unit tests (vitest)
+        run: pnpm test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ==========================================================================
+  # ビルド (production build が通ることを保証)
+  # H7-5 修正: .next 成果物を artifact として保存し、E2E job で再利用する
+  # ==========================================================================
+  build:
+    name: Next.js Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: static-checks
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload build stats
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-stats
+          path: .next/diagnostics/
+          retention-days: 7
+
+      # H7-5: .next 成果物を E2E job に渡す。cache でも良いが artifact の方が確実。
+      - name: Upload .next build output
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/
+            !.next/cache/
+          retention-days: 1
+
+  # ==========================================================================
+  # E2E (Playwright): push 時のみ実行 (PR プレビューでは静的チェック優先)
+  # H7-5 修正: build job の .next を復元し、playwright.config.ts の webServer は
+  #           `pnpm start` のみ (build を再実行しない、~2 分短縮)
+  # ==========================================================================
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # H7-5: build job の .next を復元
+      - name: Download .next build output
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next/
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

@@ -1,2 +1,13 @@
+# pnpm の postinstall (build script) 実行許可リスト。
+# false のままだと pnpm install 時に警告 + 追加確認が必要。
+#
+# Phase 10-P5 (Biome 移行) で `eslint-config-next` を削除したため、
+# `unrs-resolver` (旧: ESLint 16 の TypeScript path resolver) エントリも撤去。
 allowBuilds:
+  # next/image の image optimization に使うが Sandbox で不要 & ビルド失敗しやすい
+  sharp: false
+  # vitest / @vitejs/plugin-react が使う JS bundler (Sub-Phase 8-D で追加)
   esbuild: true
+  # msw は browser 用 service worker (public/mockServiceWorker.js) を postinstall で
+  # 配置するが、DropMod はテスト時に msw/node のみ使うので不要
+  msw: false

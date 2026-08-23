@@ -116,7 +116,7 @@ docs/
 | `components/AppContext.tsx` | `docs/planning/PHASE9_PLAN.md` 付録 A (AppContext stub 化) |
 | `lib/modrinth/server.ts` | `docs/planning/NEXTJS_MIGRATION_PLAN.md` §7 (キャッシュ戦略) |
 | `lib/store/confirm.ts` | `docs/audit/issues-phase9.md` B18 (並列 confirm キュー化検討) |
-| `eslint.config.mjs` | `docs/audit/issues-legacy.md` (react-hooks 例外ルール理由) |
+| `biome.json` | `docs/audit/issues-legacy.md` (旧 eslint.config.mjs、Phase 10-P5 で移行) |
 
 ファイル移動時はこれらの参照も更新してください。
 

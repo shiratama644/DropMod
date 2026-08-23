@@ -144,7 +144,12 @@ export const useZipImport = (
       const projectIds = Array.from(new Set(foundVersions.map((v) => v.project_id)));
       const projects = await fetchModrinthBatch<any>('/projects', projectIds);
       const projectMap = new Map<string, any>();
-      projects.forEach((p) => projectMap.set(p.id, p));
+      // Phase 10-P5 (suspicious/useIterableCallbackReturn):
+      //   Map.set() は Map を返すので arrow の暗黙 return を回避するため
+      //   block-body にして void を返す。
+      projects.forEach((p) => {
+        projectMap.set(p.id, p);
+      });
 
       const initialMods: ModItem[] = [];
       for (const ver of foundVersions) {

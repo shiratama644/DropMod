@@ -70,7 +70,12 @@ export const useDependencyCheck = (currentProfile: Profile) => {
           queryFn: () => fetchModrinthBatch<any>('/versions', versionIds),
           staleTime: 5 * 60 * 1000 // 5 分
         });
-        batchVersions.forEach((v: any) => versionMap.set(v.id, v));
+        // Phase 10-P5 (suspicious/useIterableCallbackReturn):
+        //   Map.set() は Map を返すので arrow の暗黙 return を回避するため
+        //   block-body にして void を返す。
+        batchVersions.forEach((v: any) => {
+          versionMap.set(v.id, v);
+        });
       } catch (_e) {
         // B22 修正: レートリミット / 500 等 → 前回の hasDepWarning を保持し早期 return
         // (finally の markChecked は実行される)

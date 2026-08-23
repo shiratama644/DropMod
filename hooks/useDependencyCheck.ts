@@ -94,7 +94,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       let warning = false;
       outer: for (const mod of profile.mods) {
         const vData = mod.selectedVersionId ? versionMap.get(mod.selectedVersionId) : undefined;
-        if (vData && vData.dependencies) {
+        if (vData?.dependencies) {
           for (const dep of vData.dependencies) {
             if (
               dep.dependency_type === 'required' &&

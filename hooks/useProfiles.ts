@@ -473,7 +473,7 @@ export const useProfiles = (
   );
 
   const handleToggleMod = useCallback(async (projectId: string, e?: React.MouseEvent, silent = false) => {
-    if (e && e.stopPropagation) e.stopPropagation();
+    if (e?.stopPropagation) e.stopPropagation();
 
     // 同一 projectId への並列トグル呼び出しを防止 (連打・重複クリック対策)
     if (toggleInFlightRef.current.has(projectId)) return;
@@ -548,9 +548,7 @@ export const useProfiles = (
         const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch);
 
         if (
-          !versionRes ||
-          !versionRes.targetVersion ||
-          !versionRes.targetVersion.files ||
+          !versionRes?.targetVersion?.files ||
           versionRes.targetVersion.files.length === 0
         ) {
           if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
@@ -576,8 +574,8 @@ export const useProfiles = (
           icon_url: project.icon_url,
           author: project.author || 'Modrinth',
           category:
-            (project.display_categories && project.display_categories[0]) ||
-            (project.categories && project.categories[0]) ||
+            (project.display_categories?.[0]) ||
+            (project.categories?.[0]) ||
             'mod',
           selectedVersionId: targetVersion.id,
           selectedVersionNumber: targetVersion.version_number,
@@ -637,7 +635,7 @@ export const useProfiles = (
             fetchModrinth<any>(`/version/${versionId}`, undefined, { signal }),
           staleTime: 60 * 60 * 1000 // 1h (version は project より変わりにくい)
         });
-        if (versionData && versionData.files && versionData.files.length > 0) {
+        if (versionData?.files && versionData.files.length > 0) {
           const primaryFile = versionData.files.find((f: any) => f.primary) || versionData.files[0];
 
           setProfiles((prev) =>

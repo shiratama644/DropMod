@@ -149,7 +149,7 @@ export async function fetchModrinth<T = any>(
     }
 
     // 2) プロキシが 5xx/JSONでない を返した場合、直接 Modrinth へフォールバック
-    if (!res || !res.ok || !(res.headers.get('content-type') || '').includes('application/json')) {
+    if (!res?.ok || !(res.headers.get('content-type') || '').includes('application/json')) {
       if (res) lastErrorMsg = `Proxy HTTP ${res.status} ${res.statusText}`;
       try {
         res = await fetch(directUrl, reqInit);

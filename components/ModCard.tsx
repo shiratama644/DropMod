@@ -26,8 +26,8 @@ function formatDownloads(num: number): string {
 export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) => {
   const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
   const displayCategory =
-    (hit.display_categories && hit.display_categories[0]) ||
-    (hit.categories && hit.categories[0]) ||
+    (hit.display_categories?.[0]) ||
+    (hit.categories?.[0]) ||
     'mod';
 
   // 画像読み込み失敗時にプレースホルダーへ差し替え (L-10)

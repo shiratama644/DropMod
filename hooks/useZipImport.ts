@@ -57,7 +57,7 @@ export const useZipImport = (
         const importedMods: ModItem[] = [];
         if (mrpackData.files) {
           for (const f of mrpackData.files) {
-            const downloadUrl = f.downloads && f.downloads[0] ? f.downloads[0] : '';
+            const downloadUrl = f.downloads?.[0] ? f.downloads[0] : '';
             const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
             // 配列インデックスは T | undefined。
             // split の結果は空配列にはならないが型システムには保証されない。
@@ -164,8 +164,8 @@ export const useZipImport = (
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
             category:
-              (proj.display_categories && proj.display_categories[0]) ||
-              (proj.categories && proj.categories[0]) ||
+              (proj.display_categories?.[0]) ||
+              (proj.categories?.[0]) ||
               'mod',
             selectedVersionId: ver.id,
             selectedVersionNumber: ver.version_number,
@@ -183,7 +183,7 @@ export const useZipImport = (
         name: defaultName,
         mods: initialMods,
         mcVersion: firstVer?.game_versions ? firstVer.game_versions[0] : undefined,
-        loader: firstVer?.loaders && firstVer.loaders[0]
+        loader: firstVer?.loaders?.[0]
           ? firstVer.loaders[0].charAt(0).toUpperCase() + firstVer.loaders[0].slice(1)
           : undefined
       });

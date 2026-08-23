@@ -118,8 +118,8 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
     const isEventInsideTriggerOrMenu = (target: Node | null): boolean => {
       if (!target) return false;
-      if (triggerRef.current && triggerRef.current.contains(target)) return true;
-      if (menuRef.current && menuRef.current.contains(target)) return true;
+      if (triggerRef.current?.contains(target)) return true;
+      if (menuRef.current?.contains(target)) return true;
       return false;
     };
 

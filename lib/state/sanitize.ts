@@ -62,9 +62,9 @@ export function sanitizeLoadedState(raw: unknown): SanitizedState | null {
   let normalizedCurrentId: string | undefined;
   if (typeof src.currentProfileId === 'string') {
     const target = src.currentProfileId;
-    if (normalizedProfiles && normalizedProfiles.some((p) => p.id === target)) {
+    if (normalizedProfiles?.some((p) => p.id === target)) {
       normalizedCurrentId = target;
-    } else if (normalizedProfiles && normalizedProfiles[0]) {
+    } else if (normalizedProfiles?.[0]) {
       normalizedCurrentId = normalizedProfiles[0].id;
     }
   }

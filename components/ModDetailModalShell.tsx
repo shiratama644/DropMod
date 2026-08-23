@@ -53,7 +53,7 @@ function formatDownloads(num: number): string {
 }
 
 function pickPrimaryFile(v: ModrinthVersion | null): ModrinthVersionFile | null {
-  if (!v || !v.files || v.files.length === 0) return null;
+  if (!v?.files || v.files.length === 0) return null;
   return v.files.find((f) => f.primary) || v.files[0] || null;
 }
 

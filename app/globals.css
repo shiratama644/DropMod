@@ -296,3 +296,25 @@ body.mod-fullpage #bottom-nav {
 body.mod-fullpage {
     padding-bottom: 0;
 }
+
+/* -----------------------------------------------------------------
+ * Phase 9.5-F: LP の人気 Mod 横スクロール marquee 用 keyframes
+ *   - CSS animation で GPU 加速、JS で毎フレーム更新しない
+ *   - 同じリストを 2 回連続 render し、-50% までスクロールで初期位置に
+ *     リセット (継ぎ目のない無限スクロール)
+ *   - hover で pause (視認性)
+ *   - Reduced Motion で完全停止 (WCAG 2.1 SC 2.3.3)
+ * ----------------------------------------------------------------- */
+@keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.marquee-track:hover {
+    animation-play-state: paused;
+}
+/*
+ * Reduced Motion 停止は JS 側 (PopularMarquee.tsx) で
+ * matchMedia('prefers-reduced-motion: reduce') を判定し、
+ * animation inline style 自体を付けない形にしている。
+ * (inline style を CSS で上書きするには !important が必要になるため回避。)
+ */

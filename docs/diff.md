@@ -1119,3 +1119,97 @@ Next 版で追加された Suspense/error boundary の配置:
 ---
 
 *このレポートは Phase 7 完了時点 (2026-08-21, HEAD `260075c`) のリポジトリ状態に基づき生成されました。以降 Phase 8+ で新規ファイル追加や既存ファイル改修があった場合、対応するセクションを追記する運用としてください。*
+
+---
+
+## 13. Phase 8 + Phase 9 追加サマリ (2026-08-23 更新)
+
+§11 と §12 の Phase 7 差分点検を経て、Phase 8 (Dexie + TSQ + Zustand + テスト土台) と Phase 9 (AppContext 撤去 + operationsStore 分割 + テスト強化 + Profiler 測定 + 小改善) が完了した。ここでは **Vite 版 (`.archive/vite/`) との差** ではなく、**Phase 7 完了時 (`260075c`) との差** を追記する。
+
+### 13.1 新規ディレクトリ / ファイル
+
+```
+lib/db/                       [Phase 8]
+├── dexie.ts                  # 3 テーブル (profiles / apiCache / meta)
+└── migrate.ts                # LocalStorage → Dexie 自動移行 + 7 日 backup
+lib/query/                    [Phase 8]
+├── client.ts                 # QueryClient + Dexie async storage persister
+├── hooks.ts                  # useProjectQuery / useVersionsQuery / useProjectsBatchQuery
+└── keys.ts                   # canonical queryKeys builder
+lib/state/                    [Phase 8]
+└── sanitize.ts               # LocalStorage 復元時の pure sanitizer (100% coverage)
+lib/store/                    [Phase 8 + Phase 9 増強]
+├── profiles.ts               # subscribeWithSelector + devtools middleware
+├── toast.ts                  # MAX_VISIBLE_TOASTS=5
+├── confirm.ts                # Symbol owner ID 対応 (L7-2)
+├── zipExport.ts              [Phase 9-B.1]
+├── zipImport.ts              [Phase 9-B.2]
+├── depCheck.ts               [Phase 9-B.3]
+└── appActions.ts             [Phase 9-A.1] AppShell 由来 action 登録先
+components/
+├── OfflineBanner.tsx         [Phase 8-B] navigator.onLine subscribe
+├── WebVitalsReporter.tsx     [Phase 8-E] LCP/INP/CLS を /api/analytics に送信
+├── Providers.tsx             [Phase 8-B] PersistQueryClientProvider ラッパ
+└── CacheStatusBadge.tsx      [Phase 9-E.1] 🌐 X 分前のキャッシュバッジ
+hooks/
+├── useConfirm.ts             [Phase 8-C] Promise-based confirm shim
+├── useToasts.ts              [Phase 8-C] shim
+└── (既存 useProfiles / useZipExport / useZipImport / useDependencyCheck を shim 化)
+__tests__/                    [Phase 8-D 起点、Phase 9-C で 275 tests まで拡張]
+├── mocks/                    [Phase 9-C.1] msw handlers + server
+├── test-utils/               [Phase 9-C.3] QueryClientProvider wrapper
+├── perf/rerender.test.tsx    [Phase 9-D] 軽量 Profiler
+└── components / hooks / lib / ...
+docs/
+├── PHASE8_PLAN.md            [Phase 8]
+├── PHASE8_COMPLETE.md        [Phase 8]
+├── PHASE9_PLAN.md            [Phase 9] 1629 行
+├── PHASE9_C_COMPLETE.md      [Phase 9-C.6]
+├── PHASE9_PROFILER.md        [Phase 9-D]
+├── CI_SETUP.md               [Phase 8-D、Phase 9-E.7 で加筆]
+├── CI_WORKFLOW.yml           [Phase 8-D] 実物ワークフロー保管
+└── DEPLOY.md                 [Phase 7 継続]
+```
+
+### 13.2 撤去されたコード
+
+- `components/AppContext.tsx` — **stub 化** (Phase 9-A.5): `AppContextValue = Record<string, never>`、`useAppContext()` は throw、`AppContextProvider` は pass-through、全 export @deprecated
+- `components/AppShell.tsx` の contextValue useMemo (30+ field) — Phase 9-A.5 で完全撤去、appActionsStore の register useEffect に置換
+- `hooks/useProfiles.ts` の sanitizeLoadedState re-export (dead) — Phase 8 第7波 M7-2 で削除
+- LocalStorage `dropmod_state_v2` 単独運用 — Dexie 併走 + 7 日 backup 期限管理へ移行 (LocalStorage は移行後 7 日で自動掃除)
+
+### 13.3 設計方針の変化
+
+| 領域 | Phase 7 完了時 | Phase 9 完了時 |
+|---|---|---|
+| 状態管理 | React `useState` + AppContext | Zustand 7 slice (細粒度 subscription、devtools middleware) |
+| 永続化 | LocalStorage 直接 | IndexedDB (Dexie) + LocalStorage 7 日バックアップ、SSR 安全 |
+| Modrinth 取得 | client 直呼び (`fetchModrinth`) | TanStack Query (`useQuery`/`useInfiniteQuery`) + Dexie persister (24h TTL、オフライン閲覧可) |
+| 依存チェック | `setInterval(5s)` 常時ポーリング | Zustand + TSQ (queryClient.fetchQuery)、profile signature 変化時のみ 1200ms debounce |
+| Server → Client 関数受け渡し | Context props | appActionsStore (register/unregister)、Server Component 境界を跨げる形に |
+| テスト | ~6% coverage、Zustand store のみ | **91.34% coverage**、msw + user-event + fake-indexeddb で hooks/components integration まで網羅 |
+| bundle 最適化 | react-markdown のみ | + @tanstack/react-query + @tanstack/react-query-persist-client (Phase 9-E.8) |
+| 再レンダー効率 | Context 巻き添え発生 | 3 シナリオで **80% 削減実測** (Phase 9-D `__tests__/perf/rerender.test.tsx`) |
+
+### 13.4 追加された品質保証
+
+- `__tests__/perf/rerender.test.tsx` — 継続的な再レンダー数リグレッション監視
+- `vitest.config.ts` の per-module thresholds — lib/state 95% / lib/store 85% / lib/db 75% / lib/query 70% / lib/modrinth 65% / lib/utils 60% / hooks 70% / components 50% を CI で enforce
+- `docs/CI_WORKFLOW.yml` — 3 job (static-checks / build / e2e) + artifact upload、ユーザー配置後に GitHub Actions 実運用開始 (`docs/CI_SETUP.md` 手順あり)
+- msw の `onUnhandledRequest: 'error'` — テスト中に実 Modrinth API を叩く事故を即検出
+
+### 13.5 Phase 10 (未実施) 候補
+
+Phase 9 完了時点で意図的に残した項目:
+
+- **Bundle 削減**: FontAwesome の tree-shaking (現状 CSS-only ライブラリでフル、動的 icon 呼び出しの subset 化が課題)
+- **Vercel 本番デプロイ**: 設定は Phase 7 で完了済み、実際の公開デプロイは未実施
+- **9-E.2**: E-4 Markdown 内画像を `<Image>` 化 (現状は rehype-sanitize の `<img>` フォールバック)
+- **9-E.3**: E-5 skeleton 強化 (shimmer 効果)
+- AppContext.tsx の**完全削除** (現状は stub、後方互換で残置)
+- `optimizePackageImports` に FontAwesome 追加検討 (JS export 皆無なので現状不可)
+- Storybook 導入 — Phase 9 のクイズ回答で「小規模個人開発では割に合わない」として不採用
+
+---
+
+*§13 は 2026-08-23 に Phase 8 + Phase 9 完了時点 (HEAD `8247ee0`) の追記です。次回 Phase 10 で再度差分を追記する場合は §14 として続けてください。*

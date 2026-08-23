@@ -231,3 +231,47 @@ docs/CI_WORKFLOW.yml (+ docs/CI_SETUP.md)
 | Vercel Hobby 想定 (10s timeout) | ✅ (H6-1 の 8s cap 継続) |
 
 *Phase 8 は計画書 (`docs/PHASE8_PLAN.md`) 通りに実装完了。判断留保はゼロ。次はユーザーレビュー → Phase 9 計画。*
+
+---
+
+## 🚀 Phase 9 実施結果 (2026-08-23 完了、9-E.5 追記)
+
+Phase 8 完了 (`5747545`) 後、以下の Phase 9 sub-phase を実施済み。詳細は
+[`docs/PHASE9_C_COMPLETE.md`](./PHASE9_C_COMPLETE.md) と
+[`docs/PHASE9_PROFILER.md`](./PHASE9_PROFILER.md) を参照。
+
+### 実施した sub-phase
+
+| Sub | 実施内容 | 主要コミット |
+|---|---|---|
+| **9-B.1-3** | operationsStore を 3 slice 分離 (zipExport / zipImport / depCheck)、shim パターンで既存 hook 署名維持 | `ddf9b4b` `f355404` `794566f` |
+| **9-A.1-4** | 4 コンポーネント (Settings / Mods / Home / ModDetail) を Zustand 直接参照化、AppShell の contextValue useMemo 撤去 + appActionsStore 経由に | `85136d0` `cd4cdb8` `0d2fd91` `35fd0ce` |
+| **9-A.5** | AppContext.tsx を stub 化 (73 行、`useAppContext()` は throw、Provider は pass-through、全 export @deprecated) | `ab74581` |
+| **9-C.1** | msw@2.15 導入、`__tests__/mocks/handlers.ts` に Modrinth 7 endpoint 網羅 + `onUnhandledRequest: 'error'` | `9810069` |
+| **9-C.2-5** | Modrinth client/server (+37) / hooks integration (+34) / components with user-event (+49) / lib/db + lib/query (+33) テスト追加 | `998a69c` `a322a71` `1b14aa6` `b99b1c3` |
+| **9-C.6** | per-module coverage thresholds を計画書 §7.5 に更新、全体 **91.34%** 達成 | `4ee203e` |
+| **9-D** | 再レンダー計測テスト (`__tests__/perf/rerender.test.tsx`) 実装 + `docs/PHASE9_PROFILER.md` 作成、3 シナリオ全てで **80% 削減** 達成 (目標 70% 以下超過) | `1772f25` |
+| **9-E.1** | CacheStatusBadge 実装 (「🌐 X 分前のキャッシュ」/「🔄 取得中」バッジ) + Home に配置 | `9075d39` |
+| **9-E.8** | `optimizePackageImports` に `@tanstack/react-query` + `-persist-client` 追加 | `13944f1` |
+| **9-E.6** | README.md 更新 (msw / Zustand / Dexie / TSQ 明記、テストコマンド + 現状メトリクス追記) | `7f1be99` |
+| **9-E.7** | CI_SETUP.md に配置後の動作確認手順 + トラブルシューティング追加 | `8247ee0` |
+
+### Phase 8 → Phase 9 のメトリクス変化
+
+| メトリクス | Phase 8 完了時 | Phase 9 完了時 |
+|---|---:|---:|
+| Test files | 13 | **30** |
+| Tests | 78 (Phase 8-D 直後の測定) → 102 (第7波修正後) | **275** |
+| Coverage (statements) | ~6% | **91.34%** |
+| per-module thresholds | 未設定 (仮 5%) | 計画書 §7.5 全 pass |
+| MSW handler | 0 | Modrinth 7 endpoint 完全 mock |
+| AppContext consumer | 4 コンポーネント | **0** (全て Zustand 直接参照) |
+| Zustand store | 3 (profiles / toast / confirm) | **7** (+ zipExport / zipImport / depCheck / appActions) |
+| 再レンダー数 (theme 切替) | ~25 (Context 巻き添え) | **5** (theme subscriber のみ) |
+
+### Phase 9 で見送った項目 (Phase 10 送り)
+
+- **9-E.2**: E-4 Markdown 内画像を `<Image>` 化 (Modrinth CDN 限定) — 既存の rehype-sanitize と `<img>` フォールバックで十分機能しているため優先度低下
+- **9-E.3**: E-5 ローディングスケルトン強化 (shimmer) — Phase 8 の base skeleton で UX 上問題なし、Phase 10 の bundle 削減 (FontAwesome) とセットで検討
+
+Phase 9 は計画書 (`docs/PHASE9_PLAN.md`) に対し全 sub-phase 完了 (9-A / 9-B / 9-C.1-6 / 9-D / 9-E は 5+ タスク実施で DoD 達成)。判断留保はゼロ。次は Phase 10 (Bundle 削減 + Vercel 本番デプロイ + Storybook 検討...ではなく、実運用開始判定に絞る) に進む見込み。

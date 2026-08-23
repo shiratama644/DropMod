@@ -47,6 +47,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["__tests__/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {

@@ -84,6 +84,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 {item.showBadge && (
                   <>
                     <span
+                      // Phase 10-P5 (a11y): 素の <span> は aria-label を
+                      //   サポートしないので、role="status" を付けて
+                      //   ライブリージョン化して SR に読み上げ可能にする。
+                      //   実際の Mod 数は視覚的にも見えているため、
+                      //   aria-live は "polite" 相当で十分。
+                      role="status"
                       className="absolute -top-1.5 -right-3.5 px-1.5 py-0.5 bg-emerald-500 text-slate-950 font-bold text-[10px] leading-none rounded-full min-w-[16px] text-center shadow"
                       aria-label={`${safeModCount}個のMod選択中`}
                     >

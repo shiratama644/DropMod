@@ -221,12 +221,26 @@ export const ModDetailModalShell: React.FC<Props> = ({
   );
 
   // -------- 内側カード (両バリアント共通) --------
+  // Phase 10-P5 (a11y): aria-modal / aria-labelledby は role="dialog" と
+  // セットでのみ有効。条件式で個別に付けると Biome の
+  // useAriaPropsSupportedByRole が "possibly undefined role" として警告するため、
+  // dialog 属性群を 1 つのオブジェクトで束ねてスプレッドし、静的解析上も
+  // "aria-* は必ず role=dialog 付き" に見せる。
+  const dialogProps = isModal
+    ? ({
+        role: 'dialog' as const,
+        'aria-modal': 'true' as const,
+        'aria-labelledby': titleId
+      } satisfies {
+        role: 'dialog';
+        'aria-modal': 'true';
+        'aria-labelledby': string;
+      })
+    : {};
   const innerCard = (
     <div
       ref={dialogRef}
-      role={isModal ? 'dialog' : undefined}
-      aria-modal={isModal ? 'true' : undefined}
-      aria-labelledby={titleId}
+      {...dialogProps}
       className={
         isModal
           ? 'modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'

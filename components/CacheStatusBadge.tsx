@@ -48,16 +48,41 @@ export const CacheStatusBadge: React.FC<CacheStatusBadgeProps> = ({
   isFetching,
   className = ''
 }) => {
-  // ⚠️ Date.now() を render 中に直接呼ぶと React 19 の react-hooks/impurity で
-  //   検出される (render は pure でなければならない)。
-  //   → useState + useEffect(setInterval) で「now を 30 秒ごとに tick する
-  //     state 値」として扱う。tick が実際の再描画差を生むのは
-  //     「X 秒前 → (X+30) 秒前」に切り替わるタイミングのみで十分。
-  const [now, setNow] = useState<number>(() => Date.now());
+  // B12 修正: SSR hydration mismatch 対策。
+  //   従来 useState(() => Date.now()) では SSR 実行時刻 A ≠ client 実行時刻 B
+  //   になり、hydration mismatch warning のリスク (実際は dataUpdatedAt=0 で
+  //   非表示になるので発現しないが将来的リスク)。
+  //   → useState(0) で SSR/client 両方 0 スタート、useEffect で client-side のみ
+  //     Date.now() を tick。
+  //
+  // B13 修正: tick 間隔を動的化。
+  //   従来 30 秒固定 → 「10 秒前 → 40 秒前」など label の遷移が最大 30 秒遅延
+  //   → age に応じて動的に調整:
+  //     - < 60 秒:      5 秒 tick (「X 秒前」の細かい表示)
+  //     - < 1 時間:     30 秒 tick (「X 分前」表示、多少ずれても OK)
+  //     - >= 1 時間:    5 分 tick (時間単位)
+  const [now, setNow] = useState<number>(0);
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
+    // SSR から client への hydration 完了後に初期時刻をセット
+    setNow(Date.now());
+
+    // 動的 interval: 現在の age に応じて次の tick 間隔を決定
+    let timerId: ReturnType<typeof setTimeout>;
+    const scheduleNextTick = () => {
+      const ageMs = dataUpdatedAt > 0 ? Date.now() - dataUpdatedAt : 0;
+      let interval = 30_000; // default 30s
+      if (ageMs < 60_000) interval = 5_000;
+      else if (ageMs < 60 * 60_000) interval = 30_000;
+      else interval = 5 * 60_000;
+      timerId = setTimeout(() => {
+        setNow(Date.now());
+        scheduleNextTick();
+      }, interval);
+    };
+    scheduleNextTick();
+
+    return () => clearTimeout(timerId);
+  }, [dataUpdatedAt]);
 
   // 未取得は非表示
   if (!dataUpdatedAt && !isFetching) return null;

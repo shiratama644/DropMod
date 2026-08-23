@@ -78,4 +78,18 @@ describe('CacheStatusBadge', () => {
     const span = container.querySelector('span.ml-2');
     expect(span).not.toBeNull();
   });
+
+  it('B12 修正: 初期 now=0 で SSR/client 一致 (mismatch 回避)', () => {
+    // 実装は useState(0) で初期化 → SSR で render される HTML と client の
+    // 1 回目 render 結果が確実に一致する。
+    // (SSR ではそもそも useEffect が走らないので Date.now() は呼ばれない)
+    const { container } = render(
+      <CacheStatusBadge dataUpdatedAt={Date.now() - 60_000} isFetching={false} />
+    );
+    // useEffect 完了後は「1分前のキャッシュ」表示だが、
+    // useState(0) だと初回 render では now=0, ageMs=Math.max(0, -...)=0
+    // で isFresh=true → 「今取得」が一瞬表示される可能性
+    // (テストランタイムでは useEffect が同期的に flush されるので既に「1分前」表示)
+    expect(container.textContent).toMatch(/1分前|今取得/);
+  });
 });

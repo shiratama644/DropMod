@@ -154,6 +154,13 @@ export const HomeInteractive: React.FC<Props> = ({
           pageParams: [0]
         }
       : undefined,
+    // B31 修正: initialDataUpdatedAt を SSR fetch 時刻としてセット。
+    //   従来 initialData を渡した際 dataUpdatedAt が 0 のままだったため、
+    //   CacheStatusBadge は非表示 (SSR キャッシュヒットの透明性が損なわれる)。
+    //   → Date.now() (client 初回 render 時刻) を SSR fetch 相当としてセット。
+    //     厳密には SSR 完了時刻とは違うが、staleTime 5 分の判定精度としては十分。
+    //   → CacheStatusBadge に「今取得」バッジが SSR 直後にも表示される。
+    initialDataUpdatedAt: initialMatches && initialHits.length > 0 ? Date.now() : 0,
     // SSR で initialHits が空だった (Modrinth 到達不可) 場合は
     // すぐ再取得を試みたい。initialData が無ければ通常フロー。
     staleTime: initialMatches ? 5 * 60 * 1000 : 0

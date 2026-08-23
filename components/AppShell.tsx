@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import { useScrollDirection } from '@/hooks/useScrollDirection';
 
 import type { TabName } from '@/types';
 
@@ -197,6 +198,12 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     };
   }, [isAnyModalOpen]);
 
+  // Phase 9.5-E: 全ページで Header + BottomNav をスクロール hide
+  //   - 下スクロールで hide、上スクロールで show
+  //   - モーダル open 中は hide しない (誤操作防止)
+  const scrollDirection = useScrollDirection();
+  const shouldHideNav = scrollDirection === 'down' && !isAnyModalOpen;
+
   // ---------- Reset data ----------
   const handleResetData = useCallback(async () => {
     const ok = await confirm({
@@ -356,6 +363,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           onImportZip={handleImportZipInput}
           onSwitchTab={handleSwitchTab}
           hasDepWarning={hasDepWarning}
+          hidden={shouldHideNav}
         />
       )}
 
@@ -366,6 +374,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onSwitchTab={handleSwitchTab}
         modCount={currentProfile.mods.length}
         hasDepWarning={hasDepWarning}
+        hidden={shouldHideNav}
         theme={theme}
         onToggleTheme={toggleTheme}
         onDownloadZip={handleDownloadZip}

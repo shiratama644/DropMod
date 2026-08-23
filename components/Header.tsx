@@ -18,6 +18,8 @@ interface HeaderProps {
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSwitchTab: (tab: 'home' | 'mods' | 'settings') => void;
   hasDepWarning: boolean;
+  /** Phase 9.5-E: 下スクロールで hide、上スクロールで show (AppShell で判定して渡す) */
+  hidden?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   onImportZip,
   onSwitchTab,
   hasDepWarning,
+  hidden = false,
 }) => {
   // Safely transform profiles with fallback guard
   const profileOptions = useMemo(() => {
@@ -57,7 +60,14 @@ export const Header: React.FC<HeaderProps> = ({
   // 以前あった handleLogoKeyDown は不要になった。
 
   return (
-    <header id="app-header" className="sticky top-0 z-30 glass-panel">
+    // Phase 9.5-E: hidden=true で上方向に slide out (下スクロール時)。
+    //   transition-transform で smooth 動作、will-change で GPU 加速。
+    <header
+      id="app-header"
+      className={`sticky top-0 z-30 glass-panel transition-transform duration-300 will-change-transform ${
+        hidden ? '-translate-y-full' : 'translate-y-0'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center justify-between">
           {/* <div role="button"> ではなく <Link> でロゴを実装 (SEO/新規タブ対応) */}

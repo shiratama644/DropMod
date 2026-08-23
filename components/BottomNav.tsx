@@ -34,6 +34,8 @@ interface BottomNavProps {
   onToggleTheme: () => void;
   onDownloadZip: () => void;
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Phase 9.5-E: 下スクロールで hide、上スクロールで show (AppShell で判定) */
+  hidden?: boolean;
 }
 
 interface LinkNavItem {
@@ -77,6 +79,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onToggleTheme,
   onDownloadZip,
   onImportZip,
+  hidden = false,
 }) => {
   // Sheet Stack: 手前 (末尾) が最新に開いた Sheet
   const [sheetStack, setSheetStack] = useState<SheetEntry[]>([]);
@@ -195,7 +198,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav
         id="bottom-nav"
         aria-label="メインナビゲーション"
-        className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl"
+        className={`fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl transition-transform duration-300 will-change-transform ${
+          hidden ? 'translate-y-full' : 'translate-y-0'
+        }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="max-w-md mx-auto grid grid-cols-4 h-16">

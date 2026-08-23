@@ -318,3 +318,50 @@ body.mod-fullpage {
  * animation inline style 自体を付けない形にしている。
  * (inline style を CSS で上書きするには !important が必要になるため回避。)
  */
+
+/* -----------------------------------------------------------------
+ * Phase 10-E: Loading skeleton shimmer アニメーション
+ *
+ *   従来 (animate-pulse) はグレー全体の opacity を pulse させるだけで、
+ *   モダンな shimmer (左→右への光沢 sweep) より視認性が低い。
+ *
+ * 実装方針:
+ *   - .skeleton-shimmer を付けた要素の背景として linear-gradient を敷き、
+ *     background-position を無限にスライドさせる
+ *   - 元の背景色は透けさせず、gradient の色は theme に合わせて透明白 (light) /
+ *     半透明白 (dark) の 2 段階で色を持たせる (var で theme 切替)
+ *   - Reduced Motion 環境では sweep を停止 (WCAG 2.1 SC 2.3.3)
+ *   - 既存の animate-pulse とは併用しない (置換用)
+ * ----------------------------------------------------------------- */
+@keyframes dropmod-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-image: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.06) 0%,
+        rgba(148, 163, 184, 0.18) 50%,
+        rgba(148, 163, 184, 0.06) 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: dropmod-shimmer 1.6s ease-in-out infinite;
+}
+:root.dark .skeleton-shimmer {
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.09) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+    );
+}
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+        animation: none;
+        background-image: none;
+        background-color: rgba(148, 163, 184, 0.12);
+    }
+}

@@ -11,11 +11,11 @@ export default function ModDetailLoading() {
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8 flex-1 w-full">
       {/* パンくず */}
       <div className="mb-4">
-        <div className="h-4 w-32 bg-slate-700/30 rounded animate-pulse" />
+        <div className="h-4 w-32 bg-slate-700/30 rounded skeleton-shimmer" />
       </div>
 
       {/* Hero */}
-      <div className="glass-panel rounded-3xl border shadow-xl overflow-hidden mb-4 animate-pulse">
+      <div className="glass-panel rounded-3xl border shadow-xl overflow-hidden mb-4 skeleton-shimmer">
         <div className="p-5 sm:p-8 flex flex-col md:flex-row gap-5 md:gap-7">
           <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl bg-slate-700/50 shrink-0" />
           <div className="flex-1 space-y-3 min-w-0">
@@ -46,7 +46,7 @@ export default function ModDetailLoading() {
       </div>
 
       {/* 2 カラム */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 animate-pulse">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 skeleton-shimmer">
         {/* 本文 */}
         <div className="space-y-4 min-w-0">
           <div className="glass-panel rounded-3xl border shadow-lg p-5 sm:p-8 space-y-3">

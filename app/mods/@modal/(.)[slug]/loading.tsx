@@ -13,7 +13,7 @@ export default function InterceptedModsModalLoading() {
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       aria-hidden="true"
     >
-      <div className="modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden animate-pulse">
+      <div className="modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden skeleton-shimmer">
         {/* ヘッダ skeleton */}
         <div className="flex items-start justify-between gap-3 border-b border-slate-500/20 p-4 sm:p-6 pb-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">

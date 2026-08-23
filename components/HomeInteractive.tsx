@@ -430,7 +430,7 @@ export const HomeInteractive: React.FC<Props> = ({
           INITIAL_SKELETON_KEYS.map((k) => (
             <div
               key={k}
-              className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
+              className="glass-card rounded-2xl p-4 space-y-3 skeleton-shimmer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-700/50 shrink-0" />
@@ -486,7 +486,7 @@ export const HomeInteractive: React.FC<Props> = ({
               PAGINATION_SKELETON_KEYS.map((k) => (
                 <div
                   key={k}
-                  className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
+                  className="glass-card rounded-2xl p-4 space-y-3 skeleton-shimmer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-700/50 shrink-0" />

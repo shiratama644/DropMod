@@ -187,6 +187,11 @@ export const SettingsPageClient: React.FC = () => {
             ZIPファイルのインポート / エクスポート
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Phase 10-P5 (a11y): ドラッグ&ドロップ受け入れ領域は本質的に
+                マウス操作。キーボードユーザは内部の <input type=\"file\"> を
+                Tab でフォーカスして Enter で選択可能なので代替手段を提供済み。
+                onDragOver/onDrop は onClick とは別で Biome の警告対象。 */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: ドラッグ&ドロップ領域 (input[type=file] で代替可能) */}
             <div
               id="drop-zone"
               onDragOver={handleDragOver}
@@ -241,9 +246,32 @@ export const SettingsPageClient: React.FC = () => {
             {profiles.map((p) => {
               const isActive = p.id === currentProfileId;
               return (
+                // Phase 10-P5 (a11y): カード全体をクリック可能にしたいが、
+                //   内部に削除ボタン (<button>) が入れ子で存在するため <button>
+                //   に置換不可 (button-in-button は無効な HTML)。
+                //   ARIA button pattern (role="button" + tabIndex + onKeyDown で
+                //   Enter/Space) で代替。isActive 時は「disabled 状態の button」
+                //   相当として aria-disabled=true + tabIndex=-1 + click 無視。
+                //   role は常に "button" を付けて Biome の静的解析を満たす。
+                // biome-ignore lint/a11y/useSemanticElements: 内部に <button> が入れ子で <button> 化不可
                 <div
                   key={p.id}
+                  role="button"
+                  tabIndex={isActive ? -1 : 0}
+                  aria-disabled={isActive}
                   onClick={() => !isActive && handleSwitchProfile(p.id)}
+                  onKeyDown={(e) => {
+                    if (isActive) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSwitchProfile(p.id);
+                    }
+                  }}
+                  aria-label={
+                    isActive
+                      ? `プロファイル ${p.name} (選択中)`
+                      : `プロファイル ${p.name} に切り替え`
+                  }
                   className={`glass-card p-3 sm:p-3.5 rounded-2xl flex items-center justify-between transition-all ${
                     isActive
                       ? 'border-emerald-500/50 bg-emerald-500/10 shadow-md shadow-emerald-500/5'

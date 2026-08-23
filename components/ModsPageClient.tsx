@@ -291,8 +291,12 @@ function DesktopTable({
             return (
               <tr key={mod.id} className="hover:bg-slate-500/5 transition">
                 <td className="py-3.5 px-4">
-                  <div
-                    className="flex items-center gap-3 cursor-pointer"
+                  {/* Phase 10-P5 (a11y/useSemanticElements 相当):
+                      Mod 詳細を開く UI は意味論的に button。
+                      button 標準スタイルを打ち消すため text-left / w-full を追加。 */}
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 cursor-pointer w-full text-left"
                     onClick={() => onOpenDetail(mod)}
                   >
                     {mod.icon_url ? (
@@ -317,7 +321,7 @@ function DesktopTable({
                         {`by ${mod.author || 'Modrinth'} • ${mod.filename || ''}`}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </td>
                 <td className="py-3.5 px-4">
                   <span className="px-2.5 py-1 rounded-lg text-xs font-semibold theme-badge capitalize">
@@ -386,8 +390,12 @@ function MobileList({
             className="glass-card p-3.5 rounded-2xl flex flex-col gap-2.5 border"
           >
             <div className="flex items-center justify-between gap-2">
-              <div
-                className="flex items-center gap-2.5 min-w-0 cursor-pointer"
+              {/* Phase 10-P5 (a11y/useSemanticElements 相当):
+                  Mod 詳細を開く UI は意味論的に button。
+                  button 標準スタイルを打ち消すため text-left / w-auto を保持。 */}
+              <button
+                type="button"
+                className="flex items-center gap-2.5 min-w-0 cursor-pointer text-left flex-1"
                 onClick={() => onOpenDetail(mod)}
               >
                 {mod.icon_url ? (
@@ -412,7 +420,7 @@ function MobileList({
                     {mod.category || 'mod'}
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="flex items-center gap-1 shrink-0">
                 {mod.fileUrl && (
                   <button

@@ -267,6 +267,11 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
               const isSelected = opt.value === selectedValue;
               const isFocused = index === focusedIndex;
               return (
+                // Phase 10-P5 (a11y): role="option" は ARIA listbox pattern の
+                //   一部。キーボードナビは親の combobox trigger の onKeyDown
+                //   (handleKeyDown) で ↑↓ Enter を処理しており、各 option の
+                //   onKeyDown は不要 (option 自体は tabIndex=-1)。
+                // biome-ignore lint/a11y/useKeyWithClickEvents: ARIA listbox pattern、キーボードは trigger 側で処理
                 <div
                   id={`${listboxId}-option-${index}`}
                   key={opt.value}

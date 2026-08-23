@@ -102,6 +102,11 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   };
 
   return (
+    // Phase 10-P5 (a11y): モーダル背景は Escape (useModalA11y) で閉じる設計、
+    //   キーボードで背景をクリックする必要はない。onClick は背景タップ→閉じる
+    //   モバイル UX 用。
+    // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる)
+    // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md touch-action-none"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
@@ -112,6 +117,9 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
         if (e.target === e.currentTarget) e.preventDefault();
       }}
     >
+      {/* Phase 10-P5 (a11y): innerCard の onClick は背景 onClick への
+          バブル遮断が目的 (stopPropagation)。keyboard の相当操作は不要。 */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: dialog 内バブル遮断のみ */}
       <div
         ref={dialogRef}
         role="dialog"

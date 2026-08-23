@@ -485,6 +485,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   ];
 
   return (
+    // Phase 10-P5 (a11y): モーダル背景 (Escape で閉じる、useModalA11y 参照)
+    // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
+    // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
       style={{ backgroundColor: 'var(--modal-overlay)' }}

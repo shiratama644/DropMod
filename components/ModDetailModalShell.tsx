@@ -194,6 +194,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
   if (!project) {
     if (isModal) {
       return (
+        // Phase 10-P5 (a11y): モーダル背景 (Escape で閉じる、useModalA11y 参照)
+        // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
+        // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
@@ -237,7 +240,13 @@ export const ModDetailModalShell: React.FC<Props> = ({
         'aria-labelledby': string;
       })
     : {};
+  // Phase 10-P5 (a11y): innerCard の onClick は背景 onClick への
+  //   バブル遮断 (stopPropagation) が目的。キーボードの相当操作は不要
+  //   (dialog 内部 focus は useModalA11y でトラップ、内側の各 button/link は
+  //    それぞれ独自ハンドラで対応)。
   const innerCard = (
+    // biome-ignore lint/a11y/noStaticElementInteractions: dialog 内バブル遮断のみ
+    // biome-ignore lint/a11y/useKeyWithClickEvents: dialog 内バブル遮断のみ
     <div
       ref={dialogRef}
       {...dialogProps}
@@ -335,10 +344,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
             </span>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {project.gallery.map((img) => (
-                <div
+                // Phase 10-P5 (a11y/useSemanticElements): サムネイルは意味論的に
+                //   button (アクション実行) なので <button type="button"> に変更。
+                //   Enter/Space での拡大プレビュー起動もブラウザ標準で無料。
+                <button
                   key={img.url}
+                  type="button"
                   onClick={() => setSelectedGalleryImg(img.url)}
-                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative"
+                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative p-0"
                 >
                   {/* <img> ではなく next/image (fill mode で可変サイズ対応) */}
                   <Image
@@ -353,22 +366,26 @@ export const ModDetailModalShell: React.FC<Props> = ({
                       {img.title}
                     </div>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>
         )}
 
         {/* 拡大プレビュー */}
+        {/* Phase 10-P5 (a11y): 外側コンテナ全体を button 化できない
+            (内部に <button>閉じる✕ が入れ子で存在するため) ので、
+            従来「コンテナクリックで閉じる」挙動は撤去し、閉じる操作は
+            右上の <button> と Escape (useModalA11y) に集約。
+            外側 div はイベントハンドラを持たない静的コンテナに戻し、
+            noStaticElementInteractions / useKeyWithClickEvents の警告を根本解消。 */}
         {selectedGalleryImg && (
-          <div
-            className="p-2 rounded-2xl bg-slate-900/90 border border-emerald-500/40 relative shadow-xl space-y-2 cursor-pointer"
-            onClick={() => setSelectedGalleryImg(null)}
-          >
+          <div className="p-2 rounded-2xl bg-slate-900/90 border border-emerald-500/40 relative shadow-xl space-y-2">
             <div className="flex justify-between items-center text-xs px-1">
               <span className="font-bold theme-text-brand">プレビュー</span>
               <button
                 type="button"
+                onClick={() => setSelectedGalleryImg(null)}
                 className="theme-text-muted hover:text-white"
               >
                 閉じる ✕
@@ -378,7 +395,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 のため next/image の layout=intrinsic 相当が使えない。
                 object-contain + max-h-72 の伸縮レイアウトを維持するため <img> のまま。
                 CDN 経由なので lazy load + async decoding を明示。 */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* biome-ignore lint/performance/noImgElement: aspect ratio 未確定で next/image 不可 */}
             <img
               src={selectedGalleryImg}
               alt="ギャラリー画像プレビュー"
@@ -561,6 +578,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   if (isModal) {
     return (
+      // Phase 10-P5 (a11y): モーダル背景 (Escape で閉じる、useModalA11y 参照)
+      // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
+      // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
         style={{ backgroundColor: 'var(--modal-overlay)' }}

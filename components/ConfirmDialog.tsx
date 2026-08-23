@@ -34,6 +34,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return (
+    // Phase 10-P5 (a11y): モーダル背景オーバーレイ (fixed inset-0) は
+    //   キーボードユーザには本要素ではなく useModalA11y の Escape ハンドラで
+    //   閉じてもらう設計。背景の onKeyDown を duplicate しても focus は
+    //   dialog 内にトラップされているので発火しない。ここは意図的に無視。
+    // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる、useModalA11y 参照)
+    // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md"
       style={{ backgroundColor: 'var(--modal-overlay)' }}

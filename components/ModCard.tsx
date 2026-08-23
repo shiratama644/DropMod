@@ -99,6 +99,11 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
         </p>
       </div>
 
+      {/* Phase 10-P5 (a11y): 下部アクション行は Card 全体を包む <Link> への
+          バブルを stopLinkNav で遮断するのが目的。キーボードでこの div 自体を
+          操作することはなく、内部の各 <button> が個別に focus 可能。 */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: <Link> バブル遮断 */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
       <div
         className="pt-2 border-t border-slate-500/10 flex items-center justify-between gap-2"
         onClick={stopLinkNav}

@@ -5,7 +5,8 @@ import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import type { Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { getLoaderVersions, LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
+import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
+import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -61,15 +62,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setName(profile.name || '');
       setVersion(profile.mcVersion || '');
       setLoader(profile.loader || 'Fabric');
-      const versions = getLoaderVersions(profile.loader || 'Fabric');
-      setLoaderVersion(
-        profile.loaderVersion && versions.includes(profile.loaderVersion)
-          ? profile.loaderVersion
-          : (versions[0] ?? '')
-      );
+      setLoaderVersion(profile.loaderVersion || '');
       setDesc(profile.description || '');
     }
   }, [isOpen]);
+
+  const { versions: loaderVersions, options: loaderVersionOptions } = useLoaderVersionOptions(
+    loader,
+    version,
+    isOpen,
+    profile?.loaderVersion
+  );
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -77,15 +80,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    const versions = getLoaderVersions(loader);
-    if (versions.length === 0) {
+    if (loaderVersions.length === 0) {
       setLoaderVersion('');
       return;
     }
-    if (!versions.includes(loaderVersion)) {
-      setLoaderVersion(versions[0] ?? '');
+    if (!loaderVersion || !loaderVersions.includes(loaderVersion)) {
+      setLoaderVersion(loaderVersions[0] ?? '');
     }
-  }, [loader, isOpen, loaderVersion]);
+  }, [isOpen, loaderVersion, loaderVersions]);
 
   // Safely construct version options with defensive array fallback
   const versionOptions = useMemo(() => {
@@ -199,11 +201,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </label>
             <CustomDropdown
               id={loaderVersionSelectId}
-              options={
-                getLoaderVersions(loader).length > 0
-                  ? getLoaderVersions(loader).map((v) => ({ label: v, value: v }))
-                  : [{ label: '未指定', value: '' }]
-              }
+              options={loaderVersionOptions}
               selectedValue={loaderVersion}
               onChange={setLoaderVersion}
               customClass="w-full"

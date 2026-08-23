@@ -6,7 +6,8 @@ import { CustomDropdown } from './CustomDropdown';
 import type { ModItem } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { getLoaderVersions, LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
+import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
+import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
 
 interface NewProfileModalProps {
   isOpen: boolean;
@@ -70,40 +71,37 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       if (initialImportData.loader) {
         setLoader(initialImportData.loader);
       }
-      const versions = getLoaderVersions(initialImportData.loader || 'Fabric');
-      const importedLoaderVer = initialImportData.loaderVersion;
-      setLoaderVersion(
-        importedLoaderVer && versions.includes(importedLoaderVer)
-          ? importedLoaderVer
-          : (versions[0] ?? '')
-      );
+      if (initialImportData.loaderVersion) {
+        setLoaderVersion(initialImportData.loaderVersion);
+      }
       setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
     } else {
       setName('');
       const first = mcVersions[0];
       if (first) setVersion(first);
       setLoader('Fabric');
-      setLoaderVersion(getLoaderVersions('Fabric')[0] ?? '');
+      setLoaderVersion('');
       setDesc('');
     }
   }, [isOpen]);
 
-  const loaderVersionOptions = getLoaderVersions(loader).map((v) => ({
-    label: v,
-    value: v
-  }));
+  const { versions: loaderVersions, options: loaderVersionOptions } = useLoaderVersionOptions(
+    loader,
+    version,
+    isOpen,
+    initialImportData?.loaderVersion
+  );
 
   useEffect(() => {
     if (!isOpen) return;
-    const versions = getLoaderVersions(loader);
-    if (versions.length === 0) {
+    if (loaderVersions.length === 0) {
       setLoaderVersion('');
       return;
     }
-    if (!versions.includes(loaderVersion)) {
-      setLoaderVersion(versions[0] ?? '');
+    if (!loaderVersion || !loaderVersions.includes(loaderVersion)) {
+      setLoaderVersion(loaderVersions[0] ?? '');
     }
-  }, [loader, isOpen, loaderVersion]);
+  }, [isOpen, loaderVersion, loaderVersions]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -296,11 +294,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             </label>
             <CustomDropdown
               id={loaderVersionSelectId}
-              options={
-                loaderVersionOptions.length > 0
-                  ? loaderVersionOptions
-                  : [{ label: '未指定', value: '' }]
-              }
+              options={loaderVersionOptions}
               selectedValue={loaderVersion}
               onChange={setLoaderVersion}
               customClass="w-full"

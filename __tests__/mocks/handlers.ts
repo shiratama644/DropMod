@@ -230,5 +230,22 @@ export const handlers = [
       { version: '1.20.1', version_type: 'release' },
       { version: '1.19.4', version_type: 'release' }
     ]);
+  }),
+
+  // ---------- /api/loaders/versions (公式メタのプロキシ) ----------
+  http.get('/api/loaders/versions', ({ request }) => {
+    const url = new URL(request.url);
+    const loader = url.searchParams.get('loader') ?? 'Fabric';
+    const byLoader: Record<string, string[]> = {
+      Fabric: ['0.19.3', '0.16.14', '0.15.11'],
+      Quilt: ['0.29.1', '0.28.1'],
+      Forge: ['47.4.0', '43.4.4'],
+      NeoForge: ['21.1.133', '20.4.237']
+    };
+    return HttpResponse.json({
+      loader,
+      versions: byLoader[loader] ?? byLoader.Fabric,
+      source: 'live'
+    });
   })
 ];

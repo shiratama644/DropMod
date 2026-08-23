@@ -1,11 +1,39 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+
+// -----------------------------------------------------------------------
+// Phase 10-C: Markdown 内 <img> の next/image 最適化対象ホスト。
+//
+// これらの origin (Modrinth CDN 等、next.config.ts の remotePatterns に
+// 登録済みのホスト) を持つ画像は <Image> で描画され、Vercel の Image
+// Optimization / AVIF/WebP 自動変換 / lazy loading / srcset 生成の恩恵
+// を受ける。
+//
+// それ以外の origin (ユーザー自己 host / 未登録 CDN) は従来通り <img>
+// フォールバック描画。
+// -----------------------------------------------------------------------
+const OPTIMIZED_IMAGE_HOSTS = new Set<string>([
+  'cdn.modrinth.com',
+  'raw.githubusercontent.com',
+]);
+
+function isOptimizableImageSrc(src: string | undefined): boolean {
+  if (!src) return false;
+  try {
+    const u = new URL(src);
+    if (u.protocol !== 'https:') return false;
+    return OPTIMIZED_IMAGE_HOSTS.has(u.host);
+  } catch {
+    return false;
+  }
+}
 
 interface MarkdownRendererProps {
   content: string;
@@ -184,19 +212,40 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
               </div>
             );
           },
-          // 画像スタイリング
-          // Markdown 内画像は width/height が未知 (任意サイズ)
-          // かつ src の origin もユーザー生成コンテンツで多様。
-          // next/image の remotePatterns に事前追加できない性質のため <img> を維持。
-          // lazy loading + async decoding + no-img-element の eslint disable で明示。
-          img: ({ node, src, alt, ...props }) => {
+          // 画像スタイリング (Phase 10-C: Modrinth CDN 経由の画像は <Image> 最適化)
+          //
+          // 【方針】
+          //   - src の origin が OPTIMIZED_IMAGE_HOSTS (Modrinth CDN /
+          //     raw.githubusercontent.com) なら next/image 使用
+          //     → Vercel Image Optimization / AVIF/WebP 変換 / lazy /
+          //        srcset 生成の恩恵で LCP 100〜300 ms 改善見込み
+          //   - width/height 不定なので暫定値 (1200x675 = 16:9) を渡し、
+          //     style={{ height: 'auto', width: '100%' }} でブラウザに
+          //     aspect ratio 保持任せ + sizes で最適サイズ選択
+          //   - それ以外の origin (自己 host / 未登録 CDN) は従来通り <img>
+          img: ({ node: _node, src, alt, ...props }) => {
+            const srcStr = typeof src === 'string' ? src : undefined;
+            if (isOptimizableImageSrc(srcStr)) {
+              return (
+                <span className="block my-3 rounded-2xl overflow-hidden shadow-md border border-slate-500/20">
+                  <Image
+                    src={srcStr as string}
+                    alt={alt || ''}
+                    width={1200}
+                    height={675}
+                    sizes="(max-width: 640px) 100vw, 720px"
+                    style={{ height: 'auto', width: '100%' }}
+                    className="hover:opacity-95 transition"
+                    loading="lazy"
+                  />
+                </span>
+              );
+            }
             return (
-              // Phase 10-P5 (a11y/perf): Modrinth の Markdown 内 <img> は
-              //   width/height 不定・任意 origin なので next/image 化不可。
-              //   lazy loading + async decoding で最低限のパフォーマンス対応。
-              // biome-ignore lint/performance/noImgElement: Markdown 内画像で aspect ratio / origin 不定
+              // Modrinth CDN 外 origin (ユーザー自己 host 等) は width/height 事前取得不可 → <img> 維持。
+              // biome-ignore lint/performance/noImgElement: Markdown 内画像 (未登録 origin) は width/height 不定
               <img
-                src={typeof src === 'string' ? src : undefined}
+                src={srcStr}
                 alt={alt || ''}
                 className="my-3 rounded-2xl max-w-full h-auto shadow-md border border-slate-500/20 hover:opacity-95 transition"
                 loading="lazy"

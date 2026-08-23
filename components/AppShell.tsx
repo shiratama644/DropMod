@@ -245,7 +245,15 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   // Phase 9-A: appActionsStore への登録
   //   下流コンポーネント (Settings/Mods/Home/ModDetail) が useAppContext ではなく
   //   Zustand 直接参照で action を取得できるようにする。
-  //   AppShell がマウントされている間だけ有効。unmount で null に戻す。
+  //   AppShell がマウントされている間だけ有効。
+  //
+  // B19 修正: 従来は cleanup で unregisterAppActions() を呼んでいたため、
+  //   props/state 変化のたびに 「unregister → register」 の 1 tick window が
+  //   発生 (Strict Mode の double-invoke で顕在化)、その間の button click で
+  //   useAppAction が no-op を返してしまう問題があった。
+  //   → cleanup を撤廃し、次の register 呼び出しで上書きされる形にする。
+  //      「actions=null」の window を排除。
+  //   → unmount 時のみ確実に unregister するため、別 useEffect ([] deps) を分離。
   const registerAppActions = useAppActionsStore((s) => s.registerAppActions);
   const unregisterAppActions = useAppActionsStore((s) => s.unregisterAppActions);
   useEffect(() => {
@@ -270,10 +278,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       mcVersions,
       currentProfile
     });
-    return () => unregisterAppActions();
+    // B19 修正: cleanup で unregister を呼ばない (次の register で上書きされるだけ)
   }, [
     registerAppActions,
-    unregisterAppActions,
     handleSwitchProfile,
     handleCreateProfile,
     handleDuplicateProfile,
@@ -294,6 +301,13 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     mcVersions,
     currentProfile
   ]);
+
+  // B19 修正: unmount 時のみ unregister (メモリリーク防止のため)
+  useEffect(() => {
+    return () => {
+      unregisterAppActions();
+    };
+  }, [unregisterAppActions]);
 
   return (
     <AppContextProvider>

@@ -81,6 +81,17 @@ describe('lib/store/appActions', () => {
     warnSpy.mockRestore();
   });
 
+  it('B1 修正: 未登録時の no-op fn は再 render で同一参照 (module-level 定数)', () => {
+    const { result, rerender } = renderHook(() =>
+      useAppAction('handleDuplicateProfile')
+    );
+    const first = result.current;
+    rerender();
+    const second = result.current;
+    // ✅ B1 修正後は参照安定
+    expect(first).toBe(second);
+  });
+
   it('useAppActionValue: 登録済みなら実値、未登録なら fallback', () => {
     // 未登録
     const { result: r1 } = renderHook(() =>

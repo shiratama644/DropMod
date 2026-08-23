@@ -102,6 +102,16 @@ export const useAppActionsStore = create<AppActionsStoreState>((set) => ({
 // ============================================================================
 
 /**
+ * 未登録時の共通 no-op 関数 (module-level 定数)。
+ *
+ * B1 修正: 従来 useAppAction 内で毎回 `((..._args) => {})` を生成していたため、
+ *   未登録時の参照が render の度に変化していた。呼び出し先で useEffect / useCallback
+ *   の deps に含めると再実行の原因になる (現状は無いが将来リスク)。
+ *   → module-level に固定して参照安定化。
+ */
+const APP_ACTION_NOOP: (...args: unknown[]) => void = () => {};
+
+/**
  * 指定 field の action を取得。未登録なら no-op を返す。
  * 生の `useAppActionsStore((s) => s.actions?.xxx)` より安全。
  *
@@ -111,10 +121,8 @@ export const useAppActionsStore = create<AppActionsStoreState>((set) => ({
  */
 export function useAppAction<K extends keyof AppActions>(key: K): AppActions[K] {
   const fn = useAppActionsStore((s) => s.actions?.[key]);
-  if (fn !== undefined) return fn;
-
-  // 未登録 no-op (warning は出さない: SSR/初回 hydration では通常発生する状態)
-  return ((..._args: unknown[]) => {}) as unknown as AppActions[K];
+  // B1 修正: 未登録時は module-level の共通 no-op を返す (参照安定)
+  return (fn ?? APP_ACTION_NOOP) as unknown as AppActions[K];
 }
 
 /**

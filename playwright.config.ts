@@ -55,7 +55,7 @@ export default defineConfig({
     // ローカルは build + start のまま (dev の最新反映を優先)。
     command: process.env.CI
       ? `pnpm start --port ${PORT} --hostname 0.0.0.0`
-      : `pnpm build && pnpm start --port ${PORT} --hostname 0.0.0.0`,
+      : `pnpm build --webpack && pnpm start --port ${PORT} --hostname 0.0.0.0`,
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000

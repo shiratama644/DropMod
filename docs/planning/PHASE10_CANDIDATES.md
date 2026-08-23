@@ -6,6 +6,58 @@ Phase 10 の詳細計画書はまだ作成しない (ユーザーレビュー後
 
 ---
 
+## ⚠️ 【重要方針】Vercel デプロイは Phase 10 の**全項目完了後**に実施
+
+> **決定**: Vercel 本番デプロイは Phase 10 の他の全項目 (bundle 削減 / AppContext 削除 / Markdown 画像最適化 / E2E 拡張 / shimmer skeleton 等) を完了した後の**最終ステップ**として実施する。
+>
+> 従来「Phase 10 の最優先項目」として位置付けていたが、以下の理由で**最後**に配置する。
+
+### 決定理由: Vercel Hobby プランのリソース制約
+
+Vercel Hobby プランは無料だが以下の**厳しい上限**があり、開発途中で SSR/ISR
+を大量に消費すると即座に上限に達してアプリが停止するリスクがある:
+
+| 項目 | Hobby プラン上限 | DropMod のリスク |
+|---|---|---|
+| **Function Invocations** | 100k / 月 | ISR revalidation で `/mods/[slug]` (100 pages) が定期実行、開発中に何度も再ビルドすると加速消費 |
+| **Function Duration** | 100 GB-Hrs / 月 | Modrinth API 遅延時に fetch が長引くと消費増 |
+| **Data Transfer (Bandwidth)** | 100 GB / 月 | 大 Modpack (JEI/no-chat-reports 数 MB) の SSR/ISR で消費 |
+| **Build Executions** | 100 / 日 (soft limit) | 開発中の頻繁な push で枯渇の可能性 |
+| **ISR Revalidations** | 上記 Function Invocations に含まれる | fetch cache tags で triggered revalidate も対象 |
+
+### Phase 10 実施中に想定されるリスク
+
+- 開発中に `pnpm build` で `generateStaticParams` が Modrinth API を叩く (100 リクエスト/build)
+- 何かの原因で ISR が短時間で複数回 revalidate される (バグ / 誤設定 / tag invalidation)
+- Bundle 削減や `<Image>` 化のテストで **意図せず頻繁に production deploy** してしまう
+- 開発途中の SSR エラー時に Vercel 側で retry が走る
+
+**Hobby プランでは上限到達 = プロジェクト即停止**であり、開発が完全に止まる。
+
+### 対策
+
+1. Phase 10 の全項目 (下記優先順位 §Phase 10 実施順) を **ローカル + `pnpm build` + 手動 `pnpm start` で検証**
+2. E2E テストも **CI (GitHub Actions) 上のみ**で回す (無料枠 2,000 分/月)
+3. Modrinth API との実通信を伴う機能検証はローカル `next dev` で完結させる
+4. **全項目完了・ユーザー最終確認済み**の状態で、初めて Vercel Preview → Production に deploy
+
+### Phase 11 (ローカル Minecraft 環境連携) との関係
+
+Phase 11 の設計書 `docs/planning/PHASE11_PLAN.md` にも「Phase 10 完了後」と
+記載していたが、**厳密には「Phase 10 の Vercel デプロイ以外の全項目完了後」**
+に読み替える。Phase 11 も Vercel デプロイ前の完了が理想 (deploy 後だと本番
+リスクが高まる):
+
+```
+[今]  Phase 10 の残タスク (bundle / cleanup / test / UI polish)
+  ↓
+[次]  Phase 11 (ローカル Minecraft 環境連携) — showDirectoryPicker 等
+  ↓
+[最後] Vercel 本番 Production Deploy — 全機能揃った状態で公開
+```
+
+---
+
 ## 🎯 Phase 9-E で見送った項目
 
 ### 9-E.2: E-4 Markdown 内画像を `<Image>` 化 (Modrinth CDN 限定)
@@ -58,19 +110,45 @@ Phase 10 の詳細計画書はまだ作成しない (ユーザーレビュー後
 
 ---
 
-## 🚀 Vercel 本番デプロイ
+## 🚀 Vercel 本番デプロイ (Phase 10 の最終ステップ)
 
 **現状**: `vercel.json` / `next.config.ts` / OGP / sitemap / robots.ts など Phase 7 で完了済み、実デプロイは未実施。
 
-**Phase 10 実施内容**:
+**⚠️ タイミング方針の変更 (2026-08-24 決定)**:
+従来「Phase 10 の最優先項目」だったが、**Vercel Hobby プランのリソース制約**
+により Phase 10 (および Phase 11) の全項目完了後の**最終ステップ**に位置付け直し。
+詳細は本ドキュメント冒頭の「【重要方針】」節を参照。
+
+**着手前チェックリスト** (これらが全て ✅ になってから deploy):
+- [ ] FontAwesome subset 化 (bundle 900 KB 目標達成)
+- [ ] AppContext.tsx 完全削除
+- [ ] Markdown 内 `<Image>` 化 (LCP 改善)
+- [ ] E2E カバレッジ拡張 (zip-export / zip-import / dep-check)
+- [ ] shimmer skeleton (UX 磨き上げ)
+- [ ] Phase 11 (ローカル Minecraft 環境連携) 完了
+- [ ] `pnpm build` がローカルで完全 clean (0 warning)
+- [ ] Modrinth API rate limit テスト (localhost で `generateStaticParams` を
+      複数回叩いても 429 回避できる)
+- [ ] Bundle 分析で異常な巨大化がないこと (`.next/analyze/` 等で確認)
+
+**Phase 10 実施内容 (deploy 当日)**:
 1. Vercel プロジェクト作成、GitHub Integration 接続
 2. `main` ブランチ → 自動 build + deploy 設定
-3. `NEXT_PUBLIC_SITE_URL` / `MODRINTH_USER_AGENT` を Vercel Env に設定
+3. `NEXT_PUBLIC_SITE_URL` / `MODRINTH_USER_AGENT` / `MODRINTH_FETCH_TIMEOUT_MS`
+   / `MODRINTH_MAX_RETRY_WAIT_MS` を Vercel Env に設定
 4. カスタムドメイン割当 (任意)
 5. CSP を Report-Only → Enforce 切替 (Phase 8-E の準備完了済み、Phase 10 で本移行)
 6. Vercel Analytics 有効化 + web-vitals 送信先 (`/api/analytics`) 設定
+7. **Preview → Production の 2 段階 deploy** (いきなり production は避ける)
+8. Deploy 直後に Vercel Dashboard で Function Invocations / Bandwidth を監視
 
-**優先度**: 🔴 高 (実際の公開が Phase 10 の主目的)
+**Hobby プラン監視ダッシュボード**:
+- Deploy 後 24 時間: Function Invocations を毎日確認、想定より速い消費なら
+  即座に ISR revalidate 間隔を延長 (現状 1h → 6h や 24h) で対処
+- 想定外の消費増を検知した場合は **一時的に production を pause** する運用手順を
+  README に整備
+
+**優先度**: 🔴 最終ステップ (Phase 10 + Phase 11 の全項目完了後に実施)
 
 ---
 
@@ -152,17 +230,32 @@ Phase 1-9 の PLAN / COMPLETE / PHASE_PROFILER / issues.md 等を `docs/history/
 
 ---
 
-## 🎯 Phase 10 実施順の推奨
+## 🎯 Phase 10 実施順の推奨 (2026-08-24 更新: Vercel を最後に配置)
 
-1. **Vercel 本番デプロイ** (実際に公開してユーザーが触れる状態を作る) 🔴 最優先
-2. **FontAwesome subset 化** (bundle 900 KB 目標達成) 🟡
-3. **AppContext.tsx 完全削除** (grep 確認後の後方互換整理) 🟡
-4. **9-E.2 Markdown 内 `<Image>` 化** (LCP 改善) 🟡
-5. **E2E カバレッジ拡張** (zip-export / zip-import / dep-check) 🟡
-6. **9-E.3 shimmer skeleton** (UX 磨き上げ) 🟢
+**方針変更**: Vercel Hobby プランのリソース制約により、Vercel 本番デプロイは
+Phase 10 の他全項目 + Phase 11 完了後の**最終ステップ**として実施する
+(冒頭「【重要方針】」節参照)。
+
+**推奨実施順**:
+
+1. **FontAwesome subset 化** (bundle 900 KB 目標達成) 🟡
+2. **AppContext.tsx 完全削除** (grep 確認後の後方互換整理) 🟡
+3. **9-E.2 Markdown 内 `<Image>` 化** (LCP 改善) 🟡
+4. **E2E カバレッジ拡張** (zip-export / zip-import / dep-check) 🟡
+5. **9-E.3 shimmer skeleton** (UX 磨き上げ) 🟢
+6. *(Phase 11 完了)*
+7. **🚀 Vercel 本番デプロイ** — 最終ステップ、全項目完了・ユーザー最終確認済み
+   の状態でのみ実施 🔴
+
+**理由の再掲**:
+- 上記 1〜5 と Phase 11 の開発中は **ローカル + CI のみで検証**
+- 全機能揃った状態で Vercel Preview → Production の 2 段階 deploy
+- Hobby プランの上限 (100k Function Invocations / 月, 100 GB Bandwidth / 月)
+  を意図せぬ消費で使い切るリスクを最小化
 
 Phase 10 詳細計画書は上記優先度をユーザーが確認・調整した後に作成する。
 
 ---
 
 *このリストは Phase 9 完了時点 (2026-08-23) の情報です。Phase 10 開始前に再確認・追加・削除してください。*
+*2026-08-24 更新: Vercel デプロイのタイミングを「最優先」→「最終ステップ」に変更 (Hobby プラン制約対策)。*

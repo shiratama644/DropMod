@@ -3,7 +3,8 @@
 **ステータス**: 計画中（仕様推敲済み、実装未着手）
 **優先度**: 🔴 最重要 — DropMod の核心価値の 10 倍化
 **見積工数**: 7〜10 週間（1 人フルタイム換算）
-**着手前提**: Phase 10 (Vercel 本番デプロイ) 完了
+**着手前提**: Phase 10 の**開発項目** (bundle 削減 / AppContext 削除 / Markdown 画像最適化 / E2E 拡張 / shimmer skeleton) 完了
+**Vercel デプロイとの関係**: Vercel 本番デプロイは Phase 10 + **本 Phase 11 の全項目完了後**の最終ステップに変更 (2026-08-24 決定、Hobby プランのリソース制約対策、詳細は `docs/planning/PHASE10_CANDIDATES.md` 冒頭「【重要方針】」節参照)
 
 ---
 

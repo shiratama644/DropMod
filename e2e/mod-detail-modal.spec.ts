@@ -52,6 +52,25 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(page).toHaveURL('/discover/mods');
   });
 
+  test('hides mobile BottomNav while intercepting detail modal is open', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/discover/mods');
+    const firstCard = page.locator('.mod-card-item').first();
+    await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
+    await expect(page.locator('#bottom-nav')).toBeVisible();
+
+    await firstCard.click();
+    const dialog = page.getByRole('dialog').first();
+    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(page.locator('#bottom-nav')).toBeHidden();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#bottom-nav')).toBeVisible();
+  });
+
   test('direct URL access to /mods/[slug] renders full page (not modal)', async ({
     page
   }) => {

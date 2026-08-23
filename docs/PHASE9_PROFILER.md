@@ -12,6 +12,13 @@
 
 計画書 §8.4 で「Sandbox には React DevTools 拡張が入らないため、代替として render count を spy する軽量な自動テストも用意」と決定していたため、**Vitest + jsdom 上で `React.Profiler` 相当の render 数計測** を実装した。
 
+> **DOC-6 追記 (仕様書との齟齬)**: 本レポートの測定シナリオ (theme 切替 / Toast 追加 / ZIP 進捗更新) は
+> **計画書 §8.3 の想定シナリオ (カテゴリ変更 / プロファイル切替 / Mod 追加) と異なる**。
+> 実装では Zustand slice 単位の合成シナリオを採用し、Context vs Zustand の再レンダー差分を
+> 単純明快に比較する形にした。実際のアプリ操作シナリオでの測定は
+> ユーザー環境 (Chrome + React DevTools Profiler) で計画書付録 D の手順に沿って
+> 追加測定することが可能。
+
 具体的には、次の 2 モデルを同じ Vitest テストファイル内で並置し、同一シナリオを走らせて総 render 回数を比較する:
 
 - **Context 版 (Phase 9-A 以前をシミュレート)**: 単一 `React.Context` に全 field を積んだ `useMemo` value、field のどれか 1 つの `setState` で value 参照が新規化 → 全 consumer 巻き添え再レンダー

@@ -12,7 +12,7 @@
 |---|---:|---:|---:|
 | **Test Files** | 13 | **30** | +17 |
 | **Tests** | 102 | **275** | **+173** |
-| **Coverage (statements)** | ~6% (仮 5% threshold) | **91.34%** | +85 pt |
+| **Coverage (statements)** | ~6% (仮 5% threshold) | **91.22%** (Phase 9-C.6 時点 91.34%、以降のバグ修正+テスト追加で微変動、DOC-1 修正) | +85 pt |
 | **per-module thresholds** | 未設定 | ✅ 計画書 §7.5 全 pass | — |
 | **AppContext consumer 数** | 4 コンポーネント | **0** (全 Zustand 直接参照) | -4 |
 | **Zustand store 数** | 3 (profiles / toast / confirm) | **7** (+ zipExport / zipImport / depCheck / appActions) | +4 |
@@ -28,7 +28,7 @@
 **Phase 9 全体の DoD 達成状況**:
 - ✅ **9-A**: AppContext 完全撤去 (stub 化 + 4 コンポーネント Zustand 直接参照)
 - ✅ **9-B**: operationsStore を 3 slice 分離 (zipExport / zipImport / depCheck)
-- ✅ **9-C**: msw 導入 + カバレッジ 60% 目標 → **91.34% 達成**
+- ✅ **9-C**: msw 導入 + カバレッジ 60% 目標 → **91.22%+ 達成** (継続的にバグ修正+テスト追加中)
 - ✅ **9-D**: 再レンダー計測 → **3 シナリオ全て 70% 以下目標達成** (80% 削減実測)
 - ✅ **9-E**: 小改善バンドル 5 個以上実施 (E-1 / E-4 / E-5 / E-6 / E-7 / E-8 の 6 個)
 

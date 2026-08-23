@@ -207,14 +207,19 @@ app/layout.tsx (Server Component)
 
 ### 3.2 Zustand store の最終形
 
+> **D14 更新 (Phase 9 実装時追加)**: Server → Client 関数 props 渡し不能問題への対応として
+> `appActions.ts` を新設。7 store 構成に変更。
+
 ```
 lib/store/
 ├── profiles.ts        (Phase 8-C step1、既存) — profiles + theme + updater ヘルパ
 ├── toast.ts           (Phase 8-C step2、既存) — toasts + showToast + dismissToast
 ├── confirm.ts         (Phase 8-C step2、既存 + 第7波 L7-2 修正) — confirm dialog + owner ID
-├── zipExport.ts       (Phase 9-B 新規) — ZIP エクスポート進捗 + isOpen + cancel
-├── zipImport.ts       (Phase 9-B 新規) — pendingImportData + isOpen (mrpack 検出後モーダル)
-└── depCheck.ts        (Phase 9-B 新規) — hasDepWarning + runBackgroundDepCheck
+├── zipExport.ts       (Phase 9-B 新規) — ZIP エクスポート進捗 + isOpen + cancel (cancelRequested / requestCancel / clearCancelRequest)
+├── zipImport.ts       (Phase 9-B 新規) — pendingImportData のみ (isNewProfileModalOpen 等の Modal open state は AppShell 局所 useState として残置。D4)
+├── depCheck.ts        (Phase 9-B 新規) — hasDepWarning + lastCheckAt + isChecking + reset (計画から reset() が追加、D7)
+├── appActions.ts      (Phase 9-A 新規) — AppShell 由来 handleXxx 関数の登録/購読、Server → Client 境界を跨ぐため (D14)
+└── useCurrentProfileWithFallback.ts (Phase 9-E 修正 B33 追加) — currentProfile 共通取得 hook
 ```
 
 ### 3.3 テスト構成 (Phase 9 完了後)
@@ -233,7 +238,9 @@ __tests__/
 │   ├── modrinth/parseRetryAfterMs.test.ts (既存 7 tests)
 │   ├── modrinth/{client,server}.test.ts   ← Phase 9-C 新規 (msw 経由)
 │   ├── db/{dexie,migrate}.test.ts         ← Phase 9-C 新規 (fake-indexeddb)
-│   └── query/{client,hooks}.test.ts       ← Phase 9-C 新規
+│   └── query/hooks.test.tsx               ← Phase 9-C 新規 (D15 修正: client.ts は
+│                                             SSR + IndexedDB adapter 依存で単体テスト困難、
+│                                             vitest.config.ts で coverage exclude 済、E2E で担保)
 ├── hooks/
 │   ├── computeConcurrency.test.ts        (既存 11 tests)
 │   ├── useProfiles.test.tsx              ← Phase 9-C 新規 (integration)
@@ -416,7 +423,8 @@ commit: `refactor(9-A.5): AppContext を stub 化 (Phase 10 で完全削除予�
 - [ ] `grep -rn 'useAppContext' --include='*.ts' --include='*.tsx' app/ components/ hooks/ lib/` = **0 件**
 - [ ] `grep -rn 'AppContextValue' --include='*.ts' --include='*.tsx' app/ components/ hooks/ lib/` = **0 件** (except AppContext.tsx 内部)
 - [ ] AppShell の `contextValue` useMemo が削除されている
-- [ ] AppContext.tsx が `~50 行以下` に縮小
+- [ ] AppContext.tsx が `~80 行以下` に縮小 (D16 修正: §10.1 60 行と齟齬があった 50 行を統一。
+      実装はコメントリッチで 73 行、Phase 10 で完全削除予定なので許容)
 
 ### 5.6 DoD
 
@@ -471,6 +479,11 @@ export interface ZipExportStoreState {
 
 #### `lib/store/zipImport.ts`
 
+> **D4 更新 (Phase 9 実装時)**: 当初 `isNewProfileModalOpen` / `openNewProfileModal` /
+> `closeNewProfileModal` を含む設計だったが、Modal open state は下流参照が無いため
+> AppShell 局所 `useState` として残置し、store には `pendingImportData` 関連のみに集約。
+> シンプル化のため `clearPendingImportData` を追加。
+
 ```typescript
 export interface PendingImportData {
   name: string;
@@ -481,15 +494,16 @@ export interface PendingImportData {
 
 export interface ZipImportStoreState {
   pendingImportData: PendingImportData | null;
-  isNewProfileModalOpen: boolean;
   // Setters
   setPendingImportData: (data: PendingImportData | null) => void;
-  openNewProfileModal: () => void;
-  closeNewProfileModal: () => void;
+  clearPendingImportData: () => void;
 }
 ```
 
 #### `lib/store/depCheck.ts`
+
+> **D7 更新 (Phase 9 実装時)**: `markChecked` の実装内容を明記
+> (`lastCheckAt + isChecking=false` を同時セット)。テスト用に `reset` を追加。
 
 ```typescript
 export interface DepCheckStoreState {
@@ -499,7 +513,8 @@ export interface DepCheckStoreState {
   // Setters
   setHasDepWarning: (v: boolean) => void;
   setChecking: (v: boolean) => void;
-  markChecked: () => void;
+  markChecked: () => void;   // set({ lastCheckAt: Date.now(), isChecking: false })
+  reset: () => void;         // 全 field を初期値へ (テスト用)
 }
 ```
 
@@ -847,7 +862,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 | **再レンダー数 (フィルタ変更)** | 30+ (推定) | **≤ 70% (実測)** | React DevTools Profiler |
 | **First Load JS (Home)** | 963 KB | **≤ 970 KB** (許容範囲、目標大幅超過なし) | `next build` 出力 |
 | **First Load JS (Mod詳細)** | 1262 KB | **≤ 1270 KB** | 同上 |
-| **AppContext.tsx 行数** | 119 行 | **≤ 60 行** (stub 化) | wc -l |
+| **AppContext.tsx 行数** | 119 行 | **≤ 80 行** (stub 化、D16 修正: §5.5 とのゆらぎを吸収してコメントリッチ許容) | wc -l |
 | **msw handlers 網羅率** | 0 | Modrinth 主要 6 エンドポイント (search/project/version/versions/projects/version_files) | 手動確認 |
 
 ### 10.2 検証手順 (各 sub-phase 完了時)

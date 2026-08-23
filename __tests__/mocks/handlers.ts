@@ -62,7 +62,9 @@ export const handlers = [
   }),
 
   // ---------- /project/{slug or id}/version (list) ----------
-  // NOTE: /project/:slug より先に登録 (msw の matching は登録順)
+  // B35 修正: msw v2 は path-to-regexp で specific path を自動優先するため
+  //   登録順は matching に影響しない。しかしコード可読性のため specific → generic
+  //   の順序を維持する (レビュアーに紛らわしい印象を与えないため)。
   ...both('get', '/project/:slug/version', ({ params, request }) => {
     const url = new URL(request.url);
     const loaders = url.searchParams.get('loaders');

@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import type { Toast } from '@/types';
+import { generateId } from '@/lib/utils/id';
 
 /**
  * Toast 保持上限。
@@ -32,7 +33,11 @@ export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
   showToast: (message, type = 'info') => {
-    const id = 'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    // B16 修正: id 生成を generateId (crypto.randomUUID 優先) に変更。
+    //   従来 'toast-' + Date.now() + '-' + Math.random().slice(2, 8) では
+    //   Strict Mode double-invoke で ms 単位同時発火時に低確率で衝突リスク。
+    //   → 2^122 の UUID v4 空間に置換して事実上衝突ゼロに。
+    const id = generateId('toast');
     set((s) => ({
       toasts: [...s.toasts, { id, message, type }].slice(-MAX_VISIBLE_TOASTS)
     }));

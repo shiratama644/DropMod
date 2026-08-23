@@ -67,7 +67,19 @@ export const useConfirmStore = create<ConfirmStoreState>((set) => ({
     new Promise<boolean>((resolve) => {
       // 前のダイアログが残っていれば false でクローズ (owner に関係なく: 同一 UI で
       // 複数 dialog を同時表示する仕様ではないため)
+      //
+      // ⚠️ B18 (仕様上の注意): 前の confirm を silent に false 化する。
+      //    呼び出し元は「ユーザーがキャンセルした」と区別不能。
+      //    → Promise.all([confirm(opt1), confirm(opt2)]) のような並列使用は非推奨。
+      //    現状は同一 UI 排他仕様のため実害無しだが、将来並列 confirm が必要になれば
+      //    キュー化を検討 (issues/phase9.md B18 参照)。
       if (pendingResolve) {
+        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+          console.warn(
+            '[DropMod] 前の confirm() が resolve 前に上書きされました。' +
+              '前の呼び出しは false で resolve されます。並列使用は非推奨。'
+          );
+        }
         pendingResolve(false);
       }
       pendingResolve = resolve;

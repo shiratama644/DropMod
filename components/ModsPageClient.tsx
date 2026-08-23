@@ -34,7 +34,7 @@ const PROFILE_TABS: ReadonlyArray<{
   emptyHref: string;
   emptyLabel: string;
 }> = [
-  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', emptyHref: '/mods', emptyLabel: 'Modを探しに行く' },
+  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', emptyHref: '/discover/mods', emptyLabel: 'Modを探しに行く' },
   {
     id: 'resourcepack',
     label: 'Resource Packs',

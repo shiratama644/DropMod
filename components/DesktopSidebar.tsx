@@ -57,7 +57,7 @@ interface NavLinkItem {
 
 const NAV_ITEMS: readonly NavLinkItem[] = [
   { id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
-  { id: 'mods', label: '探す', icon: 'fa-solid fa-magnifying-glass', href: '/mods' },
+  { id: 'mods', label: '探す', icon: 'fa-solid fa-magnifying-glass', href: '/discover/mods' },
   {
     id: 'profile',
     label: '現在のMod',
@@ -109,7 +109,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const isNavActive = useCallback(
     (item: NavLinkItem) => {
       if (item.id === 'mods') {
-        return pathname === '/mods' || pathname?.startsWith('/mods/') || activeTab === 'mods';
+        return (
+          pathname === '/mods' ||
+          pathname?.startsWith('/mods/') ||
+          pathname === '/discover' ||
+          pathname?.startsWith('/discover/') ||
+          activeTab === 'mods'
+        );
       }
       return activeTab === item.id;
     },

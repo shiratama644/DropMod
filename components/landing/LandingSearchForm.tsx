@@ -32,9 +32,9 @@ export function LandingSearchForm({
       e.preventDefault();
       const trimmed = query.trim();
       if (trimmed.length === 0) {
-        router.push('/mods');
+        router.push('/discover/mods');
       } else {
-        router.push(`/mods?q=${encodeURIComponent(trimmed)}`);
+        router.push(`/discover/mods?q=${encodeURIComponent(trimmed)}`);
       }
     },
     [query, router]

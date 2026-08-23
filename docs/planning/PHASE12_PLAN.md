@@ -604,9 +604,9 @@ CurseForge `.zip` を Import しようとした場合:
 `/modpack` は **Phase 12 の Modrinth Modpack ハブ** として予約済み
 (`docs/planning/PHASE11_PLAN.md` §1.2.1)。
 
-- **やってはいけない**: `/mods?type=modpack` へのリダイレクト、ルート削除
+- **やってはいけない**: `/discover/modpack` へのリダイレクト、ルート削除
 - **やること**: `.mrpack` Import、Modpack 更新検知、専用 UI をこの URL に載せる
-- `/mods?type=modpack` は Modrinth 検索の暫定フィルタとして残す
+- `/discover/modpack` は Modrinth 検索。`/modpack` は Phase 12 ハブとして分離する
 
 ### 6.1 Profile 作成モーダルの経路拡張
 

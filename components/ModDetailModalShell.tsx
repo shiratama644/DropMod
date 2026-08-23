@@ -533,7 +533,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           // Phase 9-F: フルページ (variant="page") 時の戻り先は /mods (Mod 一覧) に。
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
-            href="/mods"
+            href="/discover/mods"
             className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
@@ -631,7 +631,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <div className="mb-3">
         {/* <button router.push> ではなく <Link href> で戻る (SEO/新規タブ対応) */}
         <Link
-          href="/mods"
+          href="/discover/mods"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />

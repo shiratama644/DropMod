@@ -155,7 +155,7 @@ describe('ModDetailPageView smoke', () => {
     // slug がフォールバック文言に含まれる
     expect(container.textContent).toContain('ghost');
     // 「Mod 一覧に戻る」リンクが必ずある
-    const links = container.querySelectorAll('a[href="/mods"]');
+    const links = container.querySelectorAll('a[href="/discover/mods"]');
     expect(links.length).toBeGreaterThanOrEqual(1);
   });
 });

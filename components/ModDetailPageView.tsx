@@ -191,7 +191,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           {`Mod 情報を読み込めませんでした (slug: ${slug})。`}
         </p>
         <Link
-          href="/mods"
+          href="/discover/mods"
           className="mt-4 inline-flex items-center gap-1.5 text-xs theme-text-brand hover:underline"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
@@ -244,7 +244,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
       {/* ========== パンくず ========== */}
       <nav aria-label="パンくず" className="mb-4">
         <Link
-          href="/mods"
+          href="/discover/mods"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5 transition"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />

@@ -7,6 +7,10 @@ import { test, expect } from '@playwright/test';
 const PAGES = [
   '/',
   '/mods',
+  '/discover/mods',
+  '/discover/modpack',
+  '/discover/resourcepack',
+  '/discover/shader',
   '/profile',
   '/settings',
   '/modpack',

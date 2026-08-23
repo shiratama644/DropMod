@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
@@ -11,7 +11,7 @@ import {
   SEARCH_LIMIT,
   SEARCH_LAYOUT_OPTIONS,
   SEARCH_LAYOUT_STORAGE_KEY,
-  parseProjectType,
+  discoverPathForType,
   parseSearchLayout,
   searchGridClass,
   type ProjectType,
@@ -115,7 +115,6 @@ export const HomeInteractive: React.FC<Props> = ({
 
   // 絞り込み state
   const router = useRouter();
-  const pathname = usePathname();
   const urlSearchParams = useSearchParams();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -134,9 +133,8 @@ export const HomeInteractive: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    const fromUrl = parseProjectType(urlSearchParams.get('type'));
-    setProjectType(fromUrl);
-  }, [urlSearchParams]);
+    setProjectType(initialProjectType);
+  }, [initialProjectType]);
 
   const typeCategories = categoriesForProjectType(projectType);
 
@@ -151,12 +149,12 @@ export const HomeInteractive: React.FC<Props> = ({
       setProjectType(next);
       setSelectedCategory('All');
       const params = new URLSearchParams(urlSearchParams.toString());
-      if (next === 'mod') params.delete('type');
-      else params.set('type', next);
+      params.delete('type');
       const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      const path = discoverPathForType(next);
+      router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
     },
-    [pathname, router, urlSearchParams]
+    [router, urlSearchParams]
   );
 
   const handleLayoutChange = useCallback((value: string) => {

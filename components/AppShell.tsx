@@ -60,6 +60,11 @@ interface Props {
 //   - 設定  (/settings) → 'settings'
 const PATH_TO_TAB: Record<string, TabName> = {
   '/': 'home',
+  '/discover': 'mods',
+  '/discover/mods': 'mods',
+  '/discover/modpack': 'mods',
+  '/discover/resourcepack': 'mods',
+  '/discover/shader': 'mods',
   '/mods': 'mods',
   '/profile': 'profile',
   '/settings': 'settings'
@@ -251,7 +256,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const activeTab: TabName = useMemo(() => {
     const path = pathname ?? '/';
     // /mods/[slug] の場合は 'mods' タブを active に (Mod 詳細はモーダル or フルページ)
-    if (path.startsWith('/mods/')) return 'mods';
+    if (path.startsWith('/mods/') || path.startsWith('/discover/')) return 'mods';
     return PATH_TO_TAB[path] ?? 'home';
   }, [pathname]);
 

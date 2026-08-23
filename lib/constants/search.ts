@@ -21,6 +21,29 @@ export function parseProjectType(raw: string | string[] | undefined | null): Pro
   return 'mod';
 }
 
+/** 検索一覧のパスセグメント (`/discover/mods` の mods) */
+export const DISCOVER_SEGMENTS = ['mods', 'modpack', 'resourcepack', 'shader'] as const;
+export type DiscoverSegment = (typeof DISCOVER_SEGMENTS)[number];
+
+const PROJECT_TYPE_TO_SEGMENT: Record<ProjectType, DiscoverSegment> = {
+  mod: 'mods',
+  modpack: 'modpack',
+  resourcepack: 'resourcepack',
+  shader: 'shader'
+};
+
+export function discoverPathForType(type: ProjectType): string {
+  return `/discover/${PROJECT_TYPE_TO_SEGMENT[type]}`;
+}
+
+/** `/discover/:segment` を ProjectType にする。未知なら null */
+export function parseDiscoverSegment(raw: string | string[] | undefined | null): ProjectType | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === 'mods') return 'mod';
+  if (value === 'modpack' || value === 'resourcepack' || value === 'shader') return value;
+  return null;
+}
+
 export function sanitizeSearchQuery(raw: string | string[] | undefined | null): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== 'string') return '';

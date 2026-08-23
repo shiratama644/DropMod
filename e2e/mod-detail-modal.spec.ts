@@ -19,7 +19,7 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     page
   }) => {
     // Phase 9-F: Home → /mods に URL 変更 (Modrinth 検索は /mods で提供)
-    await page.goto('/mods');
+    await page.goto('/discover/mods');
 
     // Mod カードが表示されるまで待つ
     // (SSR 経由の initialHits があれば即表示、無ければ CSR fetch 完了待ち)
@@ -30,7 +30,7 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
 
     // Mod カードクリック前の URL は /mods
-    await expect(page).toHaveURL('/mods');
+    await expect(page).toHaveURL('/discover/mods');
 
     // Mod カードをクリック
     await firstCard.click();
@@ -49,7 +49,7 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
 
     // Phase 9-F: router.back() で /mods に戻る (旧 router.replace('/') は撤廃)
-    await expect(page).toHaveURL('/mods');
+    await expect(page).toHaveURL('/discover/mods');
   });
 
   test('direct URL access to /mods/[slug] renders full page (not modal)', async ({

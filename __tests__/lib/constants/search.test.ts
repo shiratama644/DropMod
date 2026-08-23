@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  discoverPathForType,
+  parseDiscoverSegment,
   parseProjectType,
   parseSearchLayout,
   sanitizeSearchQuery,
@@ -41,6 +43,21 @@ describe('parseSearchLayout', () => {
   it('未知は 3 カラムにフォールバック', () => {
     expect(parseSearchLayout(undefined)).toBe('3');
     expect(parseSearchLayout('wide')).toBe('3');
+  });
+});
+
+describe('discover paths', () => {
+  it('mods は /discover/mods、他は同名セグメント', () => {
+    expect(discoverPathForType('mod')).toBe('/discover/mods');
+    expect(discoverPathForType('resourcepack')).toBe('/discover/resourcepack');
+    expect(discoverPathForType('shader')).toBe('/discover/shader');
+    expect(discoverPathForType('modpack')).toBe('/discover/modpack');
+  });
+
+  it('segment を project type に戻す', () => {
+    expect(parseDiscoverSegment('mods')).toBe('mod');
+    expect(parseDiscoverSegment('shader')).toBe('shader');
+    expect(parseDiscoverSegment('plugin')).toBeNull();
   });
 });
 

@@ -47,10 +47,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8
     },
     {
-      url: `${baseUrl}/mods`,
+      url: `${baseUrl}/discover/mods`,
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 1.0
+    },
+    {
+      url: `${baseUrl}/discover/modpack`,
+      lastModified: now,
+      changeFrequency: 'hourly',
+      priority: 0.8
+    },
+    {
+      url: `${baseUrl}/discover/resourcepack`,
+      lastModified: now,
+      changeFrequency: 'hourly',
+      priority: 0.8
+    },
+    {
+      url: `${baseUrl}/discover/shader`,
+      lastModified: now,
+      changeFrequency: 'hourly',
+      priority: 0.8
     },
     {
       url: `${baseUrl}/profile`,

@@ -11,8 +11,8 @@
 
 import { test, expect } from '@playwright/test';
 
-test('/mods (Modrinth 検索一覧) renders and shows search UI', async ({ page }) => {
-  await page.goto('/mods');
+test('/discover/mods (Modrinth 検索一覧) renders and shows search UI', async ({ page }) => {
+  await page.goto('/discover/mods');
   await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
 
   // タイトル

@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Theme persistence', () => {
   test('toggles theme and persists across reload', async ({ page }) => {
-    await page.goto('/mods');
+    await page.goto('/discover/mods');
     await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
 
     const initialClass = await page.locator('html').getAttribute('class');

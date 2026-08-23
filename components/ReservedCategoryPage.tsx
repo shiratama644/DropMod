@@ -3,7 +3,7 @@ import Link from 'next/link';
 export interface ReservedCategoryPageProps {
   title: string;
   icon: string;
-  /** `/mods?type=` の検索フォールバック */
+  /** `/discover/*` の検索フォールバック */
   searchType: 'modpack' | 'resourcepack' | 'shader';
   phaseLabel: 'Phase 11' | 'Phase 12';
   description: string;
@@ -37,7 +37,7 @@ export function ReservedCategoryPage({
         </div>
         <div className="flex flex-col sm:flex-row justify-center gap-2.5 pt-2">
           <Link
-            href={`/mods?type=${searchType}`}
+            href={`/discover/${searchType}`}
             className="btn-hover-effect inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />

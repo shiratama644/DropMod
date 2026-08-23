@@ -75,18 +75,21 @@ Phase 11 は以下 3 カテゴリの Import + Analysis のみ対応:
 
 ### 1.2.1 予約 URL (実装必須)
 
-以下のルートは **Phase 11 / 12 の専用ハブ** として予約する。`/mods?type=` へ
-リダイレクトしてはならない (検索の暫定入口と専用ハブを分離するため)。
+以下のルートは **Phase 11 / 12 の専用ハブ** として予約する。検索 URL へ
+リダイレクトしてはならない (検索入口と専用ハブを分離するため)。
 
 | URL | 担当 Phase | 役割 |
 |---|---|---|
 | `/resourcepack` | **11** | Resource Pack の閲覧・Import ハブ (`resourcepacks/` 解析結果の入口) |
 | `/shader` | **11** | Shader の閲覧・Import ハブ (`shaderpacks/` 解析結果の入口) |
 | `/modpack` | **12** | Modrinth Modpack (`.mrpack`) の Import / 更新ハブ |
-| `/mods?type=resourcepack` 等 | 現行 | Modrinth `/search` の暫定フィルタ。専用ハブ実装後も検索ショートカットとして残す |
+| `/discover/mods` | 現行 | Modrinth 検索 (Mods) |
+| `/discover/resourcepack` | 現行 | Modrinth 検索 (Resource Packs) |
+| `/discover/shader` | 現行 | Modrinth 検索 (Shaders) |
+| `/discover/modpack` | 現行 | Modrinth 検索 (Modpacks) |
 
-現状は予約ページ (Coming Soon + 「Modrinth で探す」) を置き、404 にしない。
-BrowseBottomSheet のリンク先は上記予約 URL とする。
+現状は予約ページ (Coming Soon + 「Modrinth で探す」→ `/discover/*`) を置き、404 にしない。
+BrowseBottomSheet の「探す」は `/discover/*`。予約ハブはルート直下のまま。
 
 ### 1.3 コアバリュー
 

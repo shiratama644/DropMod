@@ -140,7 +140,8 @@ docs/
 | `/shader` | 11 | Shader ハブ |
 | `/modpack` | 12 | Modrinth Modpack ハブ |
 
-`/mods?type=` は検索フィルタ専用。予約 URL をそちらへリダイレクトしないこと。
+検索一覧は `/discover/mods` `/discover/resourcepack` `/discover/shader` `/discover/modpack`。
+予約 URL を検索へリダイレクトしないこと。
 詳細は [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) §1.2.1。
 
 ---

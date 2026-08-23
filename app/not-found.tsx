@@ -34,7 +34,7 @@ export default function NotFound() {
             ホームに戻る
           </Link>
           <Link
-            href="/mods"
+            href="/discover/mods"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />

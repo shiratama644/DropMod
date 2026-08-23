@@ -133,7 +133,7 @@ export default async function LandingPage() {
 
           <div className="flex flex-col sm:flex-row justify-center gap-2.5 sm:gap-3 pt-2">
             <Link
-              href="/mods"
+              href="/discover/mods"
               className="btn-hover-effect inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm sm:text-base font-bold shadow-lg shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <i className="fa-solid fa-compass" aria-hidden />
@@ -171,7 +171,7 @@ export default async function LandingPage() {
               </p>
             </div>
             <Link
-              href="/mods"
+              href="/discover/mods"
               className="text-xs sm:text-sm theme-text-brand hover:underline shrink-0 font-semibold"
             >
               もっと見る →
@@ -332,7 +332,7 @@ export default async function LandingPage() {
         </p>
         <div className="mt-8">
           <Link
-            href="/mods"
+            href="/discover/mods"
             className="btn-hover-effect inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-lg font-bold shadow-lg shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
@@ -411,17 +411,17 @@ function LandingFooter() {
           {/* サイト内リンク */}
           <FooterColumn title="サイト">
             <FooterLink href="/">ホーム</FooterLink>
-            <FooterLink href="/mods">Mod を探す</FooterLink>
+            <FooterLink href="/discover/mods">Mod を探す</FooterLink>
             <FooterLink href="/profile">マイプロファイル</FooterLink>
             <FooterLink href="/settings">設定</FooterLink>
           </FooterColumn>
 
           {/* Mod カテゴリ */}
           <FooterColumn title="カテゴリ">
-            <FooterLink href="/mods">Mods</FooterLink>
-            <FooterLink href="/mods?type=modpack">Modpacks</FooterLink>
-            <FooterLink href="/mods?type=resourcepack">Resource Packs</FooterLink>
-            <FooterLink href="/mods?type=shader">Shaders</FooterLink>
+            <FooterLink href="/discover/mods">Mods</FooterLink>
+            <FooterLink href="/discover/modpack">Modpacks</FooterLink>
+            <FooterLink href="/discover/resourcepack">Resource Packs</FooterLink>
+            <FooterLink href="/discover/shader">Shaders</FooterLink>
           </FooterColumn>
 
           {/* 外部リンク */}

@@ -34,24 +34,24 @@ interface CategoryItem {
 }
 
 const CATEGORIES: readonly CategoryItem[] = [
-  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', href: '/mods' },
+  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube', href: '/discover/mods' },
   {
     id: 'modpack',
     label: 'Modpacks',
     icon: 'fa-solid fa-boxes-stacked',
-    href: '/modpack',
+    href: '/discover/modpack',
   },
   {
     id: 'resourcepack',
     label: 'Resource Packs',
     icon: 'fa-solid fa-palette',
-    href: '/resourcepack',
+    href: '/discover/resourcepack',
   },
   {
     id: 'shader',
     label: 'Shaders',
     icon: 'fa-solid fa-wand-sparkles',
-    href: '/shader',
+    href: '/discover/shader',
   },
 ];
 

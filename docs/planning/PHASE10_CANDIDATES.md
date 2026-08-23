@@ -1,6 +1,6 @@
 # Phase 10 候補リスト
 
-Phase 9 完了時 (`577c31a`) 時点で意図的に見送った項目、および今後のロードマップ検討候補。計画書 `docs/PHASE9_PLAN.md` §9.3 の DoD 「実装しなかった項目は `docs/PHASE10_CANDIDATES.md` に記録」に対応。
+Phase 9 完了時 (`577c31a`) 時点で意図的に見送った項目、および今後のロードマップ検討候補。計画書 `docs/planning/PHASE9_PLAN.md` §9.3 の DoD 「実装しなかった項目は `docs/planning/PHASE10_CANDIDATES.md` に記録」に対応。
 
 Phase 10 の詳細計画書はまだ作成しない (ユーザーレビュー後に方針決定)。
 

@@ -9,7 +9,7 @@
 > ## ⚠️ 重要: 2026-08-22 更新について
 >
 > §11 と §12 に記載された「退行」「バグ」「未対応項目」の大部分は、
-> `docs/issues.md` の **第4波修正 (20 件、2026-08-22)** および
+> `docs/audit/issues-legacy.md` の **第4波修正 (20 件、2026-08-22)** および
 > **第5波修正 (30 件、2026-08-22)** で **すべて対応済み**です。
 >
 > 具体的には以下の記述は現在の実装 (HEAD `b6155f7` 以降) では **outdated**:
@@ -32,7 +32,7 @@
 > | §12.14 theme FOUC | ✅ M4-3 で hydration 前 inline script により解消 |
 > | §12.15 総括表: 18 件目〜32 件目のうち退行系 | ✅ 全て修正済 |
 >
-> **現状の未対応バグは `docs/issues.md` を参照**してください。
+> **現状の未対応バグは `docs/audit/issues-legacy.md` を参照**してください。
 > 第5波修正が完了した現在、実装は本番デプロイ可能な状態です。
 
 ---
@@ -289,7 +289,7 @@ Next.js への移行に伴って **新規に追加された** ファイルです
 
 ### 6.9 ドキュメント (Next 側にしか無い、参考)
 
-このリストには入れませんが、`docs/DEPLOY.md`, `docs/NEXTJS_MIGRATION_PLAN.md`, `docs/issues.md`, `README.md`, `.archive/vite/README.md` も新規追加されています。
+このリストには入れませんが、`docs/ops/DEPLOY.md`, `docs/planning/NEXTJS_MIGRATION_PLAN.md`, `docs/audit/issues-legacy.md`, `README.md`, `.archive/vite/README.md` も新規追加されています。
 
 ---
 
@@ -668,7 +668,7 @@ sandbox の外部通信制限と Chromium 不在により、以下は **手動�
 - Facebook Debugger での OGP プレビュー
 - 実 Vercel 環境での ISR 動作
 
-これらは Vercel 本番デプロイ後の `docs/DEPLOY.md` §5 チェックリストで確認する項目と重なっています。
+これらは Vercel 本番デプロイ後の `docs/ops/DEPLOY.md` §5 チェックリストで確認する項目と重なっています。
 
 ---
 
@@ -1195,7 +1195,7 @@ docs/
 
 - `__tests__/perf/rerender.test.tsx` — 継続的な再レンダー数リグレッション監視
 - `vitest.config.ts` の per-module thresholds — lib/state 95% / lib/store 85% / lib/db 75% / lib/query 70% / lib/modrinth 65% / lib/utils 60% / hooks 70% / components 50% を CI で enforce
-- `docs/CI_WORKFLOW.yml` — 3 job (static-checks / build / e2e) + artifact upload、ユーザー配置後に GitHub Actions 実運用開始 (`docs/CI_SETUP.md` 手順あり)
+- `docs/ops/CI_WORKFLOW.yml` — 3 job (static-checks / build / e2e) + artifact upload、ユーザー配置後に GitHub Actions 実運用開始 (`docs/ops/CI_SETUP.md` 手順あり)
 - msw の `onUnhandledRequest: 'error'` — テスト中に実 Modrinth API を叩く事故を即検出
 
 ### 13.5 Phase 10 (未実施) 候補

@@ -2,9 +2,9 @@
 
 > **監査開始日:** 2026-08-23 (JST)
 > **監査追加日:** 2026-08-24 (JST) — 徹底レビュー第 1 回、D2〜D9 追加
-> **対象:** `docs/PHASE9_PLAN.md` (計画書 v1) vs. 実装 (HEAD `5a3bde1`)
+> **対象:** `docs/planning/PHASE9_PLAN.md` (計画書 v1) vs. 実装 (HEAD `5a3bde1`)
 > **記録方針:** 意図的な設計変更・順序変更・未実装項目・仕様との齟齬を全てここに記録。
-> バグ (実装ミスや潜在的不具合) は `issues/phase9.md` に別途記録。
+> バグ (実装ミスや潜在的不具合) は `docs/audit/issues-phase9.md` に別途記録。
 
 ---
 
@@ -17,7 +17,7 @@
 | D3 | §5.3 | **props 渡し設計を撤廃、代わりに appActionsStore を新設** | 計画書は "Props (AppShell 局所 state 由来)" で受け取る設計だったが、実装は `useAppAction(key)` 経由に統一 | D1 の理由により全 action を Zustand 経由に統一。実装として一貫性が向上したので許容 |
 | D4 | §3.2, §6.2 (zipImport) | **isNewProfileModalOpen / openNewProfileModal / closeNewProfileModal 未実装** | 計画では `zipImport.ts` に含める予定だったが実装には無し | Modal open state は AppShell 局所 useState のまま残された。実害無し、意図的なスコープ縮小 |
 | D5 | §6.2 (zipExport) | **命名差分**: 計画 `resetCancel` / 実装 `clearCancelRequest` | 動作は同じ | 命名の一貫性のみ、実害無し |
-| D6 | §6.2 (zipExport) | **設計違反 (dead code)**: cancelRequested / requestCancel / clearCancelRequest が実装 hook で未使用 | 計画 §6.3 で「download logic は cancelRequested / updateZipState を経由」と書かれたが、実装は AbortController のみで cancel を実現 | `issues/phase9.md` B7 で追跡 |
+| D6 | §6.2 (zipExport) | **設計違反 (dead code)**: cancelRequested / requestCancel / clearCancelRequest が実装 hook で未使用 | 計画 §6.3 で「download logic は cancelRequested / updateZipState を経由」と書かれたが、実装は AbortController のみで cancel を実現 | `docs/audit/issues-phase9.md` B7 で追跡 |
 | D7 | §6.2 | **markChecked 実装が仕様と齟齬**: 計画は型のみ、実装は `lastCheckAt + isChecking=false` を同時セット | 意図的な追加だが計画書に明記なし | 実質的に有用な拡張。docs 更新推奨 |
 | D8 | §7.5 | **per-module thresholds が計画値と異なる** | 計画 `lib/store: 90/85/90/90` / 実装 `85/80/90/85` (branches が緩め) | Phase 9-C.6 で threshold 引き下げ、実測値 lib/store=96.18% で問題なし |
 | D9 | §7.5 | **branches 全体閾値が計画 55 → 実装 60 に厳格化** | 計画超過の厳しい設定 | 良い方向の変更 |
@@ -28,10 +28,10 @@
 | D14 | §3.2 | **appActionsStore が計画に無い** | 実装で新規追加 (D3 の副産物) | 妥当な追加。docs 反映済み (README/diff.md) |
 | D15 | §3.3 | **`lib/query/client.test.ts` 未実装** | 計画では `query/{client,hooks}.test.ts` の 2 ファイル、実装は `hooks.test.tsx` のみ | vitest.config.ts で `lib/query/client.ts` を exclude、実データフローは useProjectQuery テスト経由で担保という判断 |
 | D16 | §10.1 | **AppContext.tsx 行数目標 60 行 vs §5.5 の 50 行で計画書内齟齬** | 計画書自身の内部矛盾 | Phase 10 で完全削除するので実務影響なし |
-| D17 | docs/PHASE9_COMPLETE.md | **All files coverage 91.34% と記載、実測 91.5%** | Phase 9-E.1 で CacheStatusBadge テスト追加後にドキュメント未更新 | docs 更新推奨 (0.16 pt 差) |
-| D18 | 型定義重複 | **`ZipProgressState` interface が hooks/useZipExport.ts と lib/store/zipExport.ts の両方で export されている** | 名前空間衝突リスク | `issues/phase9.md` B5 で追跡 |
-| D19 | 定数重複 | **`INITIAL_STATE` が両ファイルで定義**、hooks/ 側は dead code | 保守性リスク | `issues/phase9.md` B5 で追跡 |
-| D20 | ESLint config | **`__tests__/perf/rerender.test.tsx` で react-hooks/rules-of-hooks を全 disable** | 将来の hook 追加で rules 違反が検知されない | `issues/phase9.md` B36 で追跡 |
+| D17 | docs/complete/PHASE9_COMPLETE.md | **All files coverage 91.34% と記載、実測 91.5%** | Phase 9-E.1 で CacheStatusBadge テスト追加後にドキュメント未更新 | docs 更新推奨 (0.16 pt 差) |
+| D18 | 型定義重複 | **`ZipProgressState` interface が hooks/useZipExport.ts と lib/store/zipExport.ts の両方で export されている** | 名前空間衝突リスク | `docs/audit/issues-phase9.md` B5 で追跡 |
+| D19 | 定数重複 | **`INITIAL_STATE` が両ファイルで定義**、hooks/ 側は dead code | 保守性リスク | `docs/audit/issues-phase9.md` B5 で追跡 |
+| D20 | ESLint config | **`__tests__/perf/rerender.test.tsx` で react-hooks/rules-of-hooks を全 disable** | 将来の hook 追加で rules 違反が検知されない | `docs/audit/issues-phase9.md` B36 で追跡 |
 
 ---
 
@@ -190,7 +190,7 @@ export const useZipExport = (currentProfile, showToast, ...) => {
 
 結果、**store の cancelRequested / requestCancel / clearCancelRequest は完全に dead code**。テストコードのみが叩いている状態。
 
-**バグ扱い**: `issues/phase9.md` B7 で追跡。
+**バグ扱い**: `docs/audit/issues-phase9.md` B7 で追跡。
 
 ---
 
@@ -333,13 +333,13 @@ lib/store/
 
 ## D17. docs metrics の不一致 (91.34% vs 91.5%)
 
-`docs/PHASE9_COMPLETE.md` と `docs/PHASE9_C_COMPLETE.md` で **All files coverage を 91.34% と記載**。
+`docs/complete/PHASE9_COMPLETE.md` と `docs/complete/PHASE9_C_COMPLETE.md` で **All files coverage を 91.34% と記載**。
 
 実測 (HEAD `5a3bde1` で `pnpm test:coverage`): **91.5%**
 
 差 0.16 pt。原因は Phase 9-E.1 の CacheStatusBadge テスト (8 tests 追加) 後にドキュメントを再測定していないため。実害無しだが、レポートとしての正確性の問題。
 
-**修正推奨**: `docs/PHASE9_C_COMPLETE.md` は Phase 9-C.6 時点のスナップショットなので触らず、`docs/PHASE9_COMPLETE.md` を更新して「Phase 9 完了時点 91.5%」と反映するのが妥当。
+**修正推奨**: `docs/complete/PHASE9_C_COMPLETE.md` は Phase 9-C.6 時点のスナップショットなので触らず、`docs/complete/PHASE9_COMPLETE.md` を更新して「Phase 9 完了時点 91.5%」と反映するのが妥当。
 
 ---
 
@@ -363,7 +363,7 @@ const INITIAL_STATE: ZipProgressState = { ... };            // 34 行 (実際に
 - 型 `ZipProgressState` は両方 export されているが、誰も import していない → 名前空間衝突は現状無し
 - しかし将来一方だけ変更した場合、静かに不整合になる保守性リスク
 
-**バグ扱い**: `issues/phase9.md` B5 で追跡。
+**バグ扱い**: `docs/audit/issues-phase9.md` B5 で追跡。
 
 ---
 
@@ -383,7 +383,7 @@ const INITIAL_STATE: ZipProgressState = { ... };            // 34 行 (実際に
 
 **ファイル全体で react-hooks 関連の警告を止めている**。テストコードとはいえ、将来ここに新規 hook を追加した際に rules 違反が検知されない。
 
-**バグ扱い**: `issues/phase9.md` B36 で追跡。
+**バグ扱い**: `docs/audit/issues-phase9.md` B36 で追跡。
 
 ---
 
@@ -396,7 +396,7 @@ const INITIAL_STATE: ZipProgressState = { ... };            // 34 行 (実際に
 - `__tests__/test-utils/queryWrapper.tsx` — Phase 9-C.3 のヘルパ (計画書に無し、テスト実装で新規)
 - `__tests__/mocks/handlers.ts` の path-only pattern (proxy `/api/modrinth`) — 計画書は absolute URL だったが `client.ts` の実装 (相対 URL fetch) に合わせて変更
 - `__tests__/lib/store/appActions.test.tsx` — D14 に対応する新規テスト
-- `docs/PHASE9_C_COMPLETE.md`, `docs/PHASE9_PROFILER.md`, `docs/PHASE9_COMPLETE.md`, `docs/PHASE10_CANDIDATES.md` — 各種完了レポート
+- `docs/complete/PHASE9_C_COMPLETE.md`, `docs/complete/PHASE9_PROFILER.md`, `docs/complete/PHASE9_COMPLETE.md`, `docs/planning/PHASE10_CANDIDATES.md` — 各種完了レポート
 
 ### 追加された vitest.setup.ts
 
@@ -410,4 +410,4 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 
 ---
 
-*本 diff/phase9.md は Phase 9 実装中に発見された「計画書との齟齬」を全て記録するものです。バグ (実装ミスや潜在的不具合) は `issues/phase9.md` に別途記載しています。*
+*本 docs/audit/diff-phase9.md は Phase 9 実装中に発見された「計画書との齟齬」を全て記録するものです。バグ (実装ミスや潜在的不具合) は `docs/audit/issues-phase9.md` に別途記載しています。*

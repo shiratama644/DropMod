@@ -10,9 +10,9 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
    mkdir -p .github/workflows
    ```
 
-2. 本リポジトリの `docs/CI_WORKFLOW.yml` を `.github/workflows/ci.yml` にコピー
+2. 本リポジトリの `docs/ops/CI_WORKFLOW.yml` を `.github/workflows/ci.yml` にコピー
    ```bash
-   cp docs/CI_WORKFLOW.yml .github/workflows/ci.yml
+   cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
    ```
 
 3. コミット & push (ユーザーのアカウントで実施)

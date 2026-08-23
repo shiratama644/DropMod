@@ -24,7 +24,7 @@
 >
 > **未修正 (Low、実害無いため放置)**: B2, B3, B6, B9, B14, B15, B17, B20, B21, B25, B26, B29, B30, B34, B37, B38, B39 (全て「確認済み無害」or「別バグとの重複」or「実運用で発生しない edge case」)
 >
-> **仕様書齟齬 (diff/phase9.md 側で管理)**: D1〜D20 のうち D1/D2/D3/D5/D6/D8-D11 は「意図的な設計変更」として許容、D4/D7/D14/D15/D16 は docs 更新で解決、D12/D13/D17-D20 は影響小のため許容 or docs 反映済み
+> **仕様書齟齬 (docs/audit/diff-phase9.md 側で管理)**: D1〜D20 のうち D1/D2/D3/D5/D6/D8-D11 は「意図的な設計変更」として許容、D4/D7/D14/D15/D16 は docs 更新で解決、D12/D13/D17-D20 は影響小のため許容 or docs 反映済み
 
 ---
 
@@ -150,7 +150,7 @@ grep -rn "requestCancel\|clearCancelRequest" app components hooks lib
 - A) `hooks/useZipExport.ts` の DL loop に `if (useZipExportStore.getState().cancelRequested) throw new Error('Aborted');` を挿入
 - B) store から dead code を削除、AbortController のみの設計にする
 
-**関連差分**: diff/phase9.md D5, D6
+**関連差分**: docs/audit/diff-phase9.md D5, D6
 
 ---
 
@@ -851,12 +851,12 @@ React.RefObject は参照 stable なので OK。onClose が親で useCallback �
 
 | No | ドキュメント | 現状 | 推奨 |
 |---|---|---|---|
-| DOC-1 | `docs/PHASE9_COMPLETE.md` | Coverage 91.34% と記載 | 91.5% に更新 (D17 参照) |
-| DOC-2 | `docs/PHASE9_PLAN.md` §5.5 / §10.1 | 50 行 / 60 行の齟齬 | どちらかに統一 (D16 参照) |
-| DOC-3 | `docs/PHASE9_PLAN.md` §6.2 (depCheck) | `markChecked: () => void` のみ | `markChecked` は lastCheckAt + isChecking=false と明記 (D7 参照) |
-| DOC-4 | `docs/PHASE9_PLAN.md` §3.2 | 6 store のみ列挙 | appActions.ts を追加 (D14 参照) |
-| DOC-5 | `docs/PHASE9_PLAN.md` §3.3 | `query/{client,hooks}.test.ts` | `hooks.test.tsx` のみ (D15 参照) |
-| DOC-6 | `docs/PHASE9_PROFILER.md` | Scenario A/B/C は theme/toast/zip | 計画書 §8.3 のシナリオ (フィルタ/プロファイル切替/Mod 追加) との齟齬を明示 (D12/D13 参照) |
+| DOC-1 | `docs/complete/PHASE9_COMPLETE.md` | Coverage 91.34% と記載 | 91.5% に更新 (D17 参照) |
+| DOC-2 | `docs/planning/PHASE9_PLAN.md` §5.5 / §10.1 | 50 行 / 60 行の齟齬 | どちらかに統一 (D16 参照) |
+| DOC-3 | `docs/planning/PHASE9_PLAN.md` §6.2 (depCheck) | `markChecked: () => void` のみ | `markChecked` は lastCheckAt + isChecking=false と明記 (D7 参照) |
+| DOC-4 | `docs/planning/PHASE9_PLAN.md` §3.2 | 6 store のみ列挙 | appActions.ts を追加 (D14 参照) |
+| DOC-5 | `docs/planning/PHASE9_PLAN.md` §3.3 | `query/{client,hooks}.test.ts` | `hooks.test.tsx` のみ (D15 参照) |
+| DOC-6 | `docs/complete/PHASE9_PROFILER.md` | Scenario A/B/C は theme/toast/zip | 計画書 §8.3 のシナリオ (フィルタ/プロファイル切替/Mod 追加) との齟齬を明示 (D12/D13 参照) |
 | DOC-7 | `hooks/useDependencyCheck.ts` L61 | 「前回の hasDepWarning を保持して無音失敗」 | 「前回値は保持されず false になる (仕様バグ、B22 参照)」に修正 |
 
 ---
@@ -878,4 +878,4 @@ React.RefObject は参照 stable なので OK。onClose が親で useCallback �
 
 ---
 
-*本 issues/phase9.md は Phase 9 完了時点 (HEAD `5a3bde1`) の徹底監査結果です。以降修正した項目はこの表を更新して「対応済 (commit hash)」を追記してください。*
+*本 docs/audit/issues-phase9.md は Phase 9 完了時点 (HEAD `5a3bde1`) の徹底監査結果です。以降修正した項目はこの表を更新して「対応済 (commit hash)」を追記してください。*

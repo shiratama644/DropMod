@@ -130,7 +130,7 @@ Phase 7 で Vercel 本番デプロイ用の設定が入っています:
 - `app/layout.tsx` — `metadataBase` を `NEXT_PUBLIC_SITE_URL` / `VERCEL_URL` から解決、OGP / Twitter Card テンプレを設定
 - `app/mod/[slug]/page.tsx` — `generateMetadata` に `alternates.canonical` を追加
 
-セットアップ手順・環境変数一覧・検証チェックリストは [`docs/DEPLOY.md`](./docs/DEPLOY.md) を参照してください。
+セットアップ手順・環境変数一覧・検証チェックリストは [`docs/ops/DEPLOY.md`](./docs/ops/DEPLOY.md) を参照してください。全ドキュメントの一覧は [`docs/README.md`](./docs/README.md) を参照してください。
 
 主な環境変数:
 
@@ -142,7 +142,7 @@ Phase 7 で Vercel 本番デプロイ用の設定が入っています:
 ## 移行履歴
 
 Vite + Hono から Next.js 16 + Vercel への段階的移行 (2025-08〜2026-08)。
-詳細は [`docs/NEXTJS_MIGRATION_PLAN.md`](./docs/NEXTJS_MIGRATION_PLAN.md) を参照。
+詳細は [`docs/planning/NEXTJS_MIGRATION_PLAN.md`](./docs/planning/NEXTJS_MIGRATION_PLAN.md) を参照。
 
 旧 Vite 版の完全なソースは [`/.archive/vite/`](./.archive/vite) に保存されています (履歴・比較用、ビルド対象外)。
 

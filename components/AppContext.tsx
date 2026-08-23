@@ -53,7 +53,7 @@ export function useAppContext(): never {
     '[DropMod] useAppContext() は Phase 9-A で撤去されました。' +
       '対応する Zustand store (useProfilesStore/useToastStore/etc.) を直接使うか、' +
       '`useAppAction(key)` (lib/store/appActions.ts) を利用してください。' +
-      '詳細は docs/PHASE9_PLAN.md 付録 A を参照。'
+      '詳細は docs/planning/PHASE9_PLAN.md 付録 A を参照。'
   );
 }
 

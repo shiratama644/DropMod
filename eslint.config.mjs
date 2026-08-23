@@ -9,7 +9,7 @@
 //   - react-hooks/refs
 //   - react-hooks/set-state-in-effect
 // これらのパターンは「安全な理由付きの使用」として設計確定済みなので
-// ルール違反として扱わない (詳しい経緯は docs/issues.md を参照)。
+// ルール違反として扱わない (詳しい経緯は docs/audit/issues-legacy.md を参照)。
 // -----------------------------------------------------------------------------
 
 import nextConfig from 'eslint-config-next';
@@ -37,10 +37,10 @@ const config = [
       // JSX 内で日本語文字列を許容 (react/no-unescaped-entities は日本語で誤検出多発)
       'react/no-unescaped-entities': 'off',
       // 既存の stale closure 対策 (Ref に render 中同期セット) を許容
-      // (詳しい経緯は docs/issues.md を参照)
+      // (詳しい経緯は docs/audit/issues-legacy.md を参照)
       'react-hooks/refs': 'off',
       // useEffect 内での破損 LocalStorage 復旧・hydration 直後の同期は必要
-      // (詳しい経緯は docs/issues.md を参照)
+      // (詳しい経緯は docs/audit/issues-legacy.md を参照)
       'react-hooks/set-state-in-effect': 'off'
     }
   }

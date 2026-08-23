@@ -641,7 +641,7 @@ render") を新規混入させた。
 > - `next/image` 導入で Modrinth PNG icon の WebP 変換有効化
 > - useCallback 12 関数ラップで AppContext useMemo が正しく機能
 > **調査手法:**
-> - 計画書 (`docs/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/diff.md`) と現状の実装の 3 者突き合わせ
+> - 計画書 (`docs/planning/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/audit/diff-vite-vs-nextjs.md`) と現状の実装の 3 者突き合わせ
 > - `pnpm exec tsc --noEmit` (エラー 0 件確認)
 > - `pnpm build` 実行 (17.7 秒完走、警告 0 件)
 > - `pnpm audit` (脆弱性 0 件確認)
@@ -712,7 +712,7 @@ render") を新規混入させた。
 - **影響:**
   - Vercel Environment Variables で `MODRINTH_USER_AGENT` を設定しても、**Route Handler 経由 (`/api/modrinth/*` = クライアント側 fetchModrinth 経由の全リクエスト)** に反映されない
   - Modrinth 側から「meaningful UA が変わってない」と判定され、フォークして運用しても連絡先が Modrinth 側に届かない = **規約遵守違反リスク**
-  - `.env.example` と `docs/DEPLOY.md` で「MODRINTH_USER_AGENT を Vercel で設定してください」と案内しているのに、**半分しか効かない**バグ
+  - `.env.example` と `docs/ops/DEPLOY.md` で「MODRINTH_USER_AGENT を Vercel で設定してください」と案内しているのに、**半分しか効かない**バグ
 - **修正:**
   ```typescript
   const USER_AGENT =
@@ -1153,7 +1153,7 @@ render") を新規混入させた。
   1. `pathname` が `/mod/*` の時は Header を簡略化 (「戻る」ボタンのみ)
   2. BottomNav を非表示
   3. 現状維持 (統一感を優先)
-- **推奨:** 現状維持でも問題ないが、`docs/DEPLOY.md` §5.4 のモバイル確認時にユーザーに判断してもらう。
+- **推奨:** 現状維持でも問題ないが、`docs/ops/DEPLOY.md` §5.4 のモバイル確認時にユーザーに判断してもらう。
 
 ### L4-8. `Toast` が BottomNav と近接 (safe-area-inset-bottom 大きい端末)
 
@@ -1315,7 +1315,7 @@ Route (app)                  Revalidate  Expire
 
 ---
 
-*第4波は 2026-08-21 に計画書 (`docs/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/diff.md`)、実装の 3 者突き合わせで洗い出しました。特に diff.md でも触れられていなかった **C4-1 (USER_AGENT ハードコード)**、**H4-4 (useCallback 未使用 12 関数)**、**M4-6 (trailing slash)**、**M4-7 (dead code)**、**M4-8 (HEAD method)**、**L4-2 (テスト 0 件)** の 6 件は本波で新規発見しました。*
+*第4波は 2026-08-21 に計画書 (`docs/planning/NEXTJS_MIGRATION_PLAN.md`)、diff.md (`docs/audit/diff-vite-vs-nextjs.md`)、実装の 3 者突き合わせで洗い出しました。特に diff.md でも触れられていなかった **C4-1 (USER_AGENT ハードコード)**、**H4-4 (useCallback 未使用 12 関数)**、**M4-6 (trailing slash)**、**M4-7 (dead code)**、**M4-8 (HEAD method)**、**L4-2 (テスト 0 件)** の 6 件は本波で新規発見しました。*
 
 ---
 
@@ -1454,7 +1454,7 @@ Route (app)                  Revalidate  Expire
 35. ✅ **L5-14** diff.md 更新
     - 冒頭に「2026-08-22 更新 notice」を追加
     - 第4波・第5波修正済項目 14 件を表形式で明記
-    - 「現状の未対応バグは docs/issues.md を参照」と誘導
+    - 「現状の未対応バグは docs/audit/issues-legacy.md を参照」と誘導
 
 ## 📊 修正結果集計 (第5波)
 
@@ -1513,8 +1513,8 @@ Route (app)                  Revalidate  Expire
 - 更新: `vercel.json` (冗長設定削除)
 - 更新: `next.config.ts` (optimizePackageImports 整理、remotePatterns 絞り込み)
 - 更新: `.env.example` (cookie 説明追加)
-- 更新: `README.md`, `docs/DEPLOY.md` (Dynamic SSR 記述に更新)
-- 更新: `docs/diff.md` (第4波・第5波修正済 notice 追加)
+- 更新: `README.md`, `docs/ops/DEPLOY.md` (Dynamic SSR 記述に更新)
+- 更新: `docs/audit/diff-vite-vs-nextjs.md` (第4波・第5波修正済 notice 追加)
 > **調査手法:**
 > - 全 49 コードファイル (`app/`, `components/`, `hooks/`, `lib/`, `types.ts`) + 6 config ファイル計 55 個を精査
 > - `pnpm exec tsc --noEmit` → 0 エラー確認
@@ -1882,9 +1882,9 @@ Route (app)                  Revalidate  Expire
   optimizePackageImports: ['react-markdown']  // ← @fortawesome を削除
   ```
 
-### M5-9. `README.md` と `docs/DEPLOY.md` の記述と実装 (H4-5 修正後) の齟齬
+### M5-9. `README.md` と `docs/ops/DEPLOY.md` の記述と実装 (H4-5 修正後) の齟齬
 
-- **箇所:** `README.md` (Home ISR 記述) + `docs/DEPLOY.md:104` (「Home では初期 24 件が SSR/ISR で流し込まれる」)
+- **箇所:** `README.md` (Home ISR 記述) + `docs/ops/DEPLOY.md:104` (「Home では初期 24 件が SSR/ISR で流し込まれる」)
 - **症状:** H4-5 で Home が Dynamic Rendering (cookie 依存) に変わったが、ドキュメント側は「Home 初期 24 件は ISR (5 分キャッシュ)」の記述のまま。
 - **影響:**
   - ドキュメント読者が「Home が静的化される」と誤解 → Vercel 側のキャッシュ挙動を誤診断
@@ -2058,9 +2058,9 @@ Route (app)                  Revalidate  Expire
 - **影響:** 実害無し、可読性低下
 - **修正 (Phase 8 以降):** Phase 完了後にコメント整理
 
-### L5-14. `docs/diff.md` の集計が第4波修正後で outdated
+### L5-14. `docs/audit/diff-vite-vs-nextjs.md` の集計が第4波修正後で outdated
 
-- **箇所:** `docs/diff.md` §11.11 (17 項目) + §12.15 (15 項目) + §1 サマリ
+- **箇所:** `docs/audit/diff-vite-vs-nextjs.md` §11.11 (17 項目) + §12.15 (15 項目) + §1 サマリ
 - **症状:** 第4波で 20 項目が修正されたが diff.md には反映されていない。
   - `<a href>` 数 = 0 → 5
   - `<title>` 重複 → 修正済
@@ -2754,7 +2754,7 @@ function computeConcurrency(totalMods: number): number {
 
 ### 追加バグ 6: issues.md の「grep = 0 件」主張が事実と不一致
 
-- **箇所:** `docs/issues.md` の第6波「判断留保 9 件対応結果」セクション
+- **箇所:** `docs/audit/issues-legacy.md` の第6波「判断留保 9 件対応結果」セクション
 - **症状:** 「`grep -rn -E "Phase [0-9]+|[CHML][0-9]+-[0-9]+"` = **0 件**」と主張していたが、実際は `app/`, `components/`, `hooks/`, `lib/` に限った結果。ルートレベルファイルを含めれば 13 箇所残っていた。**主張と実態の不一致 = ドキュメントバグ**。
 - **修正:** 上記 4 ファイル (types/next.config/eslint.config/globals.css) を整理してから、issues.md の主張を実態に一致させる (本セクションで追記)。
 
@@ -2810,7 +2810,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 > **本波の総件数:** 12 件 (Critical: 2 / High: 5 / Medium: 3 / Low: 2)
 >
 > **前提:** Phase 8 (Dexie 化 + TSQ + Zustand + テスト導入 + 小改善) 完了。
->          計画書と実装の意図的な差分は `diff/phase8.md` に別記録。
+>          計画書と実装の意図的な差分は `docs/audit/diff-phase8.md` に別記録。
 >          このセクションは「実装上のバグ・潜在不具合」を記載する。
 
 ## 📊 45 検査項目の内訳
@@ -2876,7 +2876,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
   - 依存チェックも同様
   - 追加された 104 行のコードが完全に無駄 (Bundle 増加要因)
 - **修正:** Phase 9 の 9-A で `useProfiles.handleToggleMod` を `queryClient.fetchQuery({ queryKey: queryKeys.project(id), queryFn: ... })` に置換 (計画書 §6.5 通り)
-- **差分としても記録:** `diff/phase8.md` D5
+- **差分としても記録:** `docs/audit/diff-phase8.md` D5
 
 ---
 
@@ -2956,7 +2956,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 
 ### H7-5. Playwright config の webServer が CI 上で `pnpm build` を 2 回実行
 
-- **箇所:** `playwright.config.ts:44` + `docs/CI_WORKFLOW.yml`
+- **箇所:** `playwright.config.ts:44` + `docs/ops/CI_WORKFLOW.yml`
 - **症状:** CI では `build` job で `pnpm build` を実行後、`e2e` job で **`webServer.command`** も `'pnpm build && pnpm start ...'` を実行する。**同じ build を 2 回**行う無駄。
 - **影響:**
   - CI 実行時間 +2 分 (Next.js build 分)
@@ -2981,7 +2981,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
   // 表示: Dexie 使用可否 / 最終移行日時 / バックアップ有無・残日数
   // ボタン: 「LocalStorage から復元」
   ```
-- **差分としても記録:** `diff/phase8.md` D4
+- **差分としても記録:** `docs/audit/diff-phase8.md` D4
 
 ### M7-2. `hooks/useProfiles.ts` の `sanitizeLoadedState` re-export が dead code
 
@@ -3093,7 +3093,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 
 ---
 
-*第7波は Phase 8 完了直後の完全検証として全 45 検査項目を実施した結果です。計画書との「意図的な差分」は `diff/phase8.md` に別途記録し、こちらは「実装ミス・潜在不具合」12 件のみを記載しました。C7-1 (新規ユーザー LocalStorage backup) は最も影響が大きいので、Phase 9 冒頭で即対応推奨。*
+*第7波は Phase 8 完了直後の完全検証として全 45 検査項目を実施した結果です。計画書との「意図的な差分」は `docs/audit/diff-phase8.md` に別途記録し、こちらは「実装ミス・潜在不具合」12 件のみを記載しました。C7-1 (新規ユーザー LocalStorage backup) は最も影響が大きいので、Phase 9 冒頭で即対応推奨。*
 
 ---
 
@@ -3111,7 +3111,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 | **H7-2** | 🟠 High | `attachPersister` + `useEffect` パターンから `PersistQueryClientProvider` に切り替え、restore 完了を待って children を render | `lib/query/client.ts`, `components/Providers.tsx` |
 | **H7-3** | 🟠 High | E2E theme-persistence の `.locator('..')` 無効セレクタを `#header-theme-toggle` 直接指定に | `e2e/theme-persistence.spec.ts` |
 | **H7-4** | 🟠 High | `tsconfig.json` から `types: ['vitest/globals', ...]` を削除し `tsconfig.test.json` に分離、実装コードから vitest globals を型的に参照不可能に | `tsconfig.json`, `tsconfig.test.json` (新規), `package.json` (typecheck script) |
-| **H7-5** | 🟠 High | Playwright `webServer.command` を `process.env.CI` で分岐 (CI では `pnpm start` のみ)、CI workflow で build artifact を e2e job に受け渡す仕組み追加 | `playwright.config.ts`, `docs/CI_WORKFLOW.yml` |
+| **H7-5** | 🟠 High | Playwright `webServer.command` を `process.env.CI` で分岐 (CI では `pnpm start` のみ)、CI workflow で build artifact を e2e job に受け渡す仕組み追加 | `playwright.config.ts`, `docs/ops/CI_WORKFLOW.yml` |
 | **M7-1** | 🟡 Medium | Settings に「データベース状態」セクション + `restoreFromLocalStorageBackup` 呼び出しボタン追加 (migratedAt/バックアップ残日数/schemaVersion 表示込み) | `components/SettingsPageClient.tsx` |
 | **M7-2** | 🟡 Medium | `hooks/useProfiles.ts` の `sanitizeLoadedState` re-export を削除 (dead code) | `hooks/useProfiles.ts` |
 | **M7-3** | 🟡 Medium | hydrate useEffect に `if (useProfilesStore.getState().hasHydrated) return;` ガードを追加、React Strict Mode 二重発火を回避 | `hooks/useProfiles.ts` |

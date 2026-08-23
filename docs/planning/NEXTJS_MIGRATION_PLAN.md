@@ -644,7 +644,7 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)   ⏳ リポジトリ側完了
 - [x] Node.js バージョンを **20.x LTS 以上** に固定 (`.nvmrc` に `20` を記載 + `package.json` の `engines.node` に `>=20.0.0` を明記)
 - [x] Vercel アカウントの準備 + GitHub リポジトリ連携 (実際のプロジェクト作成は Phase 7 で実施予定。今回はドキュメント上の準備のみ)
 - [x] `.env.example` を作成 (Modrinth UA / 認証・Vercel 関連の受け皿としてコメント記載)
-- [x] `docs/NEXTJS_MIGRATION_PLAN.md` (本ファイル) を main にマージ (PR #1 で既に反映済み)
+- [x] `docs/planning/NEXTJS_MIGRATION_PLAN.md` (本ファイル) を main にマージ (PR #1 で既に反映済み)
 
 **Phase 0 で追加したファイル:**
 - `.nvmrc` (Node 20 固定)
@@ -1034,8 +1034,8 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)   ⏳ リポジトリ側完了
   - `Allow: /`, `Disallow: /api/`
   - `Sitemap:` に絶対 URL を明示
 - [x] `.env.example` を Vercel 前提の内容に刷新 (`NEXT_PUBLIC_SITE_URL`, `MODRINTH_USER_AGENT` の推奨値と Scope 説明)
-- [x] `docs/DEPLOY.md` を新規作成 (Vercel プロジェクト作成手順・環境変数一覧・7 段階検証チェックリスト・Lighthouse 目標・トラブルシューティング・ロールバック手順)
-- [x] `README.md` に「Vercel デプロイ」節を追加 (docs/DEPLOY.md への導線)
+- [x] `docs/ops/DEPLOY.md` を新規作成 (Vercel プロジェクト作成手順・環境変数一覧・7 段階検証チェックリスト・Lighthouse 目標・トラブルシューティング・ロールバック手順)
+- [x] `README.md` に「Vercel デプロイ」節を追加 (docs/ops/DEPLOY.md への導線)
 
 **ローカル検証結果 (`pnpm build` + `pnpm start`):**
 - ✅ `pnpm exec tsc --noEmit`: 0 エラー
@@ -1068,7 +1068,7 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)   ⏳ リポジトリ側完了
   - `NEXT_PUBLIC_SITE_URL` = `https://<your-vercel-domain>` (もしくはカスタムドメイン)
   - `MODRINTH_USER_AGENT` = 任意の推奨 UA (未設定でもコード内デフォルトあり)
 - [ ] 初回デプロイ実行
-- [ ] `docs/DEPLOY.md` の §5 検証チェックリスト完走:
+- [ ] `docs/ops/DEPLOY.md` の §5 検証チェックリスト完走:
   - 5.1 疎通 (`/`, `/mods`, `/settings`, `/api/health`)
   - 5.2 SSR/SEO (view-source で初期 24 件確認、`/sitemap.xml` に Mod 100 件、`/robots.txt`)
   - 5.3 OGP (Facebook Debugger / Twitter Card Validator / Discord プレビュー)
@@ -1078,12 +1078,12 @@ Phase 7: Vercel 本番検証         ▓ (0.5日)   ⏳ リポジトリ側完了
   - 5.7 Lighthouse (Performance ≥90, Accessibility ≥90, SEO = 100)
   - 5.8 LocalStorage 移行 (旧 `craftforge_state_v2` → 新 `dropmod_state_v2`)
 
-**PR:** `feat(deploy): Phase 7 - Vercel 本番デプロイ設定 (vercel.json + sitemap/robots + OGP + セキュリティヘッダ + docs/DEPLOY.md)`
+**PR:** `feat(deploy): Phase 7 - Vercel 本番デプロイ設定 (vercel.json + sitemap/robots + OGP + セキュリティヘッダ + docs/ops/DEPLOY.md)`
 
 **DoD:**
 - ✅ リポジトリ側の全設定が投入済
 - ✅ ローカル `pnpm build` + `pnpm start` で全エンドポイントが期待通り動作
-- ⏳ Vercel 本番 URL で `docs/DEPLOY.md` §5 の全チェックが完走 (ユーザー実施)
+- ⏳ Vercel 本番 URL で `docs/ops/DEPLOY.md` §5 の全チェックが完走 (ユーザー実施)
 - ⏳ Lighthouse スコアが基準達成 (ユーザー実施)
 - ⏳ OGP スニペットが Facebook Debugger で正しく展開 (ユーザー実施)
 
@@ -1364,7 +1364,7 @@ main
 - [ ] Lighthouse Performance ≥ 90, SEO = 100
 - [ ] LocalStorage の旧データ (`dropmod_state_v2` / `craftforge_state_v2`) が正しく復元
 - [ ] iOS Safari + Android Chrome + Desktop Chrome/Firefox でレイアウト崩れなし
-- [ ] `docs/NEXTJS_MIGRATION_PLAN.md` に完了マーク
+- [ ] `docs/planning/NEXTJS_MIGRATION_PLAN.md` に完了マーク
 
 ---
 

@@ -72,7 +72,7 @@ export const useConfirmStore = create<ConfirmStoreState>((set) => ({
       //    呼び出し元は「ユーザーがキャンセルした」と区別不能。
       //    → Promise.all([confirm(opt1), confirm(opt2)]) のような並列使用は非推奨。
       //    現状は同一 UI 排他仕様のため実害無しだが、将来並列 confirm が必要になれば
-      //    キュー化を検討 (issues/phase9.md B18 参照)。
+      //    キュー化を検討 (docs/audit/issues-phase9.md B18 参照)。
       if (pendingResolve) {
         if (typeof console !== 'undefined' && typeof console.warn === 'function') {
           console.warn(

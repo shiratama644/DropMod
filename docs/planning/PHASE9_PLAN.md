@@ -4,7 +4,7 @@
 > **対象コミット:** `arena/01a01fcf-dropmod` (Phase 8 完了 + 第7波修正完了時点、HEAD `3780f28`)
 > **現行構成:** Next.js 16.3.2 + React 19.2.8 + TS 5 + Tailwind 4 + Dexie 4 + TanStack Query 5 + Zustand 5 + vitest 3
 > **目標構成:** 上記 + **AppContext 完全撤去** + **operationsStore (zipExport/zipImport/depCheck 3 分割)** + **msw 2.15** + **カバレッジ per-module 目標達成**
-> **本計画書の位置づけ:** `PHASE8_PLAN.md` の後継。Phase 8 完了レポート §Phase 9 推奨タスク、`diff/phase8.md` の未実装項目 (D2 AppContext 撤去 / D3 coverage 底上げ)、第7波 issues.md の中期対応項目を統合。
+> **本計画書の位置づけ:** `PHASE8_PLAN.md` の後継。Phase 8 完了レポート §Phase 9 推奨タスク、`docs/audit/diff-phase8.md` の未実装項目 (D2 AppContext 撤去 / D3 coverage 底上げ)、第7波 issues.md の中期対応項目を統合。
 
 ---
 
@@ -83,7 +83,7 @@ Phase 9 はこの 2 点を集中的に解消する。副次目標として第7�
 - 📚 **operationsStore 3 slice**: `useZipExportStore` / `useZipImportStore` / `useDepCheckStore`。既存 hooks はそれらの shim になる
 - 🧪 **テストカバレッジ 60% 達成**: lib/store 90% / hooks 70% / components 50% / lib/modrinth 65% (per-module thresholds)
 - 🔬 **msw 導入**: Modrinth API を network レベルで mock、テストが real fetch 経路と整合
-- 📊 **再レンダー削減の実測記録**: `docs/PHASE9_PROFILER.md` に before/after 数値と screenshot
+- 📊 **再レンダー削減の実測記録**: `docs/complete/PHASE9_PROFILER.md` に before/after 数値と screenshot
 - 🌐 **オフライン UX 追加**: E-2 キャッシュヒットバッジ、docs アップデート
 
 ### 1.3 Non-Goals (Phase 9 でやらないこと)
@@ -155,7 +155,7 @@ Phase 8 完了時点の `pnpm test:coverage` 結果:
 
 ### 2.4 CI 状況
 
-- `docs/CI_WORKFLOW.yml` に完成された workflow はあるが、**未配置** (GitHub App 権限制約、`docs/CI_SETUP.md` に手順記載済)
+- `docs/ops/CI_WORKFLOW.yml` に完成された workflow はあるが、**未配置** (GitHub App 権限制約、`docs/ops/CI_SETUP.md` に手順記載済)
 - 実運用開始は「ユーザーが `.github/workflows/ci.yml` に配置」した後
 - Playwright は Sandbox で Chromium install 不可 → CI 側でのみ実行
 
@@ -266,7 +266,7 @@ __tests__/
 | **9-A** | AppContext 撤去 | 2 日 | 4 コンポーネント Zustand 直接参照化、AppContext.tsx stub 化 | Phase 8-C 完了 |
 | **9-B** | operationsStore 3 分割 | 1.5 日 | zipExport/zipImport/depCheck store + shim hooks | 9-A 完了 (推奨、独立でも可) |
 | **9-C** | テスト強化 (msw + 各 hooks/components) | 2.5 日 | msw handlers/server、hooks/components/modrinth テスト、coverage 60% 達成 | 9-A/9-B 完了後 |
-| **9-D** | 再レンダー検証 | 0.5 日 | `docs/PHASE9_PROFILER.md` (before/after 数値記録) | 9-A/9-B 完了後 |
+| **9-D** | 再レンダー検証 | 0.5 日 | `docs/complete/PHASE9_PROFILER.md` (before/after 数値記録) | 9-A/9-B 完了後 |
 | **9-E** | 小改善バンドル | 0.5 日 | E-2 キャッシュヒットバッジ、docs 更新、diff.md 反映 | 全体並行 |
 | **合計** | | **~7 日** | | |
 
@@ -768,7 +768,7 @@ coverage: {
 - ✅ `pnpm test:coverage` 全体 60%+ 達成
 - ✅ per-module thresholds 全て pass
 - ✅ msw の `onUnhandledRequest: 'error'` 設定で「テスト中に実 API を叩くバグ」を即検出
-- ✅ 全新規テストが CI (docs/CI_WORKFLOW.yml 配置後) で pass
+- ✅ 全新規テストが CI (docs/ops/CI_WORKFLOW.yml 配置後) で pass
 
 ### 7.7 リスク & 軽減策
 
@@ -795,7 +795,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
    - 「プロファイル切替」時の再レンダー数
    - 「Mod 追加」時の再レンダー数
 2. **after の記録**: Phase 9-A/B 完了後 (`arena/01a01fcf-dropmod` HEAD) で同シナリオを記録
-3. **比較レポート作成**: `docs/PHASE9_PROFILER.md` に screenshot + 数値表
+3. **比較レポート作成**: `docs/complete/PHASE9_PROFILER.md` に screenshot + 数値表
 
 ### 8.3 期待値
 
@@ -815,7 +815,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 
 ### 8.5 DoD
 
-- ✅ `docs/PHASE9_PROFILER.md` 作成、before/after 数値表 + 分析
+- ✅ `docs/complete/PHASE9_PROFILER.md` 作成、before/after 数値表 + 分析
 - ✅ 少なくとも 1 シナリオで 70% 以下達成
 - ✅ 未達の場合は原因分析 + Phase 10 対応方針を記載
 
@@ -830,10 +830,10 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 | **9-E.1** | E-2: キャッシュヒットバッジ (「🌐 X 分前のデータ」表示) | 60 分 | 9-C 完了後 (テストと同時に) |
 | **9-E.2** | E-4: Markdown 内画像を `<Image>` に (Modrinth CDN 限定) | 45 分 | なし |
 | **9-E.3** | E-5: ローディングスケルトン強化 (Mod カード grid の shimmer) | 30 分 | なし |
-| **9-E.4** | docs/diff.md 更新 (Phase 8 実施後の状態反映) | 30 分 | Phase 9 全体完了後 |
-| **9-E.5** | docs/PHASE8_COMPLETE.md 更新 (Phase 9 実施結果を追記) | 20 分 | Phase 9 全体完了後 |
+| **9-E.4** | docs/audit/diff-vite-vs-nextjs.md 更新 (Phase 8 実施後の状態反映) | 30 分 | Phase 9 全体完了後 |
+| **9-E.5** | docs/complete/PHASE8_COMPLETE.md 更新 (Phase 9 実施結果を追記) | 20 分 | Phase 9 全体完了後 |
 | **9-E.6** | README.md 更新 (技術スタック表に msw 追加) | 10 分 | 9-C 完了後 |
-| **9-E.7** | `docs/CI_SETUP.md` に配置後の動作確認手順追加 (実運用開始判定に) | 20 分 | ユーザー配置後 |
+| **9-E.7** | `docs/ops/CI_SETUP.md` に配置後の動作確認手順追加 (実運用開始判定に) | 20 分 | ユーザー配置後 |
 | **9-E.8** | `next.config.ts` の `optimizePackageImports` に @tanstack/react-query を追加検討 | 15 分 | 効果測定込み |
 
 ### 9.2 スコープ判断基準
@@ -845,7 +845,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 
 - ✅ 上記 8 タスクのうち **少なくとも 5 個** を Phase 9 完了時までに実装
 - ✅ 各タスクは独立コミット
-- ✅ 実装しなかった項目は `docs/PHASE10_CANDIDATES.md` に記録
+- ✅ 実装しなかった項目は `docs/planning/PHASE10_CANDIDATES.md` に記録
 
 ---
 
@@ -882,7 +882,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 8. `git diff .archive/vite/` = 空
 
 **Phase 9 完了時に追加:**
-9. `docs/PHASE9_PROFILER.md` の数値記載
+9. `docs/complete/PHASE9_PROFILER.md` の数値記載
 10. `grep -rn 'useAppContext' app/ components/ hooks/ lib/` = 0
 11. 全 sub-phase の DoD が満たされている
 
@@ -905,7 +905,7 @@ Phase 8 の DoD (計画書 §10.1) で「Context 時代の 70% 以下」を挙�
 | msw の onUnhandledRequest: 'error' でテストが赤くなる | 🟠 Med | 🟡 Med | handlers.ts で Modrinth 全 endpoint 網羅、必要なら `.use()` で override |
 | カバレッジ 60% に届かない | 🟠 Med | 🟡 Med | Phase 9-C の最後で不足領域を追加テスト、達成できなければ threshold を 50% に緩和し issue 記録 |
 | Bundle 目標超過 (963 → 980 KB+) | 🟢 Low | 🟢 Low | 各 sub-phase 完了時に計測、超過なら Zustand slice の subscribe pattern 再検討 |
-| CI ワークフロー配置後にコケる (ユーザー環境依存) | 🟠 Med | 🟡 Med | `docs/CI_SETUP.md` に troubleshooting 追加、初回 green まで対話サポート |
+| CI ワークフロー配置後にコケる (ユーザー環境依存) | 🟠 Med | 🟡 Med | `docs/ops/CI_SETUP.md` に troubleshooting 追加、初回 green まで対話サポート |
 
 ### 11.2 sub-phase 単位のロールバック手順
 
@@ -963,7 +963,7 @@ graph TD
 | 9-A | Phase 8 + 第7波修正完了 | 4 コンポーネント Zustand 直接化、AppContext stub | 9-B (hooks も同じパターンで shim 化)、9-C (テストが store 直接扱える) |
 | 9-B | 9-A 完了 | `lib/store/{zipExport,zipImport,depCheck}.ts` + shim hooks | 9-C (hook integration test で store も検証) |
 | 9-C | 9-A/9-B | `__tests__/mocks/`, `__tests__/hooks/`, `__tests__/components/`, `__tests__/lib/modrinth/`, coverage 60%+ | 9-D (自動テストで再レンダー数を数値化) |
-| 9-D | 9-A/9-B | `docs/PHASE9_PROFILER.md` | Phase 10 の再レンダー最適化の baseline |
+| 9-D | 9-A/9-B | `docs/complete/PHASE9_PROFILER.md` | Phase 10 の再レンダー最適化の baseline |
 | 9-E | 特になし | 小改善コミット × 5+ | UX 継続改善 |
 
 ---
@@ -973,10 +973,10 @@ graph TD
 ### 13.1 Phase 9 全体 DoD
 
 - ✅ 5 つの sub-phase (9-A/B/C/D/E) すべてで各 DoD が満たされている
-- ✅ `docs/issues.md` に Phase 9 完了記録追記 (第8波として)
-- ✅ `docs/PHASE9_COMPLETE.md` 作成 (Phase 8 と同じ品質)
-- ✅ `docs/PHASE9_PROFILER.md` 作成 (before/after 数値)
-- ✅ `diff/phase9.md` 作成 (計画書との差分記録、Phase 8 と同じ品質)
+- ✅ `docs/audit/issues-legacy.md` に Phase 9 完了記録追記 (第8波として)
+- ✅ `docs/complete/PHASE9_COMPLETE.md` 作成 (Phase 8 と同じ品質)
+- ✅ `docs/complete/PHASE9_PROFILER.md` 作成 (before/after 数値)
+- ✅ `docs/audit/diff-phase9.md` 作成 (計画書との差分記録、Phase 8 と同じ品質)
 - ✅ `README.md` の技術スタック表に msw 追加
 - ✅ Vite 版 (`.archive/vite/`) 全期間非破壊
 - ✅ 判断留保 = 0 件 (発生時は都度対応)
@@ -1058,10 +1058,10 @@ graph TD
 - [React DevTools Profiler](https://react.dev/reference/react/Profiler)
 
 ### 15.2 前段の計画書
-- `docs/PHASE8_PLAN.md` — Phase 8 の詳細計画
-- `docs/PHASE8_COMPLETE.md` — Phase 8 完了レポート
-- `docs/issues.md` — 第1〜7波の 152+ バグ記録 + 対応
-- `diff/phase8.md` — Phase 8 実装と計画書の差分 (D1-D6)
+- `docs/planning/PHASE8_PLAN.md` — Phase 8 の詳細計画
+- `docs/complete/PHASE8_COMPLETE.md` — Phase 8 完了レポート
+- `docs/audit/issues-legacy.md` — 第1〜7波の 152+ バグ記録 + 対応
+- `docs/audit/diff-phase8.md` — Phase 8 実装と計画書の差分 (D1-D6)
 
 ### 15.3 リサーチ結果 (2026-08-23 確認)
 - **msw 最新版**: 2.15.0 (2026-07 published)
@@ -1142,7 +1142,7 @@ export function useAppContext(): never {
   throw new Error(
     '[DropMod] useAppContext() は Phase 9 で撤去されました。' +
       '対応する Zustand store (useProfilesStore/useToastStore/etc.) を直接使ってください。' +
-      '詳細は docs/PHASE9_PLAN.md 付録 A を参照。'
+      '詳細は docs/planning/PHASE9_PLAN.md 付録 A を参照。'
   );
 }
 
@@ -1581,7 +1581,7 @@ screenshot 保存 → `docs/PHASE9_PROFILER_after/*.png`
 
 ### D.4 レポート作成
 
-`docs/PHASE9_PROFILER.md`:
+`docs/complete/PHASE9_PROFILER.md`:
 
 ```markdown
 # Phase 9 再レンダー測定レポート
@@ -1635,7 +1635,7 @@ screenshot 保存 → `docs/PHASE9_PROFILER_after/*.png`
 | 6 前半 | 9-C.3-2 | useZipExport / useZipImport / useDependencyCheck test |
 | 6 後半 | 9-C.4 | component tests (ModCard/NewProfile/Confirm/Header/CustomDropdown) |
 | 7 前半 | 9-C.5 | lib/db, lib/query 補完 + coverage threshold 全 pass |
-| 7 後半 | 9-D + 9-E | Profiler 測定 + `docs/PHASE9_PROFILER.md` + 小改善バンドル |
+| 7 後半 | 9-D + 9-E | Profiler 測定 + `docs/complete/PHASE9_PROFILER.md` + 小改善バンドル |
 
 **バッファ:** +1〜2 日 (デバッグ・レビュー・追加調整用)
 
@@ -1645,4 +1645,4 @@ screenshot 保存 → `docs/PHASE9_PROFILER_after/*.png`
 
 *本計画書は Phase 8 + 第7波修正完了の状態を起点に、ユーザー確定事項に基づき作成された Phase 9 の実装可能な粒度の作業計画です。各 sub-phase 開始時にこの計画書を再確認し、実際の実装で判明した知見を都度追記していきます。*
 
-*完了後は `docs/PHASE9_COMPLETE.md` (完了レポート) + `diff/phase9.md` (計画書との差分) + `docs/PHASE9_PROFILER.md` (再レンダー測定) の 3 ドキュメントを追加予定。*
+*完了後は `docs/complete/PHASE9_COMPLETE.md` (完了レポート) + `docs/audit/diff-phase9.md` (計画書との差分) + `docs/complete/PHASE9_PROFILER.md` (再レンダー測定) の 3 ドキュメントを追加予定。*

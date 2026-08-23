@@ -1090,8 +1090,8 @@ graph TD
 ### 13.1 Phase 8 全体 DoD
 
 - ✅ 5 つの sub-phase (8-A/B/C/D/E) のすべてで各 DoD が満たされている
-- ✅ `docs/issues.md` に Phase 8 完了記録が追記されている
-- ✅ `docs/NEXTJS_MIGRATION_PLAN.md` の「Post-Phase 8」記述が完了マークに更新されている
+- ✅ `docs/audit/issues-legacy.md` に Phase 8 完了記録が追記されている
+- ✅ `docs/planning/NEXTJS_MIGRATION_PLAN.md` の「Post-Phase 8」記述が完了マークに更新されている
 - ✅ `docs/PHASE8_BUNDLE_STATS.md` に before/after のビルドサイズ diff が記録されている
 - ✅ `README.md` の技術スタック表に Dexie / TanStack Query / Zustand / vitest が追記されている
 - ✅ Vite 版 (`.archive/vite/`) は全期間非破壊
@@ -1146,10 +1146,10 @@ graph TD
 - [fake-indexeddb](https://github.com/dumbmatter/fakeIndexedDB)
 
 ### 14.2 前段の計画書
-- `docs/NEXTJS_MIGRATION_PLAN.md` — Phase 0〜7 の Next.js 移行計画 (完了)
-- `docs/issues.md` — 第1〜6波 140 件のバグ記録 (すべて解決済)
-- `docs/diff.md` — Vite 版と Next.js 版の差分記録
-- `docs/DEPLOY.md` — Vercel デプロイ手順
+- `docs/planning/NEXTJS_MIGRATION_PLAN.md` — Phase 0〜7 の Next.js 移行計画 (完了)
+- `docs/audit/issues-legacy.md` — 第1〜6波 140 件のバグ記録 (すべて解決済)
+- `docs/audit/diff-vite-vs-nextjs.md` — Vite 版と Next.js 版の差分記録
+- `docs/ops/DEPLOY.md` — Vercel デプロイ手順
 
 ### 14.3 参考実装
 - Next.js Query + Dexie: [TkDodo's blog - Offline First React Query](https://tkdodo.eu/blog/offline-react-query)

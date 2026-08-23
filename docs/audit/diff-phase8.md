@@ -1,11 +1,11 @@
 # Phase 8 実装と計画書 (PHASE8_PLAN.md) の差分
 
 > **監査日:** 2026-08-23 (JST)
-> **対象:** `docs/PHASE8_PLAN.md` (計画書 v1) vs. 実装 (コミット `12117e1` 〜 `5747545`)
+> **対象:** `docs/planning/PHASE8_PLAN.md` (計画書 v1) vs. 実装 (コミット `12117e1` 〜 `5747545`)
 > **監査者:** Arena Agent (完全検証プロセスとして 45 項目を検査)
 >
 > このファイルは「意図的な設計変更」「未実装項目」「計画書との齟齬」を記録するもので、
-> **バグそのものは `docs/issues.md` の第7波** に記録している。
+> **バグそのものは `docs/audit/issues-legacy.md` の第7波** に記録している。
 > 差分の各項目は「なぜ計画書と異なる実装になったか」「対応方針」を明記する。
 
 ## 🎯 差分サマリ
@@ -17,7 +17,7 @@
 | D3 | §8.3 coverage threshold | **緩和** (Phase 9 で底上げ) | 60% → 5%。テスト土台のみ整備、実装網羅は次段 | Phase 9 で hooks/components テスト追加後に段階的に上げる |
 | D4 | §11.3 Settings 復元ボタン | **未実装** | `restoreFromLocalStorageBackup` は用意されたが UI 未実装 | Phase 9 の 9-B (Settings UI 拡張) で対応、緊急時は DevTools コンソールから呼べる |
 | D5 | §6.5 useProfiles/useDependencyCheck の TSQ 化 | **部分実装** | `useProjectQuery/useVersionsQuery/useProjectsBatchQuery` は作られたが未利用 | Phase 9 の 9-A で hook 側から呼び出しに置換 |
-| D6 | §8.6 GitHub Actions ワークフロー配置 | **配置方法変更** | `.github/workflows/ci.yml` に置けず `docs/CI_WORKFLOW.yml` に | GitHub App の workflow permission 制約、`docs/CI_SETUP.md` に手順記載済み |
+| D6 | §8.6 GitHub Actions ワークフロー配置 | **配置方法変更** | `.github/workflows/ci.yml` に置けず `docs/ops/CI_WORKFLOW.yml` に | GitHub App の workflow permission 制約、`docs/ops/CI_SETUP.md` に手順記載済み |
 
 ---
 
@@ -247,9 +247,9 @@ Phase 9 の 9-A で以下を実装:
 ### 実装
 
 Arena エージェント (GitHub App) には `.github/workflows/` の書き込み権限がないため:
-- ワークフロー本体を `docs/CI_WORKFLOW.yml` として保管
-- 手動セットアップ手順を `docs/CI_SETUP.md` に記載
-- ユーザーが `cp docs/CI_WORKFLOW.yml .github/workflows/ci.yml` してコミットする流れ
+- ワークフロー本体を `docs/ops/CI_WORKFLOW.yml` として保管
+- 手動セットアップ手順を `docs/ops/CI_SETUP.md` に記載
+- ユーザーが `cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml` してコミットする流れ
 
 ### 変更理由
 
@@ -296,4 +296,4 @@ GitHub App の `workflows` scope を要求すると Arena Agent のパーミッ�
 
 ---
 
-*本 diff/phase8.md は Phase 8 の実装完了後のレビューで発見された「計画書との齟齬」を全て記録したものです。バグ (実装ミスや潜在的不具合) は `docs/issues.md` の第7波 (Phase 8 レビュー) セクションに別途記載しています。両者を突き合わせることで Phase 9 の計画に反映できます。*
+*本 docs/audit/diff-phase8.md は Phase 8 の実装完了後のレビューで発見された「計画書との齟齬」を全て記録したものです。バグ (実装ミスや潜在的不具合) は `docs/audit/issues-legacy.md` の第7波 (Phase 8 レビュー) セクションに別途記載しています。両者を突き合わせることで Phase 9 の計画に反映できます。*

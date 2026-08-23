@@ -1,5 +1,5 @@
 /**
- * Playwright E2E テスト設定 (Sub-Phase 8-D)
+ * Playwright E2E テスト設定 (Sub-Phase 8-D、Phase 10-P4 追記)
  *
  * 実行方針:
  *   - ローカル (Sandbox 含む) では Chromium バイナリ install 不可な環境がある
@@ -9,12 +9,31 @@
  * webServer は pnpm build → pnpm start を裏で立ち上げる。
  * CI では reuseExistingServer=false で毎回新規起動、
  * ローカルでは既存サーバー流用可能。
+ *
+ * ブラウザプロジェクト方針 (Phase 10-P4):
+ *   - `chromium-desktop`: Desktop Chrome 相当の Chromium
+ *   - `chromium-mobile`:  モバイル viewport を持たせた Chromium (Pixel 7)
+ *     ※ 従来は devices['iPhone 14'] を使っていたが、それは
+ *        `defaultBrowserType: 'webkit'` なので WebKit バイナリを要求する。
+ *        ローカル環境 (playwright install chromium のみ実行) では起動不能。
+ *        Pixel 7 は `defaultBrowserType: 'chromium'` なので chromium 単独で動く。
+ *   - どちらも launchOptions.args に `--disable-gpu` を渡し、GPU プロセスが
+ *     使えない sandbox / Docker 環境で headless_shell が SIGTRAP で落ちるのを
+ *     防ぐ (実際に発生した現象: "GPU process isn't usable. Goodbye.")。
  */
 
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3000;
 const BASE_URL = `http://localhost:${PORT}`;
+
+// sandbox / Docker で headless Chromium の GPU プロセスが起動失敗する対策。
+// SwiftShader も含めて GPU 使用を完全にオフにする。
+const CHROMIUM_LAUNCH_ARGS = [
+  '--disable-gpu',
+  '--disable-software-rasterizer',
+  '--disable-dev-shm-usage'
+];
 
 export default defineConfig({
   testDir: './e2e',
@@ -40,11 +59,19 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
-      use: { ...devices['Desktop Chrome'] }
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { args: CHROMIUM_LAUNCH_ARGS }
+      }
     },
     {
       name: 'chromium-mobile',
-      use: { ...devices['iPhone 14'] }
+      // Pixel 7 は defaultBrowserType='chromium' なので WebKit 不要。
+      // 従来 iPhone 14 だと WebKit バイナリを要求してローカルで起動不能だった。
+      use: {
+        ...devices['Pixel 7'],
+        launchOptions: { args: CHROMIUM_LAUNCH_ARGS }
+      }
     }
   ],
   webServer: {

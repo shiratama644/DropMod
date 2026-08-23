@@ -1,12 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks, react-hooks/immutability --
- *   このファイル固有の設計:
- *   render 関数を counter が register し、Counted の render 本体で hook を呼ぶ。
- *   全ての renderXxx() は「Counted の render 中でのみ」呼ばれる (React の hook
- *   ルールは実行時に守られる) が、ESLint 静的解析は関数名から判定するため誤検知する。
- *   Wrapper で子コンポーネントを包む方式では親が hook を呼ばないので count が
- *   増えないという React の subtree 最適化に阻まれるため、この設計を採用した。
- *   また Counted.displayName の代入も react-hooks/immutability が誤検知する。
- */
 /**
  * Phase 9-D: 再レンダー計測テスト
  *
@@ -65,11 +56,19 @@ function createRenderCounter(): RenderCounter {
       for (const k of Object.keys(counts)) counts[k] = 0;
     },
     register(id, renderFn) {
+      /* eslint-disable react-hooks/immutability --
+       * B36 修正: ファイル全体 disable から個別 disable (register 関数内のみ)
+       *   に縮小した状態。この関数内の以下 2 箇所で immutability が発火するが、
+       *   いずれも意図的:
+       *   1. counts[id] += 1 → render count 計測 (テスト専用の意図した副作用)
+       *   2. Counted.displayName = ... → React 公式で許可される慣用パターン
+       */
       const Counted: React.FC = () => {
         counts[id] = (counts[id] ?? 0) + 1;
         return <>{renderFn()}</>;
       };
       Counted.displayName = `Counted(${id})`;
+      /* eslint-enable react-hooks/immutability */
       return Counted;
     }
   };
@@ -162,24 +161,28 @@ function LegacyProvider({ children }: { children: React.ReactNode }) {
 
 // consumer コンポーネント (Context 版): hook 呼び出しを render 関数として export。
 // register() の中で「Counted の本体」に埋め込まれる。
-const renderCtxThemeBadge = () => {
+//
+// B36 修正: 関数名を `use` prefix にすることで react-hooks/rules-of-hooks の
+//   命名規則を満たし、ファイル冒頭の broad な eslint-disable を削除。
+//   これらは実際 Counted の render body 内で呼ばれる = React の hook rules 遵守。
+const useCtxThemeBadgeRender = () => {
   const { theme } = useLegacyCtx();
   return <span data-testid="ctx-theme">{theme}</span>;
 };
-const renderCtxProfileHeader = () => {
+const useCtxProfileHeaderRender = () => {
   const { profiles, currentProfileId } = useLegacyCtx();
   const current = profiles.find((p) => p.id === currentProfileId);
   return <span data-testid="ctx-profile">{current?.name}</span>;
 };
-const renderCtxDepWarningBadge = () => {
+const useCtxDepWarningBadgeRender = () => {
   const { hasDepWarning } = useLegacyCtx();
   return <span data-testid="ctx-dep">{hasDepWarning ? 'warn' : 'ok'}</span>;
 };
-const renderCtxZipProgress = () => {
+const useCtxZipProgressRender = () => {
   const { zipProgress } = useLegacyCtx();
   return <span data-testid="ctx-zip">{zipProgress}</span>;
 };
-const renderCtxToastCount = () => {
+const useCtxToastCountRender = () => {
   const { toasts } = useLegacyCtx();
   return <span data-testid="ctx-toasts">{toasts.length}</span>;
 };
@@ -214,25 +217,25 @@ function ZipProgressAdvancer() {
 // Zustand 版 (実装コード直接使用、Phase 9-A/9-B の状態を再現)
 // ============================================================================
 
-const renderStoreThemeBadge = () => {
+const useStoreThemeBadgeRender = () => {
   const theme = useProfilesStore((s) => s.theme);
   return <span data-testid="store-theme">{theme}</span>;
 };
-const renderStoreProfileHeader = () => {
+const useStoreProfileHeaderRender = () => {
   const profiles = useProfilesStore((s) => s.profiles);
   const currentProfileId = useProfilesStore((s) => s.currentProfileId);
   const current = profiles.find((p) => p.id === currentProfileId);
   return <span data-testid="store-profile">{current?.name ?? '?'}</span>;
 };
-const renderStoreDepWarningBadge = () => {
+const useStoreDepWarningBadgeRender = () => {
   const hasDepWarning = useDepCheckStore((s) => s.hasDepWarning);
   return <span data-testid="store-dep">{hasDepWarning ? 'warn' : 'ok'}</span>;
 };
-const renderStoreZipProgress = () => {
+const useStoreZipProgressRender = () => {
   const zipProgress = useZipExportStore((s) => s.zipState.progress);
   return <span data-testid="store-zip">{zipProgress}</span>;
 };
-const renderStoreToastCount = () => {
+const useStoreToastCountRender = () => {
   const toasts = useToastStore((s) => s.toasts);
   return <span data-testid="store-toasts">{toasts.length}</span>;
 };
@@ -256,11 +259,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
   it('Scenario A: theme 変更で、theme 非購読コンポーネントの再レンダー数を大幅削減', () => {
     // ---- Context 版 ----
     const ctxCounter = createRenderCounter();
-    const CtxTheme = ctxCounter.register('ctx-theme', renderCtxThemeBadge);
-    const CtxProfile = ctxCounter.register('ctx-profile', renderCtxProfileHeader);
-    const CtxDep = ctxCounter.register('ctx-dep', renderCtxDepWarningBadge);
-    const CtxZip = ctxCounter.register('ctx-zip', renderCtxZipProgress);
-    const CtxToasts = ctxCounter.register('ctx-toasts', renderCtxToastCount);
+    const CtxTheme = ctxCounter.register('ctx-theme', useCtxThemeBadgeRender);
+    const CtxProfile = ctxCounter.register('ctx-profile', useCtxProfileHeaderRender);
+    const CtxDep = ctxCounter.register('ctx-dep', useCtxDepWarningBadgeRender);
+    const CtxZip = ctxCounter.register('ctx-zip', useCtxZipProgressRender);
+    const CtxToasts = ctxCounter.register('ctx-toasts', useCtxToastCountRender);
     const CtxHarness = () => (
       <LegacyProvider>
         <ThemeToggler />
@@ -281,11 +284,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
 
     // ---- Zustand 版 ----
     const storeCounter = createRenderCounter();
-    const StoreTheme = storeCounter.register('store-theme', renderStoreThemeBadge);
-    const StoreProfile = storeCounter.register('store-profile', renderStoreProfileHeader);
-    const StoreDep = storeCounter.register('store-dep', renderStoreDepWarningBadge);
-    const StoreZip = storeCounter.register('store-zip', renderStoreZipProgress);
-    const StoreToasts = storeCounter.register('store-toasts', renderStoreToastCount);
+    const StoreTheme = storeCounter.register('store-theme', useStoreThemeBadgeRender);
+    const StoreProfile = storeCounter.register('store-profile', useStoreProfileHeaderRender);
+    const StoreDep = storeCounter.register('store-dep', useStoreDepWarningBadgeRender);
+    const StoreZip = storeCounter.register('store-zip', useStoreZipProgressRender);
+    const StoreToasts = storeCounter.register('store-toasts', useStoreToastCountRender);
     const StoreHarness = () => (
       <>
         <StoreTheme />
@@ -336,11 +339,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
   it('Scenario B: Toast 追加で、非購読コンポーネントの再レンダーが 0 回', () => {
     // ---- Context 版 ----
     const ctxCounter = createRenderCounter();
-    const CtxTheme = ctxCounter.register('ctx-theme', renderCtxThemeBadge);
-    const CtxProfile = ctxCounter.register('ctx-profile', renderCtxProfileHeader);
-    const CtxDep = ctxCounter.register('ctx-dep', renderCtxDepWarningBadge);
-    const CtxZip = ctxCounter.register('ctx-zip', renderCtxZipProgress);
-    const CtxToasts = ctxCounter.register('ctx-toasts', renderCtxToastCount);
+    const CtxTheme = ctxCounter.register('ctx-theme', useCtxThemeBadgeRender);
+    const CtxProfile = ctxCounter.register('ctx-profile', useCtxProfileHeaderRender);
+    const CtxDep = ctxCounter.register('ctx-dep', useCtxDepWarningBadgeRender);
+    const CtxZip = ctxCounter.register('ctx-zip', useCtxZipProgressRender);
+    const CtxToasts = ctxCounter.register('ctx-toasts', useCtxToastCountRender);
     const CtxHarness = () => (
       <LegacyProvider>
         <ToastAdder />
@@ -361,11 +364,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
 
     // ---- Zustand 版 ----
     const storeCounter = createRenderCounter();
-    const StoreTheme = storeCounter.register('store-theme', renderStoreThemeBadge);
-    const StoreProfile = storeCounter.register('store-profile', renderStoreProfileHeader);
-    const StoreDep = storeCounter.register('store-dep', renderStoreDepWarningBadge);
-    const StoreZip = storeCounter.register('store-zip', renderStoreZipProgress);
-    const StoreToasts = storeCounter.register('store-toasts', renderStoreToastCount);
+    const StoreTheme = storeCounter.register('store-theme', useStoreThemeBadgeRender);
+    const StoreProfile = storeCounter.register('store-profile', useStoreProfileHeaderRender);
+    const StoreDep = storeCounter.register('store-dep', useStoreDepWarningBadgeRender);
+    const StoreZip = storeCounter.register('store-zip', useStoreZipProgressRender);
+    const StoreToasts = storeCounter.register('store-toasts', useStoreToastCountRender);
     const StoreHarness = () => (
       <>
         <StoreTheme />
@@ -404,11 +407,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
   it('Scenario C: 高頻度な zipProgress 更新で、非購読コンポーネントの再レンダーが 0', () => {
     // ---- Context 版 ----
     const ctxCounter = createRenderCounter();
-    const CtxTheme = ctxCounter.register('ctx-theme', renderCtxThemeBadge);
-    const CtxProfile = ctxCounter.register('ctx-profile', renderCtxProfileHeader);
-    const CtxDep = ctxCounter.register('ctx-dep', renderCtxDepWarningBadge);
-    const CtxZip = ctxCounter.register('ctx-zip', renderCtxZipProgress);
-    const CtxToasts = ctxCounter.register('ctx-toasts', renderCtxToastCount);
+    const CtxTheme = ctxCounter.register('ctx-theme', useCtxThemeBadgeRender);
+    const CtxProfile = ctxCounter.register('ctx-profile', useCtxProfileHeaderRender);
+    const CtxDep = ctxCounter.register('ctx-dep', useCtxDepWarningBadgeRender);
+    const CtxZip = ctxCounter.register('ctx-zip', useCtxZipProgressRender);
+    const CtxToasts = ctxCounter.register('ctx-toasts', useCtxToastCountRender);
     const CtxHarness = () => (
       <LegacyProvider>
         <ZipProgressAdvancer />
@@ -429,11 +432,11 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
 
     // ---- Zustand 版 ----
     const storeCounter = createRenderCounter();
-    const StoreTheme = storeCounter.register('store-theme', renderStoreThemeBadge);
-    const StoreProfile = storeCounter.register('store-profile', renderStoreProfileHeader);
-    const StoreDep = storeCounter.register('store-dep', renderStoreDepWarningBadge);
-    const StoreZip = storeCounter.register('store-zip', renderStoreZipProgress);
-    const StoreToasts = storeCounter.register('store-toasts', renderStoreToastCount);
+    const StoreTheme = storeCounter.register('store-theme', useStoreThemeBadgeRender);
+    const StoreProfile = storeCounter.register('store-profile', useStoreProfileHeaderRender);
+    const StoreDep = storeCounter.register('store-dep', useStoreDepWarningBadgeRender);
+    const StoreZip = storeCounter.register('store-zip', useStoreZipProgressRender);
+    const StoreToasts = storeCounter.register('store-toasts', useStoreToastCountRender);
     const StoreHarness = () => (
       <>
         <StoreTheme />
@@ -471,7 +474,7 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
   // ----------------------------------------------------------------
   it('Zustand: 同じ selector 結果 (Object.is 等価) では再レンダーしない', () => {
     const counter = createRenderCounter();
-    const Counted = counter.register('c', renderStoreThemeBadge);
+    const Counted = counter.register('c', useStoreThemeBadgeRender);
     render(<Counted />);
     counter.reset();
 
@@ -486,8 +489,8 @@ describe('Phase 9-D: 再レンダー計測 (Context vs Zustand)', () => {
 
   it('Zustand: selector が異なる field でも独立して subscribe できる', () => {
     const counter = createRenderCounter();
-    const CountedTheme = counter.register('theme', renderStoreThemeBadge);
-    const CountedDep = counter.register('dep', renderStoreDepWarningBadge);
+    const CountedTheme = counter.register('theme', useStoreThemeBadgeRender);
+    const CountedDep = counter.register('dep', useStoreDepWarningBadgeRender);
 
     render(
       <>

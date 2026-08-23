@@ -11,6 +11,11 @@ interface CustomDropdownProps {
   onChange: (value: string) => void;
   customClass?: string;
   label?: string;
+  /**
+   * Phase 10-P5: 外側 <label htmlFor=...> と紐付けるため、trigger 要素の
+   * id を外部から指定できるようにする。未指定なら useId() で自動生成。
+   */
+  id?: string;
 }
 
 export const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -19,6 +24,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   onChange,
   customClass = '',
   label = '選択肢',
+  id,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -222,6 +228,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     <div className={`custom-dropdown-container ${customClass}`}>
       <div
         ref={triggerRef}
+        id={id}
         className="custom-dropdown-trigger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         role="combobox"
         tabIndex={0}

@@ -71,6 +71,12 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   // a11y: role/aria + Escape + フォーカストラップ
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  // Phase 10-P5 (a11y/noLabelWithoutControl): 各フィールドに id を紐付けるため
+  // useId() を活用。CustomDropdown は id prop を受け付ける (10-P5 で追加)。
+  const nameInputId = useId();
+  const versionSelectId = useId();
+  const loaderSelectId = useId();
+  const descInputId = useId();
   useModalA11y(isOpen, onClose, dialogRef);
 
   if (!isOpen) return null;
@@ -142,8 +148,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">プロファイル名</label>
+            <label
+              htmlFor={nameInputId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              プロファイル名
+            </label>
             <input
+              id={nameInputId}
               type="text"
               required
               value={name}
@@ -153,8 +165,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">Minecraft バージョン</label>
+            <label
+              htmlFor={versionSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              Minecraft バージョン
+            </label>
             <CustomDropdown
+              id={versionSelectId}
               options={versionOptions}
               selectedValue={version}
               onChange={setVersion}
@@ -163,8 +181,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">Modローダー</label>
+            <label
+              htmlFor={loaderSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              Modローダー
+            </label>
             <CustomDropdown
+              id={loaderSelectId}
               options={[
                 { label: 'Fabric', value: 'Fabric' },
                 { label: 'Forge', value: 'Forge' },
@@ -178,8 +202,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">説明 (任意)</label>
+            <label
+              htmlFor={descInputId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              説明 (任意)
+            </label>
             <input
+              id={descInputId}
               type="text"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}

@@ -35,6 +35,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const nameInputId = useId();
   const descInputId = useId();
   const modalTitleId = useId();
+  // Phase 10-P5 (a11y/noLabelWithoutControl): CustomDropdown を <label htmlFor>
+  // で紐付けるため id を生成。CustomDropdown は id prop を受け付ける (10-P5 で追加)。
+  const versionSelectId = useId();
+  const loaderSelectId = useId();
 
   // モーダルが「閉→開」になった瞬間のみプロファイル値でフォームを初期化。
   // 以前は deps に profile 全体が入っており、モーダルを開いている最中に
@@ -129,10 +133,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">
+            <label
+              htmlFor={versionSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
               Minecraft バージョン
             </label>
             <CustomDropdown
+              id={versionSelectId}
               options={versionOptions}
               selectedValue={version}
               onChange={setVersion}
@@ -142,10 +150,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold theme-text-secondary mb-1">
+            <label
+              htmlFor={loaderSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
               Modローダー
             </label>
             <CustomDropdown
+              id={loaderSelectId}
               options={LOADER_OPTIONS}
               selectedValue={loader}
               onChange={setLoader}

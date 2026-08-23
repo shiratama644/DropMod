@@ -159,6 +159,22 @@ describe('ModCard', () => {
     expect(link.getAttribute('href')).toBe('/mods/proj-1');
   });
 
+  it('自動レイアウトで横長バナーは sm:col-span-2 を付ける', () => {
+    const { container } = render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          description: 'x'.repeat(200),
+          featured_gallery: 'https://example.com/banner.png'
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="auto"
+      />
+    );
+    expect(container.querySelector('a')?.className).toContain('sm:col-span-2');
+  });
+
   it('slug 一致でも追加済み判定される', () => {
     render(
       <ModCard

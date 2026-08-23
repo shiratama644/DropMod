@@ -68,6 +68,18 @@ export function sanitizeSearchQuery(raw: string | string[] | undefined | null): 
   return value.trim().slice(0, 200);
 }
 
+/** 検索一覧の種別タブ (PC 専用。モバイルは BottomNav の「探す」) */
+export const PROJECT_TYPE_TABS: ReadonlyArray<{
+  id: ProjectType;
+  label: string;
+  icon: string;
+}> = [
+  { id: 'mod', label: 'Mods', icon: 'fa-solid fa-cube' },
+  { id: 'modpack', label: 'Modpacks', icon: 'fa-solid fa-boxes-stacked' },
+  { id: 'resourcepack', label: 'Resource Packs', icon: 'fa-solid fa-palette' },
+  { id: 'shader', label: 'Shaders', icon: 'fa-solid fa-wand-sparkles' }
+];
+
 /** 検索結果カードの表示形式 */
 export const SEARCH_LAYOUTS = ['max', '1', '2', '3', 'auto'] as const;
 export type SearchLayout = (typeof SEARCH_LAYOUTS)[number];
@@ -77,7 +89,7 @@ export const SEARCH_LAYOUT_OPTIONS: ReadonlyArray<{ label: string; value: Search
   { label: '1カラム', value: '1' },
   { label: '2カラム', value: '2' },
   { label: '3カラム', value: '3' },
-  { label: '自動', value: 'auto' }
+  { label: '自動 (アスペクト比で再配置)', value: 'auto' }
 ];
 
 export const SEARCH_LAYOUT_STORAGE_KEY = 'dropmod_search_layout';
@@ -98,8 +110,36 @@ export function searchGridClass(layout: SearchLayout): string {
     case '2':
       return 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4';
     case 'auto':
-      return 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 auto-rows-auto';
+      // カラム数は viewport 幅で自動、カード幅は画像アスペクト比で col-span
+      return 'search-grid-auto';
     default:
       return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4';
   }
+}
+
+/**
+ * 「自動」レイアウトのカード幅。
+ * 横長ギャラリーは 2 カラム分、縦長・正方形は 1 カラム。
+ * 画像未ロード時は説明文の長さで仮置きする。
+ */
+export function autoCardSpanClass(input: {
+  descriptionLength: number;
+  hasBanner: boolean;
+  aspectRatio: number | null;
+}): string {
+  const { descriptionLength, hasBanner, aspectRatio } = input;
+  if (aspectRatio != null) {
+    return aspectRatio >= 1.55 ? 'sm:col-span-2' : '';
+  }
+  if (hasBanner && descriptionLength > 160) return 'sm:col-span-2';
+  return '';
+}
+
+/** 「自動」レイアウトのバナー高さ。縦長ほど高く、超横長は低く。 */
+export function autoBannerHeightClass(aspectRatio: number | null): string {
+  if (aspectRatio == null) return 'h-24 sm:h-28';
+  if (aspectRatio >= 2) return 'h-20 sm:h-24';
+  if (aspectRatio >= 1.4) return 'h-24 sm:h-32';
+  if (aspectRatio >= 0.9) return 'h-36 sm:h-44';
+  return 'h-44 sm:h-56';
 }

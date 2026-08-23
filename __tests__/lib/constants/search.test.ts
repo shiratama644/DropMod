@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  PROJECT_TYPE_TABS,
+  autoBannerHeightClass,
+  autoCardSpanClass,
   discoverPathForType,
   discoverPathFromProjectType,
   modrinthProjectUrl,
@@ -78,6 +81,48 @@ describe('searchGridClass', () => {
     expect(searchGridClass('2')).toContain('sm:grid-cols-2');
     expect(searchGridClass('3')).toContain('lg:grid-cols-3');
     expect(searchGridClass('max')).toContain('lg:grid-cols-2');
-    expect(searchGridClass('auto')).toContain('xl:grid-cols-3');
+    expect(searchGridClass('auto')).toBe('search-grid-auto');
+  });
+});
+
+describe('PROJECT_TYPE_TABS', () => {
+  it('4 種別とアイコンを持つ', () => {
+    expect(PROJECT_TYPE_TABS.map((t) => t.id)).toEqual([
+      'mod',
+      'modpack',
+      'resourcepack',
+      'shader'
+    ]);
+    expect(PROJECT_TYPE_TABS.every((t) => t.icon.startsWith('fa-solid '))).toBe(true);
+  });
+});
+
+describe('autoCardSpanClass', () => {
+  it('横長画像は 2 カラム、縦長は 1 カラム', () => {
+    expect(
+      autoCardSpanClass({ descriptionLength: 10, hasBanner: true, aspectRatio: 1.8 })
+    ).toBe('sm:col-span-2');
+    expect(
+      autoCardSpanClass({ descriptionLength: 10, hasBanner: true, aspectRatio: 0.75 })
+    ).toBe('');
+  });
+
+  it('画像未ロード時はバナー+長文だけ仮で横長扱い', () => {
+    expect(
+      autoCardSpanClass({ descriptionLength: 200, hasBanner: true, aspectRatio: null })
+    ).toBe('sm:col-span-2');
+    expect(
+      autoCardSpanClass({ descriptionLength: 20, hasBanner: true, aspectRatio: null })
+    ).toBe('');
+  });
+});
+
+describe('autoBannerHeightClass', () => {
+  it('縦長ほど高く、超横長は低くする', () => {
+    expect(autoBannerHeightClass(2.4)).toContain('h-20');
+    expect(autoBannerHeightClass(1.6)).toContain('h-24');
+    expect(autoBannerHeightClass(1.0)).toContain('h-36');
+    expect(autoBannerHeightClass(0.6)).toContain('h-44');
+    expect(autoBannerHeightClass(null)).toContain('h-24');
   });
 });

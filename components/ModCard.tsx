@@ -5,7 +5,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ModrinthHit, Profile } from '@/types';
-import type { SearchLayout } from '@/lib/constants/search';
+import {
+  autoBannerHeightClass,
+  autoCardSpanClass,
+  type SearchLayout
+} from '@/lib/constants/search';
 
 interface ModCardProps {
   hit: ModrinthHit;
@@ -24,13 +28,6 @@ function formatDownloads(num: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
-}
-
-function autoCardClass(hit: ModrinthHit): string {
-  const long = (hit.description?.length ?? 0) > 140;
-  const hasBanner = Boolean(hit.featured_gallery);
-  if (hasBanner && long) return 'sm:col-span-2';
-  return '';
 }
 
 function clampClass(hit: ModrinthHit, layout: SearchLayout): string {
@@ -58,6 +55,7 @@ export const ModCard: React.FC<ModCardProps> = ({
 
   const [iconFailed, setIconFailed] = useState<boolean>(false);
   const [bannerFailed, setBannerFailed] = useState<boolean>(false);
+  const [bannerAspect, setBannerAspect] = useState<number | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: icon_url 変更検知トリガーとして意図的
   useEffect(() => {
     setIconFailed(false);
@@ -65,6 +63,7 @@ export const ModCard: React.FC<ModCardProps> = ({
   // biome-ignore lint/correctness/useExhaustiveDependencies: featured_gallery 変更検知トリガーとして意図的
   useEffect(() => {
     setBannerFailed(false);
+    setBannerAspect(null);
   }, [hit.featured_gallery]);
   const showIcon = hit.icon_url && !iconFailed;
   const showBanner =
@@ -72,6 +71,16 @@ export const ModCard: React.FC<ModCardProps> = ({
     Boolean(hit.featured_gallery) &&
     !bannerFailed;
   const forceBannerSlot = layout === 'max';
+  const autoSpan =
+    layout === 'auto'
+      ? autoCardSpanClass({
+          descriptionLength: hit.description?.length ?? 0,
+          hasBanner: Boolean(hit.featured_gallery) && !bannerFailed,
+          aspectRatio: bannerAspect
+        })
+      : '';
+  const autoBannerHeight =
+    layout === 'auto' ? autoBannerHeightClass(bannerAspect) : '';
 
   const detailPath = `/mods/${hit.slug || hit.project_id}`;
 
@@ -83,9 +92,7 @@ export const ModCard: React.FC<ModCardProps> = ({
   return (
     <Link
       href={detailPath}
-      className={`mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-        layout === 'auto' ? autoCardClass(hit) : ''
-      }`}
+      className={`mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${autoSpan}`}
     >
       {forceBannerSlot && (
         <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-28 sm:h-36 rounded-t-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 via-slate-800 to-slate-900">
@@ -117,7 +124,11 @@ export const ModCard: React.FC<ModCardProps> = ({
         </div>
       )}
       {!forceBannerSlot && showBanner && hit.featured_gallery && (
-        <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-20 rounded-t-2xl overflow-hidden">
+        <div
+          className={`relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 rounded-t-2xl overflow-hidden ${
+            layout === 'auto' ? autoBannerHeight : 'h-20'
+          }`}
+        >
           <Image
             src={hit.featured_gallery}
             alt=""
@@ -125,6 +136,13 @@ export const ModCard: React.FC<ModCardProps> = ({
             sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
             onError={() => setBannerFailed(true)}
+            onLoad={(e) => {
+              if (layout !== 'auto') return;
+              const img = e.currentTarget;
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setBannerAspect(img.naturalWidth / img.naturalHeight);
+              }
+            }}
           />
         </div>
       )}

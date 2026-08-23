@@ -8,6 +8,7 @@ import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
 import { categoriesForProjectType } from '@/lib/constants/categories';
 import {
+  PROJECT_TYPE_TABS,
   SEARCH_LIMIT,
   SEARCH_LAYOUT_OPTIONS,
   SEARCH_LAYOUT_STORAGE_KEY,
@@ -64,13 +65,6 @@ const PAGINATION_SKELETON_KEYS = [
   'pagination-skeleton-b',
   'pagination-skeleton-c'
 ] as const;
-
-const PROJECT_TYPE_TABS: ReadonlyArray<{ id: ProjectType; label: string }> = [
-  { id: 'mod', label: 'Mods' },
-  { id: 'modpack', label: 'Modpacks' },
-  { id: 'resourcepack', label: 'Resource Packs' },
-  { id: 'shader', label: 'Shaders' }
-];
 
 interface Props {
   /** SSR で取得した初期 24 件 (cookie ベースの実プロファイル) */
@@ -477,7 +471,11 @@ export const HomeInteractive: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1 touch-pan-x">
+        {/* 種別タブは PC のみ。モバイルは BottomNav「探す」から遷移する */}
+        <nav
+          aria-label="プロジェクト種別"
+          className="hidden md:grid grid-cols-4 gap-2"
+        >
           {PROJECT_TYPE_TABS.map((tab) => {
             const isActive = projectType === tab.id;
             return (
@@ -486,17 +484,26 @@ export const HomeInteractive: React.FC<Props> = ({
                 type="button"
                 onClick={() => handleProjectTypeChange(tab.id)}
                 aria-pressed={isActive}
-                className={`btn-hover-effect px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0 ${
                   isActive
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow'
-                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500'
+                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/20'
+                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500 hover:border-emerald-500/40'
                 }`}
               >
-                {tab.label}
+                <span
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base ${
+                    isActive
+                      ? 'bg-slate-950/15 text-slate-950'
+                      : 'bg-emerald-500/15 theme-text-brand'
+                  }`}
+                >
+                  <i className={tab.icon} aria-hidden />
+                </span>
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
 
         {/* Category Filter */}
         <div className="scroll-fade-container">

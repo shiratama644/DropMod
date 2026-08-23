@@ -39,7 +39,8 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
 
   // <div onClick> → <Link href> に変更 (SEO/新規タブ対応)。
   // 詳細 URL は slug 優先 (人間可読)、fallback で project_id。
-  const detailPath = `/mod/${hit.slug || hit.project_id}`;
+  // Phase 9-F 変更: /mod/[slug] → /mods/[slug] (URL 再設計)
+  const detailPath = `/mods/${hit.slug || hit.project_id}`;
 
   // 内側の追加/削除ボタン領域では Link 遷移をキャンセル (Vite 版の onClick
   // stopPropagation と同等挙動)。Link は preventDefault で遷移を止める。

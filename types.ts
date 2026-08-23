@@ -1,5 +1,10 @@
 export type ThemeMode = 'dark' | 'light';
-export type TabName = 'home' | 'mods' | 'settings';
+// Phase 9-F: URL 再設計に伴い 'profile' タブを追加
+//   - 'home'     → /          (簡易ランディング)
+//   - 'mods'     → /mods      (Modrinth 検索一覧、旧 Home のコンテンツ)
+//   - 'profile'  → /profile   (選択中プロファイルの Mod 一覧、旧 /mods のコンテンツ)
+//   - 'settings' → /settings  (変わらず)
+export type TabName = 'home' | 'mods' | 'profile' | 'settings';
 
 export interface ModItem {
   id: string;

@@ -1,11 +1,17 @@
 // -----------------------------------------------------------------------------
-// /mod/[slug] フルページ (RSC + ISR + SEO/OGP)
+// /mods/[slug] フルページ (RSC + ISR + SEO/OGP)
 //
-// - Home からのソフトナビは (.)mod/[slug] にインターセプトされモーダル化される
-// - 直接アクセス / 共有 URL の場合はこのフルページが SSR/ISR で描画される
-// - `generateStaticParams` で人気 100 件を事前生成 (Modrinth の 300 req/min
-//   レート制限に配慮して 100 件に抑制)
-// - `generateMetadata` で og:title / og:image / description を出力 (SEO)
+// Phase 9-F: URL 再設計で /mod/[slug] から /mods/[slug] に移動。
+//   - /mods からのソフトナビは (.)[slug] にインターセプトされモーダル化される
+//     (app/mods/@modal/(.)[slug]/page.tsx)
+//   - 直接アクセス / 共有 URL / 他ページ (/, /profile, /settings) からのクリック
+//     はこのフルページが SSR/ISR で描画される
+//   - `generateStaticParams` で人気 100 件を事前生成 (Modrinth の 300 req/min
+//     レート制限に配慮して 100 件に抑制)
+//   - `generateMetadata` で og:title / og:image / description を出力 (SEO)
+//
+// 旧 URL /mod/[slug] は next.config.ts の redirects() で 301 として
+// /mods/[slug] に永久リダイレクト (SEO 保全)。
 // -----------------------------------------------------------------------------
 
 import type { Metadata } from 'next';
@@ -51,7 +57,7 @@ interface Params {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const canonicalPath = `/mod/${slug}`;
+  const canonicalPath = `/mods/${slug}`;
   try {
     const project = await fetchModrinthProject(slug);
     // layout.tsx の title.template = '%s | DropMod' が自動で ' | DropMod' を

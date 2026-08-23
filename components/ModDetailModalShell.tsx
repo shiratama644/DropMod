@@ -23,7 +23,7 @@ import { useAppAction } from '@/lib/store/appActions';
 //                      背景クリック時に `router.replace('/')` で Home に戻す
 //                      (履歴を上書きするので、複数モーダル遷移後も戻るボタン
 //                       連打で前サイトに戻れる)。
-//   variant="page"   → `/mod/[slug]` を直接開いた場合のフルページ描画。
+//   variant="page"   → `/mods/[slug]` を直接開いた場合のフルページ描画 (Phase 9-F: 旧 /mod/[slug])。
 //                      背景・backdrop なし、閉じるボタンなし。SEO/OGP 対象。
 //
 // project / versions は Server Component 側 (RSC) が既に取得したものを
@@ -82,17 +82,27 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   const handleClose = useCallback(() => {
     if (!isModal) return;
-    // 以前は router.back() を優先していたが、
-    //   Home → Mod A → 閉じる → Mod B → 閉じる → 戻る
-    // を繰り返すと履歴に /mod/A, /mod/B が積み重なり、
-    // ブラウザバック連打で 5〜9 回戻らないと元サイトに戻れない
-    // (履歴スタック汚染) 問題があった。
+    // Phase 9-F: router.back() に統一 (Next.js 公式 Intercepting Routes 推奨パターン)
     //
-    // 対策として router.replace('/') に統一。モーダル履歴エントリを
-    // Home で上書きし、次のモーダルオープン時にはクリーンな状態から始める。
-    // これで Home → Mod A (push) → 閉じる (replace('/')) → Mod B (push)
-    // → 閉じる (replace('/')) → 戻る = 前サイト、が実現する。
-    router.replace('/');
+    // 経緯:
+    //   従来 (Phase 6〜9-E) は router.replace('/') で Home に強制遷移していた。
+    //   理由は「Home → Mod A → 閉じる → Mod B → 閉じる → 戻る」の連続で
+    //   履歴が汚染されるのを防ぐため。
+    //
+    //   しかし副作用として、閉じるたびに Home ページの SSR (Modrinth 検索 fetch)
+    //   が走り、モーダルを閉じるだけで数百 ms 〜 数秒かかる UX 問題があった
+    //   (ユーザー指摘の「バツボタン押してから戻るまで時間がかかる」)。
+    //
+    // 新 URL 設計 (Phase 9-F) では:
+    //   /mods (一覧) → /mods/[slug] (モーダル、Intercepting) の 1 段構造。
+    //   /mods は Static 相当で SSR fetch は初回のみ (以降キャッシュ)、
+    //   router.back() で軽量に戻れる (RSC ペイロードなし、既存 DOM を再利用)。
+    //
+    // 連続オープン時の履歴汚染は、
+    //   /mods → /mods/A (push) → back () → /mods → /mods/B (push) → back () → /mods
+    // となり、常に「/mods に戻る」1 手で済む。ブラウザバックボタンでも
+    // 1 回押せば前サイトに戻れる (Home ではなく /mods でユーザーに違和感なし)。
+    router.back();
   }, [isModal, router]);
 
   // Esc キー・focus trap は modal バリアント時のみ有効
@@ -140,10 +150,10 @@ export const ModDetailModalShell: React.FC<Props> = ({
       setIsTogglePending(true);
       try {
         await handleToggleMod(projectId, e);
-        // 追加/削除操作後、モーダル表示中はそのまま閉じる (Vite 版と同じ UX)
-        // handleClose と同じ理由で router.replace('/') に統一。
+        // 追加/削除操作後、モーダル表示中はそのまま閉じる (Vite 版と同じ UX)。
+        // Phase 9-F: router.replace('/') → router.back() に変更 (handleClose と同理由)。
         if (isModal) {
-          router.replace('/');
+          router.back();
         }
       } finally {
         setIsTogglePending(false);
@@ -436,12 +446,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </button>
         ) : (
           // <button router.push> → <Link href> に変更
+          // Phase 9-F: フルページ (variant="page") 時の戻り先は /mods (Mod 一覧) に。
+          //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
-            href="/"
+            href="/mods"
             className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
-            <i className="fa-solid fa-house" aria-hidden />
-            ホームに戻る
+            <i className="fa-solid fa-magnifying-glass" aria-hidden />
+            Mod 一覧に戻る
           </Link>
         )}
         {latestFile && (
@@ -525,17 +537,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
     );
   }
 
-  // variant="page": フルページ描画。上部にホームへのブレッドクラム的リンクを付与
+  // variant="page": フルページ描画。上部に Mod 一覧へのブレッドクラム的リンクを付与
+  // Phase 9-F: 戻り先を / (Home) → /mods (Mod 一覧) に変更
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
       <div className="mb-3">
         {/* <button router.push> ではなく <Link href> で戻る (SEO/新規タブ対応) */}
         <Link
-          href="/"
+          href="/mods"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
-          ホームに戻る
+          Mod 一覧に戻る
         </Link>
       </div>
       {innerCard}

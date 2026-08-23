@@ -139,15 +139,15 @@ describe('ModCard', () => {
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
-  it('Link href は /mod/{slug} を優先', () => {
+  it('Link href は /mods/{slug} を優先 (Phase 9-F: 旧 /mod/{slug})', () => {
     render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mod/sodium');
+    expect(link.getAttribute('href')).toBe('/mods/sodium');
   });
 
-  it('slug 無しなら /mod/{project_id} で fallback', () => {
+  it('slug 無しなら /mods/{project_id} で fallback (Phase 9-F)', () => {
     render(
       <ModCard
         hit={{ ...baseHit, slug: '' as unknown as string }}
@@ -156,7 +156,7 @@ describe('ModCard', () => {
       />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mod/proj-1');
+    expect(link.getAttribute('href')).toBe('/mods/proj-1');
   });
 
   it('slug 一致でも追加済み判定される', () => {

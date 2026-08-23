@@ -3,7 +3,17 @@
  */
 import { test, expect } from '@playwright/test';
 
-const PAGES = ['/', '/mods', '/settings', '/api/health', '/sitemap.xml', '/robots.txt', '/manifest.webmanifest'];
+// Phase 9-F: URL 再設計に伴い /profile を追加、/mods は Modrinth 検索一覧に役割変更
+const PAGES = [
+  '/',
+  '/mods',
+  '/profile',
+  '/settings',
+  '/api/health',
+  '/sitemap.xml',
+  '/robots.txt',
+  '/manifest.webmanifest'
+];
 
 for (const path of PAGES) {
   test(`GET ${path} returns 200`, async ({ request }) => {

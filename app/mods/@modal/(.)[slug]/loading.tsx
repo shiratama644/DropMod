@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
-// Intercepting Modal ISR MISS 時の Suspense fallback (スケルトン)
+// Intercepting Modal ISR MISS 時の Suspense fallback (スケルトン、Phase 9-F)
 //
-// Home でクリック直後、キャッシュ MISS 時に RSC ペイロード fetch (通常 200-500ms)
+// /mods でクリック直後、キャッシュ MISS 時に RSC ペイロード fetch (通常 200-500ms)
 // を待つ間の無音を回避。モーダル外枠 (fixed inset-0 + backdrop) 込みの skeleton
 // を返してユーザーに「モーダルを開こうとしている」ことを可視化する。
 // -----------------------------------------------------------------------------
 
-export default function InterceptedModLoading() {
+export default function InterceptedModsModalLoading() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"

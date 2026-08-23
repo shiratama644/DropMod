@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// /mod/[slug] 404 ページ
+// /mods/[slug] 404 ページ (Phase 9-F: URL 再設計で旧 /mod/[slug] から移動)
 //
 // Modrinth に存在しない slug (削除・改名・タイポ) を直接開いた場合の表示。
 // -----------------------------------------------------------------------------
@@ -19,11 +19,11 @@ export default function ModNotFound() {
         </p>
         <div>
           <Link
-            href="/"
+            href="/mods"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <i className="fa-solid fa-house" aria-hidden />
-            ホームに戻る
+            <i className="fa-solid fa-magnifying-glass" aria-hidden />
+            Mod 一覧に戻る
           </Link>
         </div>
       </div>

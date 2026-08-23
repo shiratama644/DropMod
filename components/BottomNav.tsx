@@ -22,13 +22,20 @@ interface NavItemConfig {
 // <button onClick> ではなく <Link href> ベースに変更。
 // 右クリック/中クリックで新規タブ、SEO クローラが辿れる、Next.js の自動 prefetch が
 // 効くようになる。onClick は Link と併用可能 (スクロール制御のため残存)。
+//
+// Phase 9-F: URL 再設計に伴い 4 タブ構成に変更。
+//   - Home  (/)         → 簡易ランディング
+//   - 探す  (/mods)     → Modrinth 検索一覧 (旧 Home のコンテンツ)
+//   - 現在  (/profile)  → 選択中プロファイル (旧 /mods のコンテンツ、badge 対象)
+//   - 設定  (/settings) → 変わらず
 const NAV_ITEMS: readonly NavItemConfig[] = [
   { id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
+  { id: 'mods', label: '探す', icon: 'fa-solid fa-magnifying-glass', href: '/mods' },
   {
-    id: 'mods',
-    label: '選択中のMod',
+    id: 'profile',
+    label: '現在のMod',
     icon: 'fa-solid fa-cubes',
-    href: '/mods',
+    href: '/profile',
     showBadge: true
   },
   { id: 'settings', label: '設定', icon: 'fa-solid fa-gear', href: '/settings' },
@@ -58,7 +65,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t shadow-2xl"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="max-w-md mx-auto grid grid-cols-3 h-16">
+      <div className="max-w-md mx-auto grid grid-cols-4 h-16">
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;
           return (

@@ -305,9 +305,9 @@ export const HomeInteractive: React.FC<Props> = ({
                 </div>
               </div>
             </div>
-            {/* モバイル用ショートカット (Vite 版と同挙動) */}
+            {/* モバイル用ショートカット (Phase 9-F: /mods → /profile URL 再設計) */}
             <Link
-              href="/mods"
+              href="/profile"
               className="sm:hidden px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-lg transition"
             >
               確認

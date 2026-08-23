@@ -95,24 +95,27 @@ export const viewport: Viewport = {
 };
 
 /**
- * Root Layout
+ * Root Layout (Phase 9-F 更新: URL 再設計で @modal Parallel Route を撤去)
+ *
+ * 従来 (Phase 6 〜 Phase 9-E): Root Layout に `@modal` Parallel Route slot を
+ *   置いて、Home からのソフトナビで `/mod/[slug]` を全ページ共通でモーダル表示
+ *   していた。
+ *
+ * Phase 9-F 以降:
+ *   - URL 構造を再設計 (/mod/[slug] → /mods/[slug])
+ *   - Intercepting Route の scope は「/mods 一覧 → /mods/[slug]」に限定
+ *   - Parallel Route slot は `app/mods/layout.tsx` に移設
+ *   - Root layout は children のみを描画するシンプルな構造に
+ *   - 他ページ (/, /profile, /settings) から /mods/[slug] クリック時は
+ *     通常のフルページ遷移 (SEO 保全 + シンプルな挙動)
  *
  * AppShell (Client Component) が Toast/Confirm/theme を管理し、
  * その内側で children (各ページ) を描画する。
- *
- * `@modal` Parallel Route slot の役割:
- *   - `/mod/[slug]` を Home からクリック時 → `@modal/(.)mod/[slug]` に
- *     インターセプトされ、Home ページの上にモーダルとして重ねて描画
- *   - 直接 URL アクセス時 → 通常の `/mod/[slug]/page.tsx` がフルページ描画
- *   - `@modal/default.tsx` = 何もない状態、`@modal/[...catchAll]/page.tsx`
- *     = 他ページに遷移した際にモーダルを閉じる (両方必須)
  */
 export default function RootLayout({
-  children,
-  modal
+  children
 }: {
   children: ReactNode;
-  modal: ReactNode;
 }) {
   // theme FOUC (SSR dark → hydration 後 light) を回避する inline script。
   // hydration 前に LocalStorage を読み取り、'light' が保存されていれば
@@ -145,10 +148,7 @@ try {
              AppShell の中で useQueryClient() を使うため、AppShell 全体を
              PersistQueryClientProvider の中に入れる必要がある。 */}
         <QueryProviders>
-          <AppShell>
-            {children}
-            {modal}
-          </AppShell>
+          <AppShell>{children}</AppShell>
         </QueryProviders>
       </body>
     </html>

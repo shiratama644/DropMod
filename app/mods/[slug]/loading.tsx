@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// /mod/[slug] streaming fallback (Suspense boundary)
+// /mods/[slug] streaming fallback (Suspense boundary、Phase 9-F: 旧 /mod/[slug])
 //
 // RSC 側で fetch が完了するまでの間、シンプルなスケルトンを描画する。
 // Modrinth API がレイテンシー高めの時 (地域によっては 400ms 超) に UX を担保。

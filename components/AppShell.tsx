@@ -51,9 +51,15 @@ interface Props {
   children: ReactNode;
 }
 
+// Phase 9-F: URL 再設計に伴い 4 タブ構成
+//   - Home  (/)         → 'home'
+//   - 探す  (/mods)     → 'mods'      (Modrinth 検索一覧)
+//   - 現在  (/profile)  → 'profile'   (選択中プロファイル、旧 /mods の役割)
+//   - 設定  (/settings) → 'settings'
 const PATH_TO_TAB: Record<string, TabName> = {
   '/': 'home',
   '/mods': 'mods',
+  '/profile': 'profile',
   '/settings': 'settings'
 };
 
@@ -151,10 +157,14 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
 
   // ---------- Modal-open scroll lock ----------
-  // /mod/[slug] Parallel Route モーダル表示中も背景スクロールをロック。
+  // /mods/[slug] Intercepting Route モーダル表示中も背景スクロールをロック。
   // Vite 版 App.tsx にあった isModDetailModalOpen ガードが Next.js 版で消失していた
-  // 回帰バグを usePathname() ベースで復元 (URL が /mod/* かどうかで判定)。
-  const isModDetailOpen = pathname?.startsWith('/mod/') ?? false;
+  // 回帰バグを usePathname() ベースで復元 (URL が /mods/xxx かどうかで判定)。
+  //
+  // Phase 9-F: URL 再設計で /mod/[slug] → /mods/[slug] に変更。
+  //   /mods 単独 (一覧) はロック対象外なので trailing `/` を含めて判定
+  //   (/mods/xxx = 詳細のみマッチ、/mods = 一覧はマッチしない)。
+  const isModDetailOpen = pathname?.startsWith('/mods/') ?? false;
 
   const isAnyModalOpen =
     isNewProfileModalOpen ||
@@ -214,15 +224,17 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   }, [confirm]);
 
   // ---------- Tab switching (URL-based) ----------
-  // pathname が `/mod/*` の時はモーダル or フルページの詳細画面: BottomNav 側では
-  // 「Mod 詳細を開く前にいた画面」に相当するタブを active にしたい。
-  // 単純化のため、詳細画面時は home をアクティブ扱いにする (Home からのソフト
-  // ナビが最も一般的な導線のため)。
-  // dead code だった PATH_TO_TAB テーブルを実際に使う (可読性向上)。
-  // /mod/[slug] などマッチしないパスは 'home' にフォールバック (Home が最も
-  // 一般的な起点タブのため、Mod 詳細画面でも Home が active 表示になる)。
+  // pathname が `/mods/xxx` の時はモーダル or フルページの詳細画面: BottomNav 側では
+  // 「Mod 詳細を開く前にいた画面」に相当するタブ ('mods') を active にしたい。
+  //
+  // Phase 9-F: URL 再設計後の判定
+  //   - /mods/xxx  → 'mods' タブ (Mod 詳細は /mods 由来の遷移が主)
+  //   - その他マッチしないパスは 'home' フォールバック
   const activeTab: TabName = useMemo(() => {
-    return PATH_TO_TAB[pathname ?? '/'] ?? 'home';
+    const path = pathname ?? '/';
+    // /mods/[slug] の場合は 'mods' タブを active に (Mod 詳細はモーダル or フルページ)
+    if (path.startsWith('/mods/')) return 'mods';
+    return PATH_TO_TAB[path] ?? 'home';
   }, [pathname]);
 
   // BottomNav/Header は <Link href> で遷移し、

@@ -3,8 +3,8 @@
 //
 // SEO スコア 100 と検索エンジン発見性のため追加。
 //
-// - 静的ルート (/, /mods, /settings) を必ず出力
-// - 人気 Mod 100 件の /mod/[slug] を動的に追加 (build/ISR 時に生成)
+// - 静的ルート (/, /mods, /profile, /settings) を必ず出力 (Phase 9-F: URL 再設計)
+// - 人気 Mod 100 件の /mods/[slug] を動的に追加 (build/ISR 時に生成)
 // - Modrinth が到達不可の場合は静的ルートのみを返す (build 失敗を回避)
 //
 // baseUrl の解決は layout.tsx の metadataBase と同じロジックを使う。
@@ -43,14 +43,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     {
       url: `${baseUrl}/`,
       lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 1.0
+      changeFrequency: 'weekly',
+      priority: 0.8
     },
     {
       url: `${baseUrl}/mods`,
       lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.6
+      changeFrequency: 'hourly',
+      priority: 1.0
+    },
+    {
+      url: `${baseUrl}/profile`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.4
     },
     {
       url: `${baseUrl}/settings`,
@@ -72,7 +78,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((h) => h.slug || h.project_id)
       .filter((s): s is string => Boolean(s))
       .map((slug) => ({
-        url: `${baseUrl}/mod/${slug}`,
+        // Phase 9-F: /mod/[slug] → /mods/[slug] (URL 再設計)
+        url: `${baseUrl}/mods/${slug}`,
         lastModified: now,
         changeFrequency: 'weekly' as const,
         priority: 0.7

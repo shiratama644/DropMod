@@ -3,7 +3,8 @@
 //
 // /nonexistent など全ページのマッチしない URL に対する Next.js デフォルト 404
 // (英語) を、日本語カスタム UI に置換。
-// `app/mod/[slug]/not-found.tsx` は Mod 詳細専用なのでこちらは全般用。
+// `app/mods/[slug]/not-found.tsx` は Mod 詳細専用なのでこちらは全般用。
+// (Phase 9-F: URL 再設計で app/mod/[slug]/not-found.tsx → app/mods/[slug]/not-found.tsx)
 // -----------------------------------------------------------------------------
 
 import Link from 'next/link';
@@ -36,8 +37,15 @@ export default function NotFound() {
             href="/mods"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
+            <i className="fa-solid fa-magnifying-glass" aria-hidden />
+            Mod を探す
+          </Link>
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
             <i className="fa-solid fa-cubes" aria-hidden />
-            選択中の Mod
+            現在の Mod
           </Link>
         </div>
       </div>

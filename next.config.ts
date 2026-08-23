@@ -116,6 +116,22 @@ const nextConfig: NextConfig = {
         headers: imageCorsHeaders
       }
     ];
+  },
+  // Phase 9-F: URL 再設計に伴う 308 リダイレクト (SEO 保全)
+  //   - /mod/[slug]  (旧 Mod 詳細、単数)     → /mods/[slug]  (新 Mod 詳細、複数)
+  //     旧 /mods (選択中プロファイル) は「Modrinth 検索一覧」に役割変更されたため、
+  //     /mods 自体はリダイレクトしない (BottomNav から /profile に案内)。
+  //   - permanent: true = 308 Permanent Redirect (検索エンジンの旧 URL cache を
+  //     置き換え、被リンク先の Value を新 URL に集約)
+  async redirects() {
+    return [
+      // 旧 Mod 詳細 (単数) → 新 Mod 詳細 (複数): SEO 上の Value を保全
+      {
+        source: '/mod/:slug',
+        destination: '/mods/:slug',
+        permanent: true
+      }
+    ];
   }
 };
 

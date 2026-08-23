@@ -19,15 +19,18 @@ const MAX_RETRY_AFTER_MS = 30_000; // 過剰な待機防止の上限
 // ==========================================================================
 // LRU + TTL キャッシュ実装
 // ==========================================================================
+// Phase 10-P5 (noExplicitAny): cache 値は呼び出し側 (fetchModrinth) の
+//   ジェネリクス T で型付けされる。cache 内部では any → unknown で持ち、
+//   呼び出し側で as T に narrowing する形。
 interface CacheEntry {
-  value: any;
+  value: unknown;
   expiresAt: number;
 }
 
 const apiCache = new Map<string, CacheEntry>();
 
 /** LRU: Map の insertion order を利用。get する度に末尾へ移動する。 */
-function cacheGet(key: string): any | undefined {
+function cacheGet(key: string): unknown | undefined {
   const entry = apiCache.get(key);
   if (!entry) return undefined;
   if (entry.expiresAt < Date.now()) {
@@ -40,7 +43,7 @@ function cacheGet(key: string): any | undefined {
   return entry.value;
 }
 
-function cacheSet(key: string, value: any): void {
+function cacheSet(key: string, value: unknown): void {
   apiCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
   // 上限超過時は最古 (先頭) を削除
   while (apiCache.size > CACHE_MAX_ENTRIES) {
@@ -60,11 +63,13 @@ export function clearApiCache(): void {
 // ==========================================================================
 
 /** params のキーを昇順にソートしてから stringify (キャッシュキー安定化) */
-function stableStringify(obj: Record<string, any>): string {
-  const keys = Object.keys(obj).sort();
-  const sorted: Record<string, any> = {};
+function stableStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+  const src = obj as Record<string, unknown>;
+  const keys = Object.keys(src).sort();
+  const sorted: Record<string, unknown> = {};
   keys.forEach((k) => {
-    sorted[k] = obj[k];
+    sorted[k] = src[k];
   });
   return JSON.stringify(sorted);
 }
@@ -92,10 +97,14 @@ function parseRetryAfterMs(headerValue: string | null): number | null {
 // ==========================================================================
 // 本体
 // ==========================================================================
-export async function fetchModrinth<T = any>(
+// Phase 10-P5 (noExplicitAny): <T = unknown> にすると呼び出し側で型指定が
+//   必須になり広範囲の boilerplate 増加。ここは Modrinth API との境界層で
+//   呼び出し側が具体型 (ModrinthProject / ModrinthVersion 等) を明示するのが
+//   正しい使い方なので、default = unknown で unsafe な暗黙 any を防ぐ。
+export async function fetchModrinth<T = unknown>(
   endpoint: string,
-  params: Record<string, any> = {},
-  options: { noCache?: boolean; signal?: AbortSignal; method?: string; body?: any } = {}
+  params: Record<string, unknown> = {},
+  options: { noCache?: boolean; signal?: AbortSignal; method?: string; body?: unknown } = {}
 ): Promise<T> {
   const method = options.method || 'GET';
   const cacheKey =
@@ -143,9 +152,12 @@ export async function fetchModrinth<T = any>(
     let res: Response | null = null;
     try {
       res = await fetch(proxyUrl, reqInit);
-    } catch (e: any) {
-      if (e?.name === 'AbortError') throw e;
-      lastErrorMsg = `Proxy fetch failed: ${e?.message || e}`;
+    } catch (e: unknown) {
+      // TS 4.4+ の catch は default unknown。AbortError は再 throw、
+      // それ以外は message を extract して lastErrorMsg に記録。
+      const err = e as { name?: string; message?: string } | null;
+      if (err?.name === 'AbortError') throw e;
+      lastErrorMsg = `Proxy fetch failed: ${err?.message || String(e)}`;
     }
 
     // 2) プロキシが 5xx/JSONでない を返した場合、直接 Modrinth へフォールバック
@@ -154,9 +166,10 @@ export async function fetchModrinth<T = any>(
       try {
         res = await fetch(directUrl, reqInit);
         usedDirect = true;
-      } catch (e: any) {
-        if (e?.name === 'AbortError') throw e;
-        lastErrorMsg = `Direct fetch failed: ${e?.message || e}`;
+      } catch (e: unknown) {
+        const err = e as { name?: string; message?: string } | null;
+        if (err?.name === 'AbortError') throw e;
+        lastErrorMsg = `Direct fetch failed: ${err?.message || String(e)}`;
         res = null;
       }
     }
@@ -286,7 +299,7 @@ const DEFAULT_BATCH_SIZE = 100;
  * @param ids       全 ID 配列 (100 個ずつに分割される)
  * @param batchSize デフォルト 100
  */
-export async function fetchModrinthBatch<T = any>(
+export async function fetchModrinthBatch<T = unknown>(
   endpoint: '/versions' | '/projects',
   ids: string[],
   batchSize: number = DEFAULT_BATCH_SIZE
@@ -307,7 +320,7 @@ export async function fetchModrinthBatch<T = any>(
  * POST /version_files (SHA1 ハッシュ照合) を chunk 分割で呼ぶ。
  * 各 batch の Record<sha1, ver> を merge して返す。
  */
-export async function fetchModrinthVersionFilesBatch<T = any>(
+export async function fetchModrinthVersionFilesBatch<T = unknown>(
   hashes: string[],
   algorithm: 'sha1' | 'sha512' = 'sha1',
   batchSize: number = DEFAULT_BATCH_SIZE

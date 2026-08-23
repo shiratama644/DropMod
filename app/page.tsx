@@ -1,27 +1,30 @@
 // ============================================================================
-// Landing Page (/) — Phase 9.5-B で骨組みを本格ランディングに刷新
+// Landing Page (/) — Phase 9.5-C 完成版
 //
-// 従来 (Phase 9-F): 中央寄せの簡易ランディング (アイコン + タイトル + CTA 3 個)
-// 新 (Phase 9.5-B): Modrinth トップページ相当の多段構成の骨組み
-//   ├─ 1. Hero            (9.5-C で Three.js 3D シーンに置換予定)
-//   ├─ 2. Feature Grid    (4 個の特徴カード)
-//   ├─ 3. Stats Counter   (9.5-C で Anime.js count-up 予定)
-//   ├─ 4. Screenshot Showcase (SVG プレースホルダー)
+// 6 セクション構成:
+//   ├─ 1. Hero            (Three.js 3D シーン背景 + h1 + CTA)
+//   ├─ 2. Feature Grid    (4 個、scroll-reveal + stagger)
+//   ├─ 3. Stats Counter   (3 個、count-up アニメ)
+//   ├─ 4. Screenshot Showcase (SVG placeholder、9.5-D で実キャプチャに置換予定)
 //   ├─ 5. Community       (GitHub リンク、star 数は静的表示)
 //   └─ 6. Final CTA       (大型 CTA + fine print)
 //
-// Phase 9.5-B ではセクション枠 + テキストコンテンツのみ実装。
-// アニメーション (Anime.js scroll reveal / Hero 3D / Stats count-up) は
-// 全て Phase 9.5-C で追加する。
-//
-// 【重要】Phase 9.5-B の絶対原則:
+// 【重要】Phase 9.5 の絶対原則:
 //   - このページ (/) のみ AppShell 側で Header が非表示になる
 //   - BottomNav は表示継続、ハンバーガーメニュー等はランディングでも使える
 //   - SSR HTML に <h1>DropMod</h1> が必ず含まれる (SEO)
 //   - 各セクションに適切な <h2>/<h3> 階層 (SEO + a11y)
+//   - Reduced Motion 環境では全アニメスキップ (WCAG 2.1 SC 2.3.3)
+//
+// Client 経由の要素 (Hero3D / scroll-reveal / count-up) は個別 Client
+// コンポーネントに切り出し、この page.tsx 自体は Server Component として
+// 静的レンダリング可能なままにする (SEO ベース HTML の完全性維持)。
 // ============================================================================
 
 import Link from 'next/link';
+import { HeroBackground } from '@/components/landing/HeroBackground';
+import { RevealSection } from '@/components/landing/RevealSection';
+import { AnimatedStats } from '@/components/landing/AnimatedStats';
 
 export const metadata = {
   title: 'DropMod - Minecraft Mod Downloader',
@@ -33,27 +36,26 @@ export default function LandingPage() {
   return (
     <main className="flex-1 w-full">
       {/* ==================================================================
-           1. Hero
-           9.5-C で背景に Three.js 3D シーン (Minecraft cube ランダム配置) を
-           dynamic import で追加予定。
-           現状は静的 Hero (グラデーション背景 + 大きなタイトル + CTA)。
+           1. Hero (Three.js 3D 背景 + h1 + CTA)
       ================================================================== */}
       <section
-        className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24"
+        className="relative overflow-hidden pt-12 sm:pt-20 pb-16 sm:pb-24 min-h-[85vh] flex items-center"
         aria-labelledby="hero-title"
       >
-        {/* 背景の subtle gradient (9.5-C で Three.js が上に乗る) */}
+        {/* 背景の subtle gradient (常時表示、Three.js の下地) */}
         <div
-          className="absolute inset-0 -z-10 opacity-70"
+          className="absolute inset-0 -z-20 opacity-70"
           aria-hidden="true"
           style={{
             background:
               'radial-gradient(ellipse at top, rgba(16, 185, 129, 0.15), transparent 60%), radial-gradient(ellipse at bottom left, rgba(59, 130, 246, 0.08), transparent 50%)'
           }}
         />
+        {/* Three.js 3D シーン (Client only、dynamic import) */}
+        <HeroBackground />
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8">
-          {/* ロゴアイコン (9.5-C で 3D 化検討) */}
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8">
+          {/* ロゴアイコン (前景) */}
           <div className="inline-flex w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/20 ring-1 ring-white/30">
             <i className="fa-solid fa-cube text-3xl sm:text-4xl" aria-hidden />
           </div>
@@ -92,8 +94,7 @@ export default function LandingPage() {
       </section>
 
       {/* ==================================================================
-           2. Feature Grid
-           4 個の特徴カード。9.5-C で scroll-triggered fade-up + stagger を追加。
+           2. Feature Grid (scroll reveal + stagger)
       ================================================================== */}
       <section
         className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20"
@@ -111,8 +112,8 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div
-          data-reveal-container
+        <RevealSection
+          selector="[data-reveal-item]"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
         >
           <FeatureCard
@@ -135,13 +136,11 @@ export default function LandingPage() {
             title="ZIP エクスポート/インポート"
             description="mods フォルダに直接置ける ZIP を 1 クリックで生成。.mrpack 読込も対応。"
           />
-        </div>
+        </RevealSection>
       </section>
 
       {/* ==================================================================
-           3. Stats Counter
-           9.5-C で Anime.js count-up アニメーション追加。
-           現状は静的表示。
+           3. Stats Counter (count-up アニメ)
       ================================================================== */}
       <section
         className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20"
@@ -156,28 +155,11 @@ export default function LandingPage() {
           </h2>
         </div>
 
-        <div
-          data-reveal-container
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto"
-        >
-          <StatCard
-            value="100k+"
-            label="Modrinth Mod にアクセス"
-            icon="fa-cube"
-          />
-          <StatCard value="4" label="Loader 対応" icon="fa-code-branch" />
-          <StatCard
-            value="100%"
-            label="オフライン対応 (IndexedDB)"
-            icon="fa-wifi"
-          />
-        </div>
+        <AnimatedStats />
       </section>
 
       {/* ==================================================================
-           4. Screenshot Showcase
-           SVG プレースホルダー (計画書決定事項)。9.5-D で実キャプチャに置換。
-           9.5-C で slide-in アニメーション追加。
+           4. Screenshot Showcase (SVG placeholder + slide-in)
       ================================================================== */}
       <section
         className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20"
@@ -195,19 +177,18 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div
-          data-reveal-container
+        <RevealSection
+          selector="[data-reveal-item]"
           className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6"
         >
           <ScreenshotPlaceholder label="Modrinth 検索" />
           <ScreenshotPlaceholder label="Mod 詳細" />
           <ScreenshotPlaceholder label="プロファイル管理" />
-        </div>
+        </RevealSection>
       </section>
 
       {/* ==================================================================
            5. Community / Open Source
-           GitHub リンクのみ、star 数は静的表示なし (計画書決定事項)。
       ================================================================== */}
       <section
         className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20"
@@ -247,7 +228,6 @@ export default function LandingPage() {
 
       {/* ==================================================================
            6. Final CTA
-           大型 CTA + fine print
       ================================================================== */}
       <section
         className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center"
@@ -283,7 +263,7 @@ export default function LandingPage() {
 }
 
 // ============================================================================
-// 内部小コンポーネント (このファイル内限定)
+// 内部小コンポーネント (このファイル内限定、Server Component として render 可)
 // ============================================================================
 
 function FeatureCard({
@@ -311,35 +291,9 @@ function FeatureCard({
   );
 }
 
-function StatCard({
-  value,
-  label,
-  icon
-}: {
-  value: string;
-  label: string;
-  icon: string;
-}) {
-  return (
-    <div
-      data-reveal-item
-      className="glass-card rounded-2xl p-6 sm:p-8 text-center border"
-    >
-      <div className="w-12 h-12 rounded-xl bg-emerald-500/15 theme-text-brand flex items-center justify-center mx-auto text-xl mb-4">
-        <i className={`fa-solid ${icon}`} aria-hidden />
-      </div>
-      <div className="font-extrabold text-3xl sm:text-4xl theme-text-brand mb-2 font-mono">
-        {value}
-      </div>
-      <div className="text-xs sm:text-sm theme-text-muted">{label}</div>
-    </div>
-  );
-}
-
 /**
  * Phase 9.5-B: Screenshot プレースホルダー。
- * 9.5-D で実際のアプリキャプチャに差し替え予定。
- * 中身は SVG グラデーション + ラベル。
+ * 9.5-D で実際のアプリキャプチャに差し替え予定。中身は SVG グラデーション + ラベル。
  */
 function ScreenshotPlaceholder({ label }: { label: string }) {
   return (

@@ -464,18 +464,21 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
               </div>
 
               {/* 拡大プレビュー (簡易ライトボックス) */}
+              {/* Phase 10-P5 (a11y/useSemanticElements): role="button" tabIndex=0 の
+                  <div> を、意味論的に正しい <button type="button"> に置換。
+                  Enter/Space での閉じ動作もブラウザ標準挙動として無料でサポートされる。
+                  button 標準スタイルを打ち消すため text-align:inherit / w-full / border=0 相当を
+                  Tailwind クラスで維持。 */}
               {selectedGalleryImg && (
-                <div
-                  className="mt-3 p-3 rounded-2xl bg-slate-900/95 border border-emerald-500/40 relative shadow-xl cursor-zoom-out"
+                <button
+                  type="button"
                   onClick={() => setSelectedGalleryImg(null)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="プレビューを閉じる"
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-                      setSelectedGalleryImg(null);
-                    }
+                    // Escape でも閉じられるように残す (Enter/Space は button 標準)
+                    if (e.key === 'Escape') setSelectedGalleryImg(null);
                   }}
+                  aria-label="プレビューを閉じる"
+                  className="mt-3 p-3 w-full text-left rounded-2xl bg-slate-900/95 border border-emerald-500/40 relative shadow-xl cursor-zoom-out"
                 >
                   <div className="flex justify-between items-center text-xs px-1 mb-2">
                     <span className="font-bold theme-text-brand">プレビュー</span>
@@ -490,7 +493,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                     loading="lazy"
                     decoding="async"
                   />
-                </div>
+                </button>
               )}
             </section>
           )}

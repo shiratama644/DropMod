@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
-import { Profile, ModItem } from '@/types';
+import type { Profile, ModItem } from '@/types';
 // B5 修正: ZipProgressState 型は lib/store/zipExport.ts に一本化。
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。

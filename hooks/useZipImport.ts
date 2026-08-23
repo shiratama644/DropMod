@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import { Profile, ModItem, MrpackIndex } from '@/types';
+import type { Profile, ModItem, MrpackIndex } from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
 import {
   fetchModrinthBatch,

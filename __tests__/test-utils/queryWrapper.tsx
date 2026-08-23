@@ -7,7 +7,7 @@
  * 持ち越されないようにする (retry: false でリトライも封じ、失敗を素早く可視化)。
  */
 
-import React from 'react';
+import type React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export function createTestQueryClient(): QueryClient {

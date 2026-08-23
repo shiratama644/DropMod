@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import type React from 'react';
+import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Profile, ThemeMode } from '@/types';
+import type { Profile, ThemeMode } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 
 interface HeaderProps {

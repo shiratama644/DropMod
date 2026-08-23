@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { Toast } from '@/types';
+import type { Toast } from '@/types';
 
 interface ToastContainerProps {
   toasts: Toast[];

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Profile, ModItem, ThemeMode } from '@/types';
+import type { Profile, ModItem, ThemeMode } from '@/types';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';

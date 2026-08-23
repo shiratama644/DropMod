@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useRef, useId } from 'react';
+import type React from 'react';
+import { useRef, useId } from 'react';
 import { useModalA11y } from '@/hooks/useModalA11y';
 
 export interface ConfirmDialogOptions {

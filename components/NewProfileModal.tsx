@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useId } from 'react';
+import type React from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
-import { ModItem } from '@/types';
+import type { ModItem } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 
 interface NewProfileModalProps {

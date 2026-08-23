@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef, useId } from 'react';
-import { Profile } from '@/types';
+import type React from 'react';
+import { useState, useEffect, useMemo, useRef, useId } from 'react';
+import type { Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
 

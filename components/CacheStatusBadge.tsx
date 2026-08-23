@@ -16,7 +16,8 @@
  * 極小 (px-2 py-0.5 text-[10px]) でヘッダ 1 行の右寄せに邪魔にならない位置に置く。
  */
 
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 interface CacheStatusBadgeProps {
   /** TanStack Query の dataUpdatedAt (ms epoch)、0 の場合は未取得 */

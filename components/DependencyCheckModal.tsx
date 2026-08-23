@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type React from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { Profile, DependencyCheckData, ModItem } from '@/types';
+import type { Profile, DependencyCheckData, ModItem } from '@/types';
 import {
   fetchModrinth,
   fetchStableModVersion,

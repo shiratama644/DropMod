@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { Profile } from '@/types';
+import type { Profile } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchModrinthBatch } from '@/lib/modrinth/client';
 import { useDepCheckStore } from '@/lib/store/depCheck';

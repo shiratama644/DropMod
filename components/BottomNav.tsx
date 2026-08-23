@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import type React from 'react';
 import Link from 'next/link';
-import { TabName } from '@/types';
+import type { TabName } from '@/types';
 
 interface BottomNavProps {
   activeTab: TabName;

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import type React from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { ThemeMode } from '@/types';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';

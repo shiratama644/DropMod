@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ModrinthHit, Profile } from '@/types';
+import type { ModrinthHit, Profile } from '@/types';
 
 interface ModCardProps {
   hit: ModrinthHit;

@@ -18,7 +18,8 @@
  *   いずれかのシナリオで Context 版の 70% 以下 (30% 以上削減) を達成すれば OK。
  */
 
-import React, { useState, useMemo, useCallback, createContext, useContext } from 'react';
+import type React from 'react';
+import { useState, useMemo, useCallback, createContext, useContext } from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 import { useProfilesStore } from '@/lib/store/profiles';

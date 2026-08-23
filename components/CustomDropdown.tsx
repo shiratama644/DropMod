@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useId, useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect, useId, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import gsap from 'gsap';
-import { DropdownOption } from '@/types';
+import type { DropdownOption } from '@/types';
 
 interface CustomDropdownProps {
   options: DropdownOption[];

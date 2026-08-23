@@ -9,19 +9,43 @@
 //   - /search:            5分   (人気順の並びは頻繁に微変動するが安定性を優先)
 //   - /project/{id}:      1時間 (メタ情報は数日〜数週間単位で更新)
 //   - /project/{id}/version: 1時間 (新版が出たら 1時間以内に反映)
+//     → JEI/no-chat-reports など巨大 project では応答が数 MB 〜 8 MB になり、
+//       Next.js Data Cache の 2 MB 上限に引っかかる。そのため /version は
+//       Data Cache に載せず、`unstable_cache` + slim 化した射影オブジェクト
+//       だけをメモリレイヤにキャッシュする (Phase 10-P2)。
 //   - /tag/game_version:  24時間 (ほぼ静的)
 //
 // レートリミット対策:
 //   - 300 req/min の Modrinth 制限に配慮し、fetch キャッシュに任せる
 //   - 429 が返ったら Retry-After を尊重して 1 回だけリトライ
+//
+// タイムアウト戦略 (Phase 10-P2):
+//   - build 時に Modrinth の一部エンドポイントが数十秒応答しない事象が観測された
+//     (euphoria-patches / cobblemon / lithium / distanthorizons など)。
+//   - Vercel Hobby の 10s Function timeout に合わせ、fetch 単位で AbortSignal.timeout(8s)
+//     を必ず付与する。呼び出し側 signal と `AbortSignal.any` で合成。
+//   - タイムアウト時は throw され、上位の try/catch で fallback される。
 // ============================================================================
 
+import { unstable_cache } from 'next/cache';
 import type { ModrinthHit, ModrinthProject, ModrinthVersion } from '@/types';
 
 const MODRINTH_BASE = 'https://api.modrinth.com/v2';
 const USER_AGENT =
   process.env.MODRINTH_USER_AGENT ||
   'DropMod/1.1.0 (https://github.com/shiratama644/DropMod)';
+
+// fetch 単位のハード timeout (ミリ秒)。Vercel Hobby の 10s Function timeout
+// から 429 リトライ余裕 2s を差し引いた 8s を既定に。
+// 環境変数 MODRINTH_FETCH_TIMEOUT_MS で上書き可能。
+const DEFAULT_FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = (() => {
+  const raw = process.env.MODRINTH_FETCH_TIMEOUT_MS;
+  if (!raw) return DEFAULT_FETCH_TIMEOUT_MS;
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return DEFAULT_FETCH_TIMEOUT_MS;
+})();
 
 // -----------------------------------------------------
 // TTL 一覧 (秒)
@@ -70,11 +94,25 @@ export function parseRetryAfterMs(headerValue: string | null): number | null {
 }
 
 /**
+ * 呼び出し側 signal と timeout signal を安全に合成する。
+ * AbortSignal.any は Node.js 20.3+ / 21 で利用可能 (Next.js 16 の要件を満たす)。
+ */
+function combineSignals(external: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  if (!external) return timeoutSignal;
+  // AbortSignal.any は複数 signal のうち最初に abort されたものを反映する
+  return AbortSignal.any([external, timeoutSignal]);
+}
+
+/**
  * Modrinth API を Server 側から叩く共通関数。
  *
  * - meaningful UA を必ず付与
  * - fetch キャッシュ (revalidate + tags) を有効化
+ *   ※ ただし呼び出し側で `cache: 'no-store'` を渡した場合は Data Cache
+ *      をバイパスする (2MB 超のレスポンス回避のため)
  * - 429 Too Many Requests の場合 Retry-After を尊重して 1 回だけリトライ
+ * - AbortSignal.timeout(8s) を必ず適用してハングを防ぐ
  */
 async function fetchModrinthServer<T>(
   endpoint: string,
@@ -84,6 +122,12 @@ async function fetchModrinthServer<T>(
     tags?: string[];
     /** 呼び出し側で abort したい場合 */
     signal?: AbortSignal;
+    /**
+     * `no-store` を渡すと Next.js Data Cache をバイパスする。
+     * 2MB を超える可能性がある巨大レスポンス (project versions) 用。
+     * この場合、キャッシュは呼び出し側で unstable_cache 等を使って行うこと。
+     */
+    cache?: 'no-store';
   }
 ): Promise<T> {
   const params = new URLSearchParams();
@@ -96,16 +140,23 @@ async function fetchModrinthServer<T>(
   const queryString = params.toString() ? `?${params.toString()}` : '';
   const url = `${MODRINTH_BASE}${endpoint}${queryString}`;
 
-  const doFetch = () =>
-    fetch(url, {
+  const doFetch = () => {
+    const signal = combineSignals(init.signal, FETCH_TIMEOUT_MS);
+    const fetchInit: RequestInit & { next?: { revalidate: number; tags?: string[] } } = {
       method: 'GET',
       headers: { 'User-Agent': USER_AGENT },
-      signal: init.signal,
-      next: {
+      signal
+    };
+    if (init.cache === 'no-store') {
+      fetchInit.cache = 'no-store';
+    } else {
+      fetchInit.next = {
         revalidate: init.revalidate,
         tags: init.tags
-      }
-    });
+      };
+    }
+    return fetch(url, fetchInit);
+  };
 
   let res = await doFetch();
 
@@ -195,10 +246,46 @@ export async function fetchModrinthProject(
 }
 
 /**
- * Modrinth /project/{slugOrId}/version を取得。
- * loader / game_versions で絞り込み。空でも呼び出せる (全バージョン)。
+ * `ModrinthVersion` を「詳細ページ表示に必要な最小フィールド」だけに射影する。
+ *
+ * Phase 10-P2: 巨大 project (JEI=8MB, no-chat-reports=6.7MB 等) では
+ * changelog / dependencies / hashes / featured / downloads などが肥大化して
+ * Next.js Data Cache の 2MB 上限に引っかかっていた。詳細ページで実際に
+ * 使うフィールド (id, version_number, version_type, game_versions, loaders,
+ * files.{url,filename,primary,size}) だけ残す。
+ *
+ * export 理由:
+ *   - unit test で射影漏れ (今後 UI で参照するフィールドを追加した際) を検知
+ *   - モーダル側 (ModDetailModalShell) で同じ slim 版を消費するため型が合う
  */
-export async function fetchModrinthProjectVersions(
+export function slimVersion(v: ModrinthVersion): ModrinthVersion {
+  return {
+    id: v.id,
+    project_id: v.project_id,
+    // Vite 版互換のため、以下 3 フィールドはダミー値を入れて型を満たす
+    // (詳細ページ UI では参照しないが、消費者側の ModrinthVersion 型が required)。
+    author_id: '',
+    featured: false,
+    name: v.name ?? v.version_number,
+    version_number: v.version_number,
+    date_published: v.date_published,
+    downloads: 0, // 意図的に落とす (プロジェクト DL 数と紛らわしく UI 未使用)
+    version_type: v.version_type,
+    files: (v.files ?? []).map((f) => ({
+      url: f.url,
+      filename: f.filename,
+      primary: f.primary,
+      size: f.size
+    })),
+    // dependencies: 詳細ページ UI では未使用 (依存チェックは別 hook)。省略。
+    game_versions: v.game_versions ?? [],
+    loaders: v.loaders ?? []
+  };
+}
+
+// unstable_cache 化するための内部 fetch。呼び出し側の filter / slug で
+// キー生成しキャッシュエントリを分ける (keyParts 経由)。
+async function fetchModrinthProjectVersionsRaw(
   slug: string,
   filter?: { loader?: string; mcVersion?: string },
   signal?: AbortSignal
@@ -210,15 +297,59 @@ export async function fetchModrinthProjectVersions(
   if (filter?.mcVersion) {
     searchParams.game_versions = JSON.stringify([filter.mcVersion]);
   }
-  return fetchModrinthServer<ModrinthVersion[]>(
+  const raw = await fetchModrinthServer<ModrinthVersion[]>(
     `/project/${encodeURIComponent(slug)}/version`,
     {
       searchParams,
       revalidate: REVALIDATE.VERSION,
       tags: ['modrinth:versions', `modrinth:versions:${slug}`],
-      signal
+      signal,
+      // Phase 10-P2: 巨大レスポンス (>2MB) が Next.js Data Cache に載らず
+      // 大量の警告を吐くのを回避。射影後の slim 版を unstable_cache に載せる。
+      cache: 'no-store'
     }
   );
+  return raw.map(slimVersion);
+}
+
+/**
+ * Modrinth /project/{slugOrId}/version を取得。
+ * loader / game_versions で絞り込み。空でも呼び出せる (全バージョン)。
+ *
+ * Phase 10-P2 修正:
+ *   - 応答を詳細ページ表示に必要な最小フィールドだけに slim 化してから返す
+ *   - fetch は `no-store` で Data Cache をバイパス (2MB 上限回避)
+ *   - 結果は `unstable_cache` にメモリ層でキャッシュ (TTL = REVALIDATE.VERSION)
+ *   - キャッシュキーは slug + filter を含む (loader/mcVersion 別で分離)
+ *   - revalidateTag('modrinth:versions:<slug>') で個別無効化可能
+ */
+export async function fetchModrinthProjectVersions(
+  slug: string,
+  filter?: { loader?: string; mcVersion?: string },
+  signal?: AbortSignal
+): Promise<ModrinthVersion[]> {
+  // vitest 実行時は Next のリクエストコンテキスト (incrementalCache) が無いため
+  // unstable_cache は invariant で throw する。テスト時は素の fetch を直接呼ぶ。
+  // (production build 時は Next のグローバルコンテキストが張られているので OK)
+  if (process.env.VITEST || process.env.NODE_ENV === 'test') {
+    return fetchModrinthProjectVersionsRaw(slug, filter, signal);
+  }
+  // unstable_cache は「関数を包む」形なので、slug/filter を keyParts に含めて
+  // 呼び出し毎にエントリを分離する。signal はキャッシュに乗せず raw fetch に渡す。
+  const cached = unstable_cache(
+    async () => fetchModrinthProjectVersionsRaw(slug, filter, signal),
+    [
+      'modrinth:versions',
+      slug,
+      filter?.loader ?? '',
+      filter?.mcVersion ?? ''
+    ],
+    {
+      revalidate: REVALIDATE.VERSION,
+      tags: ['modrinth:versions', `modrinth:versions:${slug}`]
+    }
+  );
+  return cached();
 }
 
 /**

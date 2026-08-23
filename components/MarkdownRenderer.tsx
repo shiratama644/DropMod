@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -259,15 +260,17 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
           //       場合はスタイル無しで通してブロック側の <pre> にゆだねる。
           // Ref: https://github.com/remarkjs/react-markdown/issues/834
           // ------------------------------------------------------------------
-          pre: ({ node, children, ...props }: any) => (
+          // Phase 10-P5 (noExplicitAny): react-markdown の Components 型を使い、
+          //   node 引数 (unified AST) を無視しつつ残り props を pre/code element に流す。
+          pre: (({ node: _node, children, ...props }) => (
             <pre
               className="my-3 p-3.5 rounded-xl bg-slate-900/90 text-emerald-400 font-mono text-xs overflow-x-auto border border-slate-700/50"
               {...props}
             >
               {children}
             </pre>
-          ),
-          code: ({ node, className, children, ...props }: any) => {
+          )) satisfies Components['pre'],
+          code: (({ node: _node, className, children, ...props }) => {
             // ブロックコードは className="language-xxx" が付与されるか、
             // 中身に改行を含むことが多い。
             // どちらでもない場合はインラインとしてスタイリングする。
@@ -290,7 +293,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                 {children}
               </code>
             );
-          },
+          }) satisfies Components['code'],
           // 引用
           blockquote: ({ node, children, ...props }) => (
             <blockquote className="border-l-4 border-emerald-500 pl-3.5 py-1 my-3 bg-emerald-500/10 rounded-r-xl italic theme-text-secondary" {...props}>

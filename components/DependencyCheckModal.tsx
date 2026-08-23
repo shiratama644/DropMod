@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import type { Profile, DependencyCheckData, ModItem } from '@/types';
+import type { Profile, DependencyCheckData, ModItem, ModrinthVersion, ModrinthProject } from '@/types';
 import {
   fetchModrinth,
   fetchStableModVersion,
@@ -111,7 +111,8 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       const versionIds = profile.mods
         .map((m) => m.selectedVersionId)
         .filter((id): id is string => Boolean(id && id !== 'latest'));
-      const versionMap = new Map<string, unknown>();
+      // Phase 10-P5: Modrinth API 応答を扱う Map は具体型で保持。
+      const versionMap = new Map<string, ModrinthVersion>();
 
       if (checkCancelled()) return;
       setProgress(40);
@@ -120,7 +121,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       if (versionIds.length > 0) {
         try {
           // /versions は 1000 個上限 → 100 個ずつ chunk 分割
-          const batchVersions = await fetchModrinthBatch<{ id: string }>(
+          const batchVersions = await fetchModrinthBatch<ModrinthVersion>(
             '/versions',
             versionIds
           );
@@ -132,7 +133,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
             profile.mods.map(async (mod) => {
               if (mod.selectedVersionId) {
                 try {
-                  const vData = await fetchModrinth(`/version/${mod.selectedVersionId}`);
+                  const vData = await fetchModrinth<ModrinthVersion>(
+                    `/version/${mod.selectedVersionId}`
+                  );
                   if (vData) versionMap.set(mod.selectedVersionId, vData);
                 } catch {
                   // Fallback strategy for individual version fetching
@@ -160,7 +163,9 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       const missingProjectIds = new Set<string>();
 
       for (const mod of profile.mods) {
-        let vData = mod.selectedVersionId ? (versionMap.get(mod.selectedVersionId) as any) : null;
+        let vData: ModrinthVersion | null = mod.selectedVersionId
+          ? versionMap.get(mod.selectedVersionId) ?? null
+          : null;
 
         if (!vData && mod.id) {
           try {
@@ -223,11 +228,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       setProgress(90);
       setStatusText('不足モッド情報を補完中...');
 
-      const depProjectMap = new Map<string, any>();
+      // Phase 10-P5: Modrinth API 応答を扱う Map は具体型で保持。
+      const depProjectMap = new Map<string, ModrinthProject>();
       if (missingProjectIds.size > 0) {
         try {
           // /projects も 1000 個上限 → 100 個ずつ chunk 分割
-          const projectBatch = await fetchModrinthBatch<{ id: string }>(
+          const projectBatch = await fetchModrinthBatch<ModrinthProject>(
             '/projects',
             Array.from(missingProjectIds)
           );
@@ -238,7 +244,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           await Promise.all(
             Array.from(missingProjectIds).map(async (pId) => {
               try {
-                const pData = await fetchModrinth(`/project/${pId}`);
+                const pData = await fetchModrinth<ModrinthProject>(`/project/${pId}`);
                 if (pData) depProjectMap.set(pId, pData);
               } catch {
                 // Ignore missing metadata

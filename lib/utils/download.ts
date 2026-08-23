@@ -47,10 +47,13 @@ export async function downloadAsBlob(
     // GCで Blob が回収されるようにしばらく遅延して revoke
     setTimeout(() => URL.revokeObjectURL(objectUrl), URL_REVOKE_DELAY_MS);
     return { ok: true };
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    // Phase 10-P5 (noExplicitAny): TS 4.4+ の catch default = unknown。
+    //   AbortError と一般 Error message を局所的な cast で narrow して抽出。
+    const err = e as { name?: string; message?: string } | null;
+    if (err?.name === 'AbortError') {
       return { ok: false, error: 'Aborted' };
     }
-    return { ok: false, error: e?.message || 'unknown error' };
+    return { ok: false, error: err?.message || 'unknown error' };
   }
 }

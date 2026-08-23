@@ -10,6 +10,7 @@ import {
   autoCardSpanClass,
   type SearchLayout
 } from '@/lib/constants/search';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 
 interface ModCardProps {
   hit: ModrinthHit;
@@ -103,6 +104,7 @@ export const ModCard: React.FC<ModCardProps> = ({
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
+              unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
               onError={() => setBannerFailed(true)}
             />
           ) : showIcon && hit.icon_url ? (
@@ -135,6 +137,7 @@ export const ModCard: React.FC<ModCardProps> = ({
             fill
             sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
+            unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
             onError={() => setBannerFailed(true)}
             onLoad={(e) => {
               if (layout !== 'auto') return;
@@ -158,7 +161,7 @@ export const ModCard: React.FC<ModCardProps> = ({
                 height={40}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-800/80 p-0.5 shadow-md shrink-0"
                 onError={() => setIconFailed(true)}
-                unoptimized={false}
+                unoptimized={isAnimatedImageUrl(hit.icon_url)}
               />
             ) : (
               <div

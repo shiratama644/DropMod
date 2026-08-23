@@ -7,7 +7,9 @@ import { useRouter } from 'next/navigation';
 
 import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/types';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
@@ -134,7 +136,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const titleId = useId();
   const isModal = variant === 'modal';
 
-  const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
 
@@ -166,15 +168,10 @@ export const ModDetailModalShell: React.FC<Props> = ({
   // Esc キー・focus trap は modal バリアント時のみ有効
   useModalA11y(isModal, handleClose, dialogRef);
 
-  // page バリアントに切り替わったタイミングでギャラリー展開をリセット
-  //
-  // Phase 10-P5 (useExhaustiveDependencies): slug を deps に含めるのは
-  //   「slug が変わったら (別 Mod に切り替わったら) ギャラリー展開状態と
-  //    選択中プレビュー画像をリセット」する意図トリガーのため。effect 本体で
-  //    slug を参照しないので Biome は「不要」と判定するが、これは仕様通り。
+  // slug が変わったら (別 Mod に切り替わったら) ギャラリーモーダルを閉じる
   // biome-ignore lint/correctness/useExhaustiveDependencies: slug 変更検知トリガーとして意図的
   useEffect(() => {
-    setSelectedGalleryImg(null);
+    setIsGalleryOpen(false);
   }, [slug]);
 
   // variant="page" (フルページ) の時、body に `mod-fullpage`
@@ -404,74 +401,45 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* ギャラリー画像 */}
+        {/* ギャラリー画像 (タッププレビューはしない。閲覧は専用モーダル) */}
         {project.gallery && project.gallery.length > 0 && (
           <div className="space-y-2 pt-1">
-            <span className="text-xs font-bold uppercase tracking-wider theme-text-muted flex items-center gap-1.5">
-              <i className="fa-solid fa-images theme-text-brand" aria-hidden />
-              {`ギャラリー・スクリーンショット (${project.gallery.length})`}
-            </span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider theme-text-muted flex items-center gap-1.5">
+                <i className="fa-solid fa-images theme-text-brand" aria-hidden />
+                {`ギャラリー・スクリーンショット (${project.gallery.length})`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsGalleryOpen(true)}
+                className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-images" aria-hidden />
+                ギャラリー・スクリーンショットを閲覧
+              </button>
+            </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {project.gallery.map((img) => (
-                // Phase 10-P5 (a11y/useSemanticElements): サムネイルは意味論的に
-                //   button (アクション実行) なので <button type="button"> に変更。
-                //   Enter/Space での拡大プレビュー起動もブラウザ標準で無料。
-                <button
+                <figure
                   key={img.url}
-                  type="button"
-                  onClick={() => setSelectedGalleryImg(img.url)}
-                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative p-0"
+                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 relative m-0"
                 >
-                  {/* <img> ではなく next/image (fill mode で可変サイズ対応) */}
                   <Image
                     src={img.url}
                     alt={img.title || 'Gallery image'}
                     fill
                     sizes="(min-width: 640px) 176px, 128px"
-                    className="object-cover group-hover:scale-105 transition duration-300"
+                    className="object-cover"
+                    unoptimized={isAnimatedImageUrl(img.url)}
                   />
                   {img.title && (
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
+                    <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
                       {img.title}
-                    </div>
+                    </figcaption>
                   )}
-                </button>
+                </figure>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* 拡大プレビュー */}
-        {/* Phase 10-P5 (a11y): 外側コンテナ全体を button 化できない
-            (内部に <button>閉じる✕ が入れ子で存在するため) ので、
-            従来「コンテナクリックで閉じる」挙動は撤去し、閉じる操作は
-            右上の <button> と Escape (useModalA11y) に集約。
-            外側 div はイベントハンドラを持たない静的コンテナに戻し、
-            noStaticElementInteractions / useKeyWithClickEvents の警告を根本解消。 */}
-        {selectedGalleryImg && (
-          <div className="p-2 rounded-2xl bg-slate-900/90 border border-emerald-500/40 relative shadow-xl space-y-2">
-            <div className="flex justify-between items-center text-xs px-1">
-              <span className="font-bold theme-text-brand">プレビュー</span>
-              <button
-                type="button"
-                onClick={() => setSelectedGalleryImg(null)}
-                className="theme-text-muted hover:text-white"
-              >
-                閉じる ✕
-              </button>
-            </div>
-            {/* 拡大プレビューは width/height 未確定 (画像アスペクト比依存)
-                のため next/image の layout=intrinsic 相当が使えない。
-                object-contain + max-h-72 の伸縮レイアウトを維持するため <img> のまま。
-                CDN 経由なので lazy load + async decoding を明示。 */}
-            {/* biome-ignore lint/performance/noImgElement: aspect ratio 未確定で next/image 不可 */}
-            <img
-              src={selectedGalleryImg}
-              alt="ギャラリー画像プレビュー"
-              className="max-h-72 w-full object-contain rounded-xl"
-              loading="lazy"
-              decoding="async"
-            />
           </div>
         )}
 
@@ -621,6 +589,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
         }}
       >
         {innerCard}
+        <ScreenshotGalleryModal
+          isOpen={isGalleryOpen}
+          images={project.gallery ?? []}
+          onClose={() => setIsGalleryOpen(false)}
+        />
       </div>
     );
   }
@@ -640,6 +613,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
         </Link>
       </div>
       {innerCard}
+      <ScreenshotGalleryModal
+        isOpen={isGalleryOpen}
+        images={project.gallery ?? []}
+        onClose={() => setIsGalleryOpen(false)}
+      />
     </main>
   );
 };

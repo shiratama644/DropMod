@@ -218,15 +218,15 @@ export async function fetchStableModVersion(
       loaders: [profile.loader.toLowerCase()],
       game_versions: [profile.mcVersion]
     });
-  } catch (e) {
-    // 絞り込み検索は失敗しても続行 (下でフォールバック)
+  } catch {
+    // 絞り込み検索は失敗しても続行 (下でフォールバック) — catch binding 省略
   }
 
   if (!versions || versions.length === 0) {
     try {
       versions = await fetchModrinth<ModrinthVersion[]>(`/project/${projectId}/version`);
-    } catch (e) {
-      // 完全失敗
+    } catch {
+      // 完全失敗 — catch binding 省略
     }
   }
 
@@ -251,8 +251,8 @@ export async function fetchLatestMinecraftVersions(): Promise<string[]> {
         return releaseVersions;
       }
     }
-  } catch (e) {
-    // ネットワーク不通時のフォールバックとして固定リスト
+  } catch {
+    // ネットワーク不通時のフォールバックとして固定リスト — catch binding 省略
   }
   return [
     '1.21.4',

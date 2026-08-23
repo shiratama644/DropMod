@@ -612,7 +612,8 @@ export const useProfiles = (
             showToast(`「${project.title}」を追加しました！`, 'success');
           }
         }
-      } catch (err) {
+      } catch {
+        // catch binding 省略 (ES2019+): エラー詳細は使わず一律 toast のみ
         if (!silent) showToast('Modの追加に失敗しました', 'warning');
       }
     }
@@ -665,7 +666,8 @@ export const useProfiles = (
           );
           showToast(`「${mod.title}」を Ver ${versionData.version_number} に更新`, 'success');
         }
-      } catch (e) {
+      } catch {
+        // catch binding 省略 (ES2019+): エラー詳細は使わず一律 toast のみ
         showToast('バージョンの更新に失敗しました', 'warning');
       }
     },

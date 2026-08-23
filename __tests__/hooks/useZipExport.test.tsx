@@ -245,9 +245,8 @@ describe('useZipExport', () => {
   });
 
   it('B7 修正: 開始時に前回の cancelRequested がクリアされる', async () => {
-    const showToast = vi.fn();
-    const profile = makeProfile([]);
-    const { result } = renderHook(() => useZipExport(profile, showToast));
+    // Phase 10-P5: 未使用だった `const { result } = renderHook(...)` を削除
+    //   (以下で profileWithMods を渡した r2 のみ使用、初回 result は dead code)
 
     // 前回セッションの残置を模倣
     act(() => {

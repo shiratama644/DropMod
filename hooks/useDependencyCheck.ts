@@ -116,8 +116,8 @@ export const useDependencyCheck = (currentProfile: Profile) => {
         }
       }
       setHasDepWarning(warning);
-    } catch (e) {
-      // 想定外エラー: 無音失敗 (前回値を維持)
+    } catch {
+      // 想定外エラー: 無音失敗 (前回値を維持) — catch binding は省略 (ES2019+)
     } finally {
       markChecked();
     }

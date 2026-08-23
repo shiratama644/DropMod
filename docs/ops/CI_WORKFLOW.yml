@@ -76,6 +76,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore Next / pnpm build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+            .cache/dropmod-build
+          key: dropmod-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'next.config.ts') }}
+          restore-keys: |
+            dropmod-build-${{ runner.os }}-
+
       - name: Build
         run: pnpm build
 

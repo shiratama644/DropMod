@@ -45,7 +45,7 @@ pnpm dev
 # 型チェック
 pnpm typecheck
 
-# 本番ビルド
+# 本番ビルド (PRoot-Distro は Webpack cache、それ以外は Turbopack persistent cache)
 pnpm build
 
 # 本番ランタイム起動

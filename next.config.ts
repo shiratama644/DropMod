@@ -88,7 +88,19 @@ const nextConfig: NextConfig = {
   experimental: {
     // @fortawesome/fontawesome-free は CSS-only ライブラリで
     // JS export が無いため optimizePackageImports の対象にできない (含めない)。
-    optimizePackageImports: ['react-markdown']
+    //
+    // Phase 9-E.8 追加: @tanstack/react-query
+    //   - useQuery/useInfiniteQuery/useMutation/QueryClient/QueryClientProvider など
+    //     アプリで使う exports が 10 個超、内部モジュール分割が細かい library で
+    //     optimizePackageImports の tree-shaking メリットが大きい
+    //   - react-markdown の実績と同じく、動作差分なく数 KB の削減が見込める
+    //   - PersistQueryClientProvider (@tanstack/react-query-persist-client) は
+    //     別 package なので個別に追加が必要
+    optimizePackageImports: [
+      'react-markdown',
+      '@tanstack/react-query',
+      '@tanstack/react-query-persist-client'
+    ]
   },
   async headers() {
     return [

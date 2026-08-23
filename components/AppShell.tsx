@@ -157,21 +157,30 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
 
   // ---------- Modal-open scroll lock ----------
-  // /mods/[slug] Intercepting Route モーダル表示中も背景スクロールをロック。
-  // Vite 版 App.tsx にあった isModDetailModalOpen ガードが Next.js 版で消失していた
-  // 回帰バグを usePathname() ベースで復元 (URL が /mods/xxx かどうかで判定)。
+  // Phase 10-P3: 詳細ページのスクロール不能バグを修正。
   //
-  // Phase 9-F: URL 再設計で /mod/[slug] → /mods/[slug] に変更。
-  //   /mods 単独 (一覧) はロック対象外なので trailing `/` を含めて判定
-  //   (/mods/xxx = 詳細のみマッチ、/mods = 一覧はマッチしない)。
-  const isModDetailOpen = pathname?.startsWith('/mods/') ?? false;
+  // 従来 (Phase 9-F):
+  //   `const isModDetailOpen = pathname?.startsWith('/mods/') ?? false`
+  //   を isAnyModalOpen に含めていたため、モーダル (Intercepting Route) と
+  //   フルページ (直接 URL アクセス) を URL だけでは区別できず、
+  //   フルページ `/mods/sodium` を開いても body に overflow:hidden + touchAction:none
+  //   がかかり、マウスホイール / タッチスクロールが完全に殺されていた。
+  //
+  // 修正:
+  //   URL ベースの一律ロックを撤廃。モーダル (variant="modal") がマウント中の
+  //   スクロール抑止は ModDetailModalShell 自身の useEffect で自己管理する
+  //   (Vite 版 App.tsx の isModDetailModalOpen ガードと同等の効果を持ちつつ、
+  //    フルページには影響しない)。
+  //
+  //   isAnyModalOpen の残り 5 個 (NewProfile / EditProfile / DepCheck / Zip /
+  //   Confirm) は AppShell 直下の Client Component として mount/unmount が
+  //   AppShell 内で完結するため、従来通り AppShell 側でロックする。
 
   const isAnyModalOpen =
     isNewProfileModalOpen ||
     isEditProfileModalOpen ||
     isDepCheckModalOpen ||
     isZipModalOpen ||
-    isModDetailOpen ||
     Boolean(confirmDialogProps.isOpen);
 
   useEffect(() => {

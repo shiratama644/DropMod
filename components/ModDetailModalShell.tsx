@@ -119,12 +119,37 @@ export const ModDetailModalShell: React.FC<Props> = ({
   // (Home 上のモーダル表示 = variant="modal" では付与しないので、
   //  グローバル Header は残る。)
   // アンマウント時に必ずクラスを剥がすので、他ページ遷移で消え残らない。
+  //
+  // 注: Phase 10-P1 で /mods/[slug] フルページ経路は ModDetailPageView に
+  //     移行したため、実行時に variant="page" が渡ることは無くなった。
+  //     コードは互換性のため保持 (副作用なし、isModal=true なら早期 return)。
   useEffect(() => {
     if (isModal) return;
     if (typeof document === 'undefined') return;
     document.body.classList.add('mod-fullpage');
     return () => {
       document.body.classList.remove('mod-fullpage');
+    };
+  }, [isModal]);
+
+  // Phase 10-P3: モーダル (variant="modal") マウント中は背景 (Modrinth 検索一覧)
+  // のスクロールを抑止する。従来 AppShell 側で `pathname.startsWith('/mods/')`
+  // で一律ロックしていた実装をここに移し、フルページ (ModDetailPageView) の
+  // スクロールを阻害しないよう責務を分離した。
+  //
+  // - Escape / router.back() / handleClose どのパスで閉じても unmount で必ず解除
+  // - React 19 Strict Mode の double-invoke 対策として、cleanup で必ず空文字を代入
+  //   (先に別のモーダル/コンポーネントが overflow を設定していた場合の巻き戻りは
+  //    許容: 詳細モーダルより後に開かれた要素は詳細モーダルが閉じる時点で通常
+  //    既に閉じているため、実害はない)
+  useEffect(() => {
+    if (!isModal) return;
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, [isModal]);
 

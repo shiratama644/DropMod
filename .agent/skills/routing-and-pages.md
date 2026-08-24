@@ -1,53 +1,63 @@
 # Routing & Pages
 
 > URL 設計・ページ追加・リダイレクト・モーダル経路 を触る時に読む。
+> **2026-08-24 ルーティング再設計後**（`bd05b9b`）。詳細は `docs/planning/ROUTING_REDESIGN_PLAN.md`。
 
-## URL 構成（実コード準拠, Phase 9-F 再設計後）
+## URL 構成（現行）
 
 | URL | 役割 | レンダリング | ファイル |
 | :--- | :--- | :--- | :--- |
-| `/` | ランディング（LP） | RSC（Header 非表示, PC=DesktopSidebar / mobile=BottomNav のみ） | `app/page.tsx` |
-| `/mods` | Modrinth 検索一覧 | RSC + Client | `app/mods/page.tsx` |
-| `/mods/[slug]` | Mod 詳細フルページ | RSC + **ISR 1h** + OGP, `generateStaticParams` 人気100件 | `app/mods/[slug]/page.tsx` |
-| `/mods/@modal/(.)[slug]` | `/mods` からのソフトナビを**インターセプト**してモーダル化 | Intercepting Route | `app/mods/@modal/(.)[slug]/page.tsx` |
-| `/discover/[type]` | カテゴリ別検索（mods/modpack/resourcepack/shader） | RSC | `app/discover/[type]/page.tsx` |
-| `/profile` | 選択中プロファイルの Mod 一覧（旧 `/mods` の役割） | Client | `app/profile/page.tsx` |
+| `/` | ランディング（LP） | RSC（Header 非表示） | `app/page.tsx` |
+| `/discover` | → リダイレクト `/discover/mods` | `redirect()` | `app/discover/page.tsx` |
+| `/discover/{mods,modpacks,resourcepacks,shaders}` | **検索一覧**（複数形） | RSC + Client（searchParams `?q=` で動的） | `app/discover/[type]/page.tsx` |
+| `/discover/<複数>/<slug>`（例: `/discover/mods/sodium`） | **プレビューモーダル** | Intercept（soft nav＝一覧保持）／直接＝モーダル単体 | `app/discover/[type]/[slug]/` + `@modal/(.)[slug]/` |
+| `/{mod,modpack,resourcepack,shader}/[slug]`（例: `/mod/sodium`） | **詳細フルページ**（単数形・型別・Modrinth 準拠） | SSG + ISR 1h + OGP | `app/[projectType]/[slug]/page.tsx` |
+| `/profile` | 選択中プロファイルの Mod 一覧 | Client | `app/profile/page.tsx` |
 | `/settings` | 設定 | Client | `app/settings/page.tsx` |
-| `/resourcepack` `/shader` `/modpack` | Phase 11/12 **予約ハブ**（Coming Soon） | — | `ReservedCategoryPage` |
-| `/api/modrinth/[...path]` | Modrinth API 万能プロキシ | Route Handler (Node) | `app/api/modrinth/[...path]/route.ts` |
-| `/api/health` `/api/loaders/versions` | ヘルス / ローダーバージョン | Route Handler | — |
+| `/modpack` `/resourcepack` `/shader` | **予約ハブ**（Phase 11/12）兼 詳細の名前空間ルート | `ReservedCategoryPage` | `app/{modpack,resourcepack,shader}/page.tsx` |
+| `/api/modrinth/[...path]` | Modrinth API 万能プロキシ | Route Handler (Node) | — |
 
-## タブ（TabName）= `home / mods / profile / settings`
+## 4 責務（分離）
+- **Discovery** `/discover/<複数>` — 探す
+- **Preview** `/discover/<複数>/<slug>` — モーダル（`ModDetailModalShell`、一覧の上に重ねる）
+- **Detail** `/<型>/<slug>` — フル詳細（`ModDetailPageView`）
+- **External** `modrinth.com/<型>/<slug>` — Modrinth 公式
 
-`types.ts` で定義。`AppShell` の `PATH_TO_TAB` + `usePathname()` で active 判定（`/mods/[slug]`・`/discover/*` は `'mods'` 扱い）。遷移は `<Link href>`（URL ベース）。
+## 導線
+- 一覧カード → **モーダル** `/discover/<複数>/<slug>`（Intercept で一覧状態保持。戻るで復元）
+- モーダルの **「詳細ページ」ボタン** → `/<型>/<slug>`（フル詳細）
+- プロファイル/LP のカード → **詳細ページ** `/<型>/<slug>` 直接（モーダル経由しない）
 
-## リダイレクト（`next.config.ts` `redirects()`, 308 Permanent）
+## URL 生成は一元化（`lib/constants/search.ts`）
+**直接 URL 文字列を組み立てないこと**。以下を使う:
+- `discoverPathForType(type)` → `/discover/<複数>`
+- `modalPathForType(type, slug)` / `modalPathFromProject(projectType, slug)` → `/discover/<複数>/<slug>`
+- `detailPathForType(type, slug)` / `detailPathFromProject(projectType, slug)` → `/<型>/<slug>`
+- `parseDiscoverSegment`（複数形）/ `parseDetailType`（単数形）
 
-- `/mod/:slug` → `/mods/:slug`（旧単数→新複数, SEO 保全）
-- `/mods` → `/discover/mods`
-- `/mods?type=modpack|resourcepack|shader` → `/discover/<type>`
-- ※ `/modpack` `/resourcepack` `/shader` は**予約ルートのまま**（検索へリダイレクトしないこと = `docs/README.md` 予約 URL）。
+## 詳細/モーダルのデータ取得（`lib/server/project-detail.ts`）
+- `fetchProjectDetailData(slug)` — project/versions/author 並列取得（両ルートで共用）
+- `generateDetailStaticParams(type)` — 人気上位の事前生成
+- `buildDetailMetadata(type, slug)` — OGP/canonical（`/<型>/<slug>`）
 
-## Intercepting / Parallel Routes の要点
+## リダイレクト（`next.config.ts`）
+- `/mods` → `/discover/mods`（友好 alias）。旧 `/mod/:slug→/mods/:slug` 等は**削除済**（未デプロイのため）。
+- `/modpack` `/resourcepack` `/shader` は予約ルート（検索へリダイレクトしない）。
 
-- `/mods`（一覧）→ `/mods/[slug]` のみソフトナビでモーダル化（`app/mods/@modal/(.)[slug]/`）。
-- `app/mods/layout.tsx` が `@modal` Parallel slot を受け取る（Root Layout から移設, Phase 9-F）。
-- `/discover` も独自 `@modal/(...)mods/[slug]` を持つ（cross-segment intercept）。
-- モーダル閉じる = `router.back()`（Phase 9-F: `router.replace('/')` から変更, SSR fetch 回避で軽量）。
+## ⚠️ Next.js の罠（実装で踏んだ）
+- **セグメント設定（`revalidate`/`dynamicParams`/`dynamic`/`runtime`）は静的解析可能なリテラル必須**。`export const revalidate = SOME_IMPORTED_CONST` は **「Invalid segment configuration export」エラー**になる。必ず `export const revalidate = 3600;` のようにリテラルで書く。
+- Intercept は **`/discover/[type]/@modal/(.)[slug]`**（[type] layout が `{children, modal}` slot を宣言）。一覧（searchParams で動的）と同じ [type] セグメント下だが、モーダル側に `revalidate` を置くと競合するため**モーダル系ルートにはセグメント設定を置かない**（動的描画）。
 
-## 詳細ページの 2 コンポーネント（Phase 10-P1 分離）
-
-- **フルページ** = `ModDetailPageView`（PC ワイド・サイドバー活用の専用デザイン）。
-- **モーダル** = `ModDetailModalShell variant="modal"`。
-- ※ `ModDetailModalShell` は `variant="page"` も持つが実行時は使われない（Phase 10-P1 でフルページ経路は PageView に移行）。互換で残置。
+## TabName（`home / mods / profile / settings`）
+`/`→home、`/discover/*`・`/<型>/<slug>`→mods、`/profile`→profile、`/settings`→settings。
+`AppShell` の `activeTab` は `/discover/` prefix と `^\/(mod|modpack|resourcepack|shader)\/` 正規で 'mods' 判定。
 
 ## ページ追加時のチェックリスト
-
-1. `app/<route>/page.tsx` 作成（RSC なら SSR/ISR, `'use client'` なら CSR）。
-2. `AppShell` の `PATH_TO_TAB` に新 path → TabName を追加（BottomNav active 用）。
-3. h1=1（C6-1）・`generateMetadata`（OGP）・`sitemap.ts` 更新を検討。
-4. `next.config.ts` の `redirects()` / `remotePatterns` に影響無いか確認。
+1. `app/<route>/page.tsx`（RSC=SSR/ISR, `'use client'`=CSR）。
+2. `AppShell` の `PATH_TO_TAB` と active 判定（`/discover/` or `/<型>/` なら 'mods'）に反映。
+3. h1=1（C6-1）・`generateMetadata`（OGP）・`sitemap.ts` 更新。
+4. セグメント設定は**リテラル**で。
 
 ## 関連
-
-- [ui-layout.md](./ui-layout.md)（AppShell の描画分岐）/ [modrinth-integration.md](./modrinth-integration.md)
+- [ui-layout.md](./ui-layout.md) / [modrinth-integration.md](./modrinth-integration.md)
+- `docs/planning/ROUTING_REDESIGN_PLAN.md`（経緯・全文）

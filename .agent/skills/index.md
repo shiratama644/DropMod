@@ -27,7 +27,7 @@
 | [state-and-storage.md](./state-and-storage.md) | Zustand 7 store 設計・appActionsStore（Server→Client 制約）・Dexie 3 テーブル・LocalStorage 移行・cookie。 | 2026-08-24 |
 | [modrinth-integration.md](./modrinth-integration.md) | server.ts/client.ts・キャッシュ TTL・レート制限・バッチ・slim version・プロキシ Route Handler。 | 2026-08-24 |
 | [image-strategy.md](./image-strategy.md) | ⭐ 画像の高速化・高画質化の方針（unoptimized / raw_url / ネイティブ img）。直近で確立した重要知見。 | 2026-08-24 |
-| [routing-and-pages.md](./routing-and-pages.md) | URL 再設計（Phase 9-F）・リダイレクト・Intercepting Routes・/discover・予約 URL。 | 2026-08-24 |
+| [routing-and-pages.md](./routing-and-pages.md) | URL 設計（2026-08-24 再設計後：検索複数形/詳細単数形型別/モーダル/詳細の4責務）。 | 2026-08-24 |
 | [ui-layout.md](./ui-layout.md) | PC サイドバー / モバイル Header+BottomNav / z-index 序列 / body 余白 / モーダル。 | 2026-08-24 |
 | [testing.md](./testing.md) | vitest+msw+fake-indexeddb・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-24 |
 | [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策（AGENT.md §6 の実態版）。 | 2026-08-24 |

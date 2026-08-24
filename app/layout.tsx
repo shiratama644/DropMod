@@ -165,7 +165,7 @@ try {
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme FOUC 対策のハードコード script */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
+      <body className="min-h-screen flex flex-col pb-28 md:pb-0 antialiased selection:bg-emerald-500 selection:text-white">
         {/* C7-2 修正 追随: QueryClientProvider を Root Layout に移動。
              AppShell の中で useQueryClient() を使うため、AppShell 全体を
              PersistQueryClientProvider の中に入れる必要がある。 */}

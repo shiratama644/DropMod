@@ -6,6 +6,24 @@ import ReactDOM from 'react-dom';
 import gsap from 'gsap';
 import type { DropdownOption } from '@/types';
 
+function toneClass(tone: DropdownOption['tone']): string {
+  if (tone === 'alpha') return 'text-red-500';
+  if (tone === 'beta') return 'text-blue-500';
+  if (tone === 'stable') return 'text-emerald-500';
+  return '';
+}
+
+function DropdownOptionContent({ option }: { option: DropdownOption }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 min-w-0 ${toneClass(option.tone)}`}>
+      {option.icon ? (
+        <i className={`fa-solid ${option.icon} text-[11px] shrink-0`} aria-hidden />
+      ) : null}
+      <span className="truncate">{option.label}</span>
+    </span>
+  );
+}
+
 interface CustomDropdownProps {
   options: DropdownOption[];
   selectedValue: string;
@@ -247,7 +265,9 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
         }}
         onKeyDown={handleKeyDown}
       >
-        <span className="trigger-label truncate">{selectedOption ? selectedOption.label : ''}</span>
+        <span className="trigger-label truncate">
+          {selectedOption ? <DropdownOptionContent option={selectedOption} /> : ''}
+        </span>
         <i
           ref={chevronRef}
           className="fa-solid fa-chevron-down text-xs theme-text-muted transition-transform duration-200 chevron-icon"
@@ -287,7 +307,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                     handleOptionClick(opt.value);
                   }}
                 >
-                  <span className="truncate">{opt.label}</span>
+                  <DropdownOptionContent option={opt} />
                   {isSelected && <i className="fa-solid fa-check text-xs theme-text-brand" />}
                 </div>
               );

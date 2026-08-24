@@ -146,9 +146,15 @@ export interface Toast {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+export type VersionChannel = 'stable' | 'beta' | 'alpha';
+
 export interface DropdownOption {
   label: string;
   value: string;
+  /** Font Awesome solid 名 (`fa-circle-check` 等)。未指定ならアイコンなし */
+  icon?: string;
+  /** バージョンチャネル色。未指定なら通常色 */
+  tone?: VersionChannel;
 }
 
 export interface DependencyCheckData {

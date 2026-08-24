@@ -6,7 +6,7 @@
  * License: https://fontawesome.com/license/free
  *
  * 使用 icon 数:
- *   - fa-solid:  65
+ *   - fa-solid:  69
  *   - fa-brands: 2
  *
  * 追加/削除時は本ファイルを直接編集せず、リポジトリの JSX で
@@ -35,7 +35,7 @@
  */
 :host,:root{--fa-family-classic:"Font Awesome 7 Free";--fa-font-solid:normal 900 1em/1 var(--fa-family-classic);--fa-style-family-classic:var(--fa-family-classic)}@font-face{font-family:"Font Awesome 7 Free";font-style:normal;font-weight:900;font-display:block;src:url(/webfonts/fa-solid-900.woff2)}.fas{--fa-style:900}.fa-classic,.fas{--fa-family:var(--fa-family-classic)}.fa-solid{--fa-style:900}
 
-/* Solid icon rules (63 個、DropMod で使用中のもののみ) */
+/* Solid icon rules (67 個、DropMod で使用中のもののみ) */
 .fa-magic-wand-sparkles,.fa-wand-magic-sparkles{--fa:"\e2ca"}
 .fa-cubes-stacked{--fa:"\e4e6"}
 .fa-plug-circle-xmark{--fa:"\e560"}
@@ -53,6 +53,8 @@
 .fa-book{--fa:"\f02d"}
 .fa-image{--fa:"\f03e"}
 .fa-edit,.fa-pen-to-square{--fa:"\f044"}
+.fa-circle-xmark,.fa-times-circle,.fa-xmark-circle{--fa:"\f057"}
+.fa-check-circle,.fa-circle-check{--fa:"\f058"}
 .fa-circle-question,.fa-question-circle{--fa:"\f059"}
 .fa-circle-info,.fa-info-circle{--fa:"\f05a"}
 .fa-arrow-left{--fa:"\f060"}
@@ -66,6 +68,7 @@
 .fa-arrow-up-right-from-square,.fa-external-link{--fa:"\f08e"}
 .fa-globe{--fa:"\f0ac"}
 .fa-chain,.fa-link{--fa:"\f0c1"}
+.fa-flask{--fa:"\f0c3"}
 .fa-copy{--fa:"\f0c5"}
 .fa-bars,.fa-navicon{--fa:"\f0c9"}
 .fa-cloud-arrow-up,.fa-cloud-upload,.fa-cloud-upload-alt{--fa:"\f0ee"}
@@ -92,6 +95,7 @@
 .fa-desktop,.fa-desktop-alt{--fa:"\f390"}
 .fa-shield-alt,.fa-shield-halved{--fa:"\f3ed"}
 .fa-boxes,.fa-boxes-alt,.fa-boxes-stacked{--fa:"\f468"}
+.fa-vial{--fa:"\f492"}
 .fa-box-open{--fa:"\f49e"}
 .fa-palette{--fa:"\f53f"}
 .fa-arrow-right-to-file,.fa-file-import{--fa:"\f56f"}

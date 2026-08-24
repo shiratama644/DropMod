@@ -19,6 +19,8 @@ interface NewProfileModalProps {
     mcVersion?: string;
     loader?: string;
     loaderVersion?: string;
+    description?: string;
+    source?: 'import' | 'duplicate';
   } | null;
   onCreate: (
     name: string,
@@ -74,7 +76,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       if (initialImportData.loaderVersion) {
         setLoaderVersion(initialImportData.loaderVersion);
       }
-      setDesc(`ZIPインポート (${initialImportData.mods.length} 個のMod入り)`);
+      if (initialImportData.source === 'duplicate') {
+        setDesc(initialImportData.description ?? '');
+      } else {
+        setDesc(
+          initialImportData.description ??
+            `ZIPインポート (${initialImportData.mods.length} 個のMod入り)`
+        );
+      }
     } else {
       setName('');
       const first = mcVersions[0];
@@ -183,7 +192,11 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
           <h3 id={titleId} className="font-bold text-base sm:text-lg flex items-center gap-2">
             <i className="fa-solid fa-folder-plus theme-text-brand"></i>
-            {initialImportData ? 'ZIPからプロファイル作成' : '新規プロファイル作成'}
+            {initialImportData?.source === 'duplicate'
+              ? 'プロファイルを複製'
+              : initialImportData
+                ? 'ZIPからプロファイル作成'
+                : '新規プロファイル作成'}
           </h3>
           <button
             type="button"
@@ -195,7 +208,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
           </button>
         </div>
 
-        {initialImportData && (
+        {initialImportData && initialImportData.source !== 'duplicate' && (
           <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-1">
             <div className="font-bold theme-text-brand flex items-center gap-1.5">
               <i className="fa-solid fa-file-zipper"></i> ZIP内の.jarハッシュ照合完了
@@ -330,7 +343,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
               type="submit"
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
-              作成する
+              {initialImportData?.source === 'duplicate' ? '複製する' : '作成する'}
             </button>
           </div>
         </form>

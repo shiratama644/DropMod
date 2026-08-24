@@ -12,6 +12,7 @@ import { useDependencyCheck } from '@/hooks/useDependencyCheck';
 import { useZipExport } from '@/hooks/useZipExport';
 import { useZipImport } from '@/hooks/useZipImport';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
+import { nextDuplicateName } from '@/lib/utils/profileName';
 import { db } from '@/lib/db/dexie';
 import { useProfilesStore } from '@/lib/store/profiles';
 
@@ -99,12 +100,12 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     currentProfile,
     handleSwitchProfile,
     handleCreateProfile,
-    handleDuplicateProfile,
     handleSaveEditedProfile,
     handleDeleteProfile,
     handleToggleMod,
     handleUpdateModVersion,
-    handleRemoveAllMods
+    handleRemoveAllMods,
+    handleRemoveMods
   } = useProfiles(theme, setThemeState, showToast, confirm);
 
   // ---------- Dependency check ----------
@@ -159,6 +160,23 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     setPendingImportData(null);
     setIsNewProfileModalOpen(true);
   }, [setPendingImportData]);
+
+  const handleDuplicateProfile = useCallback(() => {
+    if (!currentProfile || currentProfile.id === 'transient-fallback') return;
+    setPendingImportData({
+      name: nextDuplicateName(
+        currentProfile.name,
+        profiles.map((p) => p.name)
+      ),
+      mods: currentProfile.mods.map((m) => ({ ...m })),
+      mcVersion: currentProfile.mcVersion,
+      loader: currentProfile.loader,
+      loaderVersion: currentProfile.loaderVersion,
+      description: currentProfile.description,
+      source: 'duplicate'
+    });
+    setIsNewProfileModalOpen(true);
+  }, [currentProfile, profiles, setPendingImportData]);
 
   const openEditProfileModal = useCallback(() => setIsEditProfileModalOpen(true), []);
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
@@ -300,6 +318,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       handleToggleMod,
       handleUpdateModVersion,
       handleRemoveAllMods,
+      handleRemoveMods,
       runBackgroundDepCheck,
       handleDownloadZip,
       handleCancelZip,
@@ -323,6 +342,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     handleToggleMod,
     handleUpdateModVersion,
     handleRemoveAllMods,
+    handleRemoveMods,
     runBackgroundDepCheck,
     handleDownloadZip,
     handleCancelZip,

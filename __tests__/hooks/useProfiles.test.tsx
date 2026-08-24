@@ -164,7 +164,7 @@ describe('useProfiles', () => {
     expect(result.current.currentProfileId).toBe(bId);
   });
 
-  it('handleDuplicateProfile: 現在プロファイルの複製 + 名前に "(コピー)"', async () => {
+  it('handleDuplicateProfile: 現在プロファイルの複製 + 名前に "(1)"', async () => {
     const h = makeHarness();
     const { result } = renderHook(
       () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
@@ -176,7 +176,7 @@ describe('useProfiles', () => {
       result.current.handleDuplicateProfile();
     });
     expect(result.current.profiles).toHaveLength(2);
-    expect(result.current.profiles[1]!.name).toContain('(コピー)');
+    expect(result.current.profiles[1]!.name).toMatch(/\(1\)$/);
     expect(result.current.currentProfileId).toBe(result.current.profiles[1]!.id);
   });
 
@@ -329,6 +329,66 @@ describe('useProfiles', () => {
     });
     expect(h.confirmDialog).toHaveBeenCalled();
     expect(result.current.currentProfile?.mods.length).toBe(0);
+  });
+
+  it('handleRemoveMods: 指定 id だけ削除する', async () => {
+    const h = makeHarness(true);
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      await result.current.handleToggleMod('sodium');
+    });
+    const addedId = result.current.currentProfile!.mods[0]!.id;
+    await act(async () => {
+      await result.current.handleRemoveMods([addedId]);
+    });
+    expect(h.confirmDialog).toHaveBeenCalled();
+    expect(result.current.currentProfile?.mods.length).toBe(0);
+  });
+
+  it('handleUpdateModVersion: knownVersion があれば追加 fetch せず即反映', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+
+    await act(async () => {
+      await result.current.handleToggleMod('sodium');
+    });
+    const addedId = result.current.currentProfile!.mods[0]!.id;
+    await act(async () => {
+      await result.current.handleUpdateModVersion(addedId, 'local-ver', {
+        id: 'local-ver',
+        project_id: addedId,
+        author_id: 'a',
+        featured: false,
+        name: 'local',
+        version_number: '9.9.9',
+        date_published: '2026-01-01',
+        downloads: 0,
+        version_type: 'beta',
+        files: [
+          {
+            url: 'https://example.com/local.jar',
+            filename: 'local.jar',
+            primary: true,
+            size: 1
+          }
+        ],
+        game_versions: ['1.20.1'],
+        loaders: ['fabric']
+      });
+    });
+    const updated = result.current.currentProfile!.mods[0]!;
+    expect(updated.selectedVersionId).toBe('local-ver');
+    expect(updated.selectedVersionNumber).toBe('9.9.9');
+    expect(updated.fileUrl).toBe('https://example.com/local.jar');
   });
 
   it('handleToggleMod: fetch 失敗時は warning toast + mod 追加されない', async () => {

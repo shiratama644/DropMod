@@ -24,6 +24,7 @@ function makeActions(overrides: Partial<AppActions> = {}): AppActions {
     handleToggleMod: vi.fn(),
     handleUpdateModVersion: vi.fn(),
     handleRemoveAllMods: vi.fn(),
+    handleRemoveMods: vi.fn(),
     runBackgroundDepCheck: vi.fn(),
     handleDownloadZip: vi.fn(),
     handleCancelZip: vi.fn(),

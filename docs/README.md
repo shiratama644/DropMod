@@ -18,7 +18,8 @@ docs/
 │   ├── PHASE10_PLAN.md                # Phase 10 実施計画書 (FontAwesome subset / AppContext 削除 / Image / E2E / shimmer)
 │   ├── PHASE11_PLAN.md                # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
-│   └── PHASE13_PLAN.md                # Phase 13 (CurseForge 完全対応)
+│   ├── PHASE13_PLAN.md                # Phase 13 (CurseForge 完全対応)
+│   └── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (案B+: 型別詳細URL + モーダル廃止 + 状態保持)
 ├── complete/                          # 完了レポート
 │   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
 │   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ

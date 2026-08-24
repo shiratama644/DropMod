@@ -19,7 +19,8 @@ docs/
 │   ├── PHASE11_PLAN.md                # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
 │   ├── PHASE13_PLAN.md                # Phase 13 (CurseForge 完全対応)
-│   └── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
+│   ├── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
+│   └── SEO_CANDIDATES.md              # SEO 改善候補リスト (Phase 11/12 後に再開、重複対策は早めに)
 ├── complete/                          # 完了レポート
 │   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
 │   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ

@@ -25,6 +25,7 @@ interface PopularMarqueeProps {
   hits: ModrinthHit[];
   /** アニメ 1 周の秒数 (default 40) */
   durationSec?: number;
+  ariaLabel?: string;
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -43,6 +44,7 @@ function usePrefersReducedMotion(): boolean {
 export const PopularMarquee: React.FC<PopularMarqueeProps> = ({
   hits,
   durationSec = 40,
+  ariaLabel = '新着の Mod',
 }) => {
   const reduced = usePrefersReducedMotion();
 
@@ -51,7 +53,7 @@ export const PopularMarquee: React.FC<PopularMarqueeProps> = ({
   return (
     // Phase 9.5-F (a11y): role="region" の推奨は <section>。SR は同等に landmark 認識。
     <section
-      aria-label="人気の Mod"
+      aria-label={ariaLabel}
       className="relative overflow-hidden"
       style={{
         maskImage:

@@ -415,6 +415,40 @@ export const HomeInteractive: React.FC<Props> = ({
 
       {/* Search / Sort / Category */}
       <div id="search-bar-panel" className="glass-panel rounded-2xl p-3 sm:p-4 space-y-3">
+        {/* 種別タブは PC のみ。検索バーより上。モバイルは BottomNav「探す」 */}
+        <nav
+          aria-label="プロジェクト種別"
+          className="hidden md:grid grid-cols-4 gap-2"
+        >
+          {PROJECT_TYPE_TABS.map((tab) => {
+            const isActive = projectType === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleProjectTypeChange(tab.id)}
+                aria-pressed={isActive}
+                className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0 ${
+                  isActive
+                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/20'
+                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500 hover:border-emerald-500/40'
+                }`}
+              >
+                <span
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base ${
+                    isActive
+                      ? 'bg-slate-950/15 text-slate-950'
+                      : 'bg-emerald-500/15 theme-text-brand'
+                  }`}
+                >
+                  <i className={tab.icon} aria-hidden />
+                </span>
+                <span className="truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         <div className="flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
             <i
@@ -470,40 +504,6 @@ export const HomeInteractive: React.FC<Props> = ({
             </div>
           </div>
         </div>
-
-        {/* 種別タブは PC のみ。モバイルは BottomNav「探す」から遷移する */}
-        <nav
-          aria-label="プロジェクト種別"
-          className="hidden md:grid grid-cols-4 gap-2"
-        >
-          {PROJECT_TYPE_TABS.map((tab) => {
-            const isActive = projectType === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleProjectTypeChange(tab.id)}
-                aria-pressed={isActive}
-                className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0 ${
-                  isActive
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/20'
-                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500 hover:border-emerald-500/40'
-                }`}
-              >
-                <span
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base ${
-                    isActive
-                      ? 'bg-slate-950/15 text-slate-950'
-                      : 'bg-emerald-500/15 theme-text-brand'
-                  }`}
-                >
-                  <i className={tab.icon} aria-hidden />
-                </span>
-                <span className="truncate">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
 
         {/* Category Filter */}
         <div className="scroll-fade-container">

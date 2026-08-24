@@ -48,30 +48,29 @@ const ROTATOR_WORDS = [
   'Shaders',
 ] as const;
 
-/**
- * Modrinth API から人気上位 20 件を SSR で取得。
- * 上位 6 件は「検索プレビュー」、全 20 件は marquee として使う。
- * API 失敗時は空配列 fallback (LP 全体は動作継続)。
- */
-async function fetchPopularHits(): Promise<ModrinthHit[]> {
+async function fetchLandingHits(sortBy: 'popular' | 'newest', limit: number): Promise<ModrinthHit[]> {
   try {
     const result = await fetchModrinthSearch({
       query: '',
-      sortBy: 'popular',
-      limit: 20,
+      sortBy,
+      limit,
       offset: 0,
+      projectType: 'mod'
     });
     return result.hits;
   } catch (e) {
-    console.warn('[DropMod] landing hero fetch failed, using empty:', e);
+    console.warn(`[DropMod] landing ${sortBy} fetch failed, using empty:`, e);
     return [];
   }
 }
 
 export default async function LandingPage() {
-  const popularHits = await fetchPopularHits();
+  const [popularHits, newestHits] = await Promise.all([
+    fetchLandingHits('popular', 6),
+    fetchLandingHits('newest', 16)
+  ]);
   const previewHits = popularHits.slice(0, 6);
-  const marqueeHits = popularHits.slice(0, 16);
+  const marqueeHits = newestHits.slice(0, 16);
 
   return (
     <main className="flex-1 w-full">
@@ -204,10 +203,10 @@ export default async function LandingPage() {
               続々と追加される新しい Mod
             </h2>
             <p className="mt-1 text-xs sm:text-sm theme-text-muted text-center">
-              左右にゆっくり流れます。カード上でホバーすると停止。
+              Modrinth の新着順。ホバーすると流れが止まります。
             </p>
           </div>
-          <PopularMarquee hits={marqueeHits} />
+          <PopularMarquee hits={marqueeHits} ariaLabel="新着の Mod" />
         </section>
       )}
 

@@ -4,13 +4,16 @@
  * Phase 9-F: URL 再設計
  *   - 旧 /mods (選択中プロファイル)   → /profile に移動
  *   - 新 /mods (Modrinth 検索一覧)    → 旧 Home のコンテンツ
+ *
+ * PC では Header を出さない (DesktopSidebar のみ) ため、
+ * 待機対象は `#desktop-sidebar, #app-header` のいずれか visible。
  */
 
 import { test, expect } from '@playwright/test';
 
-test('/mods (Modrinth 検索一覧) renders and shows search UI', async ({ page }) => {
-  await page.goto('/mods');
-  await page.waitForSelector('#app-header', { state: 'visible' });
+test('/discover/mods (Modrinth 検索一覧) renders and shows search UI', async ({ page }) => {
+  await page.goto('/discover/mods');
+  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
 
   // タイトル
   await expect(page).toHaveTitle(/DropMod/);
@@ -24,17 +27,17 @@ test('/profile (選択中プロファイル一覧) renders and shows profile inf
   page
 }) => {
   await page.goto('/profile');
-  await page.waitForSelector('#app-header', { state: 'visible' });
+  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
 
   // タイトル
   await expect(page).toHaveTitle(/DropMod/);
 
-  // 「選択中のMod一覧」見出しが見える
-  await expect(page.getByText(/選択中のMod一覧/)).toBeVisible();
+  // 「選択中一覧」見出しが見える
+  await expect(page.getByText(/選択中一覧/)).toBeVisible();
 });
 
 test('settings page renders', async ({ page }) => {
   await page.goto('/settings');
-  await page.waitForSelector('#app-header', { state: 'visible' });
+  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
   await expect(page).toHaveTitle(/DropMod/);
 });

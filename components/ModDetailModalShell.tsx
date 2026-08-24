@@ -7,10 +7,13 @@ import { useRouter } from 'next/navigation';
 
 import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/types';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { discoverPathFromProjectType } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell
@@ -57,6 +60,64 @@ function pickPrimaryFile(v: ModrinthVersion | null): ModrinthVersionFile | null 
   return v.files.find((f) => f.primary) || v.files[0] || null;
 }
 
+function ModalStats({ project }: { project: ModrinthProject }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 text-xs">
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">ダウンロード数</span>
+        <span className="font-bold theme-text-brand font-mono text-sm">
+          {formatDownloads(project.downloads)}
+        </span>
+      </div>
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">最終更新日</span>
+        <span className="font-semibold font-mono text-sm">
+          {new Date(project.updated).toLocaleDateString()}
+        </span>
+      </div>
+      <div className="theme-sub-box p-2.5 rounded-xl">
+        <span className="text-xs theme-text-muted block font-semibold">カテゴリ</span>
+        <span className="font-semibold text-sm capitalize truncate block">
+          {project.categories && project.categories.length > 0
+            ? project.categories.join(', ')
+            : 'mod'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function VersionList({ versions }: { versions: ModrinthVersion[] }) {
+  if (versions.length === 0) {
+    return (
+      <p className="text-xs theme-text-muted">
+        このプロファイル向けの対応バージョンは見つかりませんでした。
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto overscroll-contain pt-1 pr-1">
+      {versions.map((v) => (
+        <span
+          key={v.id}
+          className="px-2.5 py-1 rounded-lg theme-badge text-xs font-mono flex items-center gap-1 shadow-sm"
+        >
+          <span>{v.version_number}</span>
+          <span
+            className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+              v.version_type === 'release'
+                ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
+                : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
+            }`}
+          >
+            {v.version_type}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export const ModDetailModalShell: React.FC<Props> = ({
   project,
   versions,
@@ -75,8 +136,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const titleId = useId();
   const isModal = variant === 'modal';
 
-  const [isVersionsExpanded, setIsVersionsExpanded] = useState(true);
-  const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
 
@@ -108,22 +168,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
   // Esc キー・focus trap は modal バリアント時のみ有効
   useModalA11y(isModal, handleClose, dialogRef);
 
-  // page バリアントに切り替わったタイミングでギャラリー展開をリセット
-  //
-  // Phase 10-P5 (useExhaustiveDependencies): slug を deps に含めるのは
-  //   「slug が変わったら (別 Mod に切り替わったら) ギャラリー展開状態と
-  //    選択中プレビュー画像をリセット」する意図トリガーのため。effect 本体で
-  //    slug を参照しないので Biome は「不要」と判定するが、これは仕様通り。
+  // slug が変わったら (別 Mod に切り替わったら) ギャラリーモーダルを閉じる
   // biome-ignore lint/correctness/useExhaustiveDependencies: slug 変更検知トリガーとして意図的
   useEffect(() => {
-    setIsVersionsExpanded(true);
-    setSelectedGalleryImg(null);
+    setIsGalleryOpen(false);
   }, [slug]);
 
   // variant="page" (フルページ) の時、body に `mod-fullpage`
   // クラスを付与して AppShell の Header と BottomNav を非表示にする。
-  // (Home 上のモーダル表示 = variant="modal" では付与しないので、
-  //  グローバル Header は残る。)
   // アンマウント時に必ずクラスを剥がすので、他ページ遷移で消え残らない。
   //
   // 注: Phase 10-P1 で /mods/[slug] フルページ経路は ModDetailPageView に
@@ -135,6 +187,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
     document.body.classList.add('mod-fullpage');
     return () => {
       document.body.classList.remove('mod-fullpage');
+    };
+  }, [isModal]);
+
+  // インターセプト詳細モーダル中はモバイル BottomNav を隠す。
+  // BottomNav は z-[60]、従来のモーダル overlay は z-50 だったため
+  // ナビが前面に出て操作できてしまう不具合があった。
+  useEffect(() => {
+    if (!isModal) return;
+    if (typeof document === 'undefined') return;
+    document.body.classList.add('mod-detail-modal');
+    return () => {
+      document.body.classList.remove('mod-detail-modal');
     };
   }, [isModal]);
 
@@ -204,7 +268,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
         // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
           onClick={handleClose}
         >
@@ -223,7 +287,6 @@ export const ModDetailModalShell: React.FC<Props> = ({
 
   const latestVersion = versions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
-  const displayedVersions = isVersionsExpanded ? versions : [];
 
   const isAdded = currentProfile.mods.some(
     (m) => m.id === project.id || (project.slug && m.slug === project.slug)
@@ -256,9 +319,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
     <div
       ref={dialogRef}
       {...dialogProps}
-      className={
+        className={
         isModal
-          ? 'modal-card glass-panel w-full max-w-3xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
+          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
           : 'modal-card glass-panel w-full max-w-3xl mx-auto rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden'
       }
       onClick={(e) => {
@@ -307,12 +370,19 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <div
         className={
           isModal
-            ? 'flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
+            ? 'flex-1 min-h-0 overflow-y-auto md:overflow-hidden md:flex overscroll-contain'
             : 'p-4 sm:p-6 space-y-4'
         }
       >
-        {/* 統計バー */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+        <div
+          className={
+            isModal
+              ? 'p-4 sm:p-6 space-y-4 md:flex-1 md:min-h-0 md:overflow-y-auto'
+              : 'space-y-4'
+          }
+        >
+        {/* 統計バー (モバイル。PC モーダルは右ペイン) */}
+        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs ${isModal ? 'md:hidden' : ''}`}>
           <div className="theme-sub-box p-2.5 rounded-xl">
             <span className="text-xs theme-text-muted block font-semibold">
               ダウンロード数
@@ -341,74 +411,45 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* ギャラリー画像 */}
+        {/* ギャラリー画像 (タッププレビューはしない。閲覧は専用モーダル) */}
         {project.gallery && project.gallery.length > 0 && (
           <div className="space-y-2 pt-1">
-            <span className="text-xs font-bold uppercase tracking-wider theme-text-muted flex items-center gap-1.5">
-              <i className="fa-solid fa-images theme-text-brand" aria-hidden />
-              {`ギャラリー・スクリーンショット (${project.gallery.length})`}
-            </span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider theme-text-muted flex items-center gap-1.5">
+                <i className="fa-solid fa-images theme-text-brand" aria-hidden />
+                {`ギャラリー・スクリーンショット (${project.gallery.length})`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsGalleryOpen(true)}
+                className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-images" aria-hidden />
+                ギャラリー・スクリーンショットを閲覧
+              </button>
+            </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {project.gallery.map((img) => (
-                // Phase 10-P5 (a11y/useSemanticElements): サムネイルは意味論的に
-                //   button (アクション実行) なので <button type="button"> に変更。
-                //   Enter/Space での拡大プレビュー起動もブラウザ標準で無料。
-                <button
+                <figure
                   key={img.url}
-                  type="button"
-                  onClick={() => setSelectedGalleryImg(img.url)}
-                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-pointer hover:border-emerald-500 transition shadow group relative p-0"
+                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 relative m-0"
                 >
-                  {/* <img> ではなく next/image (fill mode で可変サイズ対応) */}
                   <Image
                     src={img.url}
                     alt={img.title || 'Gallery image'}
                     fill
                     sizes="(min-width: 640px) 176px, 128px"
-                    className="object-cover group-hover:scale-105 transition duration-300"
+                    className="object-cover"
+                    unoptimized={isAnimatedImageUrl(img.url)}
                   />
                   {img.title && (
-                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
+                    <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
                       {img.title}
-                    </div>
+                    </figcaption>
                   )}
-                </button>
+                </figure>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* 拡大プレビュー */}
-        {/* Phase 10-P5 (a11y): 外側コンテナ全体を button 化できない
-            (内部に <button>閉じる✕ が入れ子で存在するため) ので、
-            従来「コンテナクリックで閉じる」挙動は撤去し、閉じる操作は
-            右上の <button> と Escape (useModalA11y) に集約。
-            外側 div はイベントハンドラを持たない静的コンテナに戻し、
-            noStaticElementInteractions / useKeyWithClickEvents の警告を根本解消。 */}
-        {selectedGalleryImg && (
-          <div className="p-2 rounded-2xl bg-slate-900/90 border border-emerald-500/40 relative shadow-xl space-y-2">
-            <div className="flex justify-between items-center text-xs px-1">
-              <span className="font-bold theme-text-brand">プレビュー</span>
-              <button
-                type="button"
-                onClick={() => setSelectedGalleryImg(null)}
-                className="theme-text-muted hover:text-white"
-              >
-                閉じる ✕
-              </button>
-            </div>
-            {/* 拡大プレビューは width/height 未確定 (画像アスペクト比依存)
-                のため next/image の layout=intrinsic 相当が使えない。
-                object-contain + max-h-72 の伸縮レイアウトを維持するため <img> のまま。
-                CDN 経由なので lazy load + async decoding を明示。 */}
-            {/* biome-ignore lint/performance/noImgElement: aspect ratio 未確定で next/image 不可 */}
-            <img
-              src={selectedGalleryImg}
-              alt="ギャラリー画像プレビュー"
-              className="max-h-72 w-full object-contain rounded-xl"
-              loading="lazy"
-              decoding="async"
-            />
           </div>
         )}
 
@@ -434,66 +475,26 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* 対応バージョン一覧 */}
-        <div className="space-y-2 pt-2 border-t border-slate-500/10">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
-              {`対応バージョン一覧 (${versions.length})`}
-            </span>
-            {versions.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsVersionsExpanded(!isVersionsExpanded)}
-                className="text-xs font-bold theme-text-brand hover:underline flex items-center gap-1"
-              >
-                <span>
-                  {isVersionsExpanded
-                    ? '折りたたむ'
-                    : `すべて表示 (${versions.length}件)`}
-                </span>
-                <i
-                  className={`fa-solid fa-chevron-${
-                    isVersionsExpanded ? 'up' : 'down'
-                  } text-[10px]`}
-                  aria-hidden
-                />
-              </button>
-            )}
-          </div>
-
-          {isVersionsExpanded && displayedVersions.length > 0 && (
-            <div
-              className={
-                isModal
-                  ? 'flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pt-1 hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
-                  : 'flex flex-wrap gap-1.5 pt-1'
-              }
-            >
-              {displayedVersions.map((v) => (
-                <span
-                  key={v.id}
-                  className="px-2.5 py-1 rounded-lg theme-badge text-xs font-mono flex items-center gap-1 shadow-sm"
-                >
-                  <span>{v.version_number}</span>
-                  <span
-                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                      v.version_type === 'release'
-                        ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
-                        : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
-                    }`}
-                  >
-                    {v.version_type}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-          {versions.length === 0 && (
-            <p className="text-xs theme-text-muted">
-              このプロファイル向けの対応バージョンは見つかりませんでした。
-            </p>
-          )}
+        {/* 対応バージョン一覧 (モバイル。PC モーダルは右ペイン) */}
+        <div className={`space-y-2 pt-2 border-t border-slate-500/10 ${isModal ? 'md:hidden' : ''}`}>
+          <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
+            {`対応バージョン一覧 (${versions.length})`}
+          </span>
+          <VersionList versions={versions} />
         </div>
+        </div>
+
+        {isModal && (
+          <aside className="hidden md:flex w-80 shrink-0 flex-col gap-4 p-6 border-l border-slate-500/15 overflow-y-auto overscroll-contain min-h-0">
+            <ModalStats project={project} />
+            <div className="space-y-2 pt-1 border-t border-slate-500/10">
+              <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
+                {`対応バージョン (${versions.length})`}
+              </span>
+              <VersionList versions={versions} />
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* 固定フッターアクション */}
@@ -511,11 +512,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
           // Phase 9-F: フルページ (variant="page") 時の戻り先は /mods (Mod 一覧) に。
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
-            href="/mods"
+            href={discoverPathFromProjectType(project.project_type)}
             className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
-            Mod 一覧に戻る
+            検索に戻る
           </Link>
         )}
         {latestFile && (
@@ -588,7 +589,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
       // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
+        className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
         style={{ backgroundColor: 'var(--modal-overlay)' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
@@ -598,6 +599,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
         }}
       >
         {innerCard}
+        <ScreenshotGalleryModal
+          isOpen={isGalleryOpen}
+          images={project.gallery ?? []}
+          onClose={() => setIsGalleryOpen(false)}
+        />
       </div>
     );
   }
@@ -609,14 +615,19 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <div className="mb-3">
         {/* <button router.push> ではなく <Link href> で戻る (SEO/新規タブ対応) */}
         <Link
-          href="/mods"
+          href={discoverPathFromProjectType(project.project_type)}
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
-          Mod 一覧に戻る
+          検索に戻る
         </Link>
       </div>
       {innerCard}
+      <ScreenshotGalleryModal
+        isOpen={isGalleryOpen}
+        images={project.gallery ?? []}
+        onClose={() => setIsGalleryOpen(false)}
+      />
     </main>
   );
 };

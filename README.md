@@ -45,7 +45,7 @@ pnpm dev
 # 型チェック
 pnpm typecheck
 
-# 本番ビルド
+# 本番ビルド (PRoot-Distro は Webpack cache、それ以外は Turbopack persistent cache)
 pnpm build
 
 # 本番ランタイム起動
@@ -148,4 +148,4 @@ Vite + Hono から Next.js 16 + Vercel への段階的移行 (2025-08〜2026-08)
 
 ## ライセンス
 
-TBD (プライベートリポジトリ)。
+MIT License。詳細は [`LICENSE`](./LICENSE) を参照してください。

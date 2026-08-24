@@ -113,6 +113,8 @@ describe('useZipImport', () => {
     expect(nextProfiles[0].loader).toBe('Fabric');
     expect(nextProfiles[0].mods).toHaveLength(1);
     expect(nextProfiles[0].mods[0].filename).toBe('example-1.0.jar');
+    // SHA-1 照合で Modrinth project id が付く (ランダム id だと詳細/依存チェックが壊れる)
+    expect(nextProfiles[0].mods[0].id).toBe('proj-x');
   });
 
   it('.mrpack の dependencies を loader ラベル (NeoForge) に対応付ける', async () => {

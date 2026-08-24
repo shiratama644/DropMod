@@ -35,6 +35,21 @@ describe('NewProfileModal', () => {
     expect(screen.getByText('新規プロファイル作成')).toBeInTheDocument();
   });
 
+  it('フォルダ選択・MC/ローダー/ローダーバージョンの UI がある', () => {
+    render(
+      <NewProfileModal
+        isOpen
+        onClose={() => {}}
+        mcVersions={mcVersions}
+        onCreate={() => {}}
+      />
+    );
+    expect(screen.getByText(/Minecraft フォルダ/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Minecraftバージョン')).toBeInTheDocument();
+    expect(screen.getByLabelText('Modローダー')).toBeInTheDocument();
+    expect(screen.getByLabelText('ローダーバージョン')).toBeInTheDocument();
+  });
+
   it('initialImportData がある場合は「ZIPから」ヘッダを表示', () => {
     render(
       <NewProfileModal
@@ -154,6 +169,33 @@ describe('NewProfileModal', () => {
     );
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('source=duplicate なら複製タイトルと名前 (1) を出す', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    render(
+      <NewProfileModal
+        isOpen
+        onClose={() => {}}
+        mcVersions={mcVersions}
+        initialImportData={{
+          name: '軽量化 (1)',
+          mods: [{ id: 'a', title: 'A', description: '' }],
+          source: 'duplicate',
+          description: '元の説明'
+        }}
+        onCreate={onCreate}
+      />
+    );
+    expect(screen.getByText('プロファイルを複製')).toBeInTheDocument();
+    expect(screen.queryByText('ZIPからプロファイル作成')).not.toBeInTheDocument();
+    const nameInput = screen.getByPlaceholderText(/最新 1\.21\.4/) as HTMLInputElement;
+    expect(nameInput.value).toBe('軽量化 (1)');
+    await user.click(screen.getByRole('button', { name: '複製する' }));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onCreate.mock.calls[0]![0]).toBe('軽量化 (1)');
+    expect(onCreate.mock.calls[0]![3]).toBe('元の説明');
   });
 
   it('initialImportData の mods は onCreate に渡される', async () => {

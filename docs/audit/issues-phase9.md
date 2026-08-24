@@ -22,7 +22,9 @@
 > | `847f760` fix(perf test B36) | B36 |
 > | `381931f` docs (仕様書齟齬) | D4, D7, D14, D15, D16, DOC-1, DOC-6, B27 |
 >
-> **未修正 (Low、実害無いため放置)**: B2, B3, B6, B9, B14, B15, B17, B20, B21, B25, B26, B29, B30, B34, B37, B38, B39 (全て「確認済み無害」or「別バグとの重複」or「実運用で発生しない edge case」)
+> **未修正 (Low、実害無いため放置)**: B2, B3, B6, B9, B14, B15, B17, B20, B21, B25, B26, B28 (JSZip 本体は Abort 非対応), B29, B30, B34, B37, B38, B39
+
+**追加修正 (2026-08-23 追記)**: B18 は confirm キュー化で対応。詳細ページ author 欠落は `/project/{id}/members` で補完。theme FOUC は `dropmod_theme` cookie で補完。
 >
 > **仕様書齟齬 (docs/audit/diff-phase9.md 側で管理)**: D1〜D20 のうち D1/D2/D3/D5/D6/D8-D11 は「意図的な設計変更」として許容、D4/D7/D14/D15/D16 は docs 更新で解決、D12/D13/D17-D20 は影響小のため許容 or docs 反映済み
 

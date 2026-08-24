@@ -43,7 +43,23 @@ describe('ModCard', () => {
     );
     expect(screen.getByText('Sodium')).toBeInTheDocument();
     expect(screen.getByText('JellySquid')).toBeInTheDocument();
-    expect(screen.getByText('performance')).toBeInTheDocument();
+    expect(screen.getByText('軽量化')).toBeInTheDocument();
+  });
+
+  it('追加ボタン左はローダーではなくカテゴリーを出す', () => {
+    render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          categories: ['fabric', 'utility'],
+          display_categories: ['fabric']
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText('ユーティリティ')).toBeInTheDocument();
+    expect(screen.queryByText('fabric')).not.toBeInTheDocument();
   });
 
   it('DL 数を K/M 単位でフォーマットする', () => {
@@ -157,6 +173,22 @@ describe('ModCard', () => {
     );
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toBe('/mods/proj-1');
+  });
+
+  it('自動レイアウトで横長バナーは sm:col-span-2 を付ける', () => {
+    const { container } = render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          description: 'x'.repeat(200),
+          featured_gallery: 'https://example.com/banner.png'
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="auto"
+      />
+    );
+    expect(container.querySelector('a')?.className).toContain('sm:col-span-2');
   });
 
   it('slug 一致でも追加済み判定される', () => {

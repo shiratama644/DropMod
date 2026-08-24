@@ -16,6 +16,8 @@
     "components/**/*.tsx",
     "hooks/**/*.ts",
     "lib/**/*.ts",
+    "scripts/**/*.ts",
+    "script/**/*.ts",
     "types.ts",
     "next-env.d.ts"
   ],

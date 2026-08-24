@@ -2,11 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { ModrinthHit } from '@/types';
 import { fetchModrinth } from '@/lib/modrinth/client';
-import { CATEGORIES } from '@/lib/constants/categories';
-import { SEARCH_LIMIT } from '@/lib/constants/search';
+import { categoriesForProjectType } from '@/lib/constants/categories';
+import {
+  PROJECT_TYPE_TABS,
+  SEARCH_LIMIT,
+  SEARCH_LAYOUT_OPTIONS,
+  SEARCH_LAYOUT_STORAGE_KEY,
+  discoverPathForType,
+  parseSearchLayout,
+  searchGridClass,
+  type ProjectType,
+  type SearchLayout
+} from '@/lib/constants/search';
 import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from './CustomDropdown';
 import { ModCard } from './ModCard';
@@ -60,16 +71,22 @@ interface Props {
   initialHits: ModrinthHit[];
   /** 初期絞り込みが hasMore かどうか (24 件以上ヒットしていれば true) */
   initialHasMore: boolean;
+  /** LP / Browse から渡された検索語 (`?q=`) */
+  initialQuery?: string;
+  /** LP / Browse から渡された project_type (`?type=`) */
+  initialProjectType?: ProjectType;
 }
 // initialMcVersions prop 削除。AppShell 側で fetchLatestMinecraftVersions を
 // Client fetch しており実質未使用 (隠しコメントでしか使われていなかった) だったため。
 
 export const HomeInteractive: React.FC<Props> = ({
-  initialHits
+  initialHits,
   // Phase 10-P5: initialHasMore は Props 型に残しつつ destructure だけ削除。
   //   将来のページネーション「initial は hasMore かどうか」実装で
   //   復活させやすくするため型シグネチャは維持 (呼び出し側 app/mods/page.tsx も
   //   引き続き渡している)。
+  initialQuery = '',
+  initialProjectType = 'mod'
 }) => {
   // Phase 9-A.3: useAppContext 撤去、Zustand + appActions 直接参照
   // B33 修正: 3 コンポーネントで重複していた fallback パターンを共通 hook に集約
@@ -91,10 +108,58 @@ export const HomeInteractive: React.FC<Props> = ({
   // ---------------------------------------------------------------------
 
   // 絞り込み state
+  const router = useRouter();
+  const urlSearchParams = useSearchParams();
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [sortBy, setSortBy] = useState<string>('popular');
-  const [searchInput, setSearchInput] = useState<string>('');
-  const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState<string>(initialQuery);
+  const [projectType, setProjectType] = useState<ProjectType>(initialProjectType);
+  const [layout, setLayout] = useState<SearchLayout>('3');
+
+  useEffect(() => {
+    try {
+      setLayout(parseSearchLayout(localStorage.getItem(SEARCH_LAYOUT_STORAGE_KEY)));
+    } catch {
+      /* private mode 等 */
+    }
+  }, []);
+
+  useEffect(() => {
+    setProjectType(initialProjectType);
+  }, [initialProjectType]);
+
+  const typeCategories = categoriesForProjectType(projectType);
+
+  useEffect(() => {
+    if (!typeCategories.some((c) => c.id === selectedCategory)) {
+      setSelectedCategory('All');
+    }
+  }, [typeCategories, selectedCategory]);
+
+  const handleProjectTypeChange = useCallback(
+    (next: ProjectType) => {
+      setProjectType(next);
+      setSelectedCategory('All');
+      const params = new URLSearchParams(urlSearchParams.toString());
+      params.delete('type');
+      const qs = params.toString();
+      const path = discoverPathForType(next);
+      router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
+    },
+    [router, urlSearchParams]
+  );
+
+  const handleLayoutChange = useCallback((value: string) => {
+    const next = parseSearchLayout(value);
+    setLayout(next);
+    try {
+      localStorage.setItem(SEARCH_LAYOUT_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   // debounce (350ms)
   useEffect(() => {
@@ -109,31 +174,34 @@ export const HomeInteractive: React.FC<Props> = ({
       mcVersion: profile.mcVersion,
       loader: profile.loader,
       category: selectedCategory,
-      sort: sortBy as SearchQueryParams['sort']
+      sort: sortBy as SearchQueryParams['sort'],
+      projectType
     }),
-    [debouncedQuery, profile.mcVersion, profile.loader, selectedCategory, sortBy]
+    [debouncedQuery, profile.mcVersion, profile.loader, selectedCategory, sortBy, projectType]
   );
 
   // "初期フィルタ" (SSR の initialHits に対応する canonical params)
   // 初期フィルタと一致する場合のみ initialData を使う
   const initialSearchParams: SearchQueryParams = useMemo(
     () => ({
-      query: '',
+      query: initialQuery,
       mcVersion: profile.mcVersion,
       loader: profile.loader,
       category: 'All',
-      sort: 'popular'
+      sort: 'popular',
+      projectType: initialProjectType
     }),
     // profile を意図的に依存に含めず、SSR 時点のスナップショット固定にしたい所だが
     // profile が hydration 完了で変わるとキーが変わるので依存に含める
-    [profile.mcVersion, profile.loader]
+    [profile.mcVersion, profile.loader, initialQuery, initialProjectType]
   );
   const initialMatches =
     searchParams.query === initialSearchParams.query &&
     searchParams.category === initialSearchParams.category &&
     searchParams.sort === initialSearchParams.sort &&
     searchParams.mcVersion === initialSearchParams.mcVersion &&
-    searchParams.loader === initialSearchParams.loader;
+    searchParams.loader === initialSearchParams.loader &&
+    (searchParams.projectType ?? 'mod') === (initialSearchParams.projectType ?? 'mod');
 
   // B31 補助: SSR fetch 時刻を client mount 時に固定して initialDataUpdatedAt に使う。
   //   Date.now() は React 19 rule で render/useMemo 中に呼べないため、
@@ -155,9 +223,12 @@ export const HomeInteractive: React.FC<Props> = ({
   const query = useInfiniteQuery({
     queryKey: queryKeys.search.of(searchParams),
     queryFn: async ({ pageParam, signal }) => {
-      const facets: string[][] = [['project_type:mod']];
+      const type = searchParams.projectType ?? 'mod';
+      const facets: string[][] = [[`project_type:${type}`]];
       if (searchParams.mcVersion) facets.push([`versions:${searchParams.mcVersion}`]);
-      if (searchParams.loader) facets.push([`categories:${searchParams.loader.toLowerCase()}`]);
+      if (searchParams.loader && (type === 'mod' || type === 'modpack')) {
+        facets.push([`categories:${searchParams.loader.toLowerCase()}`]);
+      }
       if (searchParams.category && searchParams.category !== 'All') {
         facets.push([`categories:${searchParams.category}`]);
       }
@@ -344,6 +415,40 @@ export const HomeInteractive: React.FC<Props> = ({
 
       {/* Search / Sort / Category */}
       <div id="search-bar-panel" className="glass-panel rounded-2xl p-3 sm:p-4 space-y-3">
+        {/* 種別タブは PC のみ。検索バーより上。モバイルは BottomNav「探す」 */}
+        <nav
+          aria-label="プロジェクト種別"
+          className="hidden md:grid grid-cols-4 gap-2"
+        >
+          {PROJECT_TYPE_TABS.map((tab) => {
+            const isActive = projectType === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleProjectTypeChange(tab.id)}
+                aria-pressed={isActive}
+                className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0 ${
+                  isActive
+                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/20'
+                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500 hover:border-emerald-500/40'
+                }`}
+              >
+                <span
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base ${
+                    isActive
+                      ? 'bg-slate-950/15 text-slate-950'
+                      : 'bg-emerald-500/15 theme-text-brand'
+                  }`}
+                >
+                  <i className={tab.icon} aria-hidden />
+                </span>
+                <span className="truncate">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
         <div className="flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
             <i
@@ -385,13 +490,25 @@ export const HomeInteractive: React.FC<Props> = ({
                 label="並び順"
               />
             </div>
+            <span className="text-xs font-medium theme-text-muted whitespace-nowrap shrink-0 flex items-center gap-1">
+              <i className="fa-solid fa-table-cells-large" aria-hidden />
+              <span>表示:</span>
+            </span>
+            <div className="w-full sm:w-auto min-w-[10rem]">
+              <CustomDropdown
+                options={[...SEARCH_LAYOUT_OPTIONS]}
+                selectedValue={layout}
+                onChange={handleLayoutChange}
+                label="表示形式"
+              />
+            </div>
           </div>
         </div>
 
         {/* Category Filter */}
         <div className="scroll-fade-container">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 hide-scrollbar -mx-1 px-1 touch-pan-x">
-            {CATEGORIES.map((cat) => {
+            {typeCategories.map((cat) => {
               const isActive = selectedCategory === cat.id;
               return (
                 <button
@@ -425,7 +542,7 @@ export const HomeInteractive: React.FC<Props> = ({
       </div>
 
       {/* Mod Grid */}
-      <div id="mod-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div id="mod-grid" className={searchGridClass(layout)}>
         {isLoading && safeHits.length === 0 ? (
           INITIAL_SKELETON_KEYS.map((k) => (
             <div
@@ -480,6 +597,7 @@ export const HomeInteractive: React.FC<Props> = ({
                 hit={hit}
                 profile={profile}
                 onToggleMod={handleToggleMod}
+                layout={layout}
               />
             ))}
             {isLoading &&

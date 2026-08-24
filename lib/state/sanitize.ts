@@ -41,6 +41,7 @@ export function sanitizeLoadedState(raw: unknown): SanitizedState | null {
         name: typeof p.name === 'string' ? p.name : '(名称未設定)',
         mcVersion: typeof p.mcVersion === 'string' ? p.mcVersion : '1.20.1',
         loader: typeof p.loader === 'string' ? p.loader : 'Fabric',
+        loaderVersion: typeof p.loaderVersion === 'string' ? p.loaderVersion : undefined,
         description: typeof p.description === 'string' ? p.description : '',
         mods: Array.isArray(p.mods)
           ? (p.mods as unknown[]).filter(

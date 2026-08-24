@@ -5,21 +5,16 @@ import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import type { Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
+import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   profile: Profile;
   mcVersions: string[];
-  onSave: (name: string, mcVersion: string, loader: string, desc: string) => void;
+  onSave: (name: string, mcVersion: string, loader: string, desc: string, loaderVersion?: string) => void;
 }
-
-const LOADER_OPTIONS = [
-  { label: 'Fabric', value: 'Fabric' },
-  { label: 'Forge', value: 'Forge' },
-  { label: 'NeoForge', value: 'NeoForge' },
-  { label: 'Quilt', value: 'Quilt' },
-];
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   isOpen,
@@ -31,6 +26,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [name, setName] = useState(profile?.name || '');
   const [version, setVersion] = useState(profile?.mcVersion || '');
   const [loader, setLoader] = useState(profile?.loader || 'Fabric');
+  const [loaderVersion, setLoaderVersion] = useState(profile?.loaderVersion || '');
   const [desc, setDesc] = useState(profile?.description || '');
 
   const nameInputId = useId();
@@ -40,6 +36,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   // で紐付けるため id を生成。CustomDropdown は id prop を受け付ける (10-P5 で追加)。
   const versionSelectId = useId();
   const loaderSelectId = useId();
+  const loaderVersionSelectId = useId();
 
   // モーダルが「閉→開」になった瞬間のみプロファイル値でフォームを初期化。
   // 以前は deps に profile 全体が入っており、モーダルを開いている最中に
@@ -65,13 +62,32 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setName(profile.name || '');
       setVersion(profile.mcVersion || '');
       setLoader(profile.loader || 'Fabric');
+      setLoaderVersion(profile.loaderVersion || '');
       setDesc(profile.description || '');
     }
   }, [isOpen]);
 
+  const { versions: loaderVersions, options: loaderVersionOptions } = useLoaderVersionOptions(
+    loader,
+    version,
+    isOpen,
+    profile?.loaderVersion
+  );
+
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (loaderVersions.length === 0) {
+      setLoaderVersion('');
+      return;
+    }
+    if (!loaderVersion || !loaderVersions.includes(loaderVersion)) {
+      setLoaderVersion(loaderVersions[0] ?? '');
+    }
+  }, [isOpen, loaderVersion, loaderVersions]);
 
   // Safely construct version options with defensive array fallback
   const versionOptions = useMemo(() => {
@@ -87,7 +103,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     if (!trimmedName) return;
 
     if (typeof onSave === 'function') {
-      onSave(trimmedName, version, loader, desc.trim());
+      onSave(trimmedName, version, loader, desc.trim(), loaderVersion || undefined);
     }
     if (typeof onClose === 'function') {
       onClose();
@@ -168,11 +184,28 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </label>
             <CustomDropdown
               id={loaderSelectId}
-              options={LOADER_OPTIONS}
+              options={LOADER_DROPDOWN_OPTIONS}
               selectedValue={loader}
               onChange={setLoader}
               customClass="w-full"
               label="Modローダー選択"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor={loaderVersionSelectId}
+              className="block text-xs font-semibold theme-text-secondary mb-1"
+            >
+              ローダーバージョン
+            </label>
+            <CustomDropdown
+              id={loaderVersionSelectId}
+              options={loaderVersionOptions}
+              selectedValue={loaderVersion}
+              onChange={setLoaderVersion}
+              customClass="w-full"
+              label="ローダーバージョン選択"
             />
           </div>
 

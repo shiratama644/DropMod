@@ -1,4 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+
+const webpackCacheDirectory = path.join(process.cwd(), '.next', 'cache', 'webpack');
+const nextConfigFile = fileURLToPath(import.meta.url);
 
 /**
  * DropMod Next.js 設定
@@ -100,7 +105,28 @@ const nextConfig: NextConfig = {
       'react-markdown',
       '@tanstack/react-query',
       '@tanstack/react-query-persist-client'
-    ]
+    ],
+    // 2 回目以降の `next build` を速くする (16.3+)。PRoot では --webpack 側の
+    // filesystem cache を使うので、このフラグは Turbopack 経路でのみ効く。
+    turbopackFileSystemCacheForBuild: true,
+    turbopackFileSystemCacheForDev: true
+  },
+  // PRoot-Distro 等 Turbopack 不可環境 (`scripts/build.ts` が --webpack) 用。
+  // Turbopack 実行時は webpack() は呼ばれない。
+  webpack: (config, { dev }) => {
+    if (!dev) {
+      config.cache = {
+        type: 'filesystem',
+        name: 'dropmod-webpack',
+        cacheDirectory: webpackCacheDirectory,
+        compression: 'gzip',
+        maxMemoryGenerations: 1,
+        buildDependencies: {
+          config: [nextConfigFile]
+        }
+      };
+    }
+    return config;
   },
   async headers() {
     return [
@@ -130,7 +156,33 @@ const nextConfig: NextConfig = {
         source: '/mod/:slug',
         destination: '/mods/:slug',
         permanent: true
+      },
+      // 検索一覧は /discover/* 。詳細 /mods/[slug] は動かさない。
+      {
+        source: '/mods',
+        has: [{ type: 'query', key: 'type', value: 'modpack' }],
+        destination: '/discover/modpack',
+        permanent: true
+      },
+      {
+        source: '/mods',
+        has: [{ type: 'query', key: 'type', value: 'resourcepack' }],
+        destination: '/discover/resourcepack',
+        permanent: true
+      },
+      {
+        source: '/mods',
+        has: [{ type: 'query', key: 'type', value: 'shader' }],
+        destination: '/discover/shader',
+        permanent: true
+      },
+      {
+        source: '/mods',
+        destination: '/discover/mods',
+        permanent: true
       }
+      // /modpack /resourcepack /shader は Phase 11/12 の予約ルート。
+      // 検索 (/discover/*) へリダイレクトしないこと。
     ];
   }
 };

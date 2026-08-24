@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion } from '@/types';
+import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion, ContentCategory } from '@/types';
+import { nextDuplicateName } from '@/lib/utils/profileName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
+import { contentCategoryFromProject, contentCategoryOf } from '@/lib/utils/contentCategory';
+import { primaryCategoryId } from '@/lib/constants/categories';
 import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
@@ -316,6 +319,17 @@ export const useProfiles = (
     }
   }, [hasHydrated, cookieMcVersion, cookieLoader]);
 
+  // LocalStorage バックアップ期限切れ後も FOUC しないよう theme を cookie に残す
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC 用 cookie (cookieStore は Safari 未対応)
+      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+    } catch (e) {
+      console.warn('[DropMod] theme cookie 書き込みに失敗:', e);
+    }
+  }, [hasHydrated, theme]);
+
   // ---------------------------------------------------------------------
   // profiles が空配列になった場合の安全弁
   //
@@ -398,10 +412,19 @@ export const useProfiles = (
       mcVersion: string,
       loader: string,
       description: string,
-      mods: ModItem[] = []
+      mods: ModItem[] = [],
+      loaderVersion?: string
     ) => {
       const newId = generateId('profile');
-      const newProfile: Profile = { id: newId, name, mcVersion, loader, description, mods };
+      const newProfile: Profile = {
+        id: newId,
+        name,
+        mcVersion,
+        loader,
+        loaderVersion: loaderVersion || undefined,
+        description,
+        mods
+      };
       setProfiles((prev) => [...prev, newProfile]);
       setCurrentProfileId(newId);
       showToast(
@@ -422,7 +445,10 @@ export const useProfiles = (
     const duplicated: Profile = {
       ...latest,
       id: newId,
-      name: `${latest.name} (コピー)`,
+      name: nextDuplicateName(
+        latest.name,
+        profilesRef.current.map((p) => p.name)
+      ),
       mods: JSON.parse(JSON.stringify(latest.mods))
     };
     setProfiles((prev) => [...prev, duplicated]);
@@ -431,14 +457,18 @@ export const useProfiles = (
   }, [showToast, setProfiles, setCurrentProfileId]);
 
   const handleSaveEditedProfile = useCallback(
-    (name: string, mcVersion: string, loader: string, description: string) => {
+    (name: string, mcVersion: string, loader: string, description: string, loaderVersion?: string) => {
       const targetId = currentProfileIdRef.current;
       const before = profilesRef.current.find((p) => p.id === targetId);
       const compatChanged =
         before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
 
       setProfiles((prev) =>
-        prev.map((p) => (p.id === targetId ? { ...p, name, mcVersion, loader, description } : p))
+        prev.map((p) =>
+          p.id === targetId
+            ? { ...p, name, mcVersion, loader, loaderVersion: loaderVersion || undefined, description }
+            : p
+        )
       );
       showToast('プロファイルを更新しました', 'success');
       if (compatChanged) {
@@ -549,13 +579,17 @@ export const useProfiles = (
           profilesRef.current.find((p) => p.id === currentProfileIdRef.current) ||
           latestProfile;
 
-        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch);
+        const skipLoader =
+          project.project_type === 'resourcepack' || project.project_type === 'shader';
+        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch, {
+          skipLoader
+        });
 
         if (
           !versionRes?.targetVersion?.files ||
           versionRes.targetVersion.files.length === 0
         ) {
-          if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
+          if (!silent) showToast('利用可能なファイルが見つかりませんでした', 'warning');
           return;
         }
 
@@ -566,7 +600,7 @@ export const useProfiles = (
         // 上で files.length===0 は既に return しているが
         // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
         if (!primaryFile) {
-          if (!silent) showToast('利用可能な.jarファイルが見つかりませんでした', 'warning');
+          if (!silent) showToast('利用可能なファイルが見つかりませんでした', 'warning');
           return;
         }
 
@@ -577,10 +611,8 @@ export const useProfiles = (
           description: project.description,
           icon_url: project.icon_url,
           author: project.author || 'Modrinth',
-          category:
-            (project.display_categories?.[0]) ||
-            (project.categories?.[0]) ||
-            'mod',
+          projectType: contentCategoryFromProject(project),
+          category: primaryCategoryId(project.display_categories, project.categories),
           selectedVersionId: targetVersion.id,
           selectedVersionNumber: targetVersion.version_number,
           versionType: targetVersion.version_type || 'release',
@@ -623,13 +655,55 @@ export const useProfiles = (
     }
   }, [showToast, setProfiles, queryClient]);
 
+  const applyModVersion = useCallback(
+    (projectId: string, versionData: ModrinthVersion, title: string) => {
+      const primaryFile =
+        versionData.files?.find((f) => f.primary) || versionData.files?.[0];
+      if (!primaryFile) return false;
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === currentProfileIdRef.current
+            ? {
+                ...p,
+                mods: p.mods.map((m) =>
+                  m.id === projectId || m.slug === projectId
+                    ? {
+                        ...m,
+                        selectedVersionId: versionData.id,
+                        selectedVersionNumber: versionData.version_number,
+                        versionType: versionData.version_type || 'release',
+                        fileUrl: primaryFile.url,
+                        filename: primaryFile.filename
+                      }
+                    : m
+                )
+              }
+            : p
+        )
+      );
+      showToast(`「${title}」を Ver ${versionData.version_number} に更新`, 'success');
+      return true;
+    },
+    [setProfiles, showToast]
+  );
+
   const handleUpdateModVersion = useCallback(
-    async (projectId: string, versionId: string) => {
+    async (projectId: string, versionId: string, knownVersion?: ModrinthVersion) => {
       const latestProfileId = currentProfileIdRef.current;
       const latestProfile =
         profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
       const mod = latestProfile?.mods.find((m) => m.id === projectId || m.slug === projectId);
       if (!mod) return;
+
+      if (
+        knownVersion &&
+        knownVersion.id === versionId &&
+        knownVersion.files &&
+        knownVersion.files.length > 0
+      ) {
+        applyModVersion(projectId, knownVersion, mod.title);
+        return;
+      }
 
       try {
         // C7-2 修正: fetchModrinth 直呼び → queryClient.fetchQuery で
@@ -641,61 +715,90 @@ export const useProfiles = (
           staleTime: 60 * 60 * 1000 // 1h (version は project より変わりにくい)
         });
         if (versionData?.files && versionData.files.length > 0) {
-          const primaryFile = versionData.files.find((f) => f.primary) || versionData.files[0];
-          // Phase 10-P5 (any→型付け化で発覚): 上のガードで files.length>=1 は保証されるが
-          //   noUncheckedIndexedAccess 有効時 files[0] は T | undefined。型システムを
-          //   満たしつつ実行時にも safety net として null check を追加。
-          if (!primaryFile) return;
-
-          setProfiles((prev) =>
-            prev.map((p) =>
-              p.id === currentProfileIdRef.current
-                ? {
-                    ...p,
-                    mods: p.mods.map((m) =>
-                      m.id === projectId || m.slug === projectId
-                        ? {
-                            ...m,
-                            selectedVersionId: versionData.id,
-                            selectedVersionNumber: versionData.version_number,
-                            versionType: versionData.version_type || 'release',
-                            fileUrl: primaryFile.url,
-                            filename: primaryFile.filename
-                          }
-                        : m
-                    )
-                  }
-                : p
-            )
-          );
-          showToast(`「${mod.title}」を Ver ${versionData.version_number} に更新`, 'success');
+          applyModVersion(projectId, versionData, mod.title);
         }
       } catch {
         // catch binding 省略 (ES2019+): エラー詳細は使わず一律 toast のみ
         showToast('バージョンの更新に失敗しました', 'warning');
       }
     },
-    [showToast, setProfiles, queryClient]
+    [showToast, queryClient, applyModVersion]
   );
 
-  const handleRemoveAllMods = useCallback(async () => {
+  const handleRemoveAllMods = useCallback(async (category?: ContentCategory) => {
     const latestId = currentProfileIdRef.current;
     const latest =
       profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
-    if (!latest || latest.mods.length === 0) return;
+    if (!latest) return;
+    const targets = category
+      ? latest.mods.filter((m) => contentCategoryOf(m) === category)
+      : latest.mods;
+    if (targets.length === 0) return;
+    const label =
+      category === 'resourcepack'
+        ? 'Resource Pack'
+        : category === 'shader'
+          ? 'Shader'
+          : 'Mod';
     const ok = await confirmDialog({
-      title: '全てのModを削除しますか？',
-      message: `プロファイル「${latest.name}」から ${latest.mods.length} 個のModを全て削除します。\nこの操作は取り消せません。`,
+      title: `${label}をすべて削除しますか？`,
+      message: `プロファイル「${latest.name}」から ${targets.length} 個の${label}を削除します。\\nこの操作は取り消せません。`,
       confirmLabel: 'すべて削除',
       cancelLabel: 'キャンセル',
       danger: true
     });
     if (!ok) return;
     setProfiles((prev) =>
-      prev.map((p) => (p.id === currentProfileIdRef.current ? { ...p, mods: [] } : p))
+      prev.map((p) =>
+        p.id === currentProfileIdRef.current
+          ? {
+              ...p,
+              mods: category
+                ? p.mods.filter((m) => contentCategoryOf(m) !== category)
+                : []
+            }
+          : p
+      )
     );
-    showToast('すべてのModを削除しました', 'info');
+    showToast(`すべての${label}を削除しました`, 'info');
   }, [showToast, confirmDialog, setProfiles]);
+
+  const handleRemoveMods = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const latestId = currentProfileIdRef.current;
+      const latest =
+        profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
+      if (!latest) return;
+      const idSet = new Set(ids);
+      const targets = latest.mods.filter(
+        (m) => idSet.has(m.id) || (m.slug != null && idSet.has(m.slug))
+      );
+      if (targets.length === 0) return;
+      const ok = await confirmDialog({
+        title: '選択した項目を削除しますか？',
+        message: `プロファイル「${latest.name}」から ${targets.length} 個を削除します。\\nこの操作は取り消せません。`,
+        confirmLabel: '削除する',
+        cancelLabel: 'キャンセル',
+        danger: true
+      });
+      if (!ok) return;
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === currentProfileIdRef.current
+            ? {
+                ...p,
+                mods: p.mods.filter(
+                  (m) => !idSet.has(m.id) && !(m.slug != null && idSet.has(m.slug))
+                )
+              }
+            : p
+        )
+      );
+      showToast(`${targets.length} 個を削除しました`, 'info');
+    },
+    [showToast, confirmDialog, setProfiles]
+  );
 
   return {
     profiles,
@@ -710,6 +813,7 @@ export const useProfiles = (
     handleDeleteProfile,
     handleToggleMod,
     handleUpdateModVersion,
-    handleRemoveAllMods
+    handleRemoveAllMods,
+    handleRemoveMods
   };
 };

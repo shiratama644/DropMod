@@ -1,20 +1,18 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// Header (Phase 9.5-G: PC はロゴのみ、モバイルは従来通り)
+// Header (モバイル専用)
 //
-// - モバイル (< md): 従来通りロゴ + テーマ切替 + 各種ボタン + プロファイル切替
-// - PC (md 以上): ロゴ**のみ** 表示 (ボタン類はすべて DesktopSidebar へ集約)
-//   → 各ボタン/dropdown ラッパーに `md:hidden` を付与
-//
+// - モバイル (< md): ロゴ + テーマ切替 + 各種ボタン + プロファイル切替
+// - PC (md 以上): 非表示。ナビ・プロファイル・アクションは DesktopSidebar に集約
 // - AppShell 側で `pathname !== '/'` のみ mount (LP は Header なし)
-// - `hidden` prop でスクロール hide (モバイル UX)
+// - スクロール hide はしない (常時表示)
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import type { Profile, ThemeMode } from '@/types';
+import type { Profile, TabName, ThemeMode } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 
 interface HeaderProps {
@@ -27,10 +25,8 @@ interface HeaderProps {
   onRunDependencyCheck: () => void;
   onDownloadZip: () => void;
   onImportZip: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSwitchTab: (tab: 'home' | 'mods' | 'settings') => void;
+  onSwitchTab: (tab: TabName) => void;
   hasDepWarning: boolean;
-  /** Phase 9.5-E: 下スクロールで hide、上スクロールで show (AppShell で判定して渡す) */
-  hidden?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -45,7 +41,6 @@ export const Header: React.FC<HeaderProps> = ({
   onImportZip,
   onSwitchTab,
   hasDepWarning,
-  hidden = false,
 }) => {
   const profileOptions = useMemo(() => {
     const safeProfiles = Array.isArray(profiles) ? profiles : [];
@@ -62,13 +57,9 @@ export const Header: React.FC<HeaderProps> = ({
   );
 
   return (
-    // Phase 9.5-E: hidden=true で上方向に slide out (下スクロール時)。
-    // Phase 9.5-G: PC でも表示するが、内部ボタン類は md:hidden で全非表示。
     <header
       id="app-header"
-      className={`sticky top-0 z-30 glass-panel transition-transform duration-300 will-change-transform ${
-        hidden ? '-translate-y-full' : 'translate-y-0'
-      }`}
+      className="sticky top-0 z-30 glass-panel md:hidden"
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center justify-between">

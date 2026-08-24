@@ -19,18 +19,18 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     page
   }) => {
     // Phase 9-F: Home → /mods に URL 変更 (Modrinth 検索は /mods で提供)
-    await page.goto('/mods');
+    await page.goto('/discover/mods');
 
     // Mod カードが表示されるまで待つ
     // (SSR 経由の initialHits があれば即表示、無ければ CSR fetch 完了待ち)
     const firstCard = page.locator('.mod-card-item').first();
     await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
 
-    // Header は常に表示
-    await expect(page.locator('#app-header')).toBeVisible();
+    // モバイルは Header、PC は DesktopSidebar が常時表示
+    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
 
     // Mod カードクリック前の URL は /mods
-    await expect(page).toHaveURL('/mods');
+    await expect(page).toHaveURL('/discover/mods');
 
     // Mod カードをクリック
     await firstCard.click();
@@ -49,7 +49,26 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
 
     // Phase 9-F: router.back() で /mods に戻る (旧 router.replace('/') は撤廃)
-    await expect(page).toHaveURL('/mods');
+    await expect(page).toHaveURL('/discover/mods');
+  });
+
+  test('hides mobile BottomNav while intercepting detail modal is open', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/discover/mods');
+    const firstCard = page.locator('.mod-card-item').first();
+    await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
+    await expect(page.locator('#bottom-nav')).toBeVisible();
+
+    await firstCard.click();
+    const dialog = page.getByRole('dialog').first();
+    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(page.locator('#bottom-nav')).toBeHidden();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#bottom-nav')).toBeVisible();
   });
 
   test('direct URL access to /mods/[slug] renders full page (not modal)', async ({
@@ -63,11 +82,11 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     //     (旧: body に mod-fullpage クラスが付いて Header 非表示、を撤廃)
     //   - 上部にブレッドクラム的な「Mod 一覧に戻る」リンクがある
     //   - dialog role は付いていない (モーダルではないため)
-    await expect(page.getByRole('link', { name: /Mod 一覧に戻る/ })).toBeVisible({
+    await expect(page.getByRole('link', { name: /検索に戻る|Mod 一覧に戻る/ })).toBeVisible({
       timeout: 15_000
     });
-    // Header が表示されたまま
-    await expect(page.locator('#app-header')).toBeVisible();
+    // モバイルは Header、PC は DesktopSidebar が表示されたまま
+    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
     // dialog は無い (フルページなのでモーダルではない)
     await expect(page.getByRole('dialog')).toHaveCount(0);
     // ページ h1 = Mod タイトル (SEO 継続)

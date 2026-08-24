@@ -25,6 +25,10 @@ export interface PendingImportData {
   mods: ModItem[];
   mcVersion?: string;
   loader?: string;
+  loaderVersion?: string;
+  description?: string;
+  /** ZIP 取り込みか、検索画面からの複製か */
+  source?: 'import' | 'duplicate';
 }
 
 export interface ZipImportStoreState {

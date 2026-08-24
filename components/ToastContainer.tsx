@@ -79,18 +79,17 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
   }, [toast.id]);
 
   let bgClass = 'glass-panel border-slate-500/40';
-  let icon = 'fa-circle-info theme-text-blue';
+  let iconClass = 'fa-solid fa-circle-info theme-text-blue';
 
   if (toast.type === 'success') {
     bgClass = 'glass-panel border-brand-500/60';
-    icon = 'fa-circle-check theme-text-brand';
+    iconClass = 'fa-solid fa-circle-check theme-text-brand';
   } else if (toast.type === 'warning') {
     bgClass = 'glass-panel border-amber-500/60';
-    icon = 'fa-triangle-exclamation theme-text-amber';
+    iconClass = 'fa-solid fa-triangle-exclamation theme-text-amber';
   } else if (toast.type === 'error') {
-    // error 種別を新設 (削除失敗・致命的エラー時の赤系表示)
     bgClass = 'glass-panel border-red-500/60';
-    icon = 'fa-circle-xmark theme-text-red';
+    iconClass = 'fa-solid fa-circle-xmark theme-text-red';
   }
 
   return (
@@ -98,7 +97,7 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
       ref={elRef}
       className={`pointer-events-auto px-3.5 py-2.5 rounded-2xl border shadow-2xl text-xs font-semibold flex items-center gap-2.5 text-left w-auto max-w-[85vw] sm:max-w-md ${bgClass}`}
     >
-      <i className={`fa-solid ${icon} text-sm shrink-0`}></i>
+      <i className={`${iconClass} text-sm shrink-0`} aria-hidden />
       <span className="break-words leading-tight text-left">{toast.message}</span>
     </div>
   );

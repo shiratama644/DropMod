@@ -155,6 +155,26 @@ describe('CustomDropdown', () => {
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
   });
 
+  it('tone/icon 付き option でもラベルで選択できる', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <CustomDropdown
+        options={[
+          { label: '0.6.13', value: 'stable', icon: 'fa-circle-check', tone: 'stable' },
+          { label: '0.6.14-beta', value: 'beta', icon: 'fa-flask', tone: 'beta' }
+        ]}
+        selectedValue="stable"
+        onChange={onChange}
+        label="Version"
+      />
+    );
+    expect(screen.getByRole('combobox', { name: 'Version' })).toHaveTextContent('0.6.13');
+    await user.click(screen.getByRole('combobox', { name: 'Version' }));
+    await user.click(screen.getByRole('option', { name: '0.6.14-beta' }));
+    expect(onChange).toHaveBeenCalledWith('beta');
+  });
+
   it('options が空なら開かない (無反応)', async () => {
     const user = userEvent.setup();
     render(

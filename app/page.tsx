@@ -48,30 +48,29 @@ const ROTATOR_WORDS = [
   'Shaders',
 ] as const;
 
-/**
- * Modrinth API から人気上位 20 件を SSR で取得。
- * 上位 6 件は「検索プレビュー」、全 20 件は marquee として使う。
- * API 失敗時は空配列 fallback (LP 全体は動作継続)。
- */
-async function fetchPopularHits(): Promise<ModrinthHit[]> {
+async function fetchLandingHits(sortBy: 'popular' | 'newest', limit: number): Promise<ModrinthHit[]> {
   try {
     const result = await fetchModrinthSearch({
       query: '',
-      sortBy: 'popular',
-      limit: 20,
+      sortBy,
+      limit,
       offset: 0,
+      projectType: 'mod'
     });
     return result.hits;
   } catch (e) {
-    console.warn('[DropMod] landing hero fetch failed, using empty:', e);
+    console.warn(`[DropMod] landing ${sortBy} fetch failed, using empty:`, e);
     return [];
   }
 }
 
 export default async function LandingPage() {
-  const popularHits = await fetchPopularHits();
+  const [popularHits, newestHits] = await Promise.all([
+    fetchLandingHits('popular', 6),
+    fetchLandingHits('newest', 16)
+  ]);
   const previewHits = popularHits.slice(0, 6);
-  const marqueeHits = popularHits.slice(0, 16);
+  const marqueeHits = newestHits.slice(0, 16);
 
   return (
     <main className="flex-1 w-full">
@@ -133,7 +132,7 @@ export default async function LandingPage() {
 
           <div className="flex flex-col sm:flex-row justify-center gap-2.5 sm:gap-3 pt-2">
             <Link
-              href="/mods"
+              href="/discover/mods"
               className="btn-hover-effect inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm sm:text-base font-bold shadow-lg shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <i className="fa-solid fa-compass" aria-hidden />
@@ -171,7 +170,7 @@ export default async function LandingPage() {
               </p>
             </div>
             <Link
-              href="/mods"
+              href="/discover/mods"
               className="text-xs sm:text-sm theme-text-brand hover:underline shrink-0 font-semibold"
             >
               もっと見る →
@@ -204,10 +203,10 @@ export default async function LandingPage() {
               続々と追加される新しい Mod
             </h2>
             <p className="mt-1 text-xs sm:text-sm theme-text-muted text-center">
-              左右にゆっくり流れます。カード上でホバーすると停止。
+              Modrinth の新着順。ホバーすると流れが止まります。
             </p>
           </div>
-          <PopularMarquee hits={marqueeHits} />
+          <PopularMarquee hits={marqueeHits} ariaLabel="新着の Mod" />
         </section>
       )}
 
@@ -332,7 +331,7 @@ export default async function LandingPage() {
         </p>
         <div className="mt-8">
           <Link
-            href="/mods"
+            href="/discover/mods"
             className="btn-hover-effect inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-lg font-bold shadow-lg shadow-emerald-600/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
@@ -411,17 +410,17 @@ function LandingFooter() {
           {/* サイト内リンク */}
           <FooterColumn title="サイト">
             <FooterLink href="/">ホーム</FooterLink>
-            <FooterLink href="/mods">Mod を探す</FooterLink>
+            <FooterLink href="/discover/mods">Mod を探す</FooterLink>
             <FooterLink href="/profile">マイプロファイル</FooterLink>
             <FooterLink href="/settings">設定</FooterLink>
           </FooterColumn>
 
           {/* Mod カテゴリ */}
           <FooterColumn title="カテゴリ">
-            <FooterLink href="/mods">Mods</FooterLink>
-            <FooterLink href="/mods?type=modpack">Modpacks</FooterLink>
-            <FooterLink href="/mods?type=resourcepack">Resource Packs</FooterLink>
-            <FooterLink href="/mods?type=shader">Shaders</FooterLink>
+            <FooterLink href="/discover/mods">Mods</FooterLink>
+            <FooterLink href="/discover/modpack">Modpacks</FooterLink>
+            <FooterLink href="/discover/resourcepack">Resource Packs</FooterLink>
+            <FooterLink href="/discover/shader">Shaders</FooterLink>
           </FooterColumn>
 
           {/* 外部リンク */}

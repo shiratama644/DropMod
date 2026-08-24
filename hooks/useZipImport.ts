@@ -10,6 +10,18 @@ import {
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
+import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { primaryCategoryId } from '@/lib/constants/categories';
+
+function normalizeImportedLoader(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const s = raw.toLowerCase();
+  if (s.includes('quilt')) return 'Quilt';
+  if (s.includes('neoforge')) return 'NeoForge';
+  if (s.includes('forge')) return 'Forge';
+  if (s.includes('fabric')) return 'Fabric';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
 
 export const useZipImport = (
   setProfiles: React.Dispatch<React.SetStateAction<Profile[]>>,
@@ -50,26 +62,77 @@ export const useZipImport = (
         //   fabric-loader / forge / neoforge / quilt-loader
         // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
         let loader = 'Fabric';
+        if (mrpackData.dependencies?.['fabric-loader']) loader = 'Fabric';
         if (mrpackData.dependencies?.forge) loader = 'Forge';
         if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
         if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
 
         const importedMods: ModItem[] = [];
         if (mrpackData.files) {
+          const hashes = mrpackData.files
+            .map((f) => f.hashes?.sha1)
+            .filter((h): h is string => typeof h === 'string' && h.length > 0);
+          let versionByHash: Record<string, ModrinthVersion> = {};
+          if (hashes.length > 0) {
+            try {
+              versionByHash = await fetchModrinthVersionFilesBatch<ModrinthVersion>(
+                hashes,
+                'sha1'
+              );
+            } catch {
+              versionByHash = {};
+            }
+          }
+
+          const resolvedProjectIds = Array.from(
+            new Set(
+              Object.values(versionByHash)
+                .map((v) => v.project_id)
+                .filter((id): id is string => Boolean(id))
+            )
+          );
+          const projectMap = new Map<string, ModrinthProject>();
+          if (resolvedProjectIds.length > 0) {
+            try {
+              const projects = await fetchModrinthBatch<ModrinthProject>(
+                '/projects',
+                resolvedProjectIds
+              );
+              for (const p of projects) {
+                projectMap.set(p.id, p);
+              }
+            } catch {
+              // メタ取得失敗でも fileUrl があれば ZIP エクスポートは可能
+            }
+          }
+
           for (const f of mrpackData.files) {
             const downloadUrl = f.downloads?.[0] ? f.downloads[0] : '';
             const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
-            // 配列インデックスは T | undefined。
-            // split の結果は空配列にはならないが型システムには保証されない。
             const filename = pathParts[pathParts.length - 1] || 'mod.jar';
+            const matched = f.hashes?.sha1 ? versionByHash[f.hashes.sha1] : undefined;
+            const proj = matched?.project_id ? projectMap.get(matched.project_id) : undefined;
+            const primaryFile =
+              matched?.files?.find((file) => file.primary) || matched?.files?.[0];
 
             importedMods.push({
-              id: generateId('mrpack'),
-              title: filename.replace('.jar', ''),
-              description: 'Imported from .mrpack',
-              fileUrl: downloadUrl,
-              filename: filename,
-              selectedVersionNumber: 'mrpack'
+              id: matched?.project_id || generateId('mrpack'),
+              slug: proj?.slug,
+              title: proj?.title || filename.replace('.jar', ''),
+              description: proj?.description || 'Imported from .mrpack',
+              icon_url: proj?.icon_url,
+              author: proj?.author,
+              projectType: proj
+                ? contentCategoryFromProject(proj)
+                : contentCategoryFromPath(f.path),
+              category: proj
+                ? primaryCategoryId(proj.display_categories, proj.categories)
+                : undefined,
+              selectedVersionId: matched?.id,
+              selectedVersionNumber: matched?.version_number || 'mrpack',
+              versionType: matched?.version_type || 'release',
+              fileUrl: downloadUrl || primaryFile?.url || '',
+              filename
             });
           }
         }
@@ -163,10 +226,8 @@ export const useZipImport = (
             description: proj.description,
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
-            category:
-              (proj.display_categories?.[0]) ||
-              (proj.categories?.[0]) ||
-              'mod',
+            projectType: contentCategoryFromProject(proj),
+            category: primaryCategoryId(proj.display_categories, proj.categories),
             selectedVersionId: ver.id,
             selectedVersionNumber: ver.version_number,
             versionType: ver.version_type || 'release',
@@ -183,9 +244,7 @@ export const useZipImport = (
         name: defaultName,
         mods: initialMods,
         mcVersion: firstVer?.game_versions ? firstVer.game_versions[0] : undefined,
-        loader: firstVer?.loaders?.[0]
-          ? firstVer.loaders[0].charAt(0).toUpperCase() + firstVer.loaders[0].slice(1)
-          : undefined
+        loader: normalizeImportedLoader(firstVer?.loaders?.[0])
       });
       setIsNewProfileModalOpen(true);
       showToast(`Modrinth上で ${initialMods.length} 個のModを特定しました。プロファイルを作成してください。`, 'success');

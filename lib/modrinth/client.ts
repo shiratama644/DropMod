@@ -223,14 +223,22 @@ export async function fetchModrinth<T = unknown>(
 // ==========================================================================
 export async function fetchStableModVersion(
   projectId: string,
-  profile: { loader: string; mcVersion: string }
+  profile: { loader: string; mcVersion: string },
+  options?: { skipLoader?: boolean }
 ): Promise<{ targetVersion: ModrinthVersion; allVersions: ModrinthVersion[] } | null> {
   let versions: ModrinthVersion[] = [];
+  const versionQuery: Record<string, unknown> = {
+    game_versions: [profile.mcVersion]
+  };
+  // Resource Pack / Shader は loader facet を持たない。付けると 0 件になりやすい。
+  if (!options?.skipLoader && profile.loader) {
+    versionQuery.loaders = [profile.loader.toLowerCase()];
+  }
   try {
-    versions = await fetchModrinth<ModrinthVersion[]>(`/project/${projectId}/version`, {
-      loaders: [profile.loader.toLowerCase()],
-      game_versions: [profile.mcVersion]
-    });
+    versions = await fetchModrinth<ModrinthVersion[]>(
+      `/project/${projectId}/version`,
+      versionQuery
+    );
   } catch {
     // 絞り込み検索は失敗しても続行 (下でフォールバック) — catch binding 省略
   }

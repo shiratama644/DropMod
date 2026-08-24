@@ -159,7 +159,10 @@ code, input, textarea {
 
 .custom-dropdown-container {
     position: relative;
-    display: inline-block;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .custom-dropdown-trigger {
@@ -178,6 +181,18 @@ code, input, textarea {
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     user-select: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+.custom-dropdown-trigger .trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.custom-dropdown-trigger .chevron-icon {
+    flex-shrink: 0;
 }
 .custom-dropdown-trigger:hover, .custom-dropdown-trigger:focus-visible {
     border-color: #10b981;
@@ -259,6 +274,21 @@ code, input, textarea {
     from { opacity: 0; transform: translateY(10px) scale(0.98); }
     to   { opacity: 1; transform: none; }
 }
+/* 検索「自動」: viewport 幅でカラム数を決め、dense で空きを埋める。
+   個別カードの sm:col-span-2 は画像アスペクト比で付与する。 */
+.search-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+    grid-auto-flow: dense;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+@media (min-width: 640px) {
+    .search-grid-auto {
+        gap: 1rem;
+    }
+}
+
 .mod-card-item {
     animation: mod-card-appear 0.28s ease-out both;
 }
@@ -295,6 +325,13 @@ body.mod-fullpage #bottom-nav {
    詳細カードが画面下部に無駄なスペースを作らないようにする */
 body.mod-fullpage {
     padding-bottom: 0;
+}
+
+/* インターセプト詳細モーダル中はモバイル BottomNav を隠す。
+   overlay は z-[70] で BottomNav (z-[60]) より上だが、ナビ自体も消して
+   タップ貫通・読み上げ対象に残らないようにする。 */
+body.mod-detail-modal #bottom-nav {
+    display: none;
 }
 
 /* -----------------------------------------------------------------

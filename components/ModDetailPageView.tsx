@@ -45,9 +45,12 @@ import Image from 'next/image';
 
 import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/types';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { discoverPathFromProjectType, modrinthProjectUrl } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // Props
@@ -118,7 +121,7 @@ function collectExternalLinks(project: ModrinthProject): ExternalLink[] {
   // Modrinth 上のプロジェクトページへのリンクは必ず提供する
   links.push({
     label: 'Modrinth で見る',
-    href: `https://modrinth.com/mod/${project.slug}`,
+    href: modrinthProjectUrl(project.slug, project.project_type),
     icon: 'fa-solid fa-arrow-up-right-from-square'
   });
   if (project.source_url) {
@@ -151,8 +154,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
 
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
-  const [showAllVersions, setShowAllVersions] = useState(false);
-  const [selectedGalleryImg, setSelectedGalleryImg] = useState<string | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const handleJarDownload = useCallback(
     async (file: ModrinthVersionFile) => {
@@ -192,11 +194,11 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           {`Mod 情報を読み込めませんでした (slug: ${slug})。`}
         </p>
         <Link
-          href="/mods"
+          href={discoverPathFromProjectType(undefined)}
           className="mt-4 inline-flex items-center gap-1.5 text-xs theme-text-brand hover:underline"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
-          Mod 一覧に戻る
+          検索に戻る
         </Link>
       </main>
     );
@@ -233,12 +235,6 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
 
   const galleryList = project.gallery ?? [];
 
-  // バージョン表示件数 (初期は最新 5 件、ボタンで全件展開)
-  const VERSIONS_INITIAL = 5;
-  const displayedVersions = showAllVersions
-    ? safeVersions
-    : safeVersions.slice(0, VERSIONS_INITIAL);
-
   const clientSide = project.client_side
     ? CLIENT_SERVER_LABEL[project.client_side]
     : undefined;
@@ -251,7 +247,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
       {/* ========== パンくず ========== */}
       <nav aria-label="パンくず" className="mb-4">
         <Link
-          href="/mods"
+          href="/discover/mods"
           className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5 transition"
         >
           <i className="fa-solid fa-arrow-left" aria-hidden />
@@ -386,7 +382,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                 </button>
               )}
               <a
-                href={`https://modrinth.com/mod/${project.slug}`}
+                href={modrinthProjectUrl(project.slug, project.project_type)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 rounded-xl theme-sub-box text-sm font-semibold hover:bg-slate-700/40 transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
@@ -432,73 +428,45 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           {/* ギャラリー */}
           {galleryList.length > 0 && (
             <section className="glass-panel rounded-3xl border shadow-lg p-5 sm:p-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider theme-text-muted mb-3 flex items-center gap-2">
-                <i className="fa-solid fa-images theme-text-brand" aria-hidden />
-                ギャラリー
-                <span className="theme-text-muted font-normal">
-                  {`(${galleryList.length})`}
-                </span>
-              </h2>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-bold uppercase tracking-wider theme-text-muted flex items-center gap-2">
+                  <i className="fa-solid fa-images theme-text-brand" aria-hidden />
+                  ギャラリー
+                  <span className="theme-text-muted font-normal">
+                    {`(${galleryList.length})`}
+                  </span>
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsGalleryOpen(true)}
+                  className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  <i className="fa-solid fa-images" aria-hidden />
+                  ギャラリー・スクリーンショットを閲覧
+                </button>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {galleryList.map((img) => (
-                  <button
+                  <figure
                     key={img.url}
-                    type="button"
-                    onClick={() => setSelectedGalleryImg(img.url)}
-                    className="relative aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 cursor-pointer hover:border-emerald-500 transition group focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="relative aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 m-0"
                   >
                     <Image
                       src={img.url}
                       alt={img.title || 'Gallery image'}
                       fill
                       sizes="(min-width: 1024px) 240px, (min-width: 640px) 33vw, 50vw"
-                      className="object-cover group-hover:scale-105 transition duration-300"
+                      className="object-cover"
+                      unoptimized={isAnimatedImageUrl(img.url)}
                     />
                     {img.title && (
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10">
+                      <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10">
                         {img.title}
-                      </div>
+                      </figcaption>
                     )}
-                  </button>
+                  </figure>
                 ))}
               </div>
-
-              {/* 拡大プレビュー (簡易ライトボックス) */}
-              {/* Phase 10-P5 (a11y/useSemanticElements): role="button" tabIndex=0 の
-                  <div> を、意味論的に正しい <button type="button"> に置換。
-                  Enter/Space での閉じ動作もブラウザ標準挙動として無料でサポートされる。
-                  button 標準スタイルを打ち消すため text-align:inherit / w-full / border=0 相当を
-                  Tailwind クラスで維持。 */}
-              {selectedGalleryImg && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedGalleryImg(null)}
-                  onKeyDown={(e) => {
-                    // Escape でも閉じられるように残す (Enter/Space は button 標準)
-                    if (e.key === 'Escape') setSelectedGalleryImg(null);
-                  }}
-                  aria-label="プレビューを閉じる"
-                  className="mt-3 p-3 w-full text-left rounded-2xl bg-slate-900/95 border border-emerald-500/40 relative shadow-xl cursor-zoom-out"
-                >
-                  <div className="flex justify-between items-center text-xs px-1 mb-2">
-                    <span className="font-bold theme-text-brand">プレビュー</span>
-                    <span className="theme-text-muted">クリックで閉じる</span>
-                  </div>
-                  {/* Phase 10-P5 (a11y/perf): 拡大プレビューは width/height 未確定
-                      (画像アスペクト比依存) のため next/image の layout=intrinsic
-                      相当が使えない。object-contain + max-h の伸縮レイアウトを
-                      維持するため <img> のまま。CDN 経由なので lazy load +
-                      async decoding を明示。 */}
-                  {/* biome-ignore lint/performance/noImgElement: aspect ratio 未確定で next/image 不可 */}
-                  <img
-                    src={selectedGalleryImg}
-                    alt="ギャラリー画像プレビュー"
-                    className="max-h-[70vh] w-full object-contain rounded-xl"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </button>
-              )}
             </section>
           )}
 
@@ -529,44 +497,25 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                 このプロファイル向けの対応バージョンは見つかりませんでした。
               </p>
             ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5">
-                  {displayedVersions.map((v) => (
-                    <span
-                      key={v.id}
-                      className="px-2 py-1 rounded-lg theme-badge text-[11px] font-mono flex items-center gap-1 shadow-sm"
-                    >
-                      <span>{v.version_number}</span>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                          v.version_type === 'release'
-                            ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
-                            : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
-                        }`}
-                      >
-                        {v.version_type}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-                {safeVersions.length > VERSIONS_INITIAL && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllVersions(!showAllVersions)}
-                    className="mt-3 text-xs font-bold theme-text-brand hover:underline flex items-center gap-1"
+              <div className="flex flex-wrap gap-1.5 max-h-72 overflow-y-auto overscroll-contain pr-1">
+                {safeVersions.map((v) => (
+                  <span
+                    key={v.id}
+                    className="px-2 py-1 rounded-lg theme-badge text-[11px] font-mono flex items-center gap-1 shadow-sm"
                   >
-                    <span>
-                      {showAllVersions
-                        ? '折りたたむ'
-                        : `すべて表示 (${safeVersions.length} 件)`}
+                    <span>{v.version_number}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                        v.version_type === 'release'
+                          ? 'bg-emerald-500/20 theme-text-brand border border-emerald-500/30'
+                          : 'bg-amber-500/20 theme-text-amber border border-amber-500/30'
+                      }`}
+                    >
+                      {v.version_type}
                     </span>
-                    <i
-                      className={`fa-solid fa-chevron-${showAllVersions ? 'up' : 'down'} text-[10px]`}
-                      aria-hidden
-                    />
-                  </button>
-                )}
-              </>
+                  </span>
+                ))}
+              </div>
             )}
           </SidebarCard>
 
@@ -650,6 +599,12 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           </SidebarCard>
         </aside>
       </div>
+
+      <ScreenshotGalleryModal
+        isOpen={isGalleryOpen}
+        images={galleryList}
+        onClose={() => setIsGalleryOpen(false)}
+      />
     </main>
   );
 };

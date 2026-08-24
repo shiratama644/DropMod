@@ -51,6 +51,9 @@ build/
 # --- Turbopack cache (L5-8 修正) ---
 .turbo/
 
+# --- Persistent local build cache (scripts/build.ts) ---
+.cache/
+
 # --- Vercel ---
 .vercel
 

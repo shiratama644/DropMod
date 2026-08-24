@@ -6,6 +6,9 @@ export type ThemeMode = 'dark' | 'light';
 //   - 'settings' → /settings  (変わらず)
 export type TabName = 'home' | 'mods' | 'profile' | 'settings';
 
+/** Profile 内コンテンツの種別 (Phase 11 の 3 カテゴリ) */
+export type ContentCategory = 'mod' | 'resourcepack' | 'shader';
+
 export interface ModItem {
   id: string;
   slug?: string;
@@ -14,6 +17,8 @@ export interface ModItem {
   icon_url?: string;
   author?: string;
   category?: string;
+  /** 未指定は 'mod'。Resource Pack / Shader 追加時に埋める */
+  projectType?: ContentCategory;
   selectedVersionId?: string;
   selectedVersionNumber?: string;
   versionType?: string;
@@ -26,6 +31,8 @@ export interface Profile {
   name: string;
   mcVersion: string;
   loader: string;
+  /** Fabric / Quilt / Forge / NeoForge のローダーバージョン (任意) */
+  loaderVersion?: string;
   description?: string;
   mods: ModItem[];
 }
@@ -44,6 +51,8 @@ export interface ModrinthHit {
   // Modrinth API はアイコン未設定プロジェクトを null で返すため
   // null を許容する型にしている。呼び出し側で null チェック必須。
   icon_url: string | null;
+  /** 検索ヒットのヘッダー画像 (表示形式「最大」で使用) */
+  featured_gallery?: string | null;
 }
 
 export interface ModrinthGalleryImage {
@@ -137,9 +146,15 @@ export interface Toast {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+export type VersionChannel = 'stable' | 'beta' | 'alpha';
+
 export interface DropdownOption {
   label: string;
   value: string;
+  /** Font Awesome solid 名 (`fa-circle-check` 等)。未指定ならアイコンなし */
+  icon?: string;
+  /** バージョンチャネル色。未指定なら通常色 */
+  tone?: VersionChannel;
 }
 
 export interface DependencyCheckData {

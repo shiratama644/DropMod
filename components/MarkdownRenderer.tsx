@@ -7,6 +7,7 @@ import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 
 // -----------------------------------------------------------------------
 // Phase 10-C: Markdown 内 <img> の next/image 最適化対象ホスト。
@@ -237,6 +238,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                     style={{ height: 'auto', width: '100%' }}
                     className="hover:opacity-95 transition"
                     loading="lazy"
+                    unoptimized={isAnimatedImageUrl(srcStr)}
                   />
                 </span>
               );

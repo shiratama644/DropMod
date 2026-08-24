@@ -7,6 +7,7 @@ import type { Profile, ModItem } from '@/types';
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。
 import { useZipExportStore, type ZipProgressState } from '@/lib/store/zipExport';
+import { contentCategoryOf } from '@/lib/utils/contentCategory';
 
 // ==========================================
 // 定数
@@ -89,7 +90,16 @@ const getModFileName = (mod: ModItem): string => {
   if (mod.filename) return mod.filename;
   const version = mod.selectedVersionNumber ? `-${mod.selectedVersionNumber}` : '';
   const identifier = mod.slug || mod.id;
-  return `${identifier}${version}.jar`;
+  const cat = contentCategoryOf(mod);
+  const ext = cat === 'mod' ? 'jar' : 'zip';
+  return `${identifier}${version}.${ext}`;
+};
+
+const zipSubdirFor = (mod: ModItem): 'mods' | 'resourcepacks' | 'shaderpacks' => {
+  const cat = contentCategoryOf(mod);
+  if (cat === 'resourcepack') return 'resourcepacks';
+  if (cat === 'shader') return 'shaderpacks';
+  return 'mods';
 };
 
 /** ファイル名用の文字列サニタイズ */
@@ -285,7 +295,11 @@ export const useZipExport = (
 
     try {
       const zip = new JSZip();
-      const modsFolder = zip.folder('mods');
+      const folderCache = {
+        mods: zip.folder('mods'),
+        resourcepacks: zip.folder('resourcepacks'),
+        shaderpacks: zip.folder('shaderpacks')
+      };
 
       // テキスト・JSONメタデータの追加 (profile.json は先、README.txt は
       // 全 Mod の実ファイル名 (dedup後) が確定してから最後に書く)
@@ -345,7 +359,7 @@ export const useZipExport = (
             const blob = await downloadModFile(mod.fileUrl, signal);
             if (blob) {
               const uniqueName = dedupeFileName(getModFileName(mod));
-              modsFolder?.file(uniqueName, blob);
+              folderCache[zipSubdirFor(mod)]?.file(uniqueName, blob);
               actualFilenames.set(mod.id, uniqueName);
               successCount++;
             } else {
@@ -388,32 +402,39 @@ export const useZipExport = (
 
       // B28 修正: JSZip.generateAsync は AbortSignal を native サポートしていないため、
       //   Promise.race で cancel を検知して throw する形にする。
-      //   これにより cancel 後に JSZip の圧縮ループが継続実行される (CPU 消費) 問題を排除。
+      //   generateAsync が先に完走した場合も interval を必ず止める (リーク防止)。
+      let compressWatch: ReturnType<typeof setInterval> | undefined;
       const abortPromise = new Promise<never>((_resolve, reject) => {
-        const checkInterval = setInterval(() => {
+        compressWatch = setInterval(() => {
           if (isCancelled()) {
-            clearInterval(checkInterval);
             reject(new Error('Aborted'));
           }
         }, 100);
-        // cleanup (generateAsync が先に完走した場合)
-        signal.addEventListener('abort', () => {
-          clearInterval(checkInterval);
-          reject(new Error('Aborted'));
-        });
+        signal.addEventListener(
+          'abort',
+          () => {
+            reject(new Error('Aborted'));
+          },
+          { once: true }
+        );
       });
 
-      const zipBlob = await Promise.race([
-        zip.generateAsync({ type: 'blob' }, (metadata) => {
-          if (isCancelled()) return;
-          const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
-          updateZipState({
-            progress: compressPercent,
-            detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
-          });
-        }),
-        abortPromise
-      ]);
+      let zipBlob: Blob;
+      try {
+        zipBlob = await Promise.race([
+          zip.generateAsync({ type: 'blob' }, (metadata) => {
+            if (isCancelled()) return;
+            const compressPercent = 90 + Math.round((metadata.percent / 100) * 10);
+            updateZipState({
+              progress: compressPercent,
+              detailText: metadata.currentFile ? `圧縮中: ${metadata.currentFile}` : '圧縮中...',
+            });
+          }),
+          abortPromise
+        ]);
+      } finally {
+        if (compressWatch !== undefined) clearInterval(compressWatch);
+      }
 
       if (isCancelled()) throw new Error('Aborted');
 

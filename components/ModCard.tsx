@@ -5,6 +5,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ModrinthHit, Profile } from '@/types';
+import {
+  autoBannerHeightClass,
+  autoCardSpanClass,
+  type SearchLayout
+} from '@/lib/constants/search';
+import { categoryLabel, primaryCategoryId } from '@/lib/constants/categories';
+import { isAnimatedImageUrl } from '@/lib/utils/image';
 
 interface ModCardProps {
   hit: ModrinthHit;
@@ -15,6 +22,7 @@ interface ModCardProps {
    * ランタイム上は問題なし)。
    */
   onToggleMod: (id: string, e?: React.MouseEvent, silent?: boolean) => unknown;
+  layout?: SearchLayout;
 }
 
 function formatDownloads(num: number): string {
@@ -24,51 +32,128 @@ function formatDownloads(num: number): string {
   return num.toString();
 }
 
-export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) => {
-  const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
-  const displayCategory =
-    (hit.display_categories?.[0]) ||
-    (hit.categories?.[0]) ||
-    'mod';
+function clampClass(hit: ModrinthHit, layout: SearchLayout): string {
+  if (layout === 'max') return 'line-clamp-3';
+  if (layout === 'auto') {
+    const len = hit.description?.length ?? 0;
+    if (len > 180) return 'line-clamp-5';
+    if (len > 90) return 'line-clamp-3';
+    return 'line-clamp-2';
+  }
+  return 'line-clamp-2';
+}
 
-  // 画像読み込み失敗時にプレースホルダーへ差し替え (L-10)
-  //
-  // Phase 10-P5 (useExhaustiveDependencies): 意図的に hit.icon_url を deps に含める。
-  //   effect 本体 (setIconFailed(false)) では icon_url を参照していないが、
-  //   目的は「icon_url が変わったら失敗フラグを一度リセットする」こと。
-  //   Biome は本体未参照 dependency を「不要」と判定するが、これは仕様通り。
+export const ModCard: React.FC<ModCardProps> = ({
+  hit,
+  profile,
+  onToggleMod,
+  layout = '3'
+}) => {
+  const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
+  const displayCategory = categoryLabel(
+    primaryCategoryId(hit.display_categories, hit.categories)
+  );
+
   const [iconFailed, setIconFailed] = useState<boolean>(false);
+  const [bannerFailed, setBannerFailed] = useState<boolean>(false);
+  const [bannerAspect, setBannerAspect] = useState<number | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: icon_url 変更検知トリガーとして意図的
   useEffect(() => {
     setIconFailed(false);
   }, [hit.icon_url]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: featured_gallery 変更検知トリガーとして意図的
+  useEffect(() => {
+    setBannerFailed(false);
+    setBannerAspect(null);
+  }, [hit.featured_gallery]);
   const showIcon = hit.icon_url && !iconFailed;
+  const showBanner =
+    (layout === 'max' || layout === 'auto') &&
+    Boolean(hit.featured_gallery) &&
+    !bannerFailed;
+  const forceBannerSlot = layout === 'max';
+  const autoSpan =
+    layout === 'auto'
+      ? autoCardSpanClass({
+          descriptionLength: hit.description?.length ?? 0,
+          hasBanner: Boolean(hit.featured_gallery) && !bannerFailed,
+          aspectRatio: bannerAspect
+        })
+      : '';
+  const autoBannerHeight =
+    layout === 'auto' ? autoBannerHeightClass(bannerAspect) : '';
 
-  // <div onClick> → <Link href> に変更 (SEO/新規タブ対応)。
-  // 詳細 URL は slug 優先 (人間可読)、fallback で project_id。
-  // Phase 9-F 変更: /mod/[slug] → /mods/[slug] (URL 再設計)
   const detailPath = `/mods/${hit.slug || hit.project_id}`;
 
-  // 内側の追加/削除ボタン領域では Link 遷移をキャンセル (Vite 版の onClick
-  // stopPropagation と同等挙動)。Link は preventDefault で遷移を止める。
   const stopLinkNav = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
   };
 
-  // onOpenDetail prop を廃止し <Link> の href に完全委譲。
-  // 以前は Link (`/mod/${slug || id}`) と onOpenDetail (`/mod/${project_id}`) の
-  // 二重遷移で URL 履歴汚染 + RSC ペイロード fetch レースが発生していた。
   return (
     <Link
       href={detailPath}
-      className="mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      className={`mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${autoSpan}`}
     >
+      {forceBannerSlot && (
+        <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-28 sm:h-36 rounded-t-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 via-slate-800 to-slate-900">
+          {showBanner && hit.featured_gallery ? (
+            <Image
+              src={hit.featured_gallery}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+              unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
+              onError={() => setBannerFailed(true)}
+            />
+          ) : showIcon && hit.icon_url ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Image
+                src={hit.icon_url}
+                alt=""
+                width={72}
+                height={72}
+                className="w-16 h-16 rounded-2xl object-contain bg-slate-900/50 p-1 shadow-lg"
+                onError={() => setIconFailed(true)}
+              />
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center theme-text-brand">
+              <i className="fa-solid fa-image text-3xl opacity-40" aria-hidden />
+            </div>
+          )}
+        </div>
+      )}
+      {!forceBannerSlot && showBanner && hit.featured_gallery && (
+        <div
+          className={`relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 rounded-t-2xl overflow-hidden ${
+            layout === 'auto' ? autoBannerHeight : 'h-20'
+          }`}
+        >
+          <Image
+            src={hit.featured_gallery}
+            alt=""
+            fill
+            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+            unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
+            onError={() => setBannerFailed(true)}
+            onLoad={(e) => {
+              if (layout !== 'auto') return;
+              const img = e.currentTarget;
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setBannerAspect(img.naturalWidth / img.naturalHeight);
+              }
+            }}
+          />
+        </div>
+      )}
+
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {showIcon && hit.icon_url ? (
-              // <img> → next/image で WebP/AVIF 自動変換 + srcset
               <Image
                 src={hit.icon_url}
                 alt={hit.title}
@@ -76,7 +161,7 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
                 height={40}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-800/80 p-0.5 shadow-md shrink-0"
                 onError={() => setIconFailed(true)}
-                unoptimized={false}
+                unoptimized={isAnimatedImageUrl(hit.icon_url)}
               />
             ) : (
               <div
@@ -101,14 +186,11 @@ export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod }) =
             </div>
           </div>
         </div>
-        <p className="text-xs theme-text-muted line-clamp-2 leading-relaxed">
+        <p className={`text-xs theme-text-muted leading-relaxed ${clampClass(hit, layout)}`}>
           {hit.description || '説明はありません。'}
         </p>
       </div>
 
-      {/* Phase 10-P5 (a11y): 下部アクション行は Card 全体を包む <Link> への
-          バブルを stopLinkNav で遮断するのが目的。キーボードでこの div 自体を
-          操作することはなく、内部の各 <button> が個別に focus 可能。 */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: <Link> バブル遮断 */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
       <div

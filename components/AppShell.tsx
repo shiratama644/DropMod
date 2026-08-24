@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { useScrollDirection } from '@/hooks/useScrollDirection';
 
 import type { TabName } from '@/types';
 
@@ -13,6 +12,7 @@ import { useDependencyCheck } from '@/hooks/useDependencyCheck';
 import { useZipExport } from '@/hooks/useZipExport';
 import { useZipImport } from '@/hooks/useZipImport';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
+import { nextDuplicateName } from '@/lib/utils/profileName';
 import { db } from '@/lib/db/dexie';
 import { useProfilesStore } from '@/lib/store/profiles';
 
@@ -61,6 +61,11 @@ interface Props {
 //   - 設定  (/settings) → 'settings'
 const PATH_TO_TAB: Record<string, TabName> = {
   '/': 'home',
+  '/discover': 'mods',
+  '/discover/mods': 'mods',
+  '/discover/modpack': 'mods',
+  '/discover/resourcepack': 'mods',
+  '/discover/shader': 'mods',
   '/mods': 'mods',
   '/profile': 'profile',
   '/settings': 'settings'
@@ -95,12 +100,12 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     currentProfile,
     handleSwitchProfile,
     handleCreateProfile,
-    handleDuplicateProfile,
     handleSaveEditedProfile,
     handleDeleteProfile,
     handleToggleMod,
     handleUpdateModVersion,
-    handleRemoveAllMods
+    handleRemoveAllMods,
+    handleRemoveMods
   } = useProfiles(theme, setThemeState, showToast, confirm);
 
   // ---------- Dependency check ----------
@@ -156,6 +161,23 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     setIsNewProfileModalOpen(true);
   }, [setPendingImportData]);
 
+  const handleDuplicateProfile = useCallback(() => {
+    if (!currentProfile || currentProfile.id === 'transient-fallback') return;
+    setPendingImportData({
+      name: nextDuplicateName(
+        currentProfile.name,
+        profiles.map((p) => p.name)
+      ),
+      mods: currentProfile.mods.map((m) => ({ ...m })),
+      mcVersion: currentProfile.mcVersion,
+      loader: currentProfile.loader,
+      loaderVersion: currentProfile.loaderVersion,
+      description: currentProfile.description,
+      source: 'duplicate'
+    });
+    setIsNewProfileModalOpen(true);
+  }, [currentProfile, profiles, setPendingImportData]);
+
   const openEditProfileModal = useCallback(() => setIsEditProfileModalOpen(true), []);
   const openDependencyCheckModal = useCallback(() => setIsDepCheckModalOpen(true), []);
 
@@ -200,18 +222,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     };
   }, [isAnyModalOpen]);
 
-  // Phase 9.5-E: 全ページで Header + BottomNav をスクロール hide
-  //   - 下スクロールで hide、上スクロールで show
-  //   - モーダル open 中は hide しない (誤操作防止)
-  //
-  // 【9.5-G 追加】 BottomSheet が open 中は hide 抑制。
-  //   従来: スクロール↑で BottomNav 表示 → Sheet 開く → 直前の scroll direction
-  //         次第で急に hidden に戻り、BottomNav が消える不具合。
-  //   対策: BottomNav から Sheet open 状態を受け取り、shouldHideNav の条件に追加。
-  const scrollDirection = useScrollDirection();
-  const [isAnySheetOpen, setIsAnySheetOpen] = useState(false);
-  const shouldHideNav =
-    scrollDirection === 'down' && !isAnyModalOpen && !isAnySheetOpen;
+  // Header / BottomNav は常時表示 (スクロール hide は撤回)。
 
   // ---------- Reset data ----------
   const handleResetData = useCallback(async () => {
@@ -245,6 +256,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       //   cookieStore API は Safari 未対応 (2026 時点 experimental) なので直接操作。
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 cookie 削除 (max-age=0)
       document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
+      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC cookie 削除
+      document.cookie = 'dropmod_theme=; path=/; max-age=0; SameSite=Lax; Secure';
     } catch (e) {
       console.warn('[DropMod] データ初期化中に例外:', e);
     }
@@ -261,7 +274,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   const activeTab: TabName = useMemo(() => {
     const path = pathname ?? '/';
     // /mods/[slug] の場合は 'mods' タブを active に (Mod 詳細はモーダル or フルページ)
-    if (path.startsWith('/mods/')) return 'mods';
+    if (path.startsWith('/mods/') || path.startsWith('/discover/')) return 'mods';
     return PATH_TO_TAB[path] ?? 'home';
   }, [pathname]);
 
@@ -305,6 +318,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       handleToggleMod,
       handleUpdateModVersion,
       handleRemoveAllMods,
+      handleRemoveMods,
       runBackgroundDepCheck,
       handleDownloadZip,
       handleCancelZip,
@@ -328,6 +342,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     handleToggleMod,
     handleUpdateModVersion,
     handleRemoveAllMods,
+    handleRemoveMods,
     runBackgroundDepCheck,
     handleDownloadZip,
     handleCancelZip,
@@ -371,8 +386,8 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         onImportZip={handleImportZipInput}
       />
 
-      {/* モバイル (< md) 専用の上部 Header。LP は Header 非表示 (BottomNav のみ)。
-          Header は md:hidden 指定済み。 */}
+      {/* モバイル (< md) 専用の上部 Header。PC は DesktopSidebar のみ。
+          LP は Header 非表示 (BottomNav のみ)。Header 自体も md:hidden。 */}
       {pathname !== '/' && (
         <Header
           theme={theme}
@@ -386,7 +401,6 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           onImportZip={handleImportZipInput}
           onSwitchTab={handleSwitchTab}
           hasDepWarning={hasDepWarning}
-          hidden={shouldHideNav}
         />
       )}
 
@@ -394,19 +408,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           既存ページの構造 (max-w-* mx-auto など) は保持。 */}
       <div className="md:pl-64">{children}</div>
 
-      {/* モバイル (< md) 専用の下部 BottomNav。md:hidden 指定済み。
-          Sheet open 状態を親に通知 → shouldHideNav の抑制条件に使う。 */}
+      {/* モバイル (< md) 専用の下部 BottomNav。md:hidden 指定済み。常時表示。 */}
       <BottomNav
         activeTab={activeTab}
         onSwitchTab={handleSwitchTab}
         modCount={currentProfile.mods.length}
         hasDepWarning={hasDepWarning}
-        hidden={shouldHideNav}
         theme={theme}
         onToggleTheme={toggleTheme}
         onDownloadZip={handleDownloadZip}
         onImportZip={handleImportZipInput}
-        onSheetOpenChange={setIsAnySheetOpen}
       />
 
       {/* --- グローバル モーダル群 --- */}

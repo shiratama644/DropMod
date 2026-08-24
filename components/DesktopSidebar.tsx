@@ -14,7 +14,7 @@
 //   - スクロール hide しない (PC は常時表示)
 //
 // 【構成】
-//   1. ロゴ (Link to /)
+//   1. ロゴ (Link to /) — 左ペイン上部のブランド。PC の sticky Header とは別
 //   2. メインナビ (Home / 探す / 現在のMod / 設定) — <Link>、active tab は緑
 //   3. プロファイル切替 dropdown (CustomDropdown 再利用) + 新規作成ボタン
 //   4. アクション群 (依存チェック / ZIP保存 primary / ZIP読込 / テーマ切替)
@@ -57,7 +57,7 @@ interface NavLinkItem {
 
 const NAV_ITEMS: readonly NavLinkItem[] = [
   { id: 'home', label: 'ホーム', icon: 'fa-solid fa-house', href: '/' },
-  { id: 'mods', label: '探す', icon: 'fa-solid fa-magnifying-glass', href: '/mods' },
+  { id: 'mods', label: '探す', icon: 'fa-solid fa-magnifying-glass', href: '/discover/mods' },
   {
     id: 'profile',
     label: '現在のMod',
@@ -109,7 +109,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const isNavActive = useCallback(
     (item: NavLinkItem) => {
       if (item.id === 'mods') {
-        return pathname === '/mods' || pathname?.startsWith('/mods/') || activeTab === 'mods';
+        return (
+          pathname === '/mods' ||
+          pathname?.startsWith('/mods/') ||
+          pathname === '/discover' ||
+          pathname?.startsWith('/discover/') ||
+          activeTab === 'mods'
+        );
       }
       return activeTab === item.id;
     },
@@ -120,9 +126,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     <aside
       id="desktop-sidebar"
       aria-label="サイドナビゲーション"
-      className="hidden md:flex fixed left-0 top-0 h-screen w-64 glass-panel border-r z-40 flex-col"
+      className="hidden md:flex fixed left-0 top-0 h-screen w-64 max-w-64 glass-panel border-r z-40 flex-col overflow-x-hidden"
     >
-      {/* ロゴ */}
+      {/* ロゴ (左ペイン上部。PC の sticky Header は出さない) */}
       <div className="px-4 pt-5 pb-4 border-b border-slate-500/10">
         <Link
           href="/"
@@ -187,22 +193,23 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         })}
       </nav>
 
-      {/* プロファイル切替 */}
-      <div className="px-3 pt-3 pb-2 border-t border-slate-500/10">
+      {/* プロファイル切替 (w-64 内に収める。長い名前は truncate) */}
+      <div className="px-3 pt-3 pb-2 border-t border-slate-500/10 min-w-0">
         <div className="text-[10px] theme-text-muted font-bold uppercase tracking-wider px-1 mb-1.5">
           プロファイル
         </div>
-        <div className="flex items-center rounded-xl p-1 theme-sub-box">
+        <div className="flex items-center gap-1 rounded-xl p-1 theme-sub-box min-w-0 max-w-full overflow-hidden">
           <i
-            className="fa-solid fa-layer-group theme-text-brand text-xs ml-2 mr-1"
+            className="fa-solid fa-layer-group theme-text-brand text-xs ml-1.5 shrink-0"
             aria-hidden="true"
           />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <CustomDropdown
               options={profileOptions}
               selectedValue={currentProfileId}
               onChange={onSwitchProfile}
               label="プロファイル切り替え"
+              customClass="w-full min-w-0 max-w-full"
             />
           </div>
           <button

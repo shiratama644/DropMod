@@ -34,7 +34,7 @@ describe('useConfirmStore', () => {
     await expect(resultPromise!).resolves.toBe(false);
   });
 
-  it('second confirm() while first is pending resolves the first to false', async () => {
+  it('second confirm() queues until the first resolves (B18)', async () => {
     let first: Promise<boolean>;
     let second: Promise<boolean>;
     act(() => {
@@ -43,9 +43,10 @@ describe('useConfirmStore', () => {
     act(() => {
       second = useConfirmStore.getState().confirm({ title: '2', message: '2' });
     });
-    // 1 個目は false で resolve される
-    await expect(first!).resolves.toBe(false);
-    // 2 個目はまだ pending
+    expect(useConfirmStore.getState().state.title).toBe('1');
+    act(() => useConfirmStore.getState().handleConfirm());
+    await expect(first!).resolves.toBe(true);
+    expect(useConfirmStore.getState().state.title).toBe('2');
     act(() => useConfirmStore.getState().handleConfirm());
     await expect(second!).resolves.toBe(true);
   });

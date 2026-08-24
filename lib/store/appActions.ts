@@ -24,7 +24,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Profile, ModItem } from '@/types';
+import type { Profile, ModItem, ModrinthVersion, ContentCategory } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
 // ============================================================================
@@ -40,18 +40,25 @@ export interface AppActions {
   handleSwitchProfile: (id: string) => void;
   handleCreateProfile: (
     name: string, mcVersion: string, loader: string, description: string,
-    mods?: ModItem[]
+    mods?: ModItem[],
+    loaderVersion?: string
   ) => void;
   handleDuplicateProfile: () => void;
   handleSaveEditedProfile: (
-    name: string, mcVersion: string, loader: string, description: string
+    name: string, mcVersion: string, loader: string, description: string,
+    loaderVersion?: string
   ) => void;
   handleDeleteProfile: (id: string) => void | Promise<void>;
   handleToggleMod: (
     projectId: string, e?: React.MouseEvent, silent?: boolean
   ) => Promise<void>;
-  handleUpdateModVersion: (projectId: string, versionId: string) => void | Promise<void>;
-  handleRemoveAllMods: () => void | Promise<void>;
+  handleUpdateModVersion: (
+    projectId: string,
+    versionId: string,
+    knownVersion?: ModrinthVersion
+  ) => void | Promise<void>;
+  handleRemoveAllMods: (category?: ContentCategory) => void | Promise<void>;
+  handleRemoveMods: (ids: string[]) => void | Promise<void>;
 
   // Dep check (useDependencyCheck hook 由来)
   runBackgroundDepCheck: () => void;

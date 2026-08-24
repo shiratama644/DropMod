@@ -187,6 +187,8 @@ export interface SearchParams {
   sortBy?: 'popular' | 'relevance' | 'updated' | 'newest';
   offset?: number;
   limit?: number;
+  /** 未指定時は mod。LP / BrowseSheet の type= に対応 */
+  projectType?: 'mod' | 'modpack' | 'resourcepack' | 'shader';
 }
 
 export interface SearchResult {
@@ -210,9 +212,12 @@ export async function fetchModrinthSearch(
   params: SearchParams,
   signal?: AbortSignal
 ): Promise<SearchResult> {
-  const facets: string[][] = [['project_type:mod']];
+  const projectType = params.projectType ?? 'mod';
+  const facets: string[][] = [[`project_type:${projectType}`]];
   if (params.mcVersion) facets.push([`versions:${params.mcVersion}`]);
-  if (params.loader) facets.push([`categories:${params.loader.toLowerCase()}`]);
+  if (params.loader && (projectType === 'mod' || projectType === 'modpack')) {
+    facets.push([`categories:${params.loader.toLowerCase()}`]);
+  }
   if (params.category && params.category !== 'All')
     facets.push([`categories:${params.category}`]);
 
@@ -243,6 +248,42 @@ export async function fetchModrinthProject(
     tags: ['modrinth:project', `modrinth:project:${slug}`],
     signal
   });
+}
+
+interface ModrinthTeamMember {
+  role?: string;
+  user?: {
+    username?: string;
+    name?: string | null;
+  };
+}
+
+/**
+ * `/project` 応答には author が無い。members から Owner (なければ先頭) の表示名を取る。
+ * 失敗時は null (詳細 UI は author なしで描画する)。
+ */
+export async function fetchModrinthProjectAuthor(
+  slug: string,
+  signal?: AbortSignal
+): Promise<string | null> {
+  try {
+    const members = await fetchModrinthServer<ModrinthTeamMember[]>(
+      `/project/${encodeURIComponent(slug)}/members`,
+      {
+        revalidate: REVALIDATE.PROJECT,
+        tags: ['modrinth:project', `modrinth:project:${slug}:members`],
+        signal
+      }
+    );
+    if (!Array.isArray(members) || members.length === 0) return null;
+    const owner =
+      members.find((m) => (m.role ?? '').toLowerCase() === 'owner') ?? members[0];
+    const name = owner?.user?.name?.trim() || owner?.user?.username?.trim();
+    return name || null;
+  } catch (e) {
+    console.warn('[DropMod] fetchModrinthProjectAuthor failed:', slug, e);
+    return null;
+  }
 }
 
 /**

@@ -284,8 +284,15 @@ export function BottomSheet({ isOpen, onClose, children, ariaLabel }: BottomShee
 
 ### 4.3 「探す」ボタンの Bottom Sheet 内容 (成果物 B-1)
 
-**Phase 11 準備**: 4 カテゴリを大きなカードで選択できる UI。各カード → 対応する
-`/mods?type=xxx` にリンク (Phase 11 で fetchModrinthSearch に facets を追加)。
+**Phase 11 / 12 準備**: 4 カテゴリを大きなカードで選択できる UI。
+
+- Mods → `/mods` (現行検索)
+- Modpacks → **`/discover/modpack`** (検索)。ハブは `/modpack` (Phase 12)
+- Resource Packs → **`/discover/resourcepack`** (検索)。ハブは `/resourcepack` (Phase 11)
+- Shaders → **`/discover/shader`** (検索)。ハブは `/shader` (Phase 11)
+
+予約ハブは検索へリダイレクトしない。
+詳細は `docs/planning/PHASE11_PLAN.md` §1.2.1。
 
 ```text
 ┌────────────────────────────────────────┐
@@ -312,7 +319,7 @@ export function BottomSheet({ isOpen, onClose, children, ariaLabel }: BottomShee
 **UI**:
 - 4 カテゴリボタン、縦積み or 2x2 grid (画面幅で切替)
 - 各ボタン: 左アイコン + 右矢印 `fa-chevron-right`、`py-4`
-- タップで即座に close + `/mods?type=xxx` に遷移
+- タップで即座に close + `/discover/*` に遷移
 
 **Phase 11 での拡張予定**: このシートに「フォルダから取り込み」ボタンも追加。
 

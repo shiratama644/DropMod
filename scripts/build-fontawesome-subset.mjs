@@ -38,6 +38,10 @@ const SCAN_EXTS = ['.ts', '.tsx'];
 const ALWAYS_INCLUDE_SOLID = new Set([
   'fa-chevron-up',
   'fa-chevron-down',
+  // lib/utils/versionOption.ts のチャネル icon (SCAN_DIRS 外)
+  'fa-circle-check',
+  'fa-flask',
+  'fa-vial'
 ]);
 const ALWAYS_INCLUDE_BRANDS = new Set();
 

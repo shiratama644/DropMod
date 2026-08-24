@@ -14,13 +14,14 @@ import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWith
 import { useAppAction } from '@/lib/store/appActions';
 import { contentCategoryOf } from '@/lib/utils/contentCategory';
 import { categoryLabel } from '@/lib/constants/categories';
+import { detailPathFromProject } from '@/lib/constants/search';
 import { versionDropdownOption } from '@/lib/utils/versionOption';
 
 // ============================================================================
 // ModsPageClient (Phase 9-A.2: useAppContext 撤去)
 //
 // Vite 版 `src/components/ModsTab.tsx` の完全移植。差分:
-//   - Mod カードクリック時の詳細遷移は router.push(`/mods/${slug}`) に統一 (Phase 9-F)
+//   - Mod カードクリック時の詳細遷移は router.push(detailPathFromProject(...)) で /<型>/<slug> へ (ルーティング再設計)
 //   - Vite 版と同一 UX: バージョン切替、.jar 直DL、削除、依存チェック起動、
 //     全削除、ZIP 出力
 //
@@ -257,7 +258,7 @@ export const ModsPageClient: React.FC = () => {
       // Phase 9-F: /mod/[slug] → /mods/[slug] (URL 再設計)
       // ⚠️ /profile ページからの遷移は Intercepting Route の scope 外 (別セグメント)
       //    なので通常のフルページ遷移になる。Intercepting Route は /mods 一覧からのみ発火。
-      router.push(`/mods/${mod.slug || mod.id}`);
+      router.push(detailPathFromProject(mod.projectType, mod.slug || mod.id));
     },
     [router]
   );

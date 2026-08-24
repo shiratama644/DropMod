@@ -13,6 +13,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import type { ModrinthHit } from '@/types';
+import { detailPathFromProject } from '@/lib/constants/search';
 
 interface PreviewCardProps {
   hit: ModrinthHit;
@@ -26,7 +27,7 @@ function formatDownloads(num: number): string {
 }
 
 export const PreviewCard: React.FC<PreviewCardProps> = ({ hit }) => {
-  const detailPath = `/mods/${hit.slug || hit.project_id}`;
+  const detailPath = detailPathFromProject(hit.project_type, hit.slug || hit.project_id);
   const title = hit.title || '(名称未設定)';
   const description = hit.description || '';
 

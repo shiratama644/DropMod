@@ -3,14 +3,14 @@
  */
 import { test, expect } from '@playwright/test';
 
-// Phase 9-F: URL 再設計に伴い /profile を追加、/mods は Modrinth 検索一覧に役割変更
+// ルーティング再設計: 検索一覧は /discover/<複数形>
 const PAGES = [
   '/',
   '/mods',
   '/discover/mods',
-  '/discover/modpack',
-  '/discover/resourcepack',
-  '/discover/shader',
+  '/discover/modpacks',
+  '/discover/resourcepacks',
+  '/discover/shaders',
   '/profile',
   '/settings',
   '/modpack',

@@ -8,6 +8,7 @@ import type { ModrinthHit, Profile } from '@/types';
 import {
   autoBannerHeightClass,
   autoCardSpanClass,
+  modalPathFromProject,
   type SearchLayout
 } from '@/lib/constants/search';
 import { categoryLabel, primaryCategoryId } from '@/lib/constants/categories';
@@ -83,7 +84,12 @@ export const ModCard: React.FC<ModCardProps> = ({
   const autoBannerHeight =
     layout === 'auto' ? autoBannerHeightClass(bannerAspect) : '';
 
-  const detailPath = `/mods/${hit.slug || hit.project_id}`;
+  // 検索一覧のカード → プレビューモーダル (/discover/<複数>/<slug>)。
+  // 一覧 (children) は Intercept で破棄されず、戻るで状態保持される。
+  const detailPath = modalPathFromProject(
+    hit.project_type,
+    hit.slug || hit.project_id
+  );
 
   const stopLinkNav = (e: React.MouseEvent) => {
     e.stopPropagation();

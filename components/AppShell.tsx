@@ -63,10 +63,9 @@ const PATH_TO_TAB: Record<string, TabName> = {
   '/': 'home',
   '/discover': 'mods',
   '/discover/mods': 'mods',
-  '/discover/modpack': 'mods',
-  '/discover/resourcepack': 'mods',
-  '/discover/shader': 'mods',
-  '/mods': 'mods',
+  '/discover/modpacks': 'mods',
+  '/discover/resourcepacks': 'mods',
+  '/discover/shaders': 'mods',
   '/profile': 'profile',
   '/settings': 'settings'
 };
@@ -273,8 +272,13 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   //   - その他マッチしないパスは 'home' フォールバック
   const activeTab: TabName = useMemo(() => {
     const path = pathname ?? '/';
-    // /mods/[slug] の場合は 'mods' タブを active に (Mod 詳細はモーダル or フルページ)
-    if (path.startsWith('/mods/') || path.startsWith('/discover/')) return 'mods';
+    // 詳細ページ (/<型>/<slug>) または モーダル/一覧 (/discover/...) は 'mods' 扱い
+    if (
+      path.startsWith('/discover/') ||
+      /^\/(mod|modpack|resourcepack|shader)\//.test(path)
+    ) {
+      return 'mods';
+    }
     return PATH_TO_TAB[path] ?? 'home';
   }, [pathname]);
 

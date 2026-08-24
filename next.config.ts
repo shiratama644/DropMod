@@ -153,37 +153,15 @@ const nextConfig: NextConfig = {
   //     置き換え、被リンク先の Value を新 URL に集約)
   async redirects() {
     return [
-      // 旧 Mod 詳細 (単数) → 新 Mod 詳細 (複数): SEO 上の Value を保全
-      {
-        source: '/mod/:slug',
-        destination: '/mods/:slug',
-        permanent: true
-      },
-      // 検索一覧は /discover/* 。詳細 /mods/[slug] は動かさない。
-      {
-        source: '/mods',
-        has: [{ type: 'query', key: 'type', value: 'modpack' }],
-        destination: '/discover/modpack',
-        permanent: true
-      },
-      {
-        source: '/mods',
-        has: [{ type: 'query', key: 'type', value: 'resourcepack' }],
-        destination: '/discover/resourcepack',
-        permanent: true
-      },
-      {
-        source: '/mods',
-        has: [{ type: 'query', key: 'type', value: 'shader' }],
-        destination: '/discover/shader',
-        permanent: true
-      },
+      // /mods は検索一覧 (/discover/mods) の友好 alias。
+      // 旧 /mod/:slug → /mods/:slug 等は未デプロイのため削除。
+      // 詳細は /<型>/[slug] (例: /mod/sodium)、モーダルは /discover/<複数>/<slug>。
       {
         source: '/mods',
         destination: '/discover/mods',
         permanent: true
       }
-      // /modpack /resourcepack /shader は Phase 11/12 の予約ルート。
+      // /modpack /resourcepack /shader は Phase 11/12 の予約ルート＆詳細の名前空間ルート。
       // 検索 (/discover/*) へリダイレクトしないこと。
     ];
   }

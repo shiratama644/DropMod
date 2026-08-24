@@ -21,26 +21,75 @@ export function parseProjectType(raw: string | string[] | undefined | null): Pro
   return 'mod';
 }
 
-/** 検索一覧のパスセグメント (`/discover/mods` の mods) */
-export const DISCOVER_SEGMENTS = ['mods', 'modpack', 'resourcepack', 'shader'] as const;
+// ==========================================================================
+// URL 設計 (docs/planning/ROUTING_REDESIGN_PLAN.md)
+//   検索一覧       : /discover/<複数形>          (mods / modpacks / resourcepacks / shaders)
+//   プレビューモーダル : /discover/<複数形>/<slug>
+//   詳細ページ     : /<単数形>/<slug>            (mod / modpack / resourcepack / shader)
+//   ※ Modrinth 公式と詳細 URL を一致させるため詳細は単数形。
+//   ※ すべての URL 生成はこのセクションの関数経由で行う（一元化）。
+// ==========================================================================
+
+/** 検索一覧のパスセグメント（複数形） */
+export const DISCOVER_SEGMENTS = ['mods', 'modpacks', 'resourcepacks', 'shaders'] as const;
 export type DiscoverSegment = (typeof DISCOVER_SEGMENTS)[number];
 
-const PROJECT_TYPE_TO_SEGMENT: Record<ProjectType, DiscoverSegment> = {
+const PROJECT_TYPE_TO_DISCOVER_SEGMENT: Record<ProjectType, DiscoverSegment> = {
   mod: 'mods',
-  modpack: 'modpack',
-  resourcepack: 'resourcepack',
-  shader: 'shader'
+  modpack: 'modpacks',
+  resourcepack: 'resourcepacks',
+  shader: 'shaders'
 };
 
-export function discoverPathForType(type: ProjectType): string {
-  return `/discover/${PROJECT_TYPE_TO_SEGMENT[type]}`;
+/** 詳細ページのパスセグメント（単数形 = ProjectType そのまま） */
+export const DETAIL_SEGMENTS = PROJECT_TYPES; // ['mod','modpack','resourcepack','shader']
+
+/** ProjectType → 詳細ページ URL。例: detailPathForType('mod', 'sodium') => '/mod/sodium' */
+export function detailPathForType(type: ProjectType, slug: string): string {
+  return `/${type}/${slug}`;
 }
 
-/** `/discover/:segment` を ProjectType にする。未知なら null */
+/** ProjectType → プレビューモーダル URL。例: modalPathForType('mod', 'sodium') => '/discover/mods/sodium' */
+export function modalPathForType(type: ProjectType, slug: string): string {
+  return `${discoverPathForType(type)}/${slug}`;
+}
+
+/** 任意の project_type 文字列 → 詳細ページ URL（未知型は 'mod' 扱い） */
+export function detailPathFromProject(
+  projectType: string | undefined | null,
+  slug: string
+): string {
+  return detailPathForType(parseProjectType(projectType), slug);
+}
+
+/** 任意の project_type 文字列 → プレビューモーダル URL（未知型は 'mod' 扱い） */
+export function modalPathFromProject(
+  projectType: string | undefined | null,
+  slug: string
+): string {
+  return modalPathForType(parseProjectType(projectType), slug);
+}
+
+export function discoverPathForType(type: ProjectType): string {
+  return `/discover/${PROJECT_TYPE_TO_DISCOVER_SEGMENT[type]}`;
+}
+
+/** `/discover/:segment`（複数形）を ProjectType にする。未知なら null */
 export function parseDiscoverSegment(raw: string | string[] | undefined | null): ProjectType | null {
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (value === 'mods') return 'mod';
-  if (value === 'modpack' || value === 'resourcepack' || value === 'shader') return value;
+  if (!value) return null;
+  for (const t of PROJECT_TYPES) {
+    if (PROJECT_TYPE_TO_DISCOVER_SEGMENT[t] === value) return t;
+  }
+  return null;
+}
+
+/** 詳細セグメント（単数形）を ProjectType にする。未知なら null */
+export function parseDetailType(raw: string | string[] | undefined | null): ProjectType | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value && (PROJECT_TYPES as readonly string[]).includes(value)) {
+    return value as ProjectType;
+  }
   return null;
 }
 

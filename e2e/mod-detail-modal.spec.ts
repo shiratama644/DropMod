@@ -1,60 +1,50 @@
 /**
- * E2E: Mod 詳細モーダルの開閉フロー (Phase 9-F: URL 再設計対応)
+ * E2E: プレビューモーダル と 詳細ページ のフロー (ルーティング再設計)
+ *
+ * 新 URL 設計:
+ *   検索一覧   : /discover/mods
+ *   プレビューモーダル : /discover/mods/<slug>   (Intercept: 一覧を破棄せず重ねる)
+ *   詳細ページ : /mod/<slug>
  *
  * シナリオ:
- *   1. /mods (Mod 検索一覧) にアクセス
- *   2. Mod カードをクリック → モーダルが開く (URL は /mods/[slug] に変わる)
- *   3. Escape でモーダルを閉じる → router.back() で /mods に戻る
- *
- * 検証観点:
- *   - Intercepting Routes による URL 変更 + モーダル表示
- *   - router.back() でスムーズに元の一覧に戻る (Phase 9-E で router.replace('/') から変更)
- *   - フルページ (直接 URL アクセス) との差別化
+ *   1. /discover/mods (検索一覧) にアクセス
+ *   2. カードクリック → モーダルが開く (URL は /discover/mods/<slug> に変わる)
+ *   3. Escape で閉じる → router.back() で一覧に戻る (状態保持)
+ *   4. 直接 /mod/<slug> アクセス → フル詳細ページ (モーダルではない)
  */
 
 import { test, expect } from '@playwright/test';
 
-test.describe('Mod detail modal flow (Phase 9-F)', () => {
-  test('opens modal from mod card on /mods and closes cleanly with back()', async ({
+test.describe('Project preview modal & detail page flow', () => {
+  test('opens preview modal from card on /discover/mods and closes with back()', async ({
     page
   }) => {
-    // Phase 9-F: Home → /mods に URL 変更 (Modrinth 検索は /mods で提供)
     await page.goto('/discover/mods');
 
-    // Mod カードが表示されるまで待つ
-    // (SSR 経由の initialHits があれば即表示、無ければ CSR fetch 完了待ち)
     const firstCard = page.locator('.mod-card-item').first();
     await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
 
     // モバイルは Header、PC は DesktopSidebar が常時表示
     await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
 
-    // Mod カードクリック前の URL は /mods
+    // クリック前の URL は一覧
     await expect(page).toHaveURL('/discover/mods');
 
-    // Mod カードをクリック
+    // カードクリック → モーダル (Intercept)
     await firstCard.click();
-
-    // モーダル (variant="modal") が開く。dialog role で判定
     const dialog = page.getByRole('dialog').first();
     await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
-    // URL が /mods/[slug] に変わる (Intercepting Route)
-    await expect(page).toHaveURL(/\/mods\/[^/]+$/);
+    // URL が /discover/mods/<slug> に変わる (Intercepting Route)
+    await expect(page).toHaveURL(/\/discover\/mods\/[^/]+$/);
 
-    // Escape で閉じる
+    // Escape で閉じる → router.back() で一覧に戻る
     await page.keyboard.press('Escape');
-
-    // モーダルが消える
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
-
-    // Phase 9-F: router.back() で /mods に戻る (旧 router.replace('/') は撤廃)
     await expect(page).toHaveURL('/discover/mods');
   });
 
-  test('hides mobile BottomNav while intercepting detail modal is open', async ({
-    page
-  }) => {
+  test('hides mobile BottomNav while preview modal is open', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/discover/mods');
     const firstCard = page.locator('.mod-card-item').first();
@@ -71,37 +61,38 @@ test.describe('Mod detail modal flow (Phase 9-F)', () => {
     await expect(page.locator('#bottom-nav')).toBeVisible();
   });
 
-  test('direct URL access to /mods/[slug] renders full page (not modal)', async ({
+  test('preview modal has a 詳細ページ button linking to /<型>/<slug>', async ({
     page
   }) => {
-    // 直接 URL アクセス → Intercepting Route は発火せず、フルページ描画
-    await page.goto('/mods/sodium');
+    await page.goto('/discover/mods');
+    const firstCard = page.locator('.mod-card-item').first();
+    await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
+    await firstCard.click();
+    const dialog = page.getByRole('dialog').first();
+    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
-    // Phase 10-P1: 詳細ページを ModDetailPageView に刷新。
-    //   - Header と BottomNav は「通常ページ」として表示されたままにする
-    //     (旧: body に mod-fullpage クラスが付いて Header 非表示、を撤廃)
-    //   - 上部にブレッドクラム的な「Mod 一覧に戻る」リンクがある
-    //   - dialog role は付いていない (モーダルではないため)
-    await expect(page.getByRole('link', { name: /検索に戻る|Mod 一覧に戻る/ })).toBeVisible({
-      timeout: 15_000
-    });
-    // モバイルは Header、PC は DesktopSidebar が表示されたまま
-    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
-    // dialog は無い (フルページなのでモーダルではない)
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    // ページ h1 = Mod タイトル (SEO 継続)
-    await expect(page.locator('h1').first()).toBeVisible();
+    // モーダルに「詳細ページ」ボタンがあり、詳細ページ (/<型>/<slug>) へ遷移する
+    const detailLink = dialog.getByRole('link', { name: /詳細ページ/ });
+    await expect(detailLink).toBeVisible();
+    const href = await detailLink.getAttribute('href');
+    expect(href).toMatch(/^\/(mod|modpack|resourcepack|shader)\/[^/]+$/);
   });
 
-  test('legacy /mod/[slug] URL redirects to /mods/[slug] (SEO 保全)', async ({
+  test('direct URL access to /mod/<slug> renders full detail page (not modal)', async ({
     page
   }) => {
-    // Phase 9-F: 旧 URL に 308 permanent redirect が設定されている (next.config.ts)
-    const response = await page.goto('/mod/sodium', { waitUntil: 'networkidle' });
-    // リダイレクト先の最終 URL が /mods/sodium であること
-    await expect(page).toHaveURL('/mods/sodium');
-    // response 自体は 200 (redirect chain 後) だが、初回応答は 308 permanent redirect のはず
-    // (Playwright は自動的に follow するので status は 200)
-    expect(response?.status()).toBeLessThan(400);
+    // 直接 URL アクセス → フル詳細ページ (ModDetailPageView)
+    await page.goto('/mod/sodium');
+
+    // ブレッドクラム「Mod 一覧に戻る」
+    await expect(page.getByRole('link', { name: /Mod 一覧に戻る|検索に戻る/ })).toBeVisible({
+      timeout: 15_000
+    });
+    // モバイル Header / PC DesktopSidebar は表示されたまま
+    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
+    // dialog は無い (フルページ)
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // ページ h1 = Mod タイトル (SEO)
+    await expect(page.locator('h1').first()).toBeVisible();
   });
 });

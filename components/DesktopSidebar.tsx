@@ -105,15 +105,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const themeIcon = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
   const themeLabel = theme === 'dark' ? 'ライトモード' : 'ダークモード';
 
-  // active 判定: /mods/[slug] は 'mods' 扱い (AppShell の PATH_TO_TAB と一致)
+  // active 判定: 詳細ページ (/<型>/<slug>)・モーダル/一覧 (/discover/...) は 'mods' 扱い
   const isNavActive = useCallback(
     (item: NavLinkItem) => {
       if (item.id === 'mods') {
         return (
-          pathname === '/mods' ||
-          pathname?.startsWith('/mods/') ||
           pathname === '/discover' ||
-          pathname?.startsWith('/discover/') ||
+          (pathname?.startsWith('/discover/') ?? false) ||
+          (/^\/(mod|modpack|resourcepack|shader)\//.test(pathname ?? '') ) ||
           activeTab === 'mods'
         );
       }

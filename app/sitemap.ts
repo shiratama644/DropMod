@@ -12,6 +12,7 @@
 
 import type { MetadataRoute } from 'next';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
+import { detailPathFromProject } from '@/lib/constants/search';
 
 const PREBUILD_LIMIT = 100;
 
@@ -53,19 +54,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0
     },
     {
-      url: `${baseUrl}/discover/modpack`,
+      url: `${baseUrl}/discover/modpacks`,
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.8
     },
     {
-      url: `${baseUrl}/discover/resourcepack`,
+      url: `${baseUrl}/discover/resourcepacks`,
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.8
     },
     {
-      url: `${baseUrl}/discover/shader`,
+      url: `${baseUrl}/discover/shaders`,
       lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.8
@@ -110,17 +111,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       offset: 0,
       limit: PREBUILD_LIMIT
     });
-    const modEntries: MetadataRoute.Sitemap = result.hits
-      .map((h) => h.slug || h.project_id)
-      .filter((s): s is string => Boolean(s))
-      .map((slug) => ({
-        // Phase 9-F: /mod/[slug] → /mods/[slug] (URL 再設計)
-        url: `${baseUrl}/mods/${slug}`,
+    const detailEntries: MetadataRoute.Sitemap = result.hits
+      .map((h) => ({ slug: h.slug || h.project_id, projectType: h.project_type }))
+      .filter(
+        (x): x is { slug: string; projectType: string } => Boolean(x.slug)
+      )
+      .map(({ slug, projectType }) => ({
+        // ルーティング再設計: /<型>/<slug> (型別・Modrinth 準拠)
+        url: `${baseUrl}${detailPathFromProject(projectType, slug)}`,
         lastModified: now,
         changeFrequency: 'weekly' as const,
         priority: 0.7
       }));
-    return [...staticEntries, ...modEntries];
+    return [...staticEntries, ...detailEntries];
   } catch (e) {
     console.warn('[DropMod] sitemap: Modrinth 取得失敗、静的ルートのみ出力:', e);
     return staticEntries;

@@ -13,7 +13,7 @@ import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
-import { discoverPathFromProjectType } from '@/lib/constants/search';
+import { discoverPathFromProjectType, detailPathFromProject } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell
@@ -518,6 +518,15 @@ export const ModDetailModalShell: React.FC<Props> = ({
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
             検索に戻る
+          </Link>
+        )}
+        {isModal && (
+          <Link
+            href={detailPathFromProject(project.project_type, slug)}
+            className="btn-hover-effect px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition inline-flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
+            詳細ページ
           </Link>
         )}
         {latestFile && (

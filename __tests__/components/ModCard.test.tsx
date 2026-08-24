@@ -155,15 +155,15 @@ describe('ModCard', () => {
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
-  it('Link href は /mods/{slug} を優先 (Phase 9-F: 旧 /mod/{slug})', () => {
+  it('Link href はモーダル URL /discover/mods/{slug} (ルーティング再設計)', () => {
     render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mods/sodium');
+    expect(link.getAttribute('href')).toBe('/discover/mods/sodium');
   });
 
-  it('slug 無しなら /mods/{project_id} で fallback (Phase 9-F)', () => {
+  it('slug 無しなら /discover/mods/{project_id} で fallback', () => {
     render(
       <ModCard
         hit={{ ...baseHit, slug: '' as unknown as string }}
@@ -172,7 +172,7 @@ describe('ModCard', () => {
       />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mods/proj-1');
+    expect(link.getAttribute('href')).toBe('/discover/mods/proj-1');
   });
 
   it('自動レイアウトで横長バナーは sm:col-span-2 を付ける', () => {

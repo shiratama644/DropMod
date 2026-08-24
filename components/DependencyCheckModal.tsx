@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import type { Profile, DependencyCheckData, ModItem, ModrinthVersion, ModrinthProject } from '@/types';
 import {
   fetchModrinth,
@@ -704,6 +705,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                               width={28}
                               height={28}
                               className="w-7 h-7 rounded-lg object-contain bg-slate-800 p-0.5 shrink-0"
+                                unoptimized={shouldUnoptimizeImage(pInfo.icon_url)}
                             />
                           ) : (
                             <div className="w-7 h-7 rounded-lg bg-amber-500/20 theme-text-amber flex items-center justify-center font-bold text-xs shrink-0">
@@ -769,6 +771,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                               width={28}
                               height={28}
                               className="w-7 h-7 rounded-lg object-contain bg-slate-800 p-0.5 shrink-0"
+                                unoptimized={shouldUnoptimizeImage(pInfo.icon_url)}
                             />
                           ) : (
                             <div className="w-7 h-7 rounded-lg bg-blue-500/20 theme-text-blue flex items-center justify-center font-bold text-xs shrink-0">

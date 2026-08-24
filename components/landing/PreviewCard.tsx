@@ -11,6 +11,7 @@
 import type React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import type { ModrinthHit } from '@/types';
 
 interface PreviewCardProps {
@@ -44,6 +45,7 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({ hit }) => {
               width={48}
               height={48}
               className="w-full h-full object-contain rounded-lg"
+              unoptimized={shouldUnoptimizeImage(hit.icon_url)}
             />
           ) : (
             <i

@@ -9,7 +9,7 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
@@ -340,6 +340,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 width={48}
                 height={48}
                 className="w-full h-full object-contain rounded-xl"
+                unoptimized={shouldUnoptimizeImage(project.icon_url)}
               />
             ) : (
               <i className="fa-solid fa-cube text-2xl text-emerald-400" aria-hidden />
@@ -440,7 +441,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                     fill
                     sizes="(min-width: 640px) 176px, 128px"
                     className="object-cover"
-                    unoptimized={isAnimatedImageUrl(img.url)}
+                    unoptimized={shouldUnoptimizeImage(img.url)}
                   />
                   {img.title && (
                     <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">

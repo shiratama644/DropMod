@@ -19,6 +19,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import type { ModrinthHit } from '@/types';
 
 interface PopularMarqueeProps {
@@ -106,6 +107,7 @@ function MarqueeCard({ hit }: { hit: ModrinthHit }) {
               width={44}
               height={44}
               className="w-full h-full object-contain rounded-lg"
+              unoptimized={shouldUnoptimizeImage(hit.icon_url)}
             />
           ) : (
             <i className="fa-solid fa-cube text-lg theme-text-brand" aria-hidden />

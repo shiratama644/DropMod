@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import type { ModrinthGalleryImage } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 
 interface ScreenshotGalleryModalProps {
   isOpen: boolean;
@@ -123,12 +123,12 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
         <div className="relative flex-1 min-h-0 bg-slate-950/40">
           {current ? (
             <Image
-              src={current.url}
+              src={current.raw_url || current.url}
               alt={current.title || 'ギャラリー画像'}
               fill
               sizes="100vw"
               className="object-contain p-2 sm:p-4"
-              unoptimized={isAnimatedImageUrl(current.url)}
+              unoptimized={shouldUnoptimizeImage(current.raw_url || current.url)}
               priority
             />
           ) : (
@@ -189,7 +189,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
                       fill
                       sizes="80px"
                       className="object-cover"
-                      unoptimized={isAnimatedImageUrl(img.url)}
+                      unoptimized={shouldUnoptimizeImage(img.url)}
                     />
                   </button>
                 );

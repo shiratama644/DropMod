@@ -84,9 +84,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     remotePatterns: [
-      // pathname で絞り込み (Modrinth CDN は /data/**、
-      // GitHub raw は /**/*.{png,jpg,...} が多いが後者は絞りにくいので広範のまま)
-      { protocol: 'https', hostname: 'cdn.modrinth.com', pathname: '/data/**' },
+      // Modrinth CDN はアイコン (/data/<id>/...)・本文画像 (/data/cached_images/...) 等
+      // 複数パスから画像を配信するため pathname 絞り込みなしで信頼ホストとして許可。
+      // (本アプリでは Modrinth 画像は unoptimized 直接配信が基本だが、最適化経路で
+      //  使われる場合もあるため広めに設定)
+      { protocol: 'https', hostname: 'cdn.modrinth.com' },
       { protocol: 'https', hostname: 'raw.githubusercontent.com' } // Modrinth 本文中の画像埋め込み用
     ]
   },

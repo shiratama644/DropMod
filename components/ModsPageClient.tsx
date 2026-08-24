@@ -4,6 +4,7 @@ import type React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useRouter } from 'next/navigation';
 import type { ContentCategory, DropdownOption, ModItem, ModrinthVersion } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
@@ -525,6 +526,7 @@ function DesktopTable({
                         width={32}
                         height={32}
                         className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
+                          unoptimized={shouldUnoptimizeImage(mod.icon_url)}
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 text-xs font-bold shrink-0 shadow">
@@ -639,6 +641,7 @@ function MobileList({
                     width={32}
                     height={32}
                     className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
+                      unoptimized={shouldUnoptimizeImage(mod.icon_url)}
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 text-xs font-bold shrink-0 shadow">

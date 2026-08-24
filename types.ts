@@ -57,6 +57,14 @@ export interface ModrinthHit {
 
 export interface ModrinthGalleryImage {
   url: string;
+  /**
+   * オリジナル（フル解像度）画像 URL (PNG 等)。
+   *
+   * `url` は `_350.webp` (350px 幅) のサムネイル。ギャラリーの全画面閲覧
+   * (ScreenshotGalleryModal のメインビュー) 等では本フィールド (`raw_url`)
+   * を優先して高画質で表示する。API 応答に含まれない場合は undefined。
+   */
+  raw_url?: string;
   featured?: boolean;
   title?: string;
   description?: string;
@@ -80,6 +88,15 @@ export interface ModrinthProject {
   display_categories?: string[];
   downloads: number;
   icon_url?: string;
+  /**
+   * オリジナル（フル解像度）アイコン URL (PNG 等)。
+   *
+   * Modrinth API が返す `icon_url` は `_96.webp` の低解像度サムネイル (96px) であり、
+   * これを 112px〜128px 等のやや大きい表示サイズで使うとぼやける。
+   * 詳細ページのヒーローアイコン等では本フィールド (`raw_icon_url`) を優先して
+   * 使用することで高画質を維持する。API 応答に含まれない場合は undefined。
+   */
+  raw_icon_url?: string;
   published: string;
   updated: string;
   author?: string;

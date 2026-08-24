@@ -47,7 +47,7 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { discoverPathFromProjectType, modrinthProjectUrl } from '@/lib/constants/search';
@@ -262,12 +262,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl bg-slate-800/80 p-1.5 flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700/50 relative">
             {project.icon_url ? (
               <Image
-                src={project.icon_url}
+                src={project.raw_icon_url || project.icon_url}
                 alt={project.title}
                 width={112}
                 height={112}
                 className="w-full h-full object-contain rounded-2xl"
                 priority
+                // Modrinth CDN は既に最適化済み。プロキシ経由だと sharp 未導入環境で
+                // 重くなるため直接 CDN から取得 (lib/utils/image.ts 参照)。
+                unoptimized={shouldUnoptimizeImage(
+                  project.raw_icon_url || project.icon_url
+                )}
               />
             ) : (
               <i className="fa-solid fa-cube text-4xl sm:text-5xl text-emerald-400" aria-hidden />
@@ -445,19 +450,20 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   ギャラリー・スクリーンショットを閲覧
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {/* ギャラリー: 1 行の横スクロール (折り返さない、モーダルと統一) */}
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {galleryList.map((img) => (
                   <figure
                     key={img.url}
-                    className="relative aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 m-0"
+                    className="relative w-48 sm:w-64 aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 m-0"
                   >
                     <Image
                       src={img.url}
                       alt={img.title || 'Gallery image'}
                       fill
-                      sizes="(min-width: 1024px) 240px, (min-width: 640px) 33vw, 50vw"
+                      sizes="(min-width: 640px) 256px, 192px"
                       className="object-cover"
-                      unoptimized={isAnimatedImageUrl(img.url)}
+                      unoptimized={shouldUnoptimizeImage(img.url)}
                     />
                     {img.title && (
                       <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10">
@@ -476,7 +482,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
               <i className="fa-solid fa-file-lines theme-text-brand" aria-hidden />
               詳細説明
             </h2>
-            <div className="theme-sub-box p-4 sm:p-6 rounded-2xl border border-slate-500/15">
+            <div className="theme-sub-box p-4 sm:p-6 rounded-2xl border border-slate-500/15 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
               {project.body ? (
                 <MarkdownRenderer content={project.body} />
               ) : (

@@ -11,7 +11,7 @@ import {
   type SearchLayout
 } from '@/lib/constants/search';
 import { categoryLabel, primaryCategoryId } from '@/lib/constants/categories';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 
 interface ModCardProps {
   hit: ModrinthHit;
@@ -104,7 +104,7 @@ export const ModCard: React.FC<ModCardProps> = ({
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
-              unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
+              unoptimized={shouldUnoptimizeImage(hit.featured_gallery)}
               onError={() => setBannerFailed(true)}
             />
           ) : showIcon && hit.icon_url ? (
@@ -116,6 +116,7 @@ export const ModCard: React.FC<ModCardProps> = ({
                 height={72}
                 className="w-16 h-16 rounded-2xl object-contain bg-slate-900/50 p-1 shadow-lg"
                 onError={() => setIconFailed(true)}
+                unoptimized={shouldUnoptimizeImage(hit.icon_url)}
               />
             </div>
           ) : (
@@ -137,7 +138,7 @@ export const ModCard: React.FC<ModCardProps> = ({
             fill
             sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
-            unoptimized={isAnimatedImageUrl(hit.featured_gallery)}
+            unoptimized={shouldUnoptimizeImage(hit.featured_gallery)}
             onError={() => setBannerFailed(true)}
             onLoad={(e) => {
               if (layout !== 'auto') return;
@@ -161,7 +162,7 @@ export const ModCard: React.FC<ModCardProps> = ({
                 height={40}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-800/80 p-0.5 shadow-md shrink-0"
                 onError={() => setIconFailed(true)}
-                unoptimized={isAnimatedImageUrl(hit.icon_url)}
+                unoptimized={shouldUnoptimizeImage(hit.icon_url)}
               />
             ) : (
               <div

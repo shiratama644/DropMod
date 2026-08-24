@@ -10,6 +10,7 @@ import {
   autoCardSpanClass,
   type SearchLayout
 } from '@/lib/constants/search';
+import { categoryLabel, primaryCategoryId } from '@/lib/constants/categories';
 import { isAnimatedImageUrl } from '@/lib/utils/image';
 
 interface ModCardProps {
@@ -49,10 +50,9 @@ export const ModCard: React.FC<ModCardProps> = ({
   layout = '3'
 }) => {
   const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
-  const displayCategory =
-    (hit.display_categories?.[0]) ||
-    (hit.categories?.[0]) ||
-    'mod';
+  const displayCategory = categoryLabel(
+    primaryCategoryId(hit.display_categories, hit.categories)
+  );
 
   const [iconFailed, setIconFailed] = useState<boolean>(false);
   const [bannerFailed, setBannerFailed] = useState<boolean>(false);

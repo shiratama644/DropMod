@@ -7,6 +7,7 @@ import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
 import { contentCategoryFromProject, contentCategoryOf } from '@/lib/utils/contentCategory';
+import { primaryCategoryId } from '@/lib/constants/categories';
 import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
@@ -607,10 +608,7 @@ export const useProfiles = (
           icon_url: project.icon_url,
           author: project.author || 'Modrinth',
           projectType: contentCategoryFromProject(project),
-          category:
-            (project.display_categories?.[0]) ||
-            (project.categories?.[0]) ||
-            'mod',
+          category: primaryCategoryId(project.display_categories, project.categories),
           selectedVersionId: targetVersion.id,
           selectedVersionNumber: targetVersion.version_number,
           versionType: targetVersion.version_type || 'release',

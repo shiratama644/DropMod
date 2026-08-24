@@ -12,6 +12,7 @@ import { downloadAsBlob } from '@/lib/utils/download';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { contentCategoryOf } from '@/lib/utils/contentCategory';
+import { categoryLabel } from '@/lib/constants/categories';
 
 // ============================================================================
 // ModsPageClient (Phase 9-A.2: useAppContext 撤去)
@@ -460,7 +461,7 @@ function DesktopTable({
                 </td>
                 <td className="py-3.5 px-4">
                   <span className="px-2.5 py-1 rounded-lg text-xs font-semibold theme-badge capitalize">
-                    {mod.category || 'mod'}
+                    {categoryLabel(mod.category)}
                   </span>
                 </td>
                 <td className="py-3.5 px-4">
@@ -552,7 +553,7 @@ function MobileList({
                     {mod.title}
                   </div>
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold theme-badge capitalize">
-                    {mod.category || 'mod'}
+                    {categoryLabel(mod.category)}
                   </span>
                 </div>
               </button>

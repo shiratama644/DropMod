@@ -43,7 +43,23 @@ describe('ModCard', () => {
     );
     expect(screen.getByText('Sodium')).toBeInTheDocument();
     expect(screen.getByText('JellySquid')).toBeInTheDocument();
-    expect(screen.getByText('performance')).toBeInTheDocument();
+    expect(screen.getByText('軽量化')).toBeInTheDocument();
+  });
+
+  it('追加ボタン左はローダーではなくカテゴリーを出す', () => {
+    render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          categories: ['fabric', 'utility'],
+          display_categories: ['fabric']
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText('ユーティリティ')).toBeInTheDocument();
+    expect(screen.queryByText('fabric')).not.toBeInTheDocument();
   });
 
   it('DL 数を K/M 単位でフォーマットする', () => {

@@ -11,6 +11,7 @@ import {
 import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
 import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { primaryCategoryId } from '@/lib/constants/categories';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
@@ -124,6 +125,9 @@ export const useZipImport = (
               projectType: proj
                 ? contentCategoryFromProject(proj)
                 : contentCategoryFromPath(f.path),
+              category: proj
+                ? primaryCategoryId(proj.display_categories, proj.categories)
+                : undefined,
               selectedVersionId: matched?.id,
               selectedVersionNumber: matched?.version_number || 'mrpack',
               versionType: matched?.version_type || 'release',
@@ -223,10 +227,7 @@ export const useZipImport = (
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
             projectType: contentCategoryFromProject(proj),
-            category:
-              (proj.display_categories?.[0]) ||
-              (proj.categories?.[0]) ||
-              'mod',
+            category: primaryCategoryId(proj.display_categories, proj.categories),
             selectedVersionId: ver.id,
             selectedVersionNumber: ver.version_number,
             versionType: ver.version_type || 'release',

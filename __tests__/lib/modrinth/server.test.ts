@@ -5,7 +5,7 @@
  * proxy を使わず https://api.modrinth.com/v2/* のみを msw で mock する。
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import {
@@ -15,7 +15,8 @@ import {
   fetchModrinthProjectVersions,
   fetchLatestMinecraftVersions,
   slimVersion,
-  REVALIDATE
+  REVALIDATE,
+  _resetRateLimitStateForTesting
 } from '@/lib/modrinth/server';
 import type { ModrinthVersion } from '@/types';
 
@@ -368,6 +369,16 @@ describe('lib/modrinth/server', () => {
   });
 
   describe('429 リトライ (server)', () => {
+    beforeEach(() => {
+      _resetRateLimitStateForTesting();
+      // 待ち時間の最小値を 1ms にしてテストを高速化 (実運用は既定 1000ms)
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', '1');
+    });
+    afterEach(() => {
+      _resetRateLimitStateForTesting();
+      vi.unstubAllEnvs();
+    });
+
     it('429 → Retry-After 後に 200 を返せる', async () => {
       let attempts = 0;
       server.use(
@@ -385,6 +396,99 @@ describe('lib/modrinth/server', () => {
       const project = await fetchModrinthProject('ok');
       expect(attempts).toBe(2);
       expect(project.title).toBe('RL OK');
+    });
+
+    it('429 が継続しても backoff で再試行し、計 3 試行 (初回 + 再試行 2) 後に throw', async () => {
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          return new HttpResponse('rate limited', {
+            status: 429,
+            headers: { 'Retry-After': '0' }
+          });
+        })
+      );
+      await expect(fetchModrinthProject('always-limited')).rejects.toThrow('429');
+      expect(attempts).toBe(3);
+    });
+
+    it('Retry-After ヘッダなしの場合は既定 backoff が最小ウェイトに clamp されて再試行', async () => {
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts <= 2) {
+            return new HttpResponse('rate limited', { status: 429 });
+          }
+          return HttpResponse.json({ id: 'ok3', slug: 'ok3', title: 'RL3 OK' });
+        })
+      );
+      const project = await fetchModrinthProject('ok3');
+      expect(attempts).toBe(3);
+      expect(project.title).toBe('RL3 OK');
+    });
+  });
+
+  describe('429 サーキットブレーカー (2026-08-26)', () => {
+    beforeEach(() => {
+      _resetRateLimitStateForTesting();
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', '1');
+    });
+    afterEach(() => {
+      _resetRateLimitStateForTesting();
+      vi.unstubAllEnvs();
+    });
+
+    /** 常に 429 を返す handler。calls に呼び出し回数を記録 */
+    const alwaysLimited = (calls: { count: number }) =>
+      http.get('https://api.modrinth.com/v2/project/:slug', () => {
+        calls.count++;
+        return new HttpResponse('rate limited', {
+          status: 429,
+          headers: { 'Retry-After': '0' }
+        });
+      });
+
+    it('連続 3 リクエスト最終失敗で breaker が開き、以降は fetch せず即 throw', async () => {
+      const calls = { count: 0 };
+      server.use(alwaysLimited(calls));
+
+      // 3 リクエスト連続最終失敗 (各 3 試行 = 計 9 fetch) で breaker が開く
+      for (let i = 0; i < 3; i++) {
+        await expect(fetchModrinthProject(`p${i}`)).rejects.toThrow('429');
+      }
+      expect(calls.count).toBe(9);
+
+      // 4 本目以降は fetch せず fail-fast
+      await expect(fetchModrinthProject('p3')).rejects.toThrow('circuit breaker');
+      expect(calls.count).toBe(9); // 増えていない
+    });
+
+    it('成功すると連続失敗カウントはリセットされる', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', ({ params }) => {
+          const slug = String(params.slug);
+          if (slug.startsWith('fail')) {
+            return new HttpResponse('rate limited', {
+              status: 429,
+              headers: { 'Retry-After': '0' }
+            });
+          }
+          return HttpResponse.json({ id: slug, slug, title: 'OK' });
+        })
+      );
+
+      // fail ×2 (strikes=2) → ok (reset) → fail ×3 (strikes=3 で open)
+      await expect(fetchModrinthProject('fail1')).rejects.toThrow('429');
+      await expect(fetchModrinthProject('fail2')).rejects.toThrow('429');
+      await expect(fetchModrinthProject('healthy')).resolves.toHaveProperty('title', 'OK');
+      await expect(fetchModrinthProject('fail3')).rejects.toThrow('429');
+      await expect(fetchModrinthProject('fail4')).rejects.toThrow('429');
+      // 3 連続失敗目もまだ実際に fetch される (fail-fast ではない)
+      await expect(fetchModrinthProject('fail5')).rejects.toThrow('429');
+      // open 後は fail-fast
+      await expect(fetchModrinthProject('fail6')).rejects.toThrow('circuit breaker');
     });
   });
 });

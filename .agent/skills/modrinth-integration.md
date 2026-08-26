@@ -13,7 +13,8 @@
 
 - `USER_AGENT` = `MODRINTH_USER_AGENT` env or `DropMod/1.1.0 (...)`（必須, 規約遵守+rate limit 緩和）。
 - **タイムアウト**: `AbortSignal.timeout(FETCH_TIMEOUT_MS=8s)`（Vercel Hobby 10s Function timeout から 2s 引き）。env `MODRINTH_FETCH_TIMEOUT_MS` で上書き。呼び出し側 signal と `AbortSignal.any` で合成。
-- **429 対策**: `Retry-After` ヘッダ尊重（`parseRetryAfterMs`, 上限 `MAX_RETRY_WAIT_MS=8s`）で 1 回リトライ。
+- **429 対策 (2026-08-26 強化)**: `Retry-After` ヘッダ尊重（`parseRetryAfterMs`, 上限 `MAX_RETRY_WAIT_MS=8s`）+ **最小 1s クランプ**（Modrinth は `Retry-After: 0` を返すことがあるため。`MODRINTH_429_MIN_WAIT_MS` で上書き）で backoff 再試行 **2 回**（2s→4s）。さらに**サーキットブレーカー**: 429 最終失敗が連続 3 リクエストで 60s 間 fail-fast（fetch せず即 throw、build の残りページはフォールバックで完走）。成功で連続カウントはリセット。テストは `_resetRateLimitStateForTesting()` で状態初期化。
+- **build 時リクエスト量の上限意識**: 詳細ページ事前生成は `lib/server/project-detail.ts` の `PREBUILD_LIMIT=15/型`（≈180 req/build）。**Modrinth は 300 req/min**。事前生成を増やす場合は 1 ページ 3 fetch (project/versions/members) であることに注意。
 - **REVALIDATE 定数**: `SEARCH=300s(5m)` / `PROJECT=3600s(1h)` / `PROJECT_LIST=1800s` / `VERSION=3600s` / `VERSION_LIST=1800s` / `TAG=86400s(24h)`。
 
 ### 公開関数

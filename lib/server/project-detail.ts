@@ -18,7 +18,13 @@ import { detailPathForType, type ProjectType } from '@/lib/constants/search';
 import type { ModrinthProject, ModrinthVersion } from '@/types';
 
 export const DETAIL_REVALIDATE = 3600; // 1時間 ISR
-const PREBUILD_LIMIT = 100; // 人気上位を事前生成（Modrinth レート制限に配慮）
+
+// 事前生成する人気上位の件数 (型ごと)。
+// 2026-08-26: 100 → 15 に削減。100/型 × 4 型 = 400 ページ × 3 fetch ≒ 1,200 req
+// を build 中にバーストさせると Modrinth の 300 req/min を確実に超過し全面 429
+// になっていた。15/型 (≈60 ページ ≒ 180 req) に抑え、残りは dynamicParams=true
+// による初回アクセス時 ISR 生成に任せる (PHASE10_5_PLAN.md 続報)。
+const PREBUILD_LIMIT = 15;
 
 export interface ProjectDetailData {
   project: ModrinthProject | null;

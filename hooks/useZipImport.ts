@@ -19,6 +19,10 @@ import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
 import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import { primaryCategoryId } from '@/lib/constants/categories';
+import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
+import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
+import { analyzeImportHealth } from '@/lib/env/analysis';
+import { generateProfileName } from '@/lib/env/profileName';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
@@ -158,6 +162,51 @@ export const useZipImport = (
         setCurrentProfileId(newProfile.id);
         showToast(`「${newProfile.name}」のインポート完了！`, 'success');
         return;
+      }
+
+      // 1.5. .minecraft フォルダ全体 ZIP (Phase 11-C: Firefox/Safari フォールバック)
+      //   mods/ や versions/ 等を含む ZIP を環境として解析し、NewProfileModal で
+      //   解析結果 (Analysis View) を確認してから作成する。
+      if (!mrpackFile && isMinecraftFolderZip(zip)) {
+        // ZIP が「.minecraft フォルダ自身」を含む場合はサブフォルダを root にする
+        const hasDotMinecraftRoot = Object.keys(zip.files).some((path) =>
+          path.startsWith('.minecraft/')
+        );
+        const rootedZip = hasDotMinecraftRoot ? zip.folder('.minecraft') : zip;
+        if (rootedZip) {
+          showToast('.minecraft を解析中...', 'info');
+          const source = new ZipSource(
+            rootedZip,
+            file.name.replace(/\.[^/.]+$/, '')
+          );
+          const analysis = await analyzeEnvironmentSource(source);
+          const analysisIssues = analyzeImportHealth(analysis);
+          const total =
+            analysis.mods.length +
+            analysis.resourcepacks.length +
+            analysis.shaderpacks.length;
+
+          setPendingImportData({
+            name: generateProfileName(source.rootName, analysis.environment),
+            mods: analysis.mods,
+            resourcepacks:
+              analysis.resourcepacks.length > 0 ? analysis.resourcepacks : undefined,
+            shaderpacks:
+              analysis.shaderpacks.length > 0 ? analysis.shaderpacks : undefined,
+            unknownFiles:
+              analysis.unknownFiles.length > 0 ? analysis.unknownFiles : undefined,
+            analysisIssues,
+            rootType: analysis.environment.rootType,
+            mcVersion: analysis.environment.mcVersion,
+            loader: analysis.environment.loader,
+            loaderVersion: analysis.environment.loaderVersion,
+            description: `環境取り込み (${total} 個 / 未識別 ${analysis.unknownFiles.length} 個)`,
+            source: 'import'
+          });
+          setIsNewProfileModalOpen(true);
+          showToast(`${total} 個のアイテムを認識しました`, 'success');
+          return;
+        }
       }
 
       // 2. .jar 詰め合わせ ZIP インポート (.jarハッシュ照合 ➔ プロファイル作成モーダル開く)

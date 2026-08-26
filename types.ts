@@ -74,6 +74,16 @@ export interface UnknownFile {
   discoveredAt: number;
 }
 
+/**
+ * Import 解析結果のうち、Profile 作成時に mods 以外で渡すコンテンツ
+ * (Phase 11: フォルダ/ZIP 取り込み)。全て optional・空なら設定しない。
+ */
+export interface ProfileContentExtras {
+  resourcepacks?: ProjectItem[];
+  shaderpacks?: ProjectItem[];
+  unknownFiles?: UnknownFile[];
+}
+
 export interface Profile {
   id: string;
   name: string;

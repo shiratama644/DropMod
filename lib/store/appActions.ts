@@ -24,7 +24,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Profile, ProjectItem, ModrinthVersion, ContentCategory } from '@/types';
+import type { Profile, ProjectItem, ModrinthVersion, ContentCategory, ProfileContentExtras } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
 // ============================================================================
@@ -41,7 +41,8 @@ export interface AppActions {
   handleCreateProfile: (
     name: string, mcVersion: string, loader: string, description: string,
     mods?: ProjectItem[],
-    loaderVersion?: string
+    loaderVersion?: string,
+    extras?: ProfileContentExtras
   ) => void;
   handleDuplicateProfile: () => void;
   handleSaveEditedProfile: (

@@ -14,6 +14,7 @@
 | Modrinth API / 検索 / 詳細 / プロキシ を触る | [`modrinth-integration.md`](./modrinth-integration.md) |
 | 画像・アイコン・GIF・Markdown 画像 を触る | [`image-strategy.md`](./image-strategy.md) |
 | ルーティング / URL / ページ追加 を触る | [`routing-and-pages.md`](./routing-and-pages.md) |
+| フォルダ/ZIP 取り込み・環境検出 (Phase 11) を触る | [`env-import.md`](./env-import.md) |
 | ヘッダー / サイドバー / BottomNav / モーダル / レイアウト崩れ | [`ui-layout.md`](./ui-layout.md) |
 | テスト / カバレッジ / msw / E2E を触る | [`testing.md`](./testing.md) |
 | 「動かない / 重い / フォーマット効かない」環境トラブル | [`sandbox-constraints.md`](./sandbox-constraints.md) |
@@ -28,6 +29,7 @@
 | [modrinth-integration.md](./modrinth-integration.md) | server.ts/client.ts・キャッシュ TTL・レート制限 (429 backoff + breaker)・バッチ・slim version・プロキシ Route Handler。 | 2026-08-26 |
 | [image-strategy.md](./image-strategy.md) | ⭐ 画像の高速化・高画質化の方針（unoptimized / raw_url / ネイティブ img）。直近で確立した重要知見。 | 2026-08-24 |
 | [routing-and-pages.md](./routing-and-pages.md) | URL 設計（2026-08-24 再設計後：検索複数形/詳細単数形型別/モーダル/詳細の4責務）。 | 2026-08-24 |
+| [env-import.md](./env-import.md) | Phase 11 の Import 基盤（EnvironmentSource / Detector chain / Analyzer + SHA-1 Worker / Analysis / 名前自動生成 / ZIP fallback）。 | 2026-08-26 |
 | [ui-layout.md](./ui-layout.md) | PC サイドバー / モバイル Header+BottomNav / z-index 序列 / body 余白 / モーダル。 | 2026-08-24 |
 | [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-26 |
 | [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策（AGENT.md §6 の実態版）。 | 2026-08-24 |

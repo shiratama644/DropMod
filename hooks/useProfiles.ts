@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Profile, ProjectItem, ThemeMode, ModrinthProject, ModrinthVersion, ContentCategory } from '@/types';
+import type {
+  Profile,
+  ProfileContentExtras,
+  ProjectItem,
+  ThemeMode,
+  ModrinthProject,
+  ModrinthVersion,
+  ContentCategory
+} from '@/types';
 import { nextDuplicateName } from '@/lib/utils/profileName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
@@ -411,7 +419,8 @@ export const useProfiles = (
       loader: string,
       description: string,
       mods: ProjectItem[] = [],
-      loaderVersion?: string
+      loaderVersion?: string,
+      extras?: ProfileContentExtras
     ) => {
       const newId = generateId('profile');
       const newProfile: Profile = {
@@ -423,7 +432,16 @@ export const useProfiles = (
           loaderVersion: loaderVersion || undefined
         },
         description,
-        mods
+        mods,
+        ...(extras?.resourcepacks && extras.resourcepacks.length > 0
+          ? { resourcepacks: extras.resourcepacks }
+          : {}),
+        ...(extras?.shaderpacks && extras.shaderpacks.length > 0
+          ? { shaderpacks: extras.shaderpacks }
+          : {}),
+        ...(extras?.unknownFiles && extras.unknownFiles.length > 0
+          ? { unknownFiles: extras.unknownFiles }
+          : {})
       };
       setProfiles((prev) => [...prev, newProfile]);
       setCurrentProfileId(newId);

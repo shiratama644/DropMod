@@ -3,33 +3,164 @@
 import type React from 'react';
 import { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
-import type { ProjectItem } from '@/types';
+import type { ProjectItem, ProfileContentExtras, UnknownFile } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
+import { pickMinecraftDirectory } from '@/lib/env/picker';
+import {
+  analyzeEnvironmentSource,
+  type AnalyzeProgress,
+  type ImportAnalysis
+} from '@/lib/env/analyzer';
+import { analyzeImportHealth, type AnalysisIssue } from '@/lib/env/analysis';
+import { generateProfileName } from '@/lib/env/profileName';
 import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
 import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
+import type { PendingImportData } from '@/lib/store/zipImport';
 
 interface NewProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   mcVersions: string[];
-  initialImportData?: {
-    name: string;
-    mods: ProjectItem[];
-    mcVersion?: string;
-    loader?: string;
-    loaderVersion?: string;
-    description?: string;
-    source?: 'import' | 'duplicate';
-  } | null;
+  initialImportData?: PendingImportData | null;
   onCreate: (
     name: string,
     mcVersion: string,
     loader: string,
     desc: string,
     mods?: ProjectItem[],
-    loaderVersion?: string
+    loaderVersion?: string,
+    extras?: ProfileContentExtras
   ) => void;
+}
+
+
+// ---------------------------------------------------------------------------
+// Phase 11: 解析結果の表示 (Analysis View、計画書 §6.1 / §6.2 相当)
+// フォルダ解析 (folderAnalysis) と ZIP 環境取り込み (initialImportData) の
+// 両経路で使う。Phase 11 は Read-only。
+// ---------------------------------------------------------------------------
+
+const ROOT_TYPE_LABELS: Record<string, string> = {
+  official: '公式ランチャー (.minecraft)',
+  prism: 'Prism / MultiMC インスタンス',
+  multimc: 'MultiMC インスタンス',
+  generic: '汎用構造 (mods/ 等)',
+  unknown: '不明'
+};
+
+const ANALYSIS_PHASE_LABELS: Record<AnalyzeProgress['phase'], string> = {
+  detect: '環境検出',
+  scan: 'ファイル走査',
+  read: 'ファイル読み込み',
+  hash: 'ハッシュ計算',
+  resolve: 'Modrinth 照合'
+};
+
+function AnalysisSection({
+  issues,
+  counts,
+  environment,
+  unknownFiles
+}: {
+  issues: AnalysisIssue[];
+  counts: { mods: number; resourcepacks: number; shaderpacks: number };
+  environment: {
+    mcVersion?: string;
+    loader?: string;
+    loaderVersion?: string;
+    rootType?: string;
+  };
+  unknownFiles: UnknownFile[];
+}) {
+  const envText =
+    [
+      environment.mcVersion ? `Minecraft ${environment.mcVersion}` : undefined,
+      environment.loader,
+      environment.loaderVersion
+    ]
+      .filter(Boolean)
+      .join(' / ') || '未検出 (下で手動設定してください)';
+
+  return (
+    <div
+      className="rounded-xl theme-sub-box border border-slate-500/20 p-3 space-y-2"
+      role="status"
+      aria-label="解析結果"
+    >
+      <div className="text-xs font-bold theme-text-secondary flex items-center gap-1.5">
+        <i className="fa-solid fa-clipboard-check theme-text-brand" aria-hidden />
+        解析結果 (Read-only)
+      </div>
+      <div className="text-[11px] theme-text-muted space-y-0.5">
+        <div>
+          <span className="font-semibold">環境: </span>
+          {envText}
+        </div>
+        {environment.rootType && (
+          <div>
+            <span className="font-semibold">構造: </span>
+            {ROOT_TYPE_LABELS[environment.rootType] ?? environment.rootType}
+          </div>
+        )}
+        <div>
+          <span className="font-semibold">内容: </span>
+          {counts.mods} 個のMod / {counts.resourcepacks} 個のリソースパック /{' '}
+          {counts.shaderpacks} 個のシェーダー
+          {unknownFiles.length > 0 && ` / 未識別 ${unknownFiles.length} 個`}
+        </div>
+      </div>
+      <ul className="space-y-1">
+        {issues.map((issue) => (
+          <li key={issue.id} className="text-[11px] flex gap-1.5 items-start">
+            <span
+              aria-hidden
+              className={
+                issue.status === 'ok'
+                  ? 'text-emerald-500 shrink-0'
+                  : issue.status === 'warning'
+                    ? 'text-amber-500 shrink-0'
+                    : 'text-red-500 shrink-0'
+              }
+            >
+              {issue.status === 'ok' ? '✓' : issue.status === 'warning' ? '⚠' : '✗'}
+            </span>
+            <span className="min-w-0">
+              <span className="theme-text-secondary">{issue.message}</span>
+              {issue.details.length > 0 && (
+                <details className="theme-text-muted mt-0.5">
+                  <summary className="cursor-pointer list-none underline decoration-dotted">
+                    詳細 ({issue.details.length})
+                  </summary>
+                  <ul className="list-disc pl-4 mt-0.5 space-y-0.5 break-all">
+                    {issue.details.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {unknownFiles.length > 0 && (
+        <details className="text-[11px] theme-text-muted">
+          <summary className="cursor-pointer list-none underline decoration-dotted">
+            未識別ファイル一覧 ({unknownFiles.length})
+          </summary>
+          <ul className="list-disc pl-4 mt-0.5 space-y-0.5 break-all">
+            {unknownFiles.map((file) => (
+              <li key={file.id}>{file.path}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <p className="text-[10px] theme-text-muted leading-relaxed">
+        ⓘ Phase 11 は読み取り専用です。ローカル環境への書き込み (同期) は Phase 12
+        で実装予定です。
+      </p>
+    </div>
+  );
 }
 
 export const NewProfileModal: React.FC<NewProfileModalProps> = ({
@@ -47,6 +178,10 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const [folderName, setFolderName] = useState<string | null>(null);
   const [folderError, setFolderError] = useState<string | null>(null);
   const [canPickFolder, setCanPickFolder] = useState(() => supportsDirectoryPicker());
+  // Phase 11: フォルダ解析 (Read-only Import)
+  const [folderAnalysis, setFolderAnalysis] = useState<ImportAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalyzeProgress | null>(null);
 
   const wasOpenRef = useRef<boolean>(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード
@@ -61,6 +196,9 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     setCanPickFolder(supportsDirectoryPicker());
     setFolderName(null);
     setFolderError(null);
+    setFolderAnalysis(null);
+    setAnalyzing(false);
+    setAnalysisProgress(null);
 
     if (initialImportData) {
       setName(initialImportData.name);
@@ -130,40 +268,80 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
 
   const handlePickFolder = async () => {
     setFolderError(null);
+    setFolderAnalysis(null);
     if (!supportsDirectoryPicker()) {
       setFolderError('このブラウザではフォルダ選択できません。Chrome / Edge をご利用ください。');
       return;
     }
-    const pick = window.showDirectoryPicker;
-    if (!pick) {
-      setFolderError('このブラウザではフォルダ選択できません。Chrome / Edge をご利用ください。');
+
+    let picked: Awaited<ReturnType<typeof pickMinecraftDirectory>>;
+    try {
+      picked = await pickMinecraftDirectory();
+    } catch (e) {
+      setFolderError(e instanceof Error ? e.message : 'フォルダを開けませんでした。');
       return;
     }
+    if (!picked) return; // ユーザーキャンセル
+
+    setFolderName(picked.source.rootName);
+    setAnalyzing(true);
+    setAnalysisProgress(null);
     try {
-      const handle = await pick({ mode: 'read' });
-      setFolderName(handle.name);
+      const analysis = await analyzeEnvironmentSource(picked.source, (progress) =>
+        setAnalysisProgress(progress)
+      );
+      setFolderAnalysis(analysis);
+
+      // §6.1: 自動生成ルール (あくまでデフォルト値。ユーザーが編集可能)
+      setName(generateProfileName(picked.source.rootName, analysis.environment));
+      if (
+        analysis.environment.mcVersion &&
+        mcVersions.includes(analysis.environment.mcVersion)
+      ) {
+        setVersion(analysis.environment.mcVersion);
+      }
+      if (analysis.environment.loader) {
+        setLoader(analysis.environment.loader);
+      }
+      if (analysis.environment.loaderVersion) {
+        setLoaderVersion(analysis.environment.loaderVersion);
+      }
+      const total =
+        analysis.mods.length +
+        analysis.resourcepacks.length +
+        analysis.shaderpacks.length;
+      setDesc(
+        `フォルダ取込 (${total} 個 / 未識別 ${analysis.unknownFiles.length} 個)`
+      );
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-      setFolderError('フォルダを開けませんでした。');
+      setFolderError(
+        e instanceof Error ? `解析に失敗しました: ${e.message}` : '解析に失敗しました。'
+      );
+    } finally {
+      setAnalyzing(false);
+      setAnalysisProgress(null);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName) {
+    if (!trimmedName || analyzing) {
       return;
     }
-    onCreate(
-      trimmedName,
-      version,
-      loader,
-      desc.trim(),
-      initialImportData?.mods || [],
-      loaderVersion || undefined
-    );
+    // フォルダ解析結果 > ZIP/.mrpack 取り込みデータ > 空
+    const mods = folderAnalysis?.mods || initialImportData?.mods || [];
+    const extras: ProfileContentExtras = {
+      resourcepacks:
+        folderAnalysis?.resourcepacks ?? initialImportData?.resourcepacks,
+      shaderpacks: folderAnalysis?.shaderpacks ?? initialImportData?.shaderpacks,
+      unknownFiles: folderAnalysis?.unknownFiles ?? initialImportData?.unknownFiles
+    };
+    onCreate(trimmedName, version, loader, desc.trim(), mods, loaderVersion || undefined, extras);
     setName('');
     setDesc('');
+    setFolderAnalysis(null);
+    setFolderName(null);
     onClose();
   };
 
@@ -245,7 +423,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             <button
               type="button"
               onClick={() => void handlePickFolder()}
-              disabled={!canPickFolder}
+              disabled={!canPickFolder || analyzing}
               className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl theme-sub-box text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
             >
               <span className="flex items-center gap-2 min-w-0">
@@ -258,13 +436,58 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             </button>
             <p className="mt-1 text-[11px] theme-text-muted leading-relaxed">
               {canPickFolder
-                ? 'Chrome / Edge で .minecraft または Prism インスタンスを選べます。解析取り込みは Phase 11 で実装します。'
-                : 'Firefox / Safari / モバイルはフォルダ選択非対応です。ZIP 読込をご利用ください。'}
+                ? '.minecraft または Prism インスタンスを選ぶと、環境とファイルを自動解析します (読み取り専用)。'
+                : 'Firefox / Safari / モバイルはフォルダ選択非対応です。「.minecraft を ZIP 化して読み込む」をご利用ください。'}
             </p>
+            {analyzing && (
+              <p className="mt-1 text-[11px] theme-text-muted" role="status">
+                <i className="fa-solid fa-spinner fa-spin mr-1" aria-hidden />
+                解析中...{' '}
+                {analysisProgress
+                  ? `${ANALYSIS_PHASE_LABELS[analysisProgress.phase]}${
+                      analysisProgress.total > 1
+                        ? ` (${analysisProgress.done}/${analysisProgress.total})`
+                        : ''
+                    }`
+                  : '準備中'}
+              </p>
+            )}
             {folderError && (
               <p className="mt-1 text-[11px] theme-text-amber">{folderError}</p>
             )}
           </div>
+
+          {(folderAnalysis || initialImportData?.analysisIssues) && (
+            <AnalysisSection
+              issues={
+                folderAnalysis
+                  ? analyzeImportHealth(folderAnalysis)
+                  : (initialImportData?.analysisIssues ?? [])
+              }
+              counts={
+                folderAnalysis
+                  ? folderAnalysis.scannedCounts
+                  : {
+                      mods: initialImportData?.mods.length ?? 0,
+                      resourcepacks: initialImportData?.resourcepacks?.length ?? 0,
+                      shaderpacks: initialImportData?.shaderpacks?.length ?? 0
+                    }
+              }
+              environment={
+                folderAnalysis
+                  ? folderAnalysis.environment
+                  : {
+                      mcVersion: initialImportData?.mcVersion,
+                      loader: initialImportData?.loader,
+                      loaderVersion: initialImportData?.loaderVersion,
+                      rootType: initialImportData?.rootType
+                    }
+              }
+              unknownFiles={
+                folderAnalysis?.unknownFiles ?? initialImportData?.unknownFiles ?? []
+              }
+            />
+          )}
 
           <div>
             <label
@@ -341,9 +564,10 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+              disabled={analyzing}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
             >
-              {initialImportData?.source === 'duplicate' ? '複製する' : '作成する'}
+              {analyzing ? '解析中...' : initialImportData?.source === 'duplicate' ? '複製する' : '作成する'}
             </button>
           </div>
         </form>

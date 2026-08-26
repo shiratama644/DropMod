@@ -14,7 +14,9 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ProjectItem } from '@/types';
+import type { ProjectItem, UnknownFile } from '@/types';
+import type { AnalysisIssue } from '@/lib/env/analysis';
+import type { DetectedEnvironment } from '@/lib/env/detector/types';
 
 // ============================================================================
 // 型
@@ -29,6 +31,14 @@ export interface PendingImportData {
   description?: string;
   /** ZIP 取り込みか、検索画面からの複製か */
   source?: 'import' | 'duplicate';
+  // ---- Phase 11: .minecraft フォルダ/ZIP 解析取り込み ----
+  resourcepacks?: ProjectItem[];
+  shaderpacks?: ProjectItem[];
+  unknownFiles?: UnknownFile[];
+  /** 解析結果の検査 (NewProfileModal の Analysis View 表示用) */
+  analysisIssues?: AnalysisIssue[];
+  /** 検出されたルート構造 (表示用) */
+  rootType?: DetectedEnvironment['rootType'];
 }
 
 export interface ZipImportStoreState {

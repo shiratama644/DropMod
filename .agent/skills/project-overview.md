@@ -46,7 +46,7 @@
 | 9 | AppContext 撤去 + operationsStore 分割 + msw + カバレッジ 91%（※ 後に vitest 4 で数値是正） | ✅ |
 | 9.5 | LP 刷新 + BottomNav 再設計 + **PC UI 一新（DesktopSidebar）** | ✅ |
 | 10 | FontAwesome subset(-356KB) / AppContext 完全削除 / Markdown Image / E2E 拡張 / shimmer | ✅ |
-| **10.5** | **Emergency: カバレッジ回復**（vitest 4 化で発覚の threshold 違反へテスト追加、`PHASE10_5_PLAN.md`） | ⏳ 計画済 |
+| **10.5** | **Emergency: カバレッジ回復**（A〜C 完了で全 threshold green。D/E は任意） | ✅ A〜C |
 | **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ⏳ 計画済 |
 | 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ |
 | 13 | CurseForge 完全対応（Murmur2） | ⏳ |

@@ -16,11 +16,12 @@
   - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
-- 現状: **457 tests / 55 files pass**。
-- ⚠ **coverage threshold 違反 (Phase 10.5 対応中、残 1 件)**: vitest 4 の V8 coverage は AST ベース再マッピングに変更され branch/function 数値が低下（より正確）。
-  - **Phase 10.5-A 完了**: hooks branches 61.63% / global branches 61.54% まで回復し解消。
-  - **Phase 10.5-B 完了**: components stmt 73.12 / br 67.7 / fn 76.51 / lines 75.17 まで回復し解消（399 → 457 tests）。
-  - 残: lib/store branches 76.05% < 80%（→ 10.5-C、confirm.ts cleanup 分岐）。計画は `docs/planning/PHASE10_5_PLAN.md`。
+- 現状: **459 tests / 55 files pass**。
+- **coverage threshold 全 green (Phase 10.5-A/B/C 完了、2026-08-26)**: `pnpm test:coverage` exit 0。総計 stmt 81.88 / br 69.4 / fn 89.01 / lines 84.09。
+  - 10.5-A: hooks branches 61.63% / global branches 61.54% まで回復
+  - 10.5-B: components stmt 73.12 / br 67.7 / fn 76.51 / lines 75.17 まで回復
+  - 10.5-C: lib/store branches 80%+ まで回復（confirm.ts cleanup の queue 破棄分岐）
+  - 10.5-D（BottomSheet 本体）/ 10.5-E（server 層）は任意の品質強化として未実施。
 
 ## jsdom 未実装 API の stub 基盤（Phase 10.5-A）
 

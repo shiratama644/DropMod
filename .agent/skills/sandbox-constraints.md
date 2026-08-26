@@ -39,7 +39,7 @@ pnpm install --frozen-lockfile
 
 ## その他環境メモ
 
-- Node 22（`.nvmrc`）。pnpm 11.22（corepack）。TS 5 `strict` + `noUncheckedIndexedAccess`。
+- Sandbox の node は **v22 系でプラットフォーム固定**（`.nvmrc` の影響を受けない。プロジェクトの `.nvmrc` は 24/LTS）。pnpm は 11.24（corepack が `packageManager` から解決）。TS 5 `strict` + `noUncheckedIndexedAccess`。
 - Biome 2.5（ESLint 撤去済）。formatter は**無効**（フォーマット差分は出さない方針）。
 - `pnpm-workspace.yaml` `allowBuilds`: `sharp:false / esbuild:true / msw:false`。
 

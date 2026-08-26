@@ -9,8 +9,9 @@
 #   参考: https://github.com/jdx/mise/discussions/9453
 #
 # バージョン方針:
-#   node → 26.7.0 (ユーザー指定)
-#   pnpm → 11.24.0 (ユーザー指定。package.json の packageManager と同一に保つこと)
+#   node → 24 (Node.js 最新 LTS ライン。24.x の最新パッチに自動解決。
+#            2026-10-28 に Node 26 が LTS 昇格したら 26 への更新を検討)
+#   pnpm → 11.24.0 (package.json の packageManager と同一に保つこと)
 [tools]
-node = "26.7.0"
+node = "24"
 "npm:pnpm" = "11.24.0"

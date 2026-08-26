@@ -31,7 +31,7 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 | テスト | Vitest 3 + `@testing-library/react` 16 + `@testing-library/user-event` 14 + `fake-indexeddb` 6 + **msw 2.15** (Modrinth API mock) + Playwright (E2E) |
 | メトリクス | web-vitals 4 (LCP / INP / CLS を Server Analytics endpoint に送信) |
 | デプロイ | Vercel (`next start` / Edge/Node ランタイム両対応) |
-| パッケージマネージャ | pnpm 11.22.0 (Node 20 以上) |
+| パッケージマネージャ | pnpm 11.24.0 (Node 20 以上) |
 
 ## セットアップ
 

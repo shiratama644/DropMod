@@ -35,7 +35,7 @@
 | Lint | **Biome 2.5**（ESLint 撤去済, formatter 無効） |
 | Test | Vitest 3 + jsdom + @testing-library/react 16 + user-event + **msw 2.15** + fake-indexeddb |
 | E2E | Playwright 1.62（Chromium 単独） |
-| Pkg | pnpm 11.22 (corepack), Node ≥20（`.nvmrc`=22） |
+| Pkg | pnpm 11.24 (corepack), Node ≥20（`.nvmrc`=24, LTS） |
 
 ## フェーズ進捗（現在 = Phase 10 完了直後）
 

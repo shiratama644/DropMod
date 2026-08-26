@@ -157,7 +157,7 @@ pnpm install --frozen-lockfile
 過去のセッションで実際に踏んだ地雷・確立した運用ルールを集約したもの。**計画書（`docs/planning/PHASE*_PLAN.md`）に矛盾する指定があった場合は計画書を優先**するが、それ以外は本節を厳守する。
 
 ### 6.1 環境・ツールチェーン
-- Node.js v22.x / pnpm 11.x（corepack 経由）/ Next.js 16 App Router / React 19 / TypeScript 5
+- Node.js v24.x（LTS）/ pnpm 11.x（corepack 経由）/ Next.js 16 App Router / React 19 / TypeScript 5
 - Biome 2.5 (ESLint は完全撤去済み)、`biome.json` の `overrides` でテストファイルのみ `noNonNullAssertion: off`
 - Vitest 3 + jsdom + fake-indexeddb + MSW v2 + @testing-library/react 16
 - Playwright (Chromium 単独、`--disable-gpu` 必須)

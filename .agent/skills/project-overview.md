@@ -37,15 +37,16 @@
 | E2E | Playwright 1.62（Chromium 単独） |
 | Pkg | pnpm 11.24 (corepack), Node ≥20（`.nvmrc`=24, LTS） |
 
-## フェーズ進捗（現在 = Phase 10 完了直後）
+## フェーズ進捗（現在 = Phase 10.5 Emergency 計画済み・Phase 11 前）
 
 | Phase | 内容 | 状態 |
 | :--- | :--- | :--- |
 | 0–7 | Vite+Hono → Next.js 16 移行（ISR / Parallel+Intercepting / Route Handlers） | ✅ |
 | 8 | Dexie + TSQ + Zustand + テスト土台 + CI | ✅ |
-| 9 | AppContext 撤去 + operationsStore 分割 + msw + カバレッジ 91% | ✅ |
+| 9 | AppContext 撤去 + operationsStore 分割 + msw + カバレッジ 91%（※ 後に vitest 4 で数値是正） | ✅ |
 | 9.5 | LP 刷新 + BottomNav 再設計 + **PC UI 一新（DesktopSidebar）** | ✅ |
 | 10 | FontAwesome subset(-356KB) / AppContext 完全削除 / Markdown Image / E2E 拡張 / shimmer | ✅ |
+| **10.5** | **Emergency: カバレッジ回復**（vitest 4 化で発覚の threshold 違反へテスト追加、`PHASE10_5_PLAN.md`） | ⏳ 計画済 |
 | **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ⏳ 計画済 |
 | 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ |
 | 13 | CurseForge 完全対応（Murmur2） | ⏳ |
@@ -53,7 +54,7 @@
 
 ## 規模（目安）
 
-`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 373 tests / `e2e/` 8 spec。
+`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 376 tests / `e2e/` 8 spec。
 最大ファイル: `DependencyCheckModal.tsx`(871)・`useProfiles.ts`(818)・`ModDetailPageView.tsx`(676)。
 
 ## 関連

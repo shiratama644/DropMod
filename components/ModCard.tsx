@@ -240,7 +240,9 @@ export const ModCard: React.FC<ModCardProps> = ({
         className="pt-2 border-t border-slate-500/10 flex items-center justify-between gap-2"
         onClick={stopLinkNav}
       >
-        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold theme-badge capitalize whitespace-nowrap shrink-0">
+        {/* バッジは狭いカード (モバイル 2 カラム等) で途切れる余地を持たせる。
+            追加ボタンを優先して全体を表示し、右寄せで配置する。 */}
+        <span className="min-w-0 truncate px-2 py-0.5 rounded-lg text-[10px] font-semibold theme-badge capitalize">
           {displayCategory}
         </span>
 
@@ -251,7 +253,7 @@ export const ModCard: React.FC<ModCardProps> = ({
             onClick={handleToggle}
             title="タップでプロファイルから削除"
             aria-label="追加済み。タップでプロファイルから削除"
-            className="btn-hover-effect h-9 min-w-[7rem] px-3 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-xs font-bold hover:bg-red-500/20 hover:theme-text-red hover:border-red-500/40 transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="btn-hover-effect shrink-0 h-8 sm:h-9 min-w-0 sm:min-w-[7rem] px-2 sm:px-3 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-[10px] sm:text-xs font-bold hover:bg-emerald-500/30 transition inline-flex items-center justify-center gap-1 sm:gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-check" aria-hidden />
             <span>追加済み</span>
@@ -261,7 +263,7 @@ export const ModCard: React.FC<ModCardProps> = ({
             type="button"
             onClick={handleToggle}
             aria-label="プロファイルに追加"
-            className="btn-hover-effect h-9 min-w-[7rem] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="btn-hover-effect shrink-0 h-8 sm:h-9 min-w-0 sm:min-w-[7rem] px-2 sm:px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-[10px] sm:text-xs font-bold transition inline-flex items-center justify-center gap-1 sm:gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-plus" aria-hidden />
             <span>追加</span>

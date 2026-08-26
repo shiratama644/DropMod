@@ -749,15 +749,15 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                           disabled={isFixing || actionInFlight.has(m.targetProjectId)}
                           title={`${title} を追加`}
                           aria-label={`${title} を追加`}
-                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-amber hover:bg-amber-500/15 active:bg-amber-500/25 border border-amber-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="shrink-0 self-center inline-flex items-center justify-center gap-1.5 w-10 h-10 sm:w-auto sm:h-9 sm:px-3 text-sm sm:text-xs font-semibold rounded-xl theme-text-amber hover:bg-amber-500/15 active:bg-amber-500/25 border border-amber-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {actionInFlight.has(m.targetProjectId) ? (
                             <i
-                              className="fa-solid fa-spinner fa-spin text-[11px]"
+                              className="fa-solid fa-spinner fa-spin text-sm"
                               aria-hidden="true"
                             />
                           ) : (
-                            <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                            <i className="fa-solid fa-plus text-sm" aria-hidden="true" />
                           )}
                           <span className="hidden sm:inline">追加</span>
                         </button>
@@ -815,15 +815,15 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                           disabled={isFixing || actionInFlight.has(o.targetProjectId)}
                           title={`${title} を追加`}
                           aria-label={`${title} を追加`}
-                          className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-blue hover:bg-blue-500/15 active:bg-blue-500/25 border border-blue-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="shrink-0 self-center inline-flex items-center justify-center gap-1.5 w-10 h-10 sm:w-auto sm:h-9 sm:px-3 text-sm sm:text-xs font-semibold rounded-xl theme-text-blue hover:bg-blue-500/15 active:bg-blue-500/25 border border-blue-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {actionInFlight.has(o.targetProjectId) ? (
                             <i
-                              className="fa-solid fa-spinner fa-spin text-[11px]"
+                              className="fa-solid fa-spinner fa-spin text-sm"
                               aria-hidden="true"
                             />
                           ) : (
-                            <i className="fa-solid fa-plus text-[11px]" aria-hidden="true" />
+                            <i className="fa-solid fa-plus text-sm" aria-hidden="true" />
                           )}
                           <span className="hidden sm:inline">追加</span>
                         </button>

@@ -27,6 +27,15 @@
 `ModDetailPageView` ヒーロー CTA (Modrinth/ダウンロード/追加)、`ModCard` の
 追加/追加済みボタン (両状態で同寸 h-9・min-w-[7rem] に統一 = 追加時にカード寸法が変わらない)。
 
+## カテゴリ・通知 (2026-08-27)
+
+- **カテゴリ表示は英語** (Modrinth 準拠。`lib/constants/categories.ts` のラベルがすべて英語)。
+  フィルタチップ・カードバッジ・プロファイル一覧のカテゴリ列で共有。
+- **トースト通知は設定で ON/OFF 可能** (設定ページ)。`useToastStore.enabled` +
+  localStorage `dropmod_toast_enabled`。OFF 中の showToast は no-op、OFF 切替時に表示中トーストも消える。
+- 依存チェックモーダルの 追加 ボタンは**角丸正方形 (モバイル w-10 h-10)** で
+  タップしやすく、PC はテキスト付き。
+
 ## テキストコントラスト (2026-08-27)
 
 - `--text-muted` (説明文・作者名等): dark は **#a9b7c9** (実効背景比 7.40:1)、

@@ -49,3 +49,22 @@
 
 検証: typecheck 0 / biome 0 / test:unit 550 passed / build exit 0。
 コンントラストは Python で WCAG 比を計算して決定 (dark 改善・light AA 維持)。
+
+---
+
+## 追記: 第 4 弾 — カテゴリ英語化 + トースト設定 + タップ領域改善 (同日)
+
+| 変更 | 内容 |
+| :--- | :--- |
+| `lib/constants/categories.ts` | カテゴリ表示を**すべて英語**に (Modrinth 準拠: Utility / Optimization / Library / World Gen 等)。`categoryLabel` 未設定時も 'Uncategorized' |
+| `lib/store/toast.ts` | トースト通知の **ON/OFF 設定**を追加 (`enabled` state + localStorage `dropmod_toast_enabled`)。OFF 中は showToast が no-op、切替時に表示中トーストを消す |
+| `components/SettingsPageClient.tsx` | 「通知設定 (Toast Notifications)」セクション + 表示する/オフにするボタン |
+| `components/ModCard.tsx` | ①モバイル 2 カラムでのはみ出し対策: バッジ `min-w-0 truncate`、ボタン `shrink-0` + `h-8 sm:h-9 / min-w-0 sm:min-w-[7rem] / text-[10px] sm:text-xs` の小型化 (右寄せ維持)。②**追加済みボタンの赤 hover を削除** (モバイルで tap 時に赤く発光する問題) |
+| `components/DependencyCheckModal.tsx` | 必須 (amber) / 推奨 (blue) の追加ボタンを**角丸正方形 w-10 h-10** (モバイル) に拡大、PC は h-9 テキスト付き |
+
+検証: typecheck 0 / biome 0 / **test:unit 555 passed (+5: トースト ON/OFF)** / build exit 0。
+
+## 再構築によるロス (教訓)
+
+作業中に Sandbox 再構築が発生し、**未 commit の変更をすべて失った**ため再実装した。
+以後、ある程度まとまった変更はこまめに commit する (§4.1.1 の精神)。

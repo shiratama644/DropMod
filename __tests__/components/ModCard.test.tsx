@@ -42,7 +42,7 @@ describe('ModCard', () => {
     );
     expect(screen.getByText('Sodium')).toBeInTheDocument();
     expect(screen.getByText('JellySquid')).toBeInTheDocument();
-    expect(screen.getByText('軽量化')).toBeInTheDocument();
+    expect(screen.getByText('Performance')).toBeInTheDocument();
   });
 
   it('追加ボタン左はローダーではなくカテゴリーを出す', () => {
@@ -57,7 +57,7 @@ describe('ModCard', () => {
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByText('ユーティリティ')).toBeInTheDocument();
+    expect(screen.getByText('Utility')).toBeInTheDocument();
     expect(screen.queryByText('fabric')).not.toBeInTheDocument();
   });
 
@@ -262,7 +262,7 @@ describe('ModCard: モバイル 3 カラム compact カード (Phase 11 UI)', ()
     // アイコン領域は aspect-square
     expect(card?.querySelector('div')?.className).toContain('aspect-square');
     // 標準カードのフッター (カテゴリバッジ) は出さない
-    expect(screen.queryByText('軽量化')).toBeNull();
+    expect(screen.queryByText('Optimization')).toBeNull();
   });
 
   it('2 カラム + モバイルは標準カードのまま', () => {

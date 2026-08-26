@@ -6,7 +6,7 @@
 
 :root {
     --bg-base: #f1f5f9;
-    --bg-panel: rgba(255, 255, 255, 0.92);
+    --bg-panel: rgba(255, 255, 255, 0.96);
     --bg-card: rgba(255, 255, 255, 0.85);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
     --bg-input: #e2e8f0;
@@ -31,7 +31,7 @@
 
 html.dark {
     --bg-base: #090d14;
-    --bg-panel: rgba(15, 23, 42, 0.85);
+    --bg-panel: rgba(15, 23, 42, 0.92);
     --bg-card: rgba(30, 41, 59, 0.65);
     --bg-card-hover: rgba(30, 41, 59, 0.90);
     --bg-input: #0f172a;
@@ -105,8 +105,12 @@ code, input, textarea {
 
 .glass-panel {
     background: var(--bg-panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    /* backdrop-filter は意図的に使わない (2026-08-27):
+       GPU のない環境 (PRoot / software rendering・低スペック端末) では
+       背面の再合成が発生するたび (ボタン押下・ページ遷移・スクロール) に
+       blur レイヤーの再ラスタライズで「白く一瞬光る」フラッシュが起きる。
+       パネル背景は 0.9 程度の不透明度があり、背面がフラットなページ背景
+       であるケースが大半のため、視覚差はほぼ無い。*/
     border: 1px solid var(--border-main);
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -201,9 +205,9 @@ code, input, textarea {
 .custom-dropdown-menu-portal {
     position: fixed;
     z-index: 99999;
+    /* bg が 0.98 不透明のため backdrop-filter の blur はほぼ視覚効果がなく、
+       software rendering での白フラッシュの原因にしかならないため削除。 */
     background: var(--dropdown-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--dropdown-border);
     border-radius: 0.75rem;
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0,0,0,0.1);

@@ -2,6 +2,11 @@
 
 > ヘッダー・サイドバー・BottomNav・モーダル・レイアウト崩れ を触る時に読む。
 
+## ガラス表現 (glass-panel) の方針 (2026-08-27)
+
+- **`.glass-panel` / dropdown に `backdrop-filter` は使わない**。GPU のない環境 (PRoot / software rendering・低スペック端末) で再合成のたびに「白く一瞬光る」フラッシュが起きるため削除済み。`--bg-panel` の不透明度 (dark 0.92 / light 0.96) で視覚を維持。
+- モーダルのオーバーレイ (`backdrop-blur-md` / `backdrop-blur-[2px]`, 計 9 ファイル) は現状残している (モーダル表示中しか合成されないため)。フラッシュ報告が続くなら同じ理由で削除候補。
+
 ## AppShell の描画分岐（`components/AppShell.tsx`）
 
 - **PC（md+, ≥768px）**: `<DesktopSidebar>`（fixed left `w-64`, z-40, 全ページ表示）+ 内容 `<div class="md:pl-64">`。**Header も BottomNav も非表示**。

@@ -9,6 +9,7 @@
 | `api.modrinth.com:443` 到達不可 | `pnpm build` で `TypeError: fetch failed` / `ECONNRESET`。Modrinth 依存機能（marquee/SSR search/詳細）が空表示 | **exit code 0 なら成功扱い**。ローカルでは空フォールバック UI、ユーザー環境（本番）で正常表示。検証は `pnpm build` の Route Table と exit 0 で判定 |
 | Chromium バイナリ install 不可 | E2E（`pnpm test:e2e`）が実行できない | E2E は**書けるが実行不可**。CI（GitHub Actions）上のみ。ローカルで `playwright install` を試みない |
 | `sharp` native build 不可 | `next/image` の画像最適化プロキシ（`/_next/image`）が**非常に重い**（再エンコードが squoosh/slow fallback） | `pnpm-workspace.yaml` で `sharp: false`。→ Modrinth 画像は `unoptimized` で直接 CDN 取得（[image-strategy.md](./image-strategy.md)）。Vercel 本番では sharp 自動注入で最適化復活 |
+| PRoot (GPU 無し) で `backdrop-filter` が白フラッシュ | ボタン押下・ページ遷移のたびに blur レイヤー再合成で白く光る | `glass-panel` / dropdown から `backdrop-filter` を削除済み (2026-08-27)。モーダルオーバーレイの `backdrop-blur-md` は残存 (要否は経過観察) |
 | GitHub App が `.github/workflows/` に書き込み不可 | CI ワークフローを直接 commit できない | 本体は `docs/ops/CI_WORKFLOW.yml`、ユーザーが手動で `.github/workflows/ci.yml` へ配置（`docs/ops/CI_SETUP.md`） |
 | Vercel Hobby プラン制約 | Function Invocations 100k/月・Bandwidth 100GB/月・Build 100/day 等。開発中の SSR/ISR で即枯渇リスク | **本番デプロイは Phase 10+11+12+13 全完了後の最終ステップ**（`docs/planning/PHASE10_CANDIDATES.md` 【重要方針】）。開発中は local + CI のみ |
 
@@ -40,6 +41,10 @@ bash .agent/hooks/restore-sandbox-env.sh
 
 ## その他環境メモ
 
+- **webpack (--webpack) の persistent cache を効かせる条件 (2026-08-27 検証済み)**:
+  1. next.config は **`.mjs` であること**。`.ts` は `next.config.compiled.js` にコンパイルされて読み込み後に削除され、webpack cache が「Caching failed for pack: Can't resolve next.config.compiled.js」で毎回無効化される。
+  2. **`webpack()` 内で `config.cache` を独自 override しないこと**。Next 標準の cache 設定は pnpm レイアウト対応済み。override すると `mini-css-extract-plugin` の pack 解決に失敗する。
+  3. キャッシュは `.next/cache/webpack` に書かれ、`scripts/build.ts` の symlink で永続化される。コールド 14.7s → ウォーム 4.8s を実測。
 - Sandbox の node は **`restore-sandbox-env.sh` で `.nvmrc` のメジャー版（現行 24/LTS）に自動置換**される（nodejs.org は到達不可のため npm registry の `node-linux-x64` パッケージから取得 → `/usr/local/bin/node` を差し替え）。pnpm は 11.24（corepack が `packageManager` から解決）。TS 5 `strict` + `noUncheckedIndexedAccess`。
 - Biome 2.5（ESLint 撤去済）。formatter は**無効**（フォーマット差分は出さない方針）。
 - `pnpm-workspace.yaml` `allowBuilds`: `sharp:false / esbuild:true / msw:false`。

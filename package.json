@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node --experimental-strip-types --disable-warning=ExperimentalWarning script/build.ts",
+    "build": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/build.ts",
     "build:fa-subset": "node scripts/build-fontawesome-subset.mjs",
     "start": "next start",
     "lint": "biome lint .",

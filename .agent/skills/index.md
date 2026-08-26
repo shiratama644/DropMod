@@ -30,9 +30,9 @@
 | [image-strategy.md](./image-strategy.md) | ⭐ 画像の高速化・高画質化の方針（unoptimized / raw_url / ネイティブ img）。直近で確立した重要知見。 | 2026-08-24 |
 | [routing-and-pages.md](./routing-and-pages.md) | URL 設計（2026-08-24 再設計後：検索複数形/詳細単数形型別/モーダル/詳細の4責務）。 | 2026-08-24 |
 | [env-import.md](./env-import.md) | Phase 11 の Import 基盤（EnvironmentSource / Detector chain / Analyzer + SHA-1 Worker / Analysis / 名前自動生成 / ZIP fallback）。 | 2026-08-26 |
-| [ui-layout.md](./ui-layout.md) | PC サイドバー / モバイル Header+BottomNav / z-index 序列 / body 余白 / モーダル。 | 2026-08-24 |
+| [ui-layout.md](./ui-layout.md) | PC サイドバー / モバイル Header+BottomNav / z-index 序列 / body 余白 / モーダル / glass 方針 (backdrop-filter 無し)。 | 2026-08-27 |
 | [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-26 |
-| [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策（AGENT.md §6 の実態版）。 | 2026-08-24 |
+| [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策 (webpack キャッシュ条件含む、AGENT.md §6 の実態版)。 | 2026-08-27 |
 
 ## 運用ルール
 

@@ -1,12 +1,15 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import type { NextConfig } from 'next';
-
-const webpackCacheDirectory = path.join(process.cwd(), '.next', 'cache', 'webpack');
-const nextConfigFile = fileURLToPath(import.meta.url);
-
 /**
  * DropMod Next.js 設定
+ *
+ * ⚠ このファイルは .ts ではなく .mjs であること (2026-08-27):
+ *   Next 16 は next.config.ts を next.config.compiled.js にコンパイルして
+ *   読み込み後に削除する。webpack の persistent cache がそのパスを解決できず
+ *   「Caching failed for pack」警告で毎回キャッシュが無効化されるため。
+ *   .mjs はコンパイルなしで直接読み込まれ、キャッシュが正常に永続化する
+ *   (検証済み: コールド 14.7s → ウォーム 4.8s、警告ゼロ)。
+ *   また webpack の cache 設定は独自 override せず Next 標準を使う
+ *   (独自 override すると pnpm レイアウトで mini-css-extract-plugin の
+ *   pack 解決に失敗するため)。
  *
  * - React Strict Mode を維持 (Vite 版の main.tsx と同挙動)
  * - X-Powered-By ヘッダは公開情報として不要なので無効化
@@ -79,7 +82,8 @@ const imageCorsHeaders = [
   { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' }
 ];
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
@@ -108,27 +112,11 @@ const nextConfig: NextConfig = {
       '@tanstack/react-query',
       '@tanstack/react-query-persist-client'
     ],
-    // 2 回目以降の `next build` を速くする (16.3+)。PRoot では --webpack 側の
-    // filesystem cache を使うので、このフラグは Turbopack 経路でのみ効く。
+    // 2 回目以降の `next build` を速くする (16.3+)。webpack (--webpack) 側も
+    // Next 標準の filesystem cache (.next/cache/webpack) が効くようになった
+    // (next.config.mjs 化により)。このフラグは Turbopack 経路でのみ効く。
     turbopackFileSystemCacheForBuild: true,
     turbopackFileSystemCacheForDev: true
-  },
-  // PRoot-Distro 等 Turbopack 不可環境 (`scripts/build.ts` が --webpack) 用。
-  // Turbopack 実行時は webpack() は呼ばれない。
-  webpack: (config, { dev }) => {
-    if (!dev) {
-      config.cache = {
-        type: 'filesystem',
-        name: 'dropmod-webpack',
-        cacheDirectory: webpackCacheDirectory,
-        compression: 'gzip',
-        maxMemoryGenerations: 1,
-        buildDependencies: {
-          config: [nextConfigFile]
-        }
-      };
-    }
-    return config;
   },
   async headers() {
     return [

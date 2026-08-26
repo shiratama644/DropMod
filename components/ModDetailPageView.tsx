@@ -325,24 +325,59 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
               </div>
             )}
 
-            {/* CTA 行 */}
-            <div className="mt-5 flex flex-wrap gap-2">
+            {/* CTA 行 — デザインルール (skills/ui-layout.md):
+                主操作 (追加) を右端に配置。緑の塗りつぶしは主操作のみで、
+                ダウンロード / Modrinth は枠線 or ダークグレーに統一。
+                全ボタン高さ 48px (h-12)・等幅 (flex-1) で均等に並べる。 */}
+            <div className="mt-5 flex flex-wrap sm:flex-nowrap items-stretch gap-2">
+              <a
+                href={modrinthProjectUrl(project.slug, project.project_type)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Modrinth で見る"
+                className="flex-1 min-w-0 max-w-56 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
+                Modrinth
+              </a>
+              {latestFile && (
+                <button
+                  type="button"
+                  onClick={() => handleJarDownload(latestFile)}
+                  disabled={isJarDownloading}
+                  aria-label=".jar ファイルをダウンロード"
+                  className="flex-1 min-w-0 max-w-56 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isJarDownloading ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                      DL中
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-download" aria-hidden />
+                      ダウンロード
+                    </>
+                  )}
+                </button>
+              )}
               {isAdded ? (
                 <button
                   type="button"
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
-                  className="px-4 py-2.5 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  aria-label="プロファイルから削除"
+                  className="flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      処理中...
+                      処理中
                     </>
                   ) : (
                     <>
                       <i className="fa-solid fa-trash-can" aria-hidden />
-                      プロファイルから削除
+                      削除
                     </>
                   )}
                 </button>
@@ -351,50 +386,22 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   type="button"
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
-                  className="btn-hover-effect px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  aria-label="プロファイルに追加"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      追加中...
+                      追加中
                     </>
                   ) : (
                     <>
                       <i className="fa-solid fa-plus" aria-hidden />
-                      プロファイルに追加
+                      追加
                     </>
                   )}
                 </button>
               )}
-              {latestFile && (
-                <button
-                  type="button"
-                  onClick={() => handleJarDownload(latestFile)}
-                  disabled={isJarDownloading}
-                  className="btn-hover-effect px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition flex items-center gap-2 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isJarDownloading ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      DL中...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-download" aria-hidden />
-                      .jar 直DL
-                    </>
-                  )}
-                </button>
-              )}
-              <a
-                href={modrinthProjectUrl(project.slug, project.project_type)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 rounded-xl theme-sub-box text-sm font-semibold hover:bg-slate-700/40 transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
-                Modrinth
-              </a>
             </div>
           </div>
         </div>

@@ -498,13 +498,17 @@ export const ModDetailModalShell: React.FC<Props> = ({
         )}
       </div>
 
-      {/* 固定フッターアクション */}
-      <div className="flex justify-end gap-2 p-4 sm:p-6 pt-3 border-t border-slate-500/20 shrink-0 bg-transparent flex-wrap">
+      {/* 固定フッターアクション
+          デザインルール (skills/ui-layout.md「アクションボタン デザインルール」):
+          主操作 (追加) を右端に配置。緑の塗りつぶしは主操作のみで、
+          詳細 / DL は枠線ボタン、閉じるはダークグレー。全ボタン高さ 44px
+          (h-11)・主要 3 ボタンは等幅 (flex-1) で均等に並べる。 */}
+      <div className="flex items-stretch gap-2 p-4 sm:p-6 pt-3 border-t border-slate-500/20 shrink-0 bg-transparent">
         {isModal ? (
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             閉じる
           </button>
@@ -514,7 +518,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
             href={discoverPathFromProjectType(project.project_type)}
-            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
+            className="shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
             検索に戻る
@@ -523,10 +527,11 @@ export const ModDetailModalShell: React.FC<Props> = ({
         {isModal && (
           <Link
             href={detailPathFromProject(project.project_type, slug)}
-            className="btn-hover-effect px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition inline-flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            aria-label="詳細ページ"
+            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
-            詳細ページ
+            詳細
           </Link>
         )}
         {latestFile && (
@@ -534,17 +539,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={() => handleJarDownload(latestFile)}
             disabled={isJarDownloading}
-            className="btn-hover-effect px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label=".jar ファイルをダウンロード"
+            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isJarDownloading ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                DL中...
+                DL中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-download" aria-hidden />
-                .jar 直DL
+                DL
               </>
             )}
           </button>
@@ -554,17 +560,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
-            className="px-4 py-2 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+            aria-label="プロファイルから削除"
+            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                処理中...
+                処理中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-trash-can" aria-hidden />
-                プロファイルから削除
+                削除
               </>
             )}
           </button>
@@ -573,17 +580,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+            aria-label="プロファイルに追加"
+            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                追加中...
+                追加中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-plus" aria-hidden />
-                プロファイルに追加
+                追加
               </>
             )}
           </button>

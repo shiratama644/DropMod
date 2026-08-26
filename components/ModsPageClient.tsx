@@ -193,23 +193,35 @@ export const ModsPageClient: React.FC = () => {
     []
   );
 
+  // 2026-08-27 修正: Phase 11 で Import された resourcepacks / shaderpacks も
+  // タブ表示の対象に含める。従来は profile.mods のみ参照しており、
+  // RP / Shader タブに Phase 11 の Import 結果が表示されなかった。
+  const allContentItems = useMemo(
+    () => [
+      ...profile.mods,
+      ...(profile.resourcepacks ?? []),
+      ...(profile.shaderpacks ?? [])
+    ],
+    [profile.mods, profile.resourcepacks, profile.shaderpacks]
+  );
+
   const tabCounts = useMemo(() => {
     const counts: Record<ContentCategory, number> = { mod: 0, resourcepack: 0, shader: 0 };
-    for (const mod of profile.mods) {
+    for (const mod of allContentItems) {
       counts[contentCategoryOf(mod)] += 1;
     }
     return counts;
-  }, [profile.mods]);
+  }, [allContentItems]);
 
   const visibleMods = useMemo(() => {
     const q = listQuery.trim().toLowerCase();
-    return profile.mods.filter((mod) => {
+    return allContentItems.filter((mod) => {
       if (contentCategoryOf(mod) !== activeTab) return false;
       if (!q) return true;
       const hay = `${mod.name} ${mod.author ?? ''} ${mod.filename ?? ''} ${mod.slug ?? ''}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [profile.mods, activeTab, listQuery]);
+  }, [allContentItems, activeTab, listQuery]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: タブ/プロファイル切替で選択を捨てる意図
   useEffect(() => {

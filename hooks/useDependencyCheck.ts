@@ -33,14 +33,21 @@ export const useDependencyCheck = (currentProfile: Profile) => {
 
   const runBackgroundDepCheck = useCallback(async () => {
     const profile = profileRef.current;
-    if (!profile.mods || profile.mods.length === 0) {
+    // 2026-08-27 修正: resourcepacks / shaderpacks も依存チェック対象に含める
+    // (Phase 11 の Import で RP/Shader が個別に依存を持つ可能性があるため)
+    const allItems = [
+      ...(profile.mods ?? []),
+      ...(profile.resourcepacks ?? []),
+      ...(profile.shaderpacks ?? [])
+    ];
+    if (allItems.length === 0) {
       setHasDepWarning(false);
       markChecked();
       return;
     }
     setChecking(true);
     try {
-      const versionIds = profile.mods
+      const versionIds = allItems
         .map((m) => m.versionId)
         .filter((id) => id && id !== 'latest') as string[];
 
@@ -83,7 +90,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       }
 
       const installedProjectSet = new Set<string>();
-      profile.mods.forEach((m) => {
+      allItems.forEach((m) => {
         installedProjectSet.add(m.projectId);
         if (m.slug) installedProjectSet.add(m.slug);
       });
@@ -92,7 +99,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       // outer は `if (warning) break;` に依存していて可読性が低かった)
       // mod.versionId! の non-null assertion → 明示的 undefined チェック
       let warning = false;
-      outer: for (const mod of profile.mods) {
+      outer: for (const mod of allItems) {
         const vData = mod.versionId ? versionMap.get(mod.versionId) : undefined;
         if (vData?.dependencies) {
           for (const dep of vData.dependencies) {
@@ -130,7 +137,13 @@ export const useDependencyCheck = (currentProfile: Profile) => {
   //   - 現在プロファイルの mcVersion / loader / mods の構成 (id+versionId)
   //     が変化したときだけ発火。連続変更は DEP_CHECK_DEBOUNCE_MS でまとめる。
   // ----------------------------------------------------------------------
-  const modsSignature = currentProfile.mods
+  // 2026-08-27: mods + resourcepacks + shaderpacks の signature
+  const allItemsForSignature = [
+    ...(currentProfile.mods ?? []),
+    ...(currentProfile.resourcepacks ?? []),
+    ...(currentProfile.shaderpacks ?? [])
+  ];
+  const modsSignature = allItemsForSignature
     .map((m) => `${m.projectId || m.slug || '?'}@${m.versionId || 'latest'}`)
     .join(',');
 

@@ -172,12 +172,16 @@ export const useZipImport = (
         const hasDotMinecraftRoot = Object.keys(zip.files).some((path) =>
           path.startsWith('.minecraft/')
         );
-        const rootedZip = hasDotMinecraftRoot ? zip.folder('.minecraft') : zip;
-        if (rootedZip) {
+        // 2026-08-27 修正: zip.folder() ではなく pathPrefix 方式。
+        //   folder() は file() には相対パスで動くが files の key は
+        //   フルパスのまま → exists/listFiles が壊れる。
+        const pathPrefix = hasDotMinecraftRoot ? '.minecraft/' : '';
+        {
           showToast('.minecraft を解析中...', 'info');
           const source = new ZipSource(
-            rootedZip,
-            file.name.replace(/\.[^/.]+$/, '')
+            zip,
+            file.name.replace(/\.[^/.]+$/, ''),
+            pathPrefix
           );
           const analysis = await analyzeEnvironmentSource(source);
           const analysisIssues = analyzeImportHealth(analysis);

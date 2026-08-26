@@ -98,9 +98,14 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
     if (checkCancelled()) return;
     setProgress(15);
-    setStatusText(`${profile.mods?.length || 0} 個のModデータを準備中...`);
+    const allItems = [
+      ...(profile.mods ?? []),
+      ...(profile.resourcepacks ?? []),
+      ...(profile.shaderpacks ?? [])
+    ];
+    setStatusText(`${allItems.length || 0} 個のModデータを準備中...`);
 
-    if (!profile.mods || profile.mods.length === 0) {
+    if (allItems.length === 0) {
       if (checkCancelled()) return;
       setProgress(100);
       setStatusText('チェック対象のModがありません');
@@ -115,7 +120,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     }
 
     try {
-      const versionIds = profile.mods
+      const versionIds = allItems
         .map((m) => m.versionId)
         .filter((id): id is string => Boolean(id && id !== 'latest'));
       // Phase 10-P5: Modrinth API 応答を扱う Map は具体型で保持。
@@ -137,7 +142,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           });
         } catch {
           await Promise.all(
-            profile.mods.map(async (mod) => {
+            allItems.map(async (mod) => {
               if (mod.versionId) {
                 try {
                   const vData = await fetchModrinth<ModrinthVersion>(
@@ -158,7 +163,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       setStatusText('依存・競合マトリクスを解析中...');
 
       const installedProjectSet = new Set<string>();
-      profile.mods.forEach((m) => {
+      allItems.forEach((m) => {
         installedProjectSet.add(m.projectId);
         if (m.slug) installedProjectSet.add(m.slug);
       });
@@ -172,7 +177,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       const verifiedOK: Array<{ sourceMod: ProjectItem; message: string }> = [];
       const missingProjectIds = new Set<string>();
 
-      for (const mod of profile.mods) {
+      for (const mod of allItems) {
         let vData: ModrinthVersion | null = mod.versionId
           ? versionMap.get(mod.versionId) ?? null
           : null;
@@ -211,7 +216,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
             }
           } else if (type === 'incompatible') {
             if (installedProjectSet.has(targetProjId)) {
-              const targetMod = profile.mods.find(
+              const targetMod = allItems.find(
                 (m) => m.projectId === targetProjId || m.slug === targetProjId
               );
               conflicts.push({
@@ -302,7 +307,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   //     ("反応しない" 現象) の原因になるため、profile 変化検知で
   //     まとめて更新する方式に統一。
   // ------------------------------------------------------------------
-  const modsSignature = profile.mods
+  // 2026-08-27: mods + resourcepacks + shaderpacks の signature
+  const modsSignature = [
+    ...(profile.mods ?? []),
+    ...(profile.resourcepacks ?? []),
+    ...(profile.shaderpacks ?? [])
+  ]
     .map((m) => `${m.projectId || m.slug || '?'}@${m.versionId || 'latest'}`)
     .join(',');
 
@@ -456,8 +466,13 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     try {
       // 1. 重複する targetProjectId を除去 (複数のsourceModが同じライブラリに依存するケース対策)
       // 2. 既にプロファイルに存在するMod (id or slug で照合) はスキップ
+      const allItems = [
+        ...(profile.mods ?? []),
+        ...(profile.resourcepacks ?? []),
+        ...(profile.shaderpacks ?? [])
+      ];
       const installedIds = new Set<string>();
-      profile.mods.forEach((m) => {
+      allItems.forEach((m) => {
         installedIds.add(m.projectId);
         if (m.slug) installedIds.add(m.slug);
       });

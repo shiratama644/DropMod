@@ -68,3 +68,35 @@
 
 作業中に Sandbox 再構築が発生し、**未 commit の変更をすべて失った**ため再実装した。
 以後、ある程度まとまった変更はこまめに commit する (§4.1.1 の精神)。
+
+---
+
+## 追記: 第 5 弾 — 全ファイル包括バグハント (同日)
+
+体系的に全ソース (lib/ hooks/ components/ app/) を探索し、以下のバグを発見・修正:
+
+### 発見・修正したバグ (重要度順)
+
+| # | 重要度 | ファイル | バグ | 修正 |
+|---|---|---|---|---|
+| 34 | **HIGH** | `lib/env/zipSource.ts` | **JSZip の `folder()` で作ったサブ ZIP の `files` key はフルパスのまま** → `exists` / `listFiles` / `listDirectories` がすべて壊れ、`.minecraft/` re-root した ZIP で Detector が環境を検出できなかった (Phase 11-C からの潜在バグ) | `zip.folder()` を廃止し、**pathPrefix 方式**に変更: 元の zip を直接参照し `.minecraft/` 接頭辞を付けて走査 |
+| 1 | **HIGH** | `lib/env/analyzer.ts` | 1 ファイルの `readFile` 失敗で解析全体が throw で落ちる | try-catch で該当ファイルをスキップして継続 (`readableScanned`) |
+| 21 | **HIGH** | `components/ModsPageClient.tsx` | **`visibleMods` が `profile.mods` のみ参照** → Phase 11 で Import した resourcepacks / shaderpacks が RP/Shader タブに表示されない | `allContentItems` (mods + RP + Shader) を結合してフィルタ + tabCounts も統一 |
+| 22/31 | **MED** | `hooks/useDependencyCheck.ts` | `profile.mods` のみ参照 → RP/Shader の依存がチェックされない | `allItems` (mods + RP + Shader) に統一 (signature も含む) |
+| 33 | **MED** | `components/DependencyCheckModal.tsx` | 同上 + `handleAddAllMissing` 内の `allItems` が別スコープで未定義 | プロファイル参照を `allItems` に統一 + スコープ内で定義 |
+| 3 | **MED** | `hooks/useProfiles.ts` | `handleDuplicateProfile` が `mods` のみ deep copy → RP/Shader/unknown は浅い参照共有 (複製側で編集すると元も変わる) | `structuredClone()` で全配列を deep copy |
+| 2 | **MED** | `components/BottomSheet.tsx` | `transitionend` listener が cleanup されない場合がある (アニメーション中断時) | `setTimeout(cleanup, 200)` で強制 cleanup を追加 |
+| 5 | **LOW** | `lib/utils/id.ts` | `crypto.randomUUID` が non-secure context (http LAN) で稀に throw | try-catch で fallback |
+
+### 確認済み (問題なし)
+
+- XSS: `dangerouslySetInnerHTML` は theme init script のみ (ハードコード、ユーザー入力なし)
+- 外部リンク: すべて `rel="noopener noreferrer"` 付き
+- `as any` の使用: なし
+- LRU cache: 上限 200 件 + TTL 5 分でメモリリークなし
+- IntersectionObserver / addEventListener: すべて cleanup あり
+- key={index}: landing/AnimatedStats のみ (固定 3 要素、再順序化なし)
+- API Route: path traversal チェック、ホスト検証、メソッド制限あり
+- cookie: Secure flag は https 条件付き (前回修正済み)
+
+検証: typecheck 0 / biome 0 / **test:unit 555 passed / 65 files** / build exit 0 / **coverage exit 0** (総計 stmt 84.23)。

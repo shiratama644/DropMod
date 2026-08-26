@@ -118,19 +118,29 @@ export async function analyzeEnvironmentSource(
   }
 
   // ③ ファイル読み込み (進捗: read)
+  // 1 ファイルの読み取り失敗で解析全体を落とさない (2026-08-27 バグ修正)。
+  // 権限エラー・破損 ZIP エントリ等はそのファイルをスキップして継続。
   const contents = new Map<string, Uint8Array>();
+  const readableScanned: ScannedFile[] = [];
   for (let i = 0; i < scanned.length; i++) {
     const file = scanned[i];
     if (!file) continue;
-    contents.set(file.path, await source.readFile(file.path));
+    try {
+      contents.set(file.path, await source.readFile(file.path));
+      readableScanned.push(file);
+    } catch {
+      // 読み取り失敗: 該当ファイルを解析対象から除外
+      continue;
+    }
     onProgress?.({ phase: 'read', done: i + 1, total: scanned.length });
   }
-
-  // ④ SHA-1 計算 (Worker / fallback)
-  const hashInputs = scanned.map((file) => ({
+  // 読み取り成功したファイルのみ後続処理の対象とする
+  const hashInputs = readableScanned.map((file) => ({
     path: file.path,
     data: contents.get(file.path) ?? new Uint8Array(0)
   }));
+
+  // ④ SHA-1 計算 (Worker / fallback)
   const hashes = await computeHashes(hashInputs, (p) =>
     onProgress?.({ phase: 'hash', done: p.done, total: p.total })
   );
@@ -171,7 +181,7 @@ export async function analyzeEnvironmentSource(
     versionsByProject: new Map()
   };
 
-  for (const file of scanned) {
+  for (const file of readableScanned) {
     analysis.scannedCounts[
       file.category === 'mod' ? 'mods' : file.category === 'resourcepack' ? 'resourcepacks' : 'shaderpacks'
     ]++;

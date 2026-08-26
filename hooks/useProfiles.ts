@@ -481,7 +481,13 @@ export const useProfiles = (
         latest.name,
         profilesRef.current.map((p) => p.name)
       ),
-      mods: JSON.parse(JSON.stringify(latest.mods))
+      // 2026-08-27 修正: mods 以外の配列 (resourcepacks / shaderpacks /
+      // unknownFiles) も deep copy する。浅い参照共有だと複製側で
+      // 編集した際に元プロファイルも変わってしまう。
+      mods: structuredClone(latest.mods),
+      ...(latest.resourcepacks ? { resourcepacks: structuredClone(latest.resourcepacks) } : {}),
+      ...(latest.shaderpacks ? { shaderpacks: structuredClone(latest.shaderpacks) } : {}),
+      ...(latest.unknownFiles ? { unknownFiles: structuredClone(latest.unknownFiles) } : {})
     };
     setProfiles((prev) => [...prev, duplicated]);
     setCurrentProfileId(newId);

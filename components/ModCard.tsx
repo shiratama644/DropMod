@@ -5,14 +5,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ModrinthHit, Profile } from '@/types';
-import {
-  autoBannerHeightClass,
-  autoCardSpanClass,
-  modalPathFromProject,
-  type SearchLayout
-} from '@/lib/constants/search';
+import { modalPathFromProject, type SearchLayout } from '@/lib/constants/search';
 import { categoryLabel, primaryCategoryId } from '@/lib/constants/categories';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 interface ModCardProps {
   hit: ModrinthHit;
@@ -35,12 +31,7 @@ function formatDownloads(num: number): string {
 
 function clampClass(hit: ModrinthHit, layout: SearchLayout): string {
   if (layout === 'max') return 'line-clamp-3';
-  if (layout === 'auto') {
-    const len = hit.description?.length ?? 0;
-    if (len > 180) return 'line-clamp-5';
-    if (len > 90) return 'line-clamp-3';
-    return 'line-clamp-2';
-  }
+  void hit;
   return 'line-clamp-2';
 }
 
@@ -59,7 +50,6 @@ export const ModCard: React.FC<ModCardProps> = ({
 
   const [iconFailed, setIconFailed] = useState<boolean>(false);
   const [bannerFailed, setBannerFailed] = useState<boolean>(false);
-  const [bannerAspect, setBannerAspect] = useState<number | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: icon_url 変更検知トリガーとして意図的
   useEffect(() => {
     setIconFailed(false);
@@ -67,24 +57,16 @@ export const ModCard: React.FC<ModCardProps> = ({
   // biome-ignore lint/correctness/useExhaustiveDependencies: featured_gallery 変更検知トリガーとして意図的
   useEffect(() => {
     setBannerFailed(false);
-    setBannerAspect(null);
   }, [hit.featured_gallery]);
   const showIcon = hit.icon_url && !iconFailed;
   const showBanner =
-    (layout === 'max' || layout === 'auto') &&
-    Boolean(hit.featured_gallery) &&
-    !bannerFailed;
-  const forceBannerSlot = layout === 'max';
-  const autoSpan =
-    layout === 'auto'
-      ? autoCardSpanClass({
-          descriptionLength: hit.description?.length ?? 0,
-          hasBanner: Boolean(hit.featured_gallery) && !bannerFailed,
-          aspectRatio: bannerAspect
-        })
-      : '';
-  const autoBannerHeight =
-    layout === 'auto' ? autoBannerHeightClass(bannerAspect) : '';
+    layout === 'max' && Boolean(hit.featured_gallery) && !bannerFailed;
+
+  // モバイルの 3 カラムは独自の compact カード (Modrinth のグリッド卡片風)。
+  // スマホでも 3 カラム表示するため、PC 版カードを縮小しただけでは
+  // 情報が潰れる → アイコン + タイトル + 追加ボタンのみの最小構成にする。
+  const isMobile = useIsMobile();
+  const compact = layout === '3' && isMobile;
 
   // 検索一覧のカード → プレビューモーダル (/discover/<複数>/<slug>)。
   // 一覧 (children) は Intercept で破棄されず、戻るで状態保持される。
@@ -98,13 +80,89 @@ export const ModCard: React.FC<ModCardProps> = ({
     e.preventDefault();
   };
 
+  const handleToggle = (e: React.MouseEvent) => {
+    stopLinkNav(e);
+    onToggleMod(hit.project_id, e);
+  };
+
+  // -----------------------------------------------------------------
+  // モバイル 3 カラム compact カード
+  // -----------------------------------------------------------------
+  if (compact) {
+    return (
+      <Link
+        href={detailPath}
+        className="mod-card-item glass-card rounded-xl p-1.5 flex flex-col gap-1.5 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      >
+        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-800/80 shrink-0">
+          {showIcon && hit.icon_url ? (
+            <Image
+              src={hit.icon_url}
+              alt={hit.title}
+              fill
+              sizes="(max-width: 767px) 33vw, 120px"
+              className="object-contain p-1"
+              onError={() => setIconFailed(true)}
+              unoptimized={shouldUnoptimizeImage(hit.icon_url)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center theme-text-brand">
+              <i className="fa-solid fa-cube text-2xl opacity-50" aria-hidden />
+            </div>
+          )}
+        </div>
+        <h3
+          className="text-[11px] font-bold leading-snug line-clamp-2 min-h-[2.6em]"
+          title={hit.title}
+        >
+          {hit.title}
+        </h3>
+        <div className="text-[10px] theme-text-muted flex items-center gap-1">
+          <i className="fa-solid fa-download text-[9px]" aria-hidden />
+          <span className="truncate">{formatDownloads(hit.downloads)}</span>
+        </div>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: <Link> バブル遮断 */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
+        <div onClick={stopLinkNav}>
+          {isAdded ? (
+            <button
+              type="button"
+              onClick={handleToggle}
+              title="タップでプロファイルから削除"
+              aria-label="追加済み。タップでプロファイルから削除"
+              className="w-full h-7 rounded-lg bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-[10px] font-bold transition inline-flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
+            >
+              <i className="fa-solid fa-check" aria-hidden />
+              追加済み
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleToggle}
+              aria-label="プロファイルに追加"
+              className="w-full h-7 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-bold shadow transition inline-flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
+            >
+              <i className="fa-solid fa-plus" aria-hidden />
+              追加
+            </button>
+          )}
+        </div>
+      </Link>
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // 標準カード (PC 全レイアウト / モバイルの max・1・2 カラム)
+  // -----------------------------------------------------------------
   return (
     <Link
       href={detailPath}
-      className={`mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${autoSpan}`}
+      className="mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
-      {forceBannerSlot && (
-        <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-28 sm:h-36 rounded-t-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 via-slate-800 to-slate-900">
+      {layout === 'max' && (
+        // 「最大」: ヘッダー画像を大きく表示 (2026-08-27: h-28/sm:h-36 →
+        // h-44/sm:h-60 に拡大。Card 全体がヘッダー主導のレイアウトになる)
+        <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-44 sm:h-60 rounded-t-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 via-slate-800 to-slate-900">
           {showBanner && hit.featured_gallery ? (
             <Image
               src={hit.featured_gallery}
@@ -120,9 +178,9 @@ export const ModCard: React.FC<ModCardProps> = ({
               <Image
                 src={hit.icon_url}
                 alt=""
-                width={72}
-                height={72}
-                className="w-16 h-16 rounded-2xl object-contain bg-slate-900/50 p-1 shadow-lg"
+                width={96}
+                height={96}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-contain bg-slate-900/50 p-1 shadow-lg"
                 onError={() => setIconFailed(true)}
                 unoptimized={shouldUnoptimizeImage(hit.icon_url)}
               />
@@ -132,30 +190,6 @@ export const ModCard: React.FC<ModCardProps> = ({
               <i className="fa-solid fa-image text-3xl opacity-40" aria-hidden />
             </div>
           )}
-        </div>
-      )}
-      {!forceBannerSlot && showBanner && hit.featured_gallery && (
-        <div
-          className={`relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 rounded-t-2xl overflow-hidden ${
-            layout === 'auto' ? autoBannerHeight : 'h-20'
-          }`}
-        >
-          <Image
-            src={hit.featured_gallery}
-            alt=""
-            fill
-            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover"
-            unoptimized={shouldUnoptimizeImage(hit.featured_gallery)}
-            onError={() => setBannerFailed(true)}
-            onLoad={(e) => {
-              if (layout !== 'auto') return;
-              const img = e.currentTarget;
-              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                setBannerAspect(img.naturalWidth / img.naturalHeight);
-              }
-            }}
-          />
         </div>
       )}
 
@@ -210,30 +244,27 @@ export const ModCard: React.FC<ModCardProps> = ({
           {displayCategory}
         </span>
 
+        {/* 追加状態でカード寸法が変わらないよう、両ボタンを同寸 (h-9・min-w) に統一 */}
         {isAdded ? (
           <button
             type="button"
-            onClick={(e) => {
-              stopLinkNav(e);
-              onToggleMod(hit.project_id, e);
-            }}
-            title="タップで削除"
-            className="btn-hover-effect px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-xs font-bold hover:bg-red-500/20 hover:theme-text-red hover:border-red-500/40 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            onClick={handleToggle}
+            title="タップでプロファイルから削除"
+            aria-label="追加済み。タップでプロファイルから削除"
+            className="btn-hover-effect h-9 min-w-[7rem] px-3 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-xs font-bold hover:bg-red-500/20 hover:theme-text-red hover:border-red-500/40 transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <i className="fa-solid fa-check"></i>
+            <i className="fa-solid fa-check" aria-hidden />
             <span>追加済み</span>
-            <span className="ml-0.5 text-[10px] text-red-500 opacity-70 border-l border-emerald-500/40 pl-1.5"> ✕ 削除</span>
           </button>
         ) : (
           <button
             type="button"
-            onClick={(e) => {
-              stopLinkNav(e);
-              onToggleMod(hit.project_id, e);
-            }}
-            className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-xs font-bold transition flex items-center gap-1 shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+            onClick={handleToggle}
+            aria-label="プロファイルに追加"
+            className="btn-hover-effect h-9 min-w-[7rem] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            <i className="fa-solid fa-plus"></i> 追加
+            <i className="fa-solid fa-plus" aria-hidden />
+            <span>追加</span>
           </button>
         )}
       </div>

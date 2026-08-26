@@ -371,7 +371,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる)
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md touch-action-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-action-none"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

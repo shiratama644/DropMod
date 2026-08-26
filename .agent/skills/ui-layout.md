@@ -24,12 +24,26 @@
      アクセシビリティを担保する (E2E も aria-label 経由で参照できる)。
 
 適用済み (2026-08-27): `ModDetailModalShell` フッター (閉じる/詳細/DL/追加)、
-`ModDetailPageView` ヒーロー CTA (Modrinth/ダウンロード/追加)。
+`ModDetailPageView` ヒーロー CTA (Modrinth/ダウンロード/追加)、`ModCard` の
+追加/追加済みボタン (両状態で同寸 h-9・min-w-[7rem] に統一 = 追加時にカード寸法が変わらない)。
+
+## 検索一覧の表示形式 (2026-08-27 改定)
+
+- 選択肢は **最大 (ヘッダー画像あり) / 1 / 2 / 3 カラム** の 4 つ。
+  **「自動」(アスペクト比再配置) は廃止** (`autoCardSpanClass` 等も削除済み)。
+- **2 / 3 カラムはモバイルでもそのまま適用** (grid クラスに sm: prefix を付けない。
+  Modrinth と同じ挙動)。旧実装は `sm:grid-cols-2` のためモバイルで常に 1 カラムになる
+  バグがあった。
+- **モバイルの 3 カラムは compact カード** (`ModCard` が `useIsMobile()` で切替):
+  aspect-square アイコン + line-clamp-2 タイトル + DL 数 + 全幅 h-7 追加ボタンの
+  最小構成。PC 版カードの縮小ではなく独自 UI (スマホでも 3 カラムするため)。
+- 「最大」のヘッダー画像は `h-44 sm:h-60` で大きく表示。
+- `hooks/useMediaQuery.ts`: SSR/jsom-safe な media query hook (`useIsMobile`)。
 
 ## ガラス表現 (glass-panel) の方針 (2026-08-27)
 
 - **`.glass-panel` / dropdown に `backdrop-filter` は使わない**。GPU のない環境 (PRoot / software rendering・低スペック端末) で再合成のたびに「白く一瞬光る」フラッシュが起きるため削除済み。`--bg-panel` の不透明度 (dark 0.92 / light 0.96) で視覚を維持。
-- モーダルのオーバーレイ (`backdrop-blur-md` / `backdrop-blur-[2px]`, 計 9 ファイル) は現状残している (モーダル表示中しか合成されないため)。フラッシュ報告が続くなら同じ理由で削除候補。
+- **`backdrop-filter` / `backdrop-blur-*` は全廃済み (2026-08-27)**。モーダルオーバーレイ・BottomSheet・OfflineBanner からも削除。GPU のない環境での白フラッシュは完全に解消するまで残っていたため。新規 UI でも使わないこと。
 
 ## AppShell の描画分岐（`components/AppShell.tsx`）
 

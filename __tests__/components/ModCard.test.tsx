@@ -5,7 +5,7 @@
  * unoptimized=false でも jsdom 上で <img> にレンダーされる。
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ModCard } from '@/components/ModCard';
@@ -174,20 +174,43 @@ describe('ModCard', () => {
     expect(link.getAttribute('href')).toBe('/discover/mods/proj-1');
   });
 
-  it('自動レイアウトで横長バナーは sm:col-span-2 を付ける', () => {
+  it('最大レイアウトはヘッダー画像スロットを大きく表示する (h-44/sm:h-60)', () => {
     const { container } = render(
       <ModCard
         hit={{
           ...baseHit,
-          description: 'x'.repeat(200),
           featured_gallery: 'https://example.com/banner.png'
         }}
         profile={makeProfile()}
         onToggleMod={vi.fn()}
-        layout="auto"
+        layout="max"
       />
     );
-    expect(container.querySelector('a')?.className).toContain('sm:col-span-2');
+    const banner = container.querySelector('a')?.firstElementChild;
+    expect(banner?.className).toContain('h-44');
+    expect(banner?.className).toContain('sm:h-60');
+  });
+
+  it('追加済みと未追加でボタン寸法が同一 (h-9 + min-w-[7rem])', () => {
+    const { rerender } = render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
+    );
+    const addButton = screen.getByRole('button', { name: /追加/ });
+    expect(addButton.className).toContain('h-9');
+    expect(addButton.className).toContain('min-w-[7rem]');
+
+    rerender(
+      <ModCard
+        hit={baseHit}
+        profile={makeProfile([
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
+        ])}
+        onToggleMod={vi.fn()}
+      />
+    );
+    const addedButton = screen.getByRole('button', { name: /追加済み/ });
+    expect(addedButton.className).toContain('h-9');
+    expect(addedButton.className).toContain('min-w-[7rem]');
   });
 
   it('slug 一致でも追加済み判定される', () => {
@@ -201,5 +224,77 @@ describe('ModCard', () => {
       />
     );
     expect(screen.getByRole('button', { name: /追加済み/ })).toBeInTheDocument();
+  });
+});
+
+describe('ModCard: モバイル 3 カラム compact カード (Phase 11 UI)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function renderMobile(layout: '3' | '2' = '3') {
+    // max-width: 767px に一致する matchMedia を注入
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    return render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout={layout} />
+    );
+  }
+
+  it('3 カラム + モバイルは compact カード (aspect-square アイコン + 小タイトル)', () => {
+    const { container } = renderMobile('3');
+    const card = container.querySelector('a');
+    // compact カードのクラス (rounded-xl p-1.5)
+    expect(card?.className).toContain('rounded-xl');
+    expect(card?.className).toContain('p-1.5');
+    expect(card?.className).not.toContain('justify-between');
+    // アイコン領域は aspect-square
+    expect(card?.querySelector('div')?.className).toContain('aspect-square');
+    // 標準カードのフッター (カテゴリバッジ) は出さない
+    expect(screen.queryByText('軽量化')).toBeNull();
+  });
+
+  it('2 カラム + モバイルは標準カードのまま', () => {
+    const { container } = renderMobile('2');
+    const card = container.querySelector('a');
+    expect(card?.className).not.toContain('aspect-square');
+    expect(card?.className).toContain('justify-between');
+  });
+
+  it('compact カードの 追加 ボタンは全幅・高さ h-7 でトグルが発火する', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={onToggle} layout="3" />
+    );
+    const addButton = screen.getByRole('button', { name: 'プロファイルに追加' });
+    expect(addButton.className).toContain('w-full');
+    expect(addButton.className).toContain('h-7');
+    await user.click(addButton);
+    expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 });

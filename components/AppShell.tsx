@@ -249,14 +249,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       // SSR プロファイル情報を保持する cookie も削除。
       // これが無いと reload 後の SSR で旧プロファイル用 Mod カードが並び、
       // ユーザーには「初期化バグ」に見える。
-      // 書き込み側と同じく Secure フラグを付けて削除リクエスト
-      // (localhost では自動的に無視される)
-      // Phase 10-P5 (noDocumentCookie): SSR 用 active profile cookie の削除。
-      //   cookieStore API は Safari 未対応 (2026 時点 experimental) なので直接操作。
+      // 書き込み側と同じく、アクセス protocol に応じて Secure フラグを付けて
+      // 削除リクエスト (http LAN IP では Secure 付きの書き込み/削除が
+      // 黙って拒否されるため条件分岐。localhost は Secure 要件から除外される)
+      // Phase 10-P5 (noDocumentCookie): cookieStore API は Safari 未対応
+      // (2026 時点 experimental) なので document.cookie 直接操作。
+      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 cookie 削除 (max-age=0)
-      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
-      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC cookie 削除
-      document.cookie = 'dropmod_theme=; path=/; max-age=0; SameSite=Lax; Secure';
+      document.cookie = `dropmod_active_profile=; path=/; max-age=0; SameSite=Lax${secure}`;
+      // biome-ignore lint/suspicious/noDocumentCookie: theme cookie 削除 (max-age=0)
+      document.cookie = `dropmod_theme=; path=/; max-age=0; SameSite=Lax${secure}`;
     } catch (e) {
       console.warn('[DropMod] データ初期化中に例外:', e);
     }

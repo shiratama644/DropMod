@@ -34,6 +34,20 @@ import { queryKeys } from '@/lib/query/keys';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 
+
+/**
+ * cookie 文字列の Secure フラグを現在のアクセス protocol に応じて組み立てる。
+ * Secure cookie は http (localhost 以外) で「黙って拒否」されるため、
+ * LAN 内の http://192.168.x.x 等からアクセスした場合に theme /
+ * active_profile cookie が保存されず、リロードのたび theme が
+ * 既定 (dark) へ戻るバグの原因になっていた (2026-08-27 修正)。
+ * https (Vercel 本番) では Secure を付与し続ける。
+ */
+function cookieSecureSuffix(): string {
+  if (typeof window === 'undefined') return '; Secure';
+  return window.location.protocol === 'https:' ? '; Secure' : '';
+}
+
 // B4 修正: hydration 中の transient fallback は module-level 定数に固定。
 //   render のたびに新規オブジェクトを生成しないことで、AppShell register
 //   useEffect の deps 比較で「変化なし」判定され、無駄な register/unregister
@@ -320,7 +334,7 @@ export const useProfiles = (
       //   読むため client 側 cookie 書き込みが必須。cookieStore API は
       //   Safari 未対応 (2026 時点 experimental) なので document.cookie 直接操作。
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 active profile cookie 書き込み (cookieStore は Safari 未対応)
-      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax${cookieSecureSuffix()}`;
     } catch (e) {
       console.warn('[DropMod] cookie 書き込みに失敗:', e);
     }
@@ -331,7 +345,7 @@ export const useProfiles = (
     if (!hasHydrated) return;
     try {
       // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC 用 cookie (cookieStore は Safari 未対応)
-      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Lax${cookieSecureSuffix()}`;
     } catch (e) {
       console.warn('[DropMod] theme cookie 書き込みに失敗:', e);
     }

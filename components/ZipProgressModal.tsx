@@ -30,7 +30,7 @@ export const ZipProgressModal: React.FC<ZipProgressModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
     >
       <div

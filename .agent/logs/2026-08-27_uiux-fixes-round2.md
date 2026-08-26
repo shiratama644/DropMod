@@ -37,3 +37,15 @@
 1. ユーザー環境で (a) 白フラッシュ解消、(b) ライトテーマが維持される、(c) モバイル 2/3 カラムが機能、(d) compact カードの見た目を確認。
 2. CI で E2E green 確認 (mod-detail-modal spec は aria-label 互換で影響なし、mods-page spec は表示形式「自動」参照が無いか要確認)。
 3. 引き続き Modrinth 体験に近づける改善 (検索フィルタ UI 等) は要望に応じて。
+
+---
+
+## 追記: タグ折り返し + コントラスト微調整 (同日第 3 弾)
+
+| 変更 | 内容 |
+| :--- | :--- |
+| `components/ModCard.tsx` | カテゴリバッジに `whitespace-nowrap shrink-0` + `px-2 py-0.5 text-[10px]`。「ライブラリ」等の日本語タグが 1 カラム幅カードで縦に崩れるのを解消 (常に横一列) |
+| `app/globals.css` | `--text-muted` (説明文のグレー): **dark のみ #94a3b8 → #a9b7c9** (実効背景比 5.88:1 → 7.40:1)。light は #64748b のまま (4.55:1 で WCAG AA 限界ギリギりのため、明るくすると 4.5:1 を割る) |
+
+検証: typecheck 0 / biome 0 / test:unit 550 passed / build exit 0。
+コンントラストは Python で WCAG 比を計算して決定 (dark 改善・light AA 維持)。

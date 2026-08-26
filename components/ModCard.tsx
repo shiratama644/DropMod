@@ -240,7 +240,7 @@ export const ModCard: React.FC<ModCardProps> = ({
         className="pt-2 border-t border-slate-500/10 flex items-center justify-between gap-2"
         onClick={stopLinkNav}
       >
-        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold theme-badge capitalize">
+        <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold theme-badge capitalize whitespace-nowrap shrink-0">
           {displayCategory}
         </span>
 

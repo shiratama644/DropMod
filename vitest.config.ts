@@ -64,6 +64,7 @@ export default defineConfig({
         'app/**/default.tsx',
         'app/**/page.tsx',            // Server Components: RSC 統合は E2E で
         'app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
+        'app/**/layout.tsx',          // nested layout も同様 (RSC wrapper = E2E 担保。Phase 10.5-A)
         'types.ts',                   // 純粋な型定義 (JS 実体なし)
 
         // ---- Large orchestrator Client Components (E2E で担保) ----

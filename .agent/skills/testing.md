@@ -16,10 +16,11 @@
   - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
-- 現状: **399 tests / 45 files pass**。
-- ⚠ **coverage threshold 違反あり（Phase 10.5 で対応中）**: vitest 4 の V8 coverage は AST ベース再マッピングに変更され branch/function 数値が低下（より正確）。加えて Phase 10-P1 / ルーティング再設計で追加された未テストファイル（landing/*, BottomSheet 系, DesktopSidebar 等）の影響も元からある。CI は `pnpm test:coverage` を gate にしているため要対応。
-  - **Phase 10.5-A 完了 (2026-08-26)**: hooks branches 61.63% / global branches 61.54% まで回復し解消。
-  - 残: components stmt/lines/functions（→ 10.5-B）と lib/store branches 76.05%（→ 10.5-C）。計画は `docs/planning/PHASE10_5_PLAN.md`。
+- 現状: **457 tests / 55 files pass**。
+- ⚠ **coverage threshold 違反 (Phase 10.5 対応中、残 1 件)**: vitest 4 の V8 coverage は AST ベース再マッピングに変更され branch/function 数値が低下（より正確）。
+  - **Phase 10.5-A 完了**: hooks branches 61.63% / global branches 61.54% まで回復し解消。
+  - **Phase 10.5-B 完了**: components stmt 73.12 / br 67.7 / fn 76.51 / lines 75.17 まで回復し解消（399 → 457 tests）。
+  - 残: lib/store branches 76.05% < 80%（→ 10.5-C、confirm.ts cleanup 分岐）。計画は `docs/planning/PHASE10_5_PLAN.md`。
 
 ## jsdom 未実装 API の stub 基盤（Phase 10.5-A）
 
@@ -28,8 +29,18 @@
   - `stubIntersectionObserver()` — `io.trigger(isIntersecting)` で callback を手動発火。`instances[n].options` / `observe` / `disconnect` で呼び出し検証。
   - `stubRequestAnimationFrame('sync' | 'queued')` — sync は即時実行、queued は `flush()` まで保留（rAF throttle の検証用）。
   - `stubScrollY(initial)` — `window.scrollY` は getter のため `defineProperty` で差し替え。
+- `__tests__/test-utils/navigation.ts`: `vi.mock('next/navigation', async () => (await import(...)).nextNavigationModuleMock())` の形で usePathname / useRouter を差し替え。`navigationMock.setPathname('/discover/mods')` で切替。
 - **vi.fn 実装は arrow 不可**: vitest 4 は `new` で呼ばれた mock を construct するため、実装は function 宣言/式にする（arrow は `not a constructor` で落ちる）。biome の useArrowFunction を避けるには function 宣言を分離して `vi.fn(宣言名)` に渡す。
 - anime.js は `vi.mock('animejs', () => ({...}))` で差し替え（dynamic import も intercept される）。複雑な実型と切り離すため `vi.hoisted` で mock 変数を定義して factory から返す。
+
+## ⚠ vitest 4 の mocker 競合: 並行 dynamic import に mock が当たらない（2026-08-26 実証）
+
+- **現象**: 同一モジュールから `await import('animejs')` を**並行**に走らせると、1 本目だけ vi.mock の mock が返り、**2 本目以降は実モジュールが返る**（実測: `true,false,false`）。逐次（await を挟む）なら全て mock。
+- **影響**: `AnimatedStats` のように useCountUp を同時に複数 render して IO を一斉 trigger すると、一部カードだけ animate が呼ばれない。また mock でない実 anime.js の import は解決が遅く、テスト終了後に continuation が走って unhandled rejection（matchMedia 削除後など）になることも。
+- **回避策**:
+  1. IO instance を **1 つずつ `await act(async () => instance.trigger(true))` で逐次 trigger** する（AnimatedStats.test.tsx 参照）。
+  2. matchMedia stub などは afterEach で削除せず **afterAll で復帰** する（late continuation 対策。MenuBottomSheet.test.tsx 参照）。
+- 上流 issue は未特定（2026-08-26 時点で検索しても該当なし。vitest 4 の Module Runner 移行に起因する可能性）。vitest アップグレード時に再検証の価値あり。
 
 ## msw（Network レベル mock）
 

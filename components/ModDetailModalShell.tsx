@@ -289,7 +289,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const latestFile = pickPrimaryFile(latestVersion);
 
   const isAdded = currentProfile.mods.some(
-    (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+    (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
   );
 
   // -------- 内側カード (両バリアント共通) --------

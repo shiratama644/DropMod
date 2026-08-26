@@ -41,7 +41,7 @@ export const useDependencyCheck = (currentProfile: Profile) => {
     setChecking(true);
     try {
       const versionIds = profile.mods
-        .map((m) => m.selectedVersionId)
+        .map((m) => m.versionId)
         .filter((id) => id && id !== 'latest') as string[];
 
       // B23 修正: versionIds が空 = 全 mod が 'latest' を選択している状態。
@@ -84,16 +84,16 @@ export const useDependencyCheck = (currentProfile: Profile) => {
 
       const installedProjectSet = new Set<string>();
       profile.mods.forEach((m) => {
-        if (m.id) installedProjectSet.add(m.id);
+        installedProjectSet.add(m.projectId);
         if (m.slug) installedProjectSet.add(m.slug);
       });
 
       // outer break は明示的にラベルで示す (以前は inner break のみで
       // outer は `if (warning) break;` に依存していて可読性が低かった)
-      // mod.selectedVersionId! の non-null assertion → 明示的 undefined チェック
+      // mod.versionId! の non-null assertion → 明示的 undefined チェック
       let warning = false;
       outer: for (const mod of profile.mods) {
-        const vData = mod.selectedVersionId ? versionMap.get(mod.selectedVersionId) : undefined;
+        const vData = mod.versionId ? versionMap.get(mod.versionId) : undefined;
         if (vData?.dependencies) {
           for (const dep of vData.dependencies) {
             if (
@@ -131,13 +131,13 @@ export const useDependencyCheck = (currentProfile: Profile) => {
   //     が変化したときだけ発火。連続変更は DEP_CHECK_DEBOUNCE_MS でまとめる。
   // ----------------------------------------------------------------------
   const modsSignature = currentProfile.mods
-    .map((m) => `${m.id || m.slug || '?'}@${m.selectedVersionId || 'latest'}`)
+    .map((m) => `${m.projectId || m.slug || '?'}@${m.versionId || 'latest'}`)
     .join(',');
 
   // Phase 10-P5 (useExhaustiveDependencies): 意図的な冗長依存パターン。
   //   effect 本体は runBackgroundDepCheck() を呼ぶだけで、4 依存全部を
   //   Biome は「未参照」と判定する。しかし runBackgroundDepCheck 内部で
-  //   currentProfile 全体を capture 参照するため、mcVersion / loader /
+  //   currentProfile 全体を capture 参照するため、environment.mcVersion / loader /
   //   modsSignature の変化をトリガーに再実行させる必要がある
   //   (signature 化で mods 内容 diff を検知)。
   // biome-ignore lint/correctness/useExhaustiveDependencies: プロファイル構成変化トリガー (詳細は上コメント)
@@ -146,7 +146,12 @@ export const useDependencyCheck = (currentProfile: Profile) => {
       runBackgroundDepCheck();
     }, DEP_CHECK_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [currentProfile.mcVersion, currentProfile.loader, modsSignature, runBackgroundDepCheck]);
+  }, [
+    currentProfile.environment.mcVersion,
+    currentProfile.environment.loader,
+    modsSignature,
+    runBackgroundDepCheck
+  ]);
 
   return {
     hasDepWarning,

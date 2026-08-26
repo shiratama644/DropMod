@@ -21,8 +21,7 @@ function makeProfile(mods: Profile['mods']): Profile {
   return {
     id: 'p1',
     name: 'Test Profile',
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods
   };
@@ -91,12 +90,13 @@ describe('useZipExport', () => {
     const showToast = vi.fn();
     const profile = makeProfile([
       {
-        id: 'proj-a',
-        title: 'ModA',
+        projectId: 'proj-a',
+        name: 'ModA',
+        type: 'mod',
         description: '',
         fileUrl: 'https://cdn.modrinth.com/data/mock/mod.jar',
         filename: 'moda-1.0.jar',
-        selectedVersionNumber: '1.0.0'
+        versionNumber: '1.0.0'
       }
     ]);
     const { result } = renderHook(() => useZipExport(profile, showToast));
@@ -122,11 +122,12 @@ describe('useZipExport', () => {
     const showToast = vi.fn();
     const profile = makeProfile([
       {
-        id: 'proj-nofile',
-        title: 'NoFileMod',
+        projectId: 'proj-nofile',
+        name: 'NoFileMod',
+        type: 'mod',
         description: '',
         fileUrl: undefined,
-        selectedVersionNumber: '1.0.0'
+        versionNumber: '1.0.0'
       }
     ]);
     const { result } = renderHook(() => useZipExport(profile, showToast));
@@ -166,8 +167,9 @@ describe('useZipExport', () => {
     const showToast = vi.fn();
     const profile = makeProfile([
       {
-        id: 'p-slow',
-        title: 'Slow',
+        projectId: 'p-slow',
+        name: 'Slow',
+        type: 'mod',
         description: '',
         fileUrl: 'https://cdn.modrinth.com/data/mock/slow.jar',
         filename: 'slow.jar'
@@ -259,8 +261,9 @@ describe('useZipExport', () => {
     // 別 test で 0-mod のケースは扱っているので、ここでは直接 profile を渡す
     const profileWithMods = makeProfile([
       {
-        id: 'p-cancel',
-        title: 'CancelTest',
+        projectId: 'p-cancel',
+        name: 'CancelTest',
+        type: 'mod',
         description: '',
         fileUrl: 'https://cdn.modrinth.com/data/cancel/mod.jar',
         filename: 'cancel.jar'

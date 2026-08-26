@@ -6,35 +6,93 @@ export type ThemeMode = 'dark' | 'light';
 //   - 'settings' → /settings  (変わらず)
 export type TabName = 'home' | 'mods' | 'profile' | 'settings';
 
-/** Profile 内コンテンツの種別 (Phase 11 の 3 カテゴリ) */
+/** Profile 内コンテンツの種別 (Phase 11 の 3 カテゴリ)
+ *
+ * ※ Modrinth API / 検索ドメインの ProjectType (4値: mod/modpack/resourcepack/shader、
+ *   lib/constants/search.ts) とは**意図的に分離**している。modpack は Profile を
+ *   構成する上位概念 (Phase 12 の modpackSource) であり、Profile 内の実体ファイル
+ *   カテゴリではないため。
+ */
 export type ContentCategory = 'mod' | 'resourcepack' | 'shader';
 
-export interface ModItem {
-  id: string;
+/** Profile 環境のローダー (Phase 11: environment.loader)。不正値は 'Fabric' に正規化 */
+export type ProfileLoader = 'Fabric' | 'Forge' | 'NeoForge' | 'Quilt' | 'Vanilla';
+
+/**
+ * ProjectItem (Phase 11-A: 旧 ModItem を改名・整理した 3 カテゴリ共通の flat 型)。
+ *
+ * 旧フィールドからのリネーム (Dexie v2 migration で既存データを一括変換):
+ *   id → projectId / title → name / projectType? → type (必須化) /
+ *   selectedVersionId → versionId / selectedVersionNumber → versionNumber
+ */
+export interface ProjectItem {
+  /** Modrinth project ID (旧: id) */
+  projectId: string;
+  /** 選択中の Modrinth version ID。未設定 = 最新安定版扱い (旧: selectedVersionId) */
+  versionId?: string;
+  versionNumber?: string; // (旧: selectedVersionNumber)
+  /** 表示名 (旧: title) */
+  name: string;
+  /** コンテンツ分類 (旧: projectType? を必須化。取りこぼしを型で検出) */
+  type: ContentCategory;
+
+  // ---- 既存フィールドは維持 ----
   slug?: string;
-  title: string;
   description?: string;
   icon_url?: string;
   author?: string;
   category?: string;
-  /** 未指定は 'mod'。Resource Pack / Shader 追加時に埋める */
-  projectType?: ContentCategory;
-  selectedVersionId?: string;
-  selectedVersionNumber?: string;
   versionType?: string;
   fileUrl?: string;
   filename?: string;
+
+  // ---- Phase 11 追加 ----
+  /** Import 由来の provider。未設定 = 従来の手動追加 ('modrinth' 扱い) */
+  provider?: 'modrinth' | 'curseforge' | 'unknown';
+  /** ローカルファイルの実体情報 (Import 由来のみ設定。Phase 12 の Sync/Backup で再利用) */
+  artifact?: {
+    sha1: string;
+    /** ルートからの相対パス (例: 'mods/sodium-fabric-0.6.0.jar') */
+    path: string;
+    size: number;
+  };
+}
+
+/**
+ * Unknown File (Phase 11): Modrinth 照合できなかったローカルファイル。
+ * category は確定できないため location で記録する。
+ */
+export interface UnknownFile {
+  id: string;
+  /** どのディレクトリで見つかったか */
+  location: 'mods' | 'resourcepacks' | 'shaderpacks';
+  filename: string;
+  /** ルートからの相対パス (例: 'mods/some-custom.jar') */
+  path: string;
+  sha1: string;
+  size: number;
+  discoveredAt: number;
 }
 
 export interface Profile {
   id: string;
   name: string;
-  mcVersion: string;
-  loader: string;
-  /** Fabric / Quilt / Forge / NeoForge のローダーバージョン (任意) */
-  loaderVersion?: string;
   description?: string;
-  mods: ModItem[];
+
+  /** 環境情報 (Phase 11: 旧 flat な mcVersion / loader / loaderVersion を集約) */
+  environment: {
+    mcVersion: string;
+    loader: ProfileLoader;
+    loaderVersion?: string;
+  };
+
+  /** 3 カテゴリ (modpack はカテゴリではない)。resourcepacks/shaderpacks は既存 Profile は未設定で OK */
+  mods: ProjectItem[];
+  resourcepacks?: ProjectItem[];
+  shaderpacks?: ProjectItem[];
+  unknownFiles?: UnknownFile[];
+
+  // linkedSource (フォルダ紐付け) / modpackSource は Phase 12 で追加
 }
 
 export interface ModrinthHit {
@@ -175,10 +233,13 @@ export interface DropdownOption {
 }
 
 export interface DependencyCheckData {
-  missingRequired: Array<{ sourceMod: ModItem; targetProjectId: string }>;
-  conflicts: Array<{ sourceMod: ModItem; targetMod: ModItem | { title: string; id: string } }>;
-  optionalAvailable: Array<{ sourceMod: ModItem; targetProjectId: string }>;
-  verifiedOK: Array<{ sourceMod: ModItem; message: string }>;
+  missingRequired: Array<{ sourceMod: ProjectItem; targetProjectId: string }>;
+  conflicts: Array<{
+    sourceMod: ProjectItem;
+    targetMod: ProjectItem | { name: string; projectId: string };
+  }>;
+  optionalAvailable: Array<{ sourceMod: ProjectItem; targetProjectId: string }>;
+  verifiedOK: Array<{ sourceMod: ProjectItem; message: string }>;
   depProjectMap: Map<string, ModrinthProject>;
 }
 

@@ -29,8 +29,7 @@ function makeProfile(mods: Profile['mods'] = []): Profile {
   return {
     id: 'p1',
     name: 'Test',
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods
   };
@@ -121,7 +120,7 @@ describe('ModCard', () => {
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'proj-1', title: 'Sodium', description: '' }
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={vi.fn()}
       />
@@ -146,7 +145,7 @@ describe('ModCard', () => {
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'proj-1', title: 'Sodium', description: '' }
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={onToggle}
       />
@@ -196,7 +195,7 @@ describe('ModCard', () => {
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'other-id', slug: 'sodium', title: 'Sodium', description: '' }
+          { projectId: 'other-id', slug: 'sodium', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={vi.fn()}
       />

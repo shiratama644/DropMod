@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useRouter } from 'next/navigation';
-import type { ContentCategory, DropdownOption, ModItem, ModrinthVersion } from '@/types';
+import type { ContentCategory, DropdownOption, ProjectItem, ModrinthVersion } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
@@ -85,9 +85,9 @@ export const ModsPageClient: React.FC = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: プロファイル切り替え検知トリガーとして意図的
   useEffect(() => {
     setModVersionsMap(new Map());
-  }, [profile.id, profile.mcVersion, profile.loader]);
+  }, [profile.id, profile.environment.mcVersion, profile.environment.loader]);
 
-  const modIdsSignature = profile.mods.map((m) => m.id).join(',');
+  const modIdsSignature = profile.mods.map((m) => m.projectId).join(',');
 
   // Phase 10-P5 (useExhaustiveDependencies): 意図的な複合パターン
   //   1. modIdsSignature: mods 配列の内容変化を string 化で diff 検知
@@ -103,10 +103,10 @@ export const ModsPageClient: React.FC = () => {
   useEffect(() => {
     let active = true;
     const missingMods = profile.mods.filter(
-      (mod) => mod.id && !modVersionsMap.has(mod.id)
+      (mod) => mod.projectId && !modVersionsMap.has(mod.projectId)
     );
     if (missingMods.length === 0) {
-      const currentIds = new Set(profile.mods.map((m) => m.id));
+      const currentIds = new Set(profile.mods.map((m) => m.projectId));
       let needsClean = false;
       modVersionsMap.forEach((_v, k) => {
         if (!currentIds.has(k)) needsClean = true;
@@ -125,10 +125,13 @@ export const ModsPageClient: React.FC = () => {
       const results = await Promise.all(
         missingMods.map(async (mod) => {
           try {
-            const versionRes = await fetchStableModVersion(mod.id, profile);
-            return { id: mod.id, versions: versionRes?.allVersions };
+            const versionRes = await fetchStableModVersion(mod.projectId, {
+              loader: profile.environment.loader,
+              mcVersion: profile.environment.mcVersion
+            });
+            return { id: mod.projectId, versions: versionRes?.allVersions };
           } catch {
-            return { id: mod.id, versions: undefined };
+            return { id: mod.projectId, versions: undefined };
           }
         })
       );
@@ -138,7 +141,7 @@ export const ModsPageClient: React.FC = () => {
         results.forEach(({ id, versions }) => {
           if (versions && versions.length > 0) next.set(id, versions);
         });
-        const currentIds = new Set(profile.mods.map((m) => m.id));
+        const currentIds = new Set(profile.mods.map((m) => m.projectId));
         Array.from(next.keys()).forEach((k) => {
           if (!currentIds.has(k)) next.delete(k);
         });
@@ -152,11 +155,11 @@ export const ModsPageClient: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [modIdsSignature, profile.mcVersion, profile.loader]);
+  }, [modIdsSignature, profile.environment.mcVersion, profile.environment.loader]);
 
-  const handleDirectJarDownload = useCallback(async (mod: ModItem) => {
+  const handleDirectJarDownload = useCallback(async (mod: ProjectItem) => {
     if (!mod.fileUrl) return;
-    const filename = mod.filename || `${mod.slug || mod.id}.jar`;
+    const filename = mod.filename || `${mod.slug || mod.projectId}.jar`;
     const result = await downloadAsBlob(mod.fileUrl, filename);
     if (!result.ok && result.error !== 'Aborted') {
       console.warn('[DropMod] jar direct download failed:', result);
@@ -164,16 +167,16 @@ export const ModsPageClient: React.FC = () => {
   }, []);
 
   const buildVersionOptions = useCallback(
-    (mod: ModItem, availableVersions: ModrinthVersion[]): DropdownOption[] => {
+    (mod: ProjectItem, availableVersions: ModrinthVersion[]): DropdownOption[] => {
       const opts = availableVersions.map((v) =>
         versionDropdownOption(v.version_number, v.id, v.version_type)
       );
-      const currentId = mod.selectedVersionId || '';
+      const currentId = mod.versionId || '';
       const hasCurrent = opts.some((o) => o.value === currentId);
       if (currentId && !hasCurrent) {
         opts.unshift(
           versionDropdownOption(
-            mod.selectedVersionNumber || 'カスタム',
+            mod.versionNumber || 'カスタム',
             currentId,
             mod.versionType
           )
@@ -181,7 +184,7 @@ export const ModsPageClient: React.FC = () => {
       }
       if (opts.length === 0) {
         opts.push({
-          label: mod.selectedVersionNumber || '最新安定版',
+          label: mod.versionNumber || '最新安定版',
           value: currentId || 'latest'
         });
       }
@@ -203,7 +206,7 @@ export const ModsPageClient: React.FC = () => {
     return profile.mods.filter((mod) => {
       if (contentCategoryOf(mod) !== activeTab) return false;
       if (!q) return true;
-      const hay = `${mod.title} ${mod.author ?? ''} ${mod.filename ?? ''} ${mod.slug ?? ''}`.toLowerCase();
+      const hay = `${mod.name} ${mod.author ?? ''} ${mod.filename ?? ''} ${mod.slug ?? ''}`.toLowerCase();
       return hay.includes(q);
     });
   }, [profile.mods, activeTab, listQuery]);
@@ -222,7 +225,7 @@ export const ModsPageClient: React.FC = () => {
     });
   }, []);
 
-  const visibleIds = useMemo(() => visibleMods.map((m) => m.id), [visibleMods]);
+  const visibleIds = useMemo(() => visibleMods.map((m) => m.projectId), [visibleMods]);
   const selectedVisibleCount = useMemo(
     () => visibleIds.filter((id) => selectedIds.has(id)).length,
     [visibleIds, selectedIds]
@@ -254,11 +257,11 @@ export const ModsPageClient: React.FC = () => {
   }, [visibleIds, selectedIds, handleRemoveMods]);
 
   const handleOpenModDetail = useCallback(
-    (mod: ModItem) => {
+    (mod: ProjectItem) => {
       // Phase 9-F: /mod/[slug] → /mods/[slug] (URL 再設計)
       // ⚠️ /profile ページからの遷移は Intercepting Route の scope 外 (別セグメント)
       //    なので通常のフルページ遷移になる。Intercepting Route は /mods 一覧からのみ発火。
-      router.push(detailPathFromProject(mod.projectType, mod.slug || mod.id));
+      router.push(detailPathFromProject(mod.type, mod.slug || mod.projectId));
     },
     [router]
   );
@@ -440,14 +443,14 @@ function EmptyState({
 }
 
 interface RowProps {
-  items: ModItem[];
+  items: ProjectItem[];
   modVersionsMap: Map<string, ModrinthVersion[]>;
   buildVersionOptions: (
-    mod: ModItem,
+    mod: ProjectItem,
     availableVersions: ModrinthVersion[]
   ) => DropdownOption[];
-  onOpenDetail: (mod: ModItem) => void;
-  onDirectDownload: (mod: ModItem) => void;
+  onOpenDetail: (mod: ProjectItem) => void;
+  onDirectDownload: (mod: ProjectItem) => void;
   onToggleMod: (
     id: string,
     e?: React.MouseEvent,
@@ -497,16 +500,16 @@ function DesktopTable({
         </thead>
         <tbody className="divide-y divide-slate-500/10 text-sm">
           {items.map((mod) => {
-            const availableVersions = modVersionsMap.get(mod.id) || [];
+            const availableVersions = modVersionsMap.get(mod.projectId) || [];
             const versionOptions = buildVersionOptions(mod, availableVersions);
             return (
-              <tr key={mod.id} className="hover:bg-slate-500/5 transition">
+              <tr key={mod.projectId} className="hover:bg-slate-500/5 transition">
                 <td className="py-3.5 pl-4 pr-1">
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(mod.id)}
-                    onChange={() => onToggleSelected(mod.id)}
-                    aria-label={`${mod.title} を選択`}
+                    checked={selectedIds.has(mod.projectId)}
+                    onChange={() => onToggleSelected(mod.projectId)}
+                    aria-label={`${mod.name} を選択`}
                     className="size-4 accent-emerald-600"
                   />
                 </td>
@@ -523,7 +526,7 @@ function DesktopTable({
                       // <img> → next/image (WebP 自動変換 + srcset)
                       <Image
                         src={mod.icon_url}
-                        alt={mod.title}
+                        alt={mod.name}
                         width={32}
                         height={32}
                         className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
@@ -536,7 +539,7 @@ function DesktopTable({
                     )}
                     <div>
                       <div className="font-bold text-sm hover:text-emerald-500 transition">
-                        {mod.title}
+                        {mod.name}
                       </div>
                       <div className="text-xs theme-text-muted">
                         {`by ${mod.author || 'Modrinth'} • ${mod.filename || ''}`}
@@ -553,17 +556,17 @@ function DesktopTable({
                   <CustomDropdown
                     options={versionOptions}
                     selectedValue={
-                      mod.selectedVersionId ||
+                      mod.versionId ||
                       (versionOptions[0] ? versionOptions[0].value : '')
                     }
                     onChange={(newVerId) =>
                       onUpdateModVersion(
-                        mod.id,
+                        mod.projectId,
                         newVerId,
                         availableVersions.find((v) => v.id === newVerId)
                       )
                     }
-                    label={`${mod.title} のバージョン選択`}
+                    label={`${mod.name} のバージョン選択`}
                   />
                 </td>
                 <td className="py-3.5 px-4 text-right">
@@ -580,7 +583,7 @@ function DesktopTable({
                     )}
                     <button
                       type="button"
-                      onClick={(e) => onToggleMod(mod.id, e)}
+                      onClick={(e) => onToggleMod(mod.projectId, e)}
                       className="p-2 theme-text-muted hover:theme-text-red hover:bg-red-500/10 rounded-xl transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                       title="削除"
                     >
@@ -611,19 +614,19 @@ function MobileList({
   return (
     <div className="block md:hidden p-3 space-y-3">
       {items.map((mod) => {
-        const availableVersions = modVersionsMap.get(mod.id) || [];
+        const availableVersions = modVersionsMap.get(mod.projectId) || [];
         const versionOptions = buildVersionOptions(mod, availableVersions);
         return (
           <div
-            key={mod.id}
+            key={mod.projectId}
             className="glass-card p-3.5 rounded-2xl flex flex-col gap-2.5 border"
           >
             <div className="flex items-center justify-between gap-2">
               <input
                 type="checkbox"
-                checked={selectedIds.has(mod.id)}
-                onChange={() => onToggleSelected(mod.id)}
-                aria-label={`${mod.title} を選択`}
+                checked={selectedIds.has(mod.projectId)}
+                onChange={() => onToggleSelected(mod.projectId)}
+                aria-label={`${mod.name} を選択`}
                 className="size-4 accent-emerald-600 shrink-0"
               />
               {/* Phase 10-P5 (a11y/useSemanticElements 相当):
@@ -638,7 +641,7 @@ function MobileList({
                   // <img> → next/image (WebP 自動変換 + srcset)
                   <Image
                     src={mod.icon_url}
-                    alt={mod.title}
+                    alt={mod.name}
                     width={32}
                     height={32}
                     className="w-8 h-8 rounded-lg object-contain bg-slate-800/80 p-0.5 shrink-0 shadow"
@@ -651,7 +654,7 @@ function MobileList({
                 )}
                 <div className="min-w-0">
                   <div className="font-bold text-xs sm:text-sm truncate">
-                    {mod.title}
+                    {mod.name}
                   </div>
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold theme-badge capitalize">
                     {categoryLabel(mod.category)}
@@ -671,7 +674,7 @@ function MobileList({
                 )}
                 <button
                   type="button"
-                  onClick={(e) => onToggleMod(mod.id, e)}
+                  onClick={(e) => onToggleMod(mod.projectId, e)}
                   className="p-2 theme-text-muted active:theme-text-red active:bg-red-500/10 rounded-xl transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                 >
                   <i className="fa-solid fa-trash-can text-sm" aria-hidden />
@@ -686,11 +689,11 @@ function MobileList({
               <CustomDropdown
                 options={versionOptions}
                 selectedValue={
-                  mod.selectedVersionId ||
+                  mod.versionId ||
                   (versionOptions[0] ? versionOptions[0].value : '')
                 }
-                onChange={(newVerId) => onUpdateModVersion(mod.id, newVerId)}
-                label={`${mod.title} のバージョン選択`}
+                onChange={(newVerId) => onUpdateModVersion(mod.projectId, newVerId)}
+                label={`${mod.name} のバージョン選択`}
               />
             </div>
           </div>

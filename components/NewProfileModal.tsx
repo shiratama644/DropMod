@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
-import type { ModItem } from '@/types';
+import type { ProjectItem } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
@@ -15,7 +15,7 @@ interface NewProfileModalProps {
   mcVersions: string[];
   initialImportData?: {
     name: string;
-    mods: ModItem[];
+    mods: ProjectItem[];
     mcVersion?: string;
     loader?: string;
     loaderVersion?: string;
@@ -27,7 +27,7 @@ interface NewProfileModalProps {
     mcVersion: string,
     loader: string,
     desc: string,
-    mods?: ModItem[],
+    mods?: ProjectItem[],
     loaderVersion?: string
   ) => void;
 }

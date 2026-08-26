@@ -213,7 +213,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   const latestVersion = safeVersions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
   const isAdded = (currentProfile.mods ?? []).some(
-    (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+    (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
   );
   const externalLinks = collectExternalLinks(project);
 

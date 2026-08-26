@@ -18,7 +18,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
-import type { Profile, ModItem, ThemeMode } from '@/types';
+import type { Profile, ProjectItem, ThemeMode } from '@/types';
 
 // Sub-Phase 8-E (E-8): Zustand DevTools を dev モードのみ有効化。
 // production では devtools ラップを外して zero-cost にする。
@@ -49,24 +49,24 @@ export interface ProfilesState {
    * 特定プロファイル内で mod を追加。既存 (同 id / slug) があれば何もせず false を返す。
    * @returns 追加できたら true, 既存で追加しなかったら false, profile が見つからなければ null
    */
-  addModToProfile: (profileId: string, mod: ModItem) => boolean | null;
+  addModToProfile: (profileId: string, mod: ProjectItem) => boolean | null;
 
   /**
-   * 特定プロファイルから mod を削除。削除された ModItem を返す (無ければ null)。
+   * 特定プロファイルから mod を削除。削除された ProjectItem を返す (無ければ null)。
    */
   removeModFromProfile: (
     profileId: string,
     modIdOrSlug: string
-  ) => ModItem | null;
+  ) => ProjectItem | null;
 
   /**
    * 特定プロファイル内の mod のバージョン情報を更新。
-   * (selectedVersionId / selectedVersionNumber / versionType / fileUrl / filename を上書き)
+   * (versionId / versionNumber / versionType / fileUrl / filename を上書き)
    */
   updateModVersionInProfile: (
     profileId: string,
     modId: string,
-    updates: Partial<Pick<ModItem, 'selectedVersionId' | 'selectedVersionNumber' | 'versionType' | 'fileUrl' | 'filename'>>
+    updates: Partial<Pick<ProjectItem, 'versionId' | 'versionNumber' | 'versionType' | 'fileUrl' | 'filename'>>
   ) => boolean;
 
   /**
@@ -82,8 +82,10 @@ export interface ProfilesState {
 const DEFAULT_PROFILE: Profile = {
   id: 'default-profile',
   name: '1.20.1 Fabric 軽量化・ユーティリティ',
-  mcVersion: '1.20.1',
-  loader: 'Fabric',
+  environment: {
+    mcVersion: '1.20.1',
+    loader: 'Fabric'
+  },
   description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
   mods: []
 };
@@ -136,7 +138,7 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
           return s;
         }
         const duplicate = target.mods.some(
-          (m) => m.id === mod.id || (mod.slug && m.slug === mod.slug)
+          (m) => m.projectId === mod.projectId || (mod.slug && m.slug === mod.slug)
         );
         if (duplicate) {
           result = false;
@@ -151,14 +153,14 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     },
 
     removeModFromProfile: (profileId, modIdOrSlug) => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       set((s) => {
         const idx = s.profiles.findIndex((p) => p.id === profileId);
         if (idx < 0) return s;
         const target = s.profiles[idx];
         if (!target) return s;
         const modIdx = target.mods.findIndex(
-          (m) => m.id === modIdOrSlug || m.slug === modIdOrSlug
+          (m) => m.projectId === modIdOrSlug || m.slug === modIdOrSlug
         );
         if (modIdx < 0) return s;
         removed = target.mods[modIdx] ?? null;
@@ -179,7 +181,7 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
         if (idx < 0) return s;
         const target = s.profiles[idx];
         if (!target) return s;
-        const modIdx = target.mods.findIndex((m) => m.id === modId);
+        const modIdx = target.mods.findIndex((m) => m.projectId === modId);
         if (modIdx < 0) return s;
         const existingMod = target.mods[modIdx];
         if (!existingMod) return s;

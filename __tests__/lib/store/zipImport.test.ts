@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useZipImportStore, type PendingImportData } from '@/lib/store/zipImport';
-import type { ModItem } from '@/types';
+import type { ProjectItem } from '@/types';
 
-const M1: ModItem = {
-  id: 'm1', slug: 'sodium', title: 'Sodium', fileUrl: '', filename: '',
-  selectedVersionId: 'v1', selectedVersionNumber: '1.0'
-} as ModItem;
+const M1: ProjectItem = {
+  projectId: 'm1', slug: 'sodium', name: 'Sodium', type: 'mod',
+  fileUrl: '', filename: '',
+  versionId: 'v1', versionNumber: '1.0'
+};
 
 describe('useZipImportStore', () => {
   beforeEach(() => {

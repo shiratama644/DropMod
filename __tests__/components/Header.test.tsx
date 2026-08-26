@@ -12,16 +12,14 @@ const profiles: Profile[] = [
   {
     id: 'p1',
     name: 'Fabric 1.20',
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods: []
   },
   {
     id: 'p2',
     name: 'Forge 1.21',
-    mcVersion: '1.21.1',
-    loader: 'Forge',
+    environment: { mcVersion: '1.21.1', loader: 'Forge' },
     description: '',
     mods: []
   }

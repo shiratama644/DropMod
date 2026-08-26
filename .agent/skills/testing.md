@@ -16,7 +16,7 @@
   - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
-- 現状: **459 tests / 55 files pass**。
+- 現状: **470 tests / 56 files pass**（Phase 11-A で +11: Dexie v2 migration 4 / sanitize 正規化 5 ほか）。
 - **coverage threshold 全 green (Phase 10.5-A/B/C 完了、2026-08-26)**: `pnpm test:coverage` exit 0。総計 stmt 81.88 / br 69.4 / fn 89.01 / lines 84.09。
   - 10.5-A: hooks branches 61.63% / global branches 61.54% まで回復
   - 10.5-B: components stmt 73.12 / br 67.7 / fn 76.51 / lines 75.17 まで回復

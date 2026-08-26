@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Profile, ModItem, ThemeMode, ModrinthProject, ModrinthVersion, ContentCategory } from '@/types';
+import type { Profile, ProjectItem, ThemeMode, ModrinthProject, ModrinthVersion, ContentCategory } from '@/types';
 import { nextDuplicateName } from '@/lib/utils/profileName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
@@ -33,8 +33,7 @@ type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;
 const TRANSIENT_FALLBACK_PROFILE: Profile = Object.freeze({
   id: 'transient-fallback',
   name: '既定プロファイル',
-  mcVersion: '1.20.1',
-  loader: 'Fabric',
+  environment: { mcVersion: '1.20.1', loader: 'Fabric' },
   description: '',
   mods: []
 }) as Profile;
@@ -43,7 +42,7 @@ const TRANSIENT_FALLBACK_PROFILE: Profile = Object.freeze({
 // 以前は互換のため useProfiles からも re-export していたが、参照 0 の dead code
 // だったため削除。fallback 経路 (Dexie 失敗時) の LocalStorage 読み取り用に
 // import のみ残す。
-import { sanitizeLoadedState as sanitizeLoadedStateShim } from '@/lib/state/sanitize';
+import { sanitizeLoadedState as sanitizeLoadedStateShim, normalizeLoader } from '@/lib/state/sanitize';
 
 export const useProfiles = (
   theme: ThemeMode,
@@ -292,8 +291,8 @@ export const useProfiles = (
   // で変化ないのに)。必要な mcVersion/loader をローカル変数に取り出し、
   // deps を [hasHydrated, mcVersion, loader] のみに限定して過剰実行を防止。
   const currentProfileForCookie = profiles.find((p) => p.id === currentProfileId) || profiles[0];
-  const cookieMcVersion = currentProfileForCookie?.mcVersion;
-  const cookieLoader = currentProfileForCookie?.loader;
+  const cookieMcVersion = currentProfileForCookie?.environment.mcVersion;
+  const cookieLoader = currentProfileForCookie?.environment.loader;
   useEffect(() => {
     if (!hasHydrated) return;
     if (!cookieMcVersion || !cookieLoader) return;
@@ -353,8 +352,7 @@ export const useProfiles = (
       const fallbackProfile: Profile = {
         id: generateId('default-profile-recovered'),
         name: '既定プロファイル',
-        mcVersion: '1.20.1',
-        loader: 'Fabric',
+        environment: { mcVersion: '1.20.1', loader: 'Fabric' },
         description: 'データ復旧により自動生成されたプロファイル',
         mods: []
       };
@@ -412,16 +410,18 @@ export const useProfiles = (
       mcVersion: string,
       loader: string,
       description: string,
-      mods: ModItem[] = [],
+      mods: ProjectItem[] = [],
       loaderVersion?: string
     ) => {
       const newId = generateId('profile');
       const newProfile: Profile = {
         id: newId,
         name,
-        mcVersion,
-        loader,
-        loaderVersion: loaderVersion || undefined,
+        environment: {
+          mcVersion,
+          loader: normalizeLoader(loader),
+          loaderVersion: loaderVersion || undefined
+        },
         description,
         mods
       };
@@ -461,12 +461,25 @@ export const useProfiles = (
       const targetId = currentProfileIdRef.current;
       const before = profilesRef.current.find((p) => p.id === targetId);
       const compatChanged =
-        before && (before.mcVersion !== mcVersion || before.loader !== loader) && before.mods.length > 0;
+        before &&
+          (before.environment.mcVersion !== mcVersion ||
+            before.environment.loader !== normalizeLoader(loader)) &&
+          before.mods.length > 0;
 
       setProfiles((prev) =>
         prev.map((p) =>
           p.id === targetId
-            ? { ...p, name, mcVersion, loader, loaderVersion: loaderVersion || undefined, description }
+            ? {
+                ...p,
+                name,
+                environment: {
+                  ...p.environment,
+                  mcVersion,
+                  loader: normalizeLoader(loader),
+                  loaderVersion: loaderVersion || undefined
+                },
+                description
+              }
             : p
         )
       );
@@ -537,7 +550,7 @@ export const useProfiles = (
       }
 
       const existsIndex = latestProfile.mods.findIndex(
-        (m) => m.id === projectId || m.slug === projectId
+        (m) => m.projectId === projectId || m.slug === projectId
       );
 
     if (existsIndex >= 0) {
@@ -547,11 +560,16 @@ export const useProfiles = (
       setProfiles((prev) =>
         prev.map((p) =>
           p.id === latestProfileId
-            ? { ...p, mods: p.mods.filter((m) => m.id !== projectId && m.slug !== projectId) }
+            ? {
+                ...p,
+                mods: p.mods.filter(
+                  (m) => m.projectId !== projectId && m.slug !== projectId
+                )
+              }
             : p
         )
       );
-      if (!silent) showToast(`「${removed?.title || 'Mod'}」を削除しました`, 'info');
+      if (!silent) showToast(`「${removed?.name || 'Mod'}」を削除しました`, 'info');
       // B10 修正: 削除フローは microtask 経由で unlock、race 回避
       releaseLock();
       return;
@@ -581,9 +599,14 @@ export const useProfiles = (
 
         const skipLoader =
           project.project_type === 'resourcepack' || project.project_type === 'shader';
-        const versionRes = await fetchStableModVersion(projectId, profileAtVersionFetch, {
-          skipLoader
-        });
+        const versionRes = await fetchStableModVersion(
+          projectId,
+          {
+            loader: profileAtVersionFetch.environment.loader,
+            mcVersion: profileAtVersionFetch.environment.mcVersion
+          },
+          { skipLoader }
+        );
 
         if (
           !versionRes?.targetVersion?.files ||
@@ -604,17 +627,17 @@ export const useProfiles = (
           return;
         }
 
-        const modObj: ModItem = {
-          id: project.id,
+        const modObj: ProjectItem = {
+          projectId: project.id,
           slug: project.slug,
-          title: project.title,
+          name: project.title,
           description: project.description,
           icon_url: project.icon_url,
           author: project.author || 'Modrinth',
-          projectType: contentCategoryFromProject(project),
+          type: contentCategoryFromProject(project),
           category: primaryCategoryId(project.display_categories, project.categories),
-          selectedVersionId: targetVersion.id,
-          selectedVersionNumber: targetVersion.version_number,
+          versionId: targetVersion.id,
+          versionNumber: targetVersion.version_number,
           versionType: targetVersion.version_type || 'release',
           fileUrl: primaryFile.url,
           filename: primaryFile.filename
@@ -627,7 +650,8 @@ export const useProfiles = (
           prev.map((p) => {
             if (p.id !== currentProfileIdRef.current) return p;
             const dup = p.mods.some(
-              (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+              (m) =>
+                m.projectId === project.id || (project.slug && m.slug === project.slug)
             );
             if (dup) {
               alreadyAdded = true;
@@ -666,11 +690,11 @@ export const useProfiles = (
             ? {
                 ...p,
                 mods: p.mods.map((m) =>
-                  m.id === projectId || m.slug === projectId
+                  m.projectId === projectId || m.slug === projectId
                     ? {
                         ...m,
-                        selectedVersionId: versionData.id,
-                        selectedVersionNumber: versionData.version_number,
+                        versionId: versionData.id,
+                        versionNumber: versionData.version_number,
                         versionType: versionData.version_type || 'release',
                         fileUrl: primaryFile.url,
                         filename: primaryFile.filename
@@ -692,7 +716,9 @@ export const useProfiles = (
       const latestProfileId = currentProfileIdRef.current;
       const latestProfile =
         profilesRef.current.find((p) => p.id === latestProfileId) || profilesRef.current[0];
-      const mod = latestProfile?.mods.find((m) => m.id === projectId || m.slug === projectId);
+      const mod = latestProfile?.mods.find(
+        (m) => m.projectId === projectId || m.slug === projectId
+      );
       if (!mod) return;
 
       if (
@@ -701,7 +727,7 @@ export const useProfiles = (
         knownVersion.files &&
         knownVersion.files.length > 0
       ) {
-        applyModVersion(projectId, knownVersion, mod.title);
+        applyModVersion(projectId, knownVersion, mod.name);
         return;
       }
 
@@ -715,7 +741,7 @@ export const useProfiles = (
           staleTime: 60 * 60 * 1000 // 1h (version は project より変わりにくい)
         });
         if (versionData?.files && versionData.files.length > 0) {
-          applyModVersion(projectId, versionData, mod.title);
+          applyModVersion(projectId, versionData, mod.name);
         }
       } catch {
         // catch binding 省略 (ES2019+): エラー詳細は使わず一律 toast のみ
@@ -772,7 +798,7 @@ export const useProfiles = (
       if (!latest) return;
       const idSet = new Set(ids);
       const targets = latest.mods.filter(
-        (m) => idSet.has(m.id) || (m.slug != null && idSet.has(m.slug))
+        (m) => idSet.has(m.projectId) || (m.slug != null && idSet.has(m.slug))
       );
       if (targets.length === 0) return;
       const ok = await confirmDialog({
@@ -789,7 +815,8 @@ export const useProfiles = (
             ? {
                 ...p,
                 mods: p.mods.filter(
-                  (m) => !idSet.has(m.id) && !(m.slug != null && idSet.has(m.slug))
+                  (m) =>
+                    !idSet.has(m.projectId) && !(m.slug != null && idSet.has(m.slug))
                 )
               }
             : p

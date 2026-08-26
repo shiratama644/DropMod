@@ -24,9 +24,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave,
 }) => {
   const [name, setName] = useState(profile?.name || '');
-  const [version, setVersion] = useState(profile?.mcVersion || '');
-  const [loader, setLoader] = useState(profile?.loader || 'Fabric');
-  const [loaderVersion, setLoaderVersion] = useState(profile?.loaderVersion || '');
+  const [version, setVersion] = useState(profile?.environment.mcVersion || '');
+  const [loader, setLoader] = useState<string>(profile?.environment.loader || 'Fabric');
+  const [loaderVersion, setLoaderVersion] = useState(
+    profile?.environment.loaderVersion || ''
+  );
   const [desc, setDesc] = useState(profile?.description || '');
 
   const nameInputId = useId();
@@ -60,9 +62,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
     if (profile) {
       setName(profile.name || '');
-      setVersion(profile.mcVersion || '');
-      setLoader(profile.loader || 'Fabric');
-      setLoaderVersion(profile.loaderVersion || '');
+      setVersion(profile.environment.mcVersion || '');
+      setLoader(profile.environment.loader || 'Fabric');
+      setLoaderVersion(profile.environment.loaderVersion || '');
       setDesc(profile.description || '');
     }
   }, [isOpen]);
@@ -71,7 +73,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     loader,
     version,
     isOpen,
-    profile?.loaderVersion
+    profile?.environment.loaderVersion
   );
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)

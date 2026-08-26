@@ -11,8 +11,8 @@ describe('contentCategoryOf', () => {
   });
 
   it('resourcepack / shader をそのまま返す', () => {
-    expect(contentCategoryOf({ projectType: 'resourcepack' })).toBe('resourcepack');
-    expect(contentCategoryOf({ projectType: 'shader' })).toBe('shader');
+    expect(contentCategoryOf({ type: 'resourcepack' })).toBe('resourcepack');
+    expect(contentCategoryOf({ type: 'shader' })).toBe('shader');
   });
 });
 

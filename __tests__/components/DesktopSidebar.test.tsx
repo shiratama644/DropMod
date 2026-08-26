@@ -25,8 +25,7 @@ vi.mock('next/navigation', async () => {
 const profileA: Profile = {
   id: 'p1',
   name: '1.20.1 Fabric 軽量化',
-  mcVersion: '1.20.1',
-  loader: 'Fabric',
+  environment: { mcVersion: '1.20.1', loader: 'Fabric' },
   description: '',
   mods: []
 };

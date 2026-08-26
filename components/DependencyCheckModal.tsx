@@ -4,7 +4,13 @@ import type React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
-import type { Profile, DependencyCheckData, ModItem, ModrinthVersion, ModrinthProject } from '@/types';
+import type {
+  Profile,
+  DependencyCheckData,
+  ProjectItem,
+  ModrinthVersion,
+  ModrinthProject
+} from '@/types';
 import {
   fetchModrinth,
   fetchStableModVersion,
@@ -110,7 +116,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
     try {
       const versionIds = profile.mods
-        .map((m) => m.selectedVersionId)
+        .map((m) => m.versionId)
         .filter((id): id is string => Boolean(id && id !== 'latest'));
       // Phase 10-P5: Modrinth API 応答を扱う Map は具体型で保持。
       const versionMap = new Map<string, ModrinthVersion>();
@@ -132,12 +138,12 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
         } catch {
           await Promise.all(
             profile.mods.map(async (mod) => {
-              if (mod.selectedVersionId) {
+              if (mod.versionId) {
                 try {
                   const vData = await fetchModrinth<ModrinthVersion>(
-                    `/version/${mod.selectedVersionId}`
+                    `/version/${mod.versionId}`
                   );
-                  if (vData) versionMap.set(mod.selectedVersionId, vData);
+                  if (vData) versionMap.set(mod.versionId, vData);
                 } catch {
                   // Fallback strategy for individual version fetching
                 }
@@ -153,24 +159,30 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
       const installedProjectSet = new Set<string>();
       profile.mods.forEach((m) => {
-        if (m.id) installedProjectSet.add(m.id);
+        installedProjectSet.add(m.projectId);
         if (m.slug) installedProjectSet.add(m.slug);
       });
 
-      const missingRequired: Array<{ sourceMod: ModItem; targetProjectId: string }> = [];
-      const conflicts: Array<{ sourceMod: ModItem; targetMod: ModItem | { title: string; id: string } }> = [];
-      const optionalAvailable: Array<{ sourceMod: ModItem; targetProjectId: string }> = [];
-      const verifiedOK: Array<{ sourceMod: ModItem; message: string }> = [];
+      const missingRequired: Array<{ sourceMod: ProjectItem; targetProjectId: string }> = [];
+      const conflicts: Array<{
+        sourceMod: ProjectItem;
+        targetMod: ProjectItem | { name: string; projectId: string };
+      }> = [];
+      const optionalAvailable: Array<{ sourceMod: ProjectItem; targetProjectId: string }> = [];
+      const verifiedOK: Array<{ sourceMod: ProjectItem; message: string }> = [];
       const missingProjectIds = new Set<string>();
 
       for (const mod of profile.mods) {
-        let vData: ModrinthVersion | null = mod.selectedVersionId
-          ? versionMap.get(mod.selectedVersionId) ?? null
+        let vData: ModrinthVersion | null = mod.versionId
+          ? versionMap.get(mod.versionId) ?? null
           : null;
 
-        if (!vData && mod.id) {
+        if (!vData && mod.projectId) {
           try {
-            const versionRes = await fetchStableModVersion(mod.id, profile);
+            const versionRes = await fetchStableModVersion(mod.projectId, {
+              loader: profile.environment.loader,
+              mcVersion: profile.environment.mcVersion
+            });
             vData = versionRes ? versionRes.targetVersion : null;
           } catch {
             // Fallback strategy exhausted
@@ -200,11 +212,11 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           } else if (type === 'incompatible') {
             if (installedProjectSet.has(targetProjId)) {
               const targetMod = profile.mods.find(
-                (m) => m.id === targetProjId || m.slug === targetProjId
+                (m) => m.projectId === targetProjId || m.slug === targetProjId
               );
               conflicts.push({
                 sourceMod: mod,
-                targetMod: targetMod || { title: targetProjId, id: targetProjId },
+                targetMod: targetMod || { name: targetProjId, projectId: targetProjId },
               });
             }
           } else if (type === 'optional') {
@@ -291,7 +303,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   //     まとめて更新する方式に統一。
   // ------------------------------------------------------------------
   const modsSignature = profile.mods
-    .map((m) => `${m.id || m.slug || '?'}@${m.selectedVersionId || 'latest'}`)
+    .map((m) => `${m.projectId || m.slug || '?'}@${m.versionId || 'latest'}`)
     .join(',');
 
   // (1) 初回オープン / プロファイル本体切替 → 即時
@@ -370,7 +382,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       if (actionInFlightRef.current.has(targetProjectId)) return;
       // 既に installed なら onToggleMod を呼ばずに data 側から消すだけ
       const alreadyInstalled = profile.mods.some(
-        (m) => m.id === targetProjectId || m.slug === targetProjectId
+        (m) => m.projectId === targetProjectId || m.slug === targetProjectId
       );
       if (alreadyInstalled) {
         // すでに入っているのに missing 判定が残っているのは runCheck 未反映の可能性
@@ -409,7 +421,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
     async (sourceModId: string, e: React.MouseEvent) => {
       if (actionInFlightRef.current.has(sourceModId)) return;
       const stillExists = profile.mods.some(
-        (m) => m.id === sourceModId || m.slug === sourceModId
+        (m) => m.projectId === sourceModId || m.slug === sourceModId
       );
       if (!stillExists) {
         // 既に消えていたら data からも消す
@@ -418,7 +430,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
           return {
             ...prev,
             conflicts: prev.conflicts.filter(
-              (c) => c.sourceMod.id !== sourceModId && c.sourceMod.slug !== sourceModId
+              (c) => c.sourceMod.projectId !== sourceModId && c.sourceMod.slug !== sourceModId
             )
           };
         });
@@ -446,7 +458,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
       // 2. 既にプロファイルに存在するMod (id or slug で照合) はスキップ
       const installedIds = new Set<string>();
       profile.mods.forEach((m) => {
-        if (m.id) installedIds.add(m.id);
+        installedIds.add(m.projectId);
         if (m.slug) installedIds.add(m.slug);
       });
 
@@ -623,7 +635,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
             <>
               {(checkTab === 'all' || checkTab === 'conflicts') &&
                 data.conflicts.map((c) => {
-                  const key = `conflict-${c.sourceMod.id || c.sourceMod.slug}-${c.targetMod.id || ('title' in c.targetMod ? c.targetMod.title : '')}`;
+                  const key = `conflict-${c.sourceMod.projectId || c.sourceMod.slug}-${c.targetMod.projectId || ('name' in c.targetMod ? c.targetMod.name : '')}`;
                   return (
                     <div
                       key={key}
@@ -647,30 +659,33 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                               </span>
                             </div>
                             <div className="text-xs font-bold theme-text-primary truncate mt-0.5">
-                              {c.sourceMod.title}
+                              {c.sourceMod.name}
                             </div>
                             <div className="text-[11px] theme-text-muted truncate">
-                              {`「${c.targetMod.title}」と併用できません`}
+                              {`「${c.targetMod.name}」と併用できません`}
                             </div>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => {
-                            if (c.sourceMod.id) {
+                            if (c.sourceMod.projectId) {
                               // 削除専用ハンドラ (トグル暴発回避 + 自動 runCheck に任せる)
-                              void handleRemoveConflictingMod(c.sourceMod.id, e);
+                              void handleRemoveConflictingMod(c.sourceMod.projectId, e);
                             }
                           }}
                           disabled={
                             isFixing ||
-                            (c.sourceMod.id ? actionInFlight.has(c.sourceMod.id) : false)
+                            (c.sourceMod.projectId
+                              ? actionInFlight.has(c.sourceMod.projectId)
+                              : false)
                           }
-                          title={`${c.sourceMod.title} を削除`}
-                          aria-label={`${c.sourceMod.title} を削除`}
+                          title={`${c.sourceMod.name} を削除`}
+                          aria-label={`${c.sourceMod.name} を削除`}
                           className="shrink-0 self-center inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg theme-text-red hover:bg-red-500/15 active:bg-red-500/25 border border-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {c.sourceMod.id && actionInFlight.has(c.sourceMod.id) ? (
+                          {c.sourceMod.projectId &&
+                          actionInFlight.has(c.sourceMod.projectId) ? (
                             <i
                               className="fa-solid fa-spinner fa-spin text-[11px]"
                               aria-hidden="true"
@@ -689,7 +704,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                 data.missingRequired.map((m) => {
                   const pInfo = data.depProjectMap.get(m.targetProjectId);
                   const title = pInfo ? pInfo.title : m.targetProjectId;
-                  const key = `missing-${m.sourceMod.id || m.sourceMod.slug}-${m.targetProjectId}`;
+                  const key = `missing-${m.sourceMod.projectId || m.sourceMod.slug}-${m.targetProjectId}`;
                   return (
                     <div
                       key={key}
@@ -721,7 +736,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             </div>
                             <div className="text-xs font-bold theme-text-primary truncate mt-0.5">{title}</div>
                             <div className="text-[11px] theme-text-muted truncate">
-                              {`「${m.sourceMod.title}」の動作に必要`}
+                              {`「${m.sourceMod.name}」の動作に必要`}
                             </div>
                           </div>
                         </div>
@@ -755,7 +770,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                 data.optionalAvailable.map((o) => {
                   const pInfo = data.depProjectMap.get(o.targetProjectId);
                   const title = pInfo ? pInfo.title : o.targetProjectId;
-                  const key = `optional-${o.sourceMod.id || o.sourceMod.slug}-${o.targetProjectId}`;
+                  const key = `optional-${o.sourceMod.projectId || o.sourceMod.slug}-${o.targetProjectId}`;
                   return (
                     <div
                       key={key}
@@ -787,7 +802,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                             </div>
                             <div className="text-xs font-bold theme-text-primary truncate mt-0.5">{title}</div>
                             <div className="text-[11px] theme-text-muted truncate">
-                              {`「${o.sourceMod.title}」と連携機能あり`}
+                              {`「${o.sourceMod.name}」と連携機能あり`}
                             </div>
                           </div>
                         </div>
@@ -819,7 +834,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
 
               {(checkTab === 'all' || checkTab === 'ok') &&
                 data.verifiedOK.map((v) => {
-                  const key = `ok-${v.sourceMod.id || v.sourceMod.slug}`;
+                  const key = `ok-${v.sourceMod.projectId || v.sourceMod.slug}`;
                   return (
                     <div
                       key={key}
@@ -830,7 +845,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
                           <i className="fa-solid fa-check" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-xs truncate">{v.sourceMod.title}</div>
+                          <div className="font-semibold text-xs truncate">{v.sourceMod.name}</div>
                           <div className="text-[11px] theme-text-muted truncate">{v.message}</div>
                         </div>
                       </div>

@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
-import type { Profile, ModItem } from '@/types';
+import type { Profile, ProjectItem } from '@/types';
 // B5 修正: ZipProgressState 型は lib/store/zipExport.ts に一本化。
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。
@@ -86,16 +86,16 @@ const URL_REVOKE_DELAY_MS = 10000;
 // ==========================================
 
 /** Modのファイル名を決定する */
-const getModFileName = (mod: ModItem): string => {
+const getModFileName = (mod: ProjectItem): string => {
   if (mod.filename) return mod.filename;
-  const version = mod.selectedVersionNumber ? `-${mod.selectedVersionNumber}` : '';
-  const identifier = mod.slug || mod.id;
+  const version = mod.versionNumber ? `-${mod.versionNumber}` : '';
+  const identifier = mod.slug || mod.projectId;
   const cat = contentCategoryOf(mod);
   const ext = cat === 'mod' ? 'jar' : 'zip';
   return `${identifier}${version}.${ext}`;
 };
 
-const zipSubdirFor = (mod: ModItem): 'mods' | 'resourcepacks' | 'shaderpacks' => {
+const zipSubdirFor = (mod: ProjectItem): 'mods' | 'resourcepacks' | 'shaderpacks' => {
   const cat = contentCategoryOf(mod);
   if (cat === 'resourcepack') return 'resourcepacks';
   if (cat === 'shader') return 'shaderpacks';
@@ -110,7 +110,7 @@ const sanitizeFileName = (name: string): string => {
 /** ZIP出力ファイル名を生成する */
 const generateZipFileName = (profile: Profile): string => {
   const cleanName = sanitizeFileName(profile.name);
-  return `${cleanName}_MC${profile.mcVersion}_mods.zip`;
+  return `${cleanName}_MC${profile.environment.mcVersion}_mods.zip`;
 };
 
 /** profile.json のコンテンツを生成する */
@@ -134,8 +134,8 @@ const generateReadmeText = (
 ): string => {
   const modsList = profile.mods
     .map((mod) => {
-      const actualName = actualFilenames.get(mod.id) || getModFileName(mod);
-      return `- ${mod.title} (${mod.selectedVersionNumber || 'Stable'}) -> ${actualName}\n  Source: ${mod.fileUrl || 'N/A'}`;
+      const actualName = actualFilenames.get(mod.projectId) || getModFileName(mod);
+      return `- ${mod.name} (${mod.versionNumber || 'Stable'}) -> ${actualName}\n  Source: ${mod.fileUrl || 'N/A'}`;
     })
     .join('\n');
 
@@ -143,8 +143,8 @@ const generateReadmeText = (
     'DropMod Mod Profile Export',
     '==============================',
     `Profile Name: ${profile.name}`,
-    `Minecraft Version: ${profile.mcVersion}`,
-    `Mod Loader: ${profile.loader}`,
+    `Minecraft Version: ${profile.environment.mcVersion}`,
+    `Mod Loader: ${profile.environment.loader}`,
     `Exported At: ${new Date().toLocaleString()}`,
     '',
     `Included Mods (${profile.mods.length}):`,
@@ -352,7 +352,7 @@ export const useZipExport = (
           }
 
           updateZipState({
-            detailText: `ダウンロード中: ${mod.title} (${mod.selectedVersionNumber || 'Stable'})`,
+            detailText: `ダウンロード中: ${mod.name} (${mod.versionNumber || 'Stable'})`,
           });
 
           if (mod.fileUrl) {
@@ -360,7 +360,7 @@ export const useZipExport = (
             if (blob) {
               const uniqueName = dedupeFileName(getModFileName(mod));
               folderCache[zipSubdirFor(mod)]?.file(uniqueName, blob);
-              actualFilenames.set(mod.id, uniqueName);
+              actualFilenames.set(mod.projectId, uniqueName);
               successCount++;
             } else {
               failCount++;
@@ -377,7 +377,7 @@ export const useZipExport = (
             progress: percent,
             statusCount: `${processedCount} / ${totalMods}`,
             statusText: `ダウンロード進行中 (${processedCount}/${totalMods})`,
-            detailText: `取得完了: ${mod.title}`,
+            detailText: `取得完了: ${mod.name}`,
           });
         }
       };

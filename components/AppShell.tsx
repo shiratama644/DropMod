@@ -168,9 +168,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         profiles.map((p) => p.name)
       ),
       mods: currentProfile.mods.map((m) => ({ ...m })),
-      mcVersion: currentProfile.mcVersion,
-      loader: currentProfile.loader,
-      loaderVersion: currentProfile.loaderVersion,
+      mcVersion: currentProfile.environment.mcVersion,
+      loader: currentProfile.environment.loader,
+      loaderVersion: currentProfile.environment.loaderVersion,
       description: currentProfile.description,
       source: 'duplicate'
     });

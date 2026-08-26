@@ -171,13 +171,20 @@ export const HomeInteractive: React.FC<Props> = ({
   const searchParams: SearchQueryParams = useMemo(
     () => ({
       query: debouncedQuery,
-      mcVersion: profile.mcVersion,
-      loader: profile.loader,
+      mcVersion: profile.environment.mcVersion,
+      loader: profile.environment.loader,
       category: selectedCategory,
       sort: sortBy as SearchQueryParams['sort'],
       projectType
     }),
-    [debouncedQuery, profile.mcVersion, profile.loader, selectedCategory, sortBy, projectType]
+    [
+      debouncedQuery,
+      profile.environment.mcVersion,
+      profile.environment.loader,
+      selectedCategory,
+      sortBy,
+      projectType
+    ]
   );
 
   // "初期フィルタ" (SSR の initialHits に対応する canonical params)
@@ -185,15 +192,15 @@ export const HomeInteractive: React.FC<Props> = ({
   const initialSearchParams: SearchQueryParams = useMemo(
     () => ({
       query: initialQuery,
-      mcVersion: profile.mcVersion,
-      loader: profile.loader,
+      mcVersion: profile.environment.mcVersion,
+      loader: profile.environment.loader,
       category: 'All',
       sort: 'popular',
       projectType: initialProjectType
     }),
     // profile を意図的に依存に含めず、SSR 時点のスナップショット固定にしたい所だが
     // profile が hydration 完了で変わるとキーが変わるので依存に含める
-    [profile.mcVersion, profile.loader, initialQuery, initialProjectType]
+    [profile.environment.mcVersion, profile.environment.loader, initialQuery, initialProjectType]
   );
   const initialMatches =
     searchParams.query === initialSearchParams.query &&
@@ -346,10 +353,10 @@ export const HomeInteractive: React.FC<Props> = ({
             <div className="flex flex-wrap items-center gap-1.5">
               {/* profile?.mcVersion || '未設定' 等のフォールバック (Vite 版と同挙動) */}
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30 shrink-0">
-                Minecraft {profile?.mcVersion || '未設定'}
+                Minecraft {profile?.environment.mcVersion || '未設定'}
               </span>
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 theme-text-blue border border-blue-500/30 shrink-0">
-                {profile?.loader || '未設定'}
+                {profile?.environment.loader || '未設定'}
               </span>
             </div>
             <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight break-all leading-tight">

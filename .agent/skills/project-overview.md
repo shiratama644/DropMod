@@ -47,14 +47,14 @@
 | 9.5 | LP 刷新 + BottomNav 再設計 + **PC UI 一新（DesktopSidebar）** | ✅ |
 | 10 | FontAwesome subset(-356KB) / AppContext 完全削除 / Markdown Image / E2E 拡張 / shimmer | ✅ |
 | **10.5** | **Emergency: カバレッジ回復**（A〜C 完了で全 threshold green。D/E は任意） | ✅ A〜C |
-| **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ⏳ 計画済 |
+| **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | 🔄 **11-A 完了**（データモデル基盤） |
 | 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ |
 | 13 | CurseForge 完全対応（Murmur2） | ⏳ |
 | 最終 | Vercel 本番デプロイ（Hobby 制約のため全 Phase 後） | ⏳ |
 
 ## 規模（目安）
 
-`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 376 tests / `e2e/` 8 spec。
+`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 470 tests / `e2e/` 8 spec。
 最大ファイル: `DependencyCheckModal.tsx`(871)・`useProfiles.ts`(818)・`ModDetailPageView.tsx`(676)。
 
 ## 関連

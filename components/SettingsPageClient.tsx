@@ -300,7 +300,7 @@ export const SettingsPageClient: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs theme-text-muted mt-0.5">
-                        {`MC ${p.mcVersion} (${p.loader}) • ${p.mods.length} 個のMod`}
+                        {`MC ${p.environment.mcVersion} (${p.environment.loader}) • ${p.mods.length} 個のMod`}
                       </div>
                     </div>
                   </div>

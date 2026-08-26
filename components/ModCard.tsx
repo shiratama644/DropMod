@@ -50,7 +50,9 @@ export const ModCard: React.FC<ModCardProps> = ({
   onToggleMod,
   layout = '3'
 }) => {
-  const isAdded = profile.mods.some((m) => m.id === hit.project_id || m.slug === hit.slug);
+  const isAdded = profile.mods.some(
+    (m) => m.projectId === hit.project_id || m.slug === hit.slug
+  );
   const displayCategory = categoryLabel(
     primaryCategoryId(hit.display_categories, hit.categories)
   );

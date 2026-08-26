@@ -15,7 +15,7 @@ import { useProfilesStore } from '@/lib/store/profiles';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '../test-utils/queryWrapper';
 import { db } from '@/lib/db/dexie';
-import type { ThemeMode } from '@/types';
+import type { ProjectItem, ThemeMode } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
 // ------------------ Reset helpers ------------------
@@ -27,8 +27,7 @@ async function resetAll() {
       {
         id: 'default-profile',
         name: '1.20.1 Fabric 軽量化・ユーティリティ',
-        mcVersion: '1.20.1',
-        loader: 'Fabric',
+        environment: { mcVersion: '1.20.1', loader: 'Fabric' },
         description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
         mods: []
       }
@@ -120,8 +119,8 @@ describe('useProfiles', () => {
     expect(result.current.profiles).toHaveLength(2);
     const newP = result.current.profiles[1]!;
     expect(newP.name).toBe('MyPack');
-    expect(newP.mcVersion).toBe('1.21.1');
-    expect(newP.loader).toBe('NeoForge');
+    expect(newP.environment.mcVersion).toBe('1.21.1');
+    expect(newP.environment.loader).toBe('NeoForge');
     expect(result.current.currentProfileId).toBe(newP.id);
     expect(h.showToast).toHaveBeenCalledWith(
       expect.stringContaining('作成しました'),
@@ -138,9 +137,9 @@ describe('useProfiles', () => {
     await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
 
     const initialMods = [
-      { id: 'preset-a', title: 'Preset A', description: '' },
-      { id: 'preset-b', title: 'Preset B', description: '' }
-    ];
+      { projectId: 'preset-a', name: 'Preset A', type: 'mod', description: '' },
+      { projectId: 'preset-b', name: 'Preset B', type: 'mod', description: '' }
+    ] satisfies ProjectItem[];
     await act(async () => {
       result.current.handleCreateProfile('WithMods', '1.20.1', 'Fabric', '', initialMods);
     });
@@ -253,8 +252,8 @@ describe('useProfiles', () => {
     });
     const updated = result.current.profiles[0]!;
     expect(updated.name).toBe('NewName');
-    expect(updated.mcVersion).toBe('1.21.1');
-    expect(updated.loader).toBe('NeoForge');
+    expect(updated.environment.mcVersion).toBe('1.21.1');
+    expect(updated.environment.loader).toBe('NeoForge');
     expect(updated.description).toBe('new desc');
     expect(h.showToast).toHaveBeenCalledWith(
       expect.stringContaining('プロファイルを更新'),
@@ -282,7 +281,7 @@ describe('useProfiles', () => {
 
     // 削除 (同じ projectId でトグル)
     // 追加時に id は 'id-sodium' が入る (mock handler の返り値より)
-    const addedId = result.current.currentProfile!.mods[0]!.id;
+    const addedId = result.current.currentProfile!.mods[0]!.projectId;
     await act(async () => {
       await result.current.handleToggleMod(addedId);
     });
@@ -305,15 +304,15 @@ describe('useProfiles', () => {
     await act(async () => {
       await result.current.handleToggleMod('sodium');
     });
-    const addedId = result.current.currentProfile!.mods[0]!.id;
+    const addedId = result.current.currentProfile!.mods[0]!.projectId;
 
     // version 差し替え (mock handler が version_number: '1.0.0' で返す)
     await act(async () => {
       await result.current.handleUpdateModVersion(addedId, 'ver-99');
     });
     const updated = result.current.currentProfile!.mods[0]!;
-    expect(updated.selectedVersionId).toBe('ver-99');
-    expect(updated.selectedVersionNumber).toBe('1.0.0');
+    expect(updated.versionId).toBe('ver-99');
+    expect(updated.versionNumber).toBe('1.0.0');
   });
 
   it('handleRemoveAllMods: mods=0 なら何もしない、mods>0 なら confirm 後クリア', async () => {
@@ -355,7 +354,7 @@ describe('useProfiles', () => {
     await act(async () => {
       await result.current.handleToggleMod('sodium');
     });
-    const addedId = result.current.currentProfile!.mods[0]!.id;
+    const addedId = result.current.currentProfile!.mods[0]!.projectId;
     await act(async () => {
       await result.current.handleRemoveMods([addedId]);
     });
@@ -374,7 +373,7 @@ describe('useProfiles', () => {
     await act(async () => {
       await result.current.handleToggleMod('sodium');
     });
-    const addedId = result.current.currentProfile!.mods[0]!.id;
+    const addedId = result.current.currentProfile!.mods[0]!.projectId;
     await act(async () => {
       await result.current.handleUpdateModVersion(addedId, 'local-ver', {
         id: 'local-ver',
@@ -399,8 +398,8 @@ describe('useProfiles', () => {
       });
     });
     const updated = result.current.currentProfile!.mods[0]!;
-    expect(updated.selectedVersionId).toBe('local-ver');
-    expect(updated.selectedVersionNumber).toBe('9.9.9');
+    expect(updated.versionId).toBe('local-ver');
+    expect(updated.versionNumber).toBe('9.9.9');
     expect(updated.fileUrl).toBe('https://example.com/local.jar');
   });
 
@@ -469,8 +468,7 @@ describe('useProfiles', () => {
       {
         id: 'real-1',
         name: 'Real Profile',
-        mcVersion: '1.20.1',
-        loader: 'Fabric',
+        environment: { mcVersion: '1.20.1', loader: 'Fabric' },
         description: '',
         mods: [],
         updatedAt: Date.now()

@@ -22,8 +22,10 @@ import type { Profile } from '@/types';
 const EMPTY_PROFILE: Profile = Object.freeze({
   id: 'empty',
   name: '(未初期化)',
-  mcVersion: '1.20.1',
-  loader: 'Fabric',
+  environment: {
+    mcVersion: '1.20.1',
+    loader: 'Fabric'
+  },
   description: '',
   mods: []
 }) as Profile;

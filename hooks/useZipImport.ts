@@ -2,7 +2,14 @@
 
 import { useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import type { Profile, ModItem, MrpackIndex, ModrinthProject, ModrinthVersion } from '@/types';
+import type {
+  Profile,
+  ProfileLoader,
+  ProjectItem,
+  MrpackIndex,
+  ModrinthProject,
+  ModrinthVersion
+} from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
 import {
   fetchModrinthBatch,
@@ -61,13 +68,12 @@ export const useZipImport = (
         // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
         //   fabric-loader / forge / neoforge / quilt-loader
         // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
-        let loader = 'Fabric';
-        if (mrpackData.dependencies?.['fabric-loader']) loader = 'Fabric';
+        let loader: ProfileLoader = 'Fabric';
         if (mrpackData.dependencies?.forge) loader = 'Forge';
         if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
         if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
 
-        const importedMods: ModItem[] = [];
+        const importedMods: ProjectItem[] = [];
         if (mrpackData.files) {
           const hashes = mrpackData.files
             .map((f) => f.hashes?.sha1)
@@ -116,20 +122,20 @@ export const useZipImport = (
               matched?.files?.find((file) => file.primary) || matched?.files?.[0];
 
             importedMods.push({
-              id: matched?.project_id || generateId('mrpack'),
+              projectId: matched?.project_id || generateId('mrpack'),
               slug: proj?.slug,
-              title: proj?.title || filename.replace('.jar', ''),
+              name: proj?.title || filename.replace('.jar', ''),
               description: proj?.description || 'Imported from .mrpack',
               icon_url: proj?.icon_url,
               author: proj?.author,
-              projectType: proj
+              type: proj
                 ? contentCategoryFromProject(proj)
                 : contentCategoryFromPath(f.path),
               category: proj
                 ? primaryCategoryId(proj.display_categories, proj.categories)
                 : undefined,
-              selectedVersionId: matched?.id,
-              selectedVersionNumber: matched?.version_number || 'mrpack',
+              versionId: matched?.id,
+              versionNumber: matched?.version_number || 'mrpack',
               versionType: matched?.version_type || 'release',
               fileUrl: downloadUrl || primaryFile?.url || '',
               filename
@@ -140,8 +146,10 @@ export const useZipImport = (
         const newProfile: Profile = {
           id: generateId('mrpack'),
           name: `${mrpackData.name || 'Modrinth Pack'} (インポート)`,
-          mcVersion: mcVer,
-          loader: loader,
+          environment: {
+            mcVersion: mcVer,
+            loader: loader
+          },
           description: 'Modrinth .mrpack からインポート',
           mods: importedMods
         };
@@ -214,22 +222,22 @@ export const useZipImport = (
         projectMap.set(p.id, p);
       });
 
-      const initialMods: ModItem[] = [];
+      const initialMods: ProjectItem[] = [];
       for (const ver of foundVersions) {
         const proj = projectMap.get(ver.project_id);
         if (proj) {
           const primaryFile = ver.files.find((f) => f.primary) || ver.files[0];
           initialMods.push({
-            id: proj.id,
+            projectId: proj.id,
             slug: proj.slug,
-            title: proj.title,
+            name: proj.title,
             description: proj.description,
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
-            projectType: contentCategoryFromProject(proj),
+            type: contentCategoryFromProject(proj),
             category: primaryCategoryId(proj.display_categories, proj.categories),
-            selectedVersionId: ver.id,
-            selectedVersionNumber: ver.version_number,
+            versionId: ver.id,
+            versionNumber: ver.version_number,
             versionType: ver.version_type || 'release',
             fileUrl: primaryFile ? primaryFile.url : '',
             filename: primaryFile ? primaryFile.filename : ''

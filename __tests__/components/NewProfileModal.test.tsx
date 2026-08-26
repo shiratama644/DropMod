@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NewProfileModal } from '@/components/NewProfileModal';
+import type { ProjectItem } from '@/types';
 
 const mcVersions = ['1.21.4', '1.20.1'];
 
@@ -59,8 +60,8 @@ describe('NewProfileModal', () => {
         initialImportData={{
           name: 'MyImport',
           mods: [
-            { id: 'a', title: 'A', description: '' },
-            { id: 'b', title: 'B', description: '' }
+            { projectId: 'a', name: 'A', type: 'mod', description: '' },
+            { projectId: 'b', name: 'B', type: 'mod', description: '' }
           ]
         }}
         onCreate={() => {}}
@@ -181,7 +182,7 @@ describe('NewProfileModal', () => {
         mcVersions={mcVersions}
         initialImportData={{
           name: '軽量化 (1)',
-          mods: [{ id: 'a', title: 'A', description: '' }],
+          mods: [{ projectId: 'a', name: 'A', type: 'mod', description: '' }],
           source: 'duplicate',
           description: '元の説明'
         }}
@@ -201,9 +202,9 @@ describe('NewProfileModal', () => {
   it('initialImportData の mods は onCreate に渡される', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn();
-    const initialMods = [
-      { id: 'a', title: 'A', description: '' },
-      { id: 'b', title: 'B', description: '' }
+    const initialMods: ProjectItem[] = [
+      { projectId: 'a', name: 'A', type: 'mod', description: '' },
+      { projectId: 'b', name: 'B', type: 'mod', description: '' }
     ];
     render(
       <NewProfileModal

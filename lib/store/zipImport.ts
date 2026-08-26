@@ -14,7 +14,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ModItem } from '@/types';
+import type { ProjectItem } from '@/types';
 
 // ============================================================================
 // 型
@@ -22,7 +22,7 @@ import type { ModItem } from '@/types';
 
 export interface PendingImportData {
   name: string;
-  mods: ModItem[];
+  mods: ProjectItem[];
   mcVersion?: string;
   loader?: string;
   loaderVersion?: string;

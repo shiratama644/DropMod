@@ -36,9 +36,19 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 
 > ⚠ 既知バグ（`docs/audit/issues-phase9.md`）: B24(幽霊 currentProfileId)は修正済。B7(zipExport cancel dead code)・B22(depCheck catch)等の Low 残件あり。プロファイル系を触る場合は同 issues を一読。
 
+## データモデル（Phase 11-A, 2026-08-26 変更）
+
+- **`ModItem` は廃止 → `ProjectItem`**（`types.ts`）。flat 型のままリネーム・整理:
+  `id→projectId` / `title→name` / `projectType?→type`（必須化）/ `selectedVersionId→versionId` / `selectedVersionNumber→versionNumber`。
+  Phase 11 追加: `provider?` ('modrinth'|'curseforge'|'unknown') / `artifact?` (sha1/path/size)。
+- **`Profile.environment`** に mcVersion / loader（`ProfileLoader` 5 値 union, 不正値は 'Fabric' 正規化）/ loaderVersion を集約。旧 flat フィールドは廃止。
+- `Profile.resourcepacks?` / `shaderpacks?` / `unknownFiles?`（`UnknownFile`: location/filename/path/sha1/size/discoveredAt）追加。linkedSource/modpackSource は Phase 12。
+- **ContentCategory (3値) と ProjectType (4値, lib/constants/search.ts) は意図的に分離**（modpack は Profile を構成する上位概念）。
+- 変換ロジックは `lib/state/sanitize.ts` の **`normalizeProfileForV2` / `normalizeProjectItem` / `normalizeLoader`**（pure, Dexie v2 upgrade と LocalStorage 経路で共用）。
+
 ## Dexie（IndexedDB, `lib/db/dexie.ts`）
 
-3 テーブル（DB 名 `DropModDB`, schema v1）:
+3 テーブル（DB 名 `DropModDB`, **schema v2**, index は v1 と同一）:
 
 | テーブル | PK / Index | 用途 |
 | :--- | :--- | :--- |
@@ -51,13 +61,17 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 ヘルパ: `putProfile` / `bulkPutProfiles` / `syncProfiles`（diff 同期, 単一 tx） / `getMeta/setMeta/deleteMeta` / `getAllProfiles` / `_clearAllForTesting`。
 > SSR では触らない（IndexedDB はブラウザ API）。全呼び出しは Client の useEffect/handler 経由。
 
+**schema v2 migration（Phase 11-A）**: v1 DB を開いた時点で upgrade が走り、
+保存済み row を `normalizeProfileForV2` で新形状に一括変換（flat→environment、ModItem→ProjectItem、loader 正規化、updatedAt 保持）。
+テストは `__tests__/lib/db/dexie.migration.test.ts`（v1 DB を作ってから app db を開く手法）。
+
 ## LocalStorage → Dexie 移行（`lib/db/migrate.ts`）
 
 - 初回起動で `migrateFromLocalStorage()`（`meta.migratedAt` 無ければ 1 回だけ, 冪等）。
 - 元キー: `dropmod_state_v2` / 旧 `craftforge_state_v2`（自動吸収）。
 - **LocalStorage は 7 日間バックアップ保持**（`localStorageBackupExpiresAt`）→ 期限後 `cleanupExpiredBackup` で削除。
 - `restoreFromLocalStorageBackup()` あり（緊急復旧用, UI ボタンは未実装 = diff-phase8 D4）。
-- 破損データ防御: `lib/state/sanitize.ts`（pure function, 100% カバレッジ）。
+- 破損データ防御: `lib/state/sanitize.ts`（pure function。旧 flat 形状の入力も新形状に変換して返す）→ LocalStorage 旧バックアップ流入も v2 形状で書き込まれる。
 
 ## cookie（SSR 用）
 

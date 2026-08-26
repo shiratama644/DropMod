@@ -1,10 +1,24 @@
 # Phase 12: ローカル Minecraft 環境 Sync & Modrinth Modpack (Read/Write)
 
-**ステータス**: 計画中（仕様推敲済み、Phase 11 完了後に着手）
+**ステータス**: 計画中（2026-08-26 改定: Phase 11 の確定仕様を反映。Phase 11 完了後に着手）
 **優先度**: 🔴 最重要 — Phase 11 と合わせて DropMod の核心価値を実現
 **見積工数**: 4〜5 週間（1 人フルタイム換算）
 **着手前提**: Phase 11 (Read-only Import & Analysis) 完了
 **Vercel デプロイとの関係**: Vercel 本番デプロイは **本 Phase 12 完了後**の最終ステップ (`docs/planning/PHASE10_CANDIDATES.md` 冒頭「【重要方針】」節参照)
+
+---
+
+## 📌 2026-08-26 改定: Phase 11 確定仕様に伴う調整
+
+> Phase 11 のセッション合意（`PHASE11_PLAN.md` 冒頭「2026-08-26 改定」参照）により、本計画書も以下を反映。
+
+| # | 項目 | 本 Phase への影響 |
+|---|---|---|
+| 1 | Profile は **`ProjectItem` ベース**（旧 `ContentItem` 案は不採用） | `ManagedFileRecord.contentId` は `ProjectItem.projectId` を参照。`.mrpack` Import も `ProjectItem[]` を生成 |
+| 2 | **`linkedSource` / `dirHandles` テーブルは Phase 11 から延期**され、**本 Phase で追加** | Phase 12-A の最初に Profile へ `linkedSource` を追加 + 既存 Import 済み Profile へのフォルダ再選択（リンク）UX を実装 |
+| 3 | Import 済み Profile は **`ProjectItem.artifact`（sha1/path/size）を既に保持** | 旧「Import snapshot を初期 ManagedFileRecord として展開」→「Profile 内の `artifact` を初期 `ManagedFileRecord` として展開」に置換 |
+| 4 | Phase 11 の Import 時環境不一致ハンドリングは**廃止**（新規 Profile のみのため） | **Sync 実行時**の `Profile.environment` とローカル検出環境の不一致の扱いを、新たな設計論点として §9 に追加 |
+| 5 | 3 カテゴリは `mods` / `resourcepacks` / `shaderpacks`（`ContentCategory` = mod/resourcepack/shader。**modpack はカテゴリではなく Profile の上位概念**） | `.mrpack` Import は 3 カテゴリへ `ProjectItem` を投入し、Profile に `modpackSource` を付与（本計画書どおり） |
 
 ---
 
@@ -21,7 +35,7 @@
 
 ```
 Phase 11: Read-only Import & Analysis (完了済み想定)
-  └─ Local → Profile snapshot、書き込みなし
+  └─ Local → Profile (Import、書き込みなし。ProjectItem.artifact が指紋を保持)
 
 Phase 12 (本仕様書): Sync & Modrinth Modpack
   ├─ Diff Engine → SyncPlan → Preview → Executor
@@ -142,8 +156,8 @@ interface ManagedFileRecord {
   sha1: string;
   size: number;
 
-  /** どの content を代表するか (ChatGPT #4) */
-  contentId?: string;              // Profile.mods[].id
+  /** どの content を代表するか (ChatGPT #4)。Phase 11 の ProjectItem.projectId を参照 */
+  contentId?: string;              // ProjectItem.projectId (Profile.mods 等の該当アイテム)
   versionId?: string;              // Modrinth version id
 
   /** 追加経路 (ChatGPT #5: ownership と source を分離) */
@@ -310,15 +324,15 @@ async function computeSyncPlan(
 ```
 
 **アルゴリズム** (カテゴリごとに独立実行):
-1. **Additions**: `Profile.contentItem` の `artifact.sha1` が Local に存在しない → add
-2. **Updates**: 同じ `contentId` で `artifact.sha1` が変わっている → update
+1. **Additions**: Profile 各カテゴリ（`mods` / `resourcepacks` / `shaderpacks`）の `ProjectItem.artifact.sha1` が Local に存在しない → add
+2. **Updates**: 同じ `contentId`（= `ProjectItem.projectId`）で `artifact.sha1` が変わっている → update
 3. **Deletions** (安全な削除条件、ChatGPT #12):
    ```
    ManagedFileRecord が存在
      AND
    現在の Local fingerprint == ManagedFileRecord.sha1  ← fingerprint unchanged 必須
      AND
-   Profile.mods[].content が該当 contentId を持たない
+   Profile の該当カテゴリ配列が該当 projectId の ProjectItem を持たない
    ```
    **fingerprint が変わっていたら** → deletion に含めず、`unchanged` + "外部変更検知" フラグ
 4. **Unchanged**: profile と local と managed で全て sha1 一致
@@ -458,11 +472,21 @@ Recent Sync History:
 
 ### 4.1 データモデル拡張 (ChatGPT #9 準拠)
 
-Profile 型に `modpackSource` を追加:
+Profile 型に `linkedSource`（Phase 11 から延期された分）と `modpackSource` を追加:
 
 ```typescript
 interface Profile {
-  // ... (Phase 11 で定義済み)
+  // ... (Phase 11 で定義済み: environment / mods / resourcepacks / shaderpacks /
+  //       unknownFiles — すべて ProjectItem ベース)
+
+  /** Phase 12-A で追加: Import 元フォルダとの紐付け (Phase 11 から延期) */
+  linkedSource?: {
+    rootType: 'official' | 'prism' | 'multimc' | 'generic';
+    /** Chromium 版のみ、Dexie の dirHandles テーブルに保存した handle への参照 */
+    dirHandleId?: string;
+    /** 最終 Sync 日時 */
+    lastSyncedAt: number;
+  };
 
   /** Modpack 由来の Profile はここに source を記録 */
   modpackSource?: {
@@ -477,7 +501,7 @@ interface Profile {
 ```
 
 **重要**: `modpackSource` は Profile 全体の由来を示すマーカー。
-`mods[]` / `resourcepacks[]` / `shaderpacks[]` の中身は Phase 11 と同じ構造。
+`mods[]` / `resourcepacks[]` / `shaderpacks[]` の中身は Phase 11 と同じ `ProjectItem` 構造。
 Modpack 由来のファイルは `ManagedFileRecord.source: 'modpack'` で管理。
 
 ### 4.2 .mrpack Import フロー (ChatGPT #10 準拠: Artifact-first)
@@ -497,7 +521,7 @@ POST /version_files with hashes[]
      ▼ Metadata resolution (project 情報取得)
 POST /projects?ids=[...]
      │
-     ▼ ContentItem[] 生成 (Phase 11 と同じ形式)
+     ▼ ProjectItem[] 生成 (Phase 11 と同じ形式)
      ▼ Profile.modpackSource セット
      ▼ ManagedFileRecord に source: 'modpack' 記録
      │
@@ -604,9 +628,9 @@ CurseForge `.zip` を Import しようとした場合:
 `/modpack` は **Phase 12 の Modrinth Modpack ハブ** として予約済み
 (`docs/planning/PHASE11_PLAN.md` §1.2.1)。
 
-- **やってはいけない**: `/discover/modpack` へのリダイレクト、ルート削除
+- **やってはいけない**: `/discover/modpacks` へのリダイレクト、ルート削除
 - **やること**: `.mrpack` Import、Modpack 更新検知、専用 UI をこの URL に載せる
-- `/discover/modpack` は Modrinth 検索。`/modpack` は Phase 12 ハブとして分離する
+- `/discover/modpacks` は Modrinth 検索。`/modpack` は Phase 12 ハブとして分離する
 
 ### 6.1 Profile 作成モーダルの経路拡張
 
@@ -671,11 +695,13 @@ Recent Sync Operations                      [ すべて表示 ]
 
 ### Phase 12-A: 基盤 + Managed File + Diff Engine (2 週)
 
+- [ ] **Profile へ `linkedSource` 追加 + `dirHandles` テーブル**（Phase 11 から延期された分。
+      Import 済み Profile へのフォルダ再選択（リンク）UX を含む）
 - [ ] `EnvironmentSink` 抽象 (`lib/env/sink.ts`)
 - [ ] Chromium `FileSystemSink` (`lib/env/sink/filesystem.ts`)
-  - Phase 11 handle を `requestPermission({ mode: 'readwrite' })` で昇格
+  - リンクした handle を `requestPermission({ mode: 'readwrite' })` で昇格
 - [ ] `ManagedFileRecord` の Dexie スキーマ + migration
-- [ ] Phase 11 で残した Import snapshot を初期 `ManagedFileRecord` として展開
+- [ ] Profile 内 `ProjectItem.artifact`（sha1/path/size）を初期 `ManagedFileRecord` として展開
 - [ ] `computeSyncPlan()` 実装 (Diff Engine)
 - [ ] Unit tests (Diff の全 5 分類、fingerprint unchanged 検証含む)
 
@@ -771,8 +797,12 @@ FingerprintChangedError などの発生時は自動中断 + Rollback UI 提示�
 
 ## 9. 未解決の設計論点（実装前に確定すべき）
 
+- [ ] **Sync 実行時に `Profile.environment` とローカルフォルダの検出環境が不一致の場合の扱い**
+      （2026-08-26 追加。Phase 11 の Import 時不一致は廃止されたが、Sync 時は発生し得る:
+      例: ユーザーがランチャー側で Loader を変更した後に Sync する。
+      警告 / ブロック / Profile 側を更新のいずれか）
 - [ ] Chromium: `read` handle を `readwrite` 昇格失敗時の UX
-      (ユーザーが「読み取りのみ」に留めた場合、Phase 11 モードに fallback)
+      (ユーザーが「読み取りのみ」に留めた場合、Read-only 解析のみに fallback)
 - [ ] Modpack 更新時にユーザーの追加 Mod (source: 'dropmod') と競合したら?
       (例: Modpack 新 version が同名 Mod を含む)
 - [ ] Sync 実行中にブラウザタブを閉じられた場合の resume UX
@@ -787,7 +817,7 @@ FingerprintChangedError などの発生時は自動中断 + Rollback UI 提示�
 | # | 提案内容 | Phase 12 反映 |
 |---|---|---|
 | 1 | Import/Sync 分離 | ✅ Phase 11 完了前提 |
-| 2 | ContentRef + Artifact 分離 | ✅ Phase 11 から継承 |
+| 2 | ContentRef + Artifact 分離 | ✅ `ProjectItem` flat 型 + `artifact?` として簡素化継承 (2026-08-26 改定) |
 | 3 | UnknownFile.location | ✅ Phase 11 から継承 |
 | 4 | ManagedFileRecord 拡張 | ✅ §2.3.1 |
 | 5 | Ownership Model | ✅ §2.3.1 (ownership × source の 2 軸) |
@@ -798,7 +828,7 @@ FingerprintChangedError などの発生時は自動中断 + Rollback UI 提示�
 | 10 | .mrpack Artifact-first | ✅ §4.2 |
 | 11 | CurseForge を外へ | ✅ Phase 13 に移動、§5 で入口のみ準備 |
 | 12 | fingerprint 必須 | ✅ §3.1 削除条件 / §3.3 実行直前再検証 |
-| 13 | Import 直後 snapshot | ✅ Phase 11-C で保存済み想定、§7 Phase 12-A で活用 |
+| 13 | Import 直後 snapshot | ✅ `ProjectItem.artifact` として Phase 11 から保持、§7 Phase 12-A で `ManagedFileRecord` 展開 |
 | 14 | Detector Strategy | ✅ Phase 11 完了 |
 | 15 | Web Worker SHA-1 | ✅ Phase 11 完了、Phase 12 でも活用 |
 | 16 | Batch API + cache | ✅ Phase 11 完了、Phase 12 でも活用 |

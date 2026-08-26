@@ -1,10 +1,27 @@
 # Phase 11: ローカル Minecraft 環境 Import & Analysis (Read-only)
 
-**ステータス**: 計画中（仕様推敲済み、実装未着手）
+**ステータス**: 計画確定（2026-08-26 セッション合意により仕様確定。実装未着手）
 **優先度**: 🔴 最重要 — DropMod の核心価値の 10 倍化
 **見積工数**: 4〜6 週間（1 人フルタイム換算）
 **着手前提**: Phase 10 の**開発項目** (bundle 削減 / AppContext 削除 / Markdown 画像最適化 / E2E 拡張 / shimmer skeleton) 完了
 **Vercel デプロイとの関係**: Vercel 本番デプロイは **Phase 10 + Phase 11 + Phase 12 の全項目完了後**の最終ステップ (2026-08-24 決定、Hobby プランのリソース制約対策、詳細は `docs/planning/PHASE10_CANDIDATES.md` 冒頭「【重要方針】」節参照)
+
+---
+
+## 📌 2026-08-26 改定: セッション合意による確定事項
+
+> 本セッションでのユーザー合意に基づき、データモデルと運用方針を改定した（本文にも反映済み）。
+
+| # | 項目 | 改定内容 |
+|---|---|---|
+| 1 | **データモデル** | 旧案の `ContentItem`（ContentRef + ContentArtifact のネスト構造）は**不採用**。既存 `ModItem` を `ProjectItem` に改名・整理した **flat 型**で `mods / resourcepacks / shaderpacks` を扱う（§4.5）。既存コード（約 100 箇所）への影響を最小化 |
+| 2 | **型の分離** | `ProjectType`（4値: mod/modpack/resourcepack/shader、Modrinth API/検索ドメイン）と `ContentCategory`（3値、Profile 内実体ファイル）は**意図的に分離**。`modpack` は Profile を構成する上位概念のため `ContentCategory` に含めない |
+| 3 | **Profile.environment** | flat な `mcVersion / loader / loaderVersion` を `environment` サブオブジェクトに集約。Dexie schema v2 で既存データをマイグレーション |
+| 4 | **linkedSource** | Profile への `linkedSource` / `dirHandles` テーブルは **Phase 12 へ延期**。Phase 11 ではフォルダ選択は都度使い捨て（恒久的な紐付けを持たない） |
+| 5 | **Import 先** | **常に新規 Profile 作成のみ**（既存 Profile への再 Import / merge は不可）。§9.2 の「環境不一致ハンドリング」は不要となり破棄 |
+| 6 | **プロファイル命名** | 自動生成: フォルダ名が妥当ならフォルダ名、不適切（`.minecraft` 等の特定名・一定以上長い）なら検出環境から生成、検出失敗なら空欄。**すべてユーザー編集可**（§6.1） |
+| 7 | **artifact** | `ProjectItem.artifact`（sha1 / path / size）として Phase 11 から保持。Phase 12 の Sync / Backup / Rollback で再利用。旧案の「Import 直後 snapshot を別途保存」（11-C）は本フィールドに吸収され**廃止** |
+| 8 | **技術検証 (2026-08-26 実施)** | File System Access API は 2026 年時点でも **Chromium 系のみ**（Firefox/Safari/モバイル不可）→ ZIP フォールバック方針を継続。Modrinth `/version_files` は SHA-1/SHA-512、レート制限 300 req/min |
 
 ---
 
@@ -84,9 +101,9 @@ Phase 11 は以下 3 カテゴリの Import + Analysis のみ対応:
 | `/shader` | **11** | Shader の閲覧・Import ハブ (`shaderpacks/` 解析結果の入口) |
 | `/modpack` | **12** | Modrinth Modpack (`.mrpack`) の Import / 更新ハブ |
 | `/discover/mods` | 現行 | Modrinth 検索 (Mods) |
-| `/discover/resourcepack` | 現行 | Modrinth 検索 (Resource Packs) |
-| `/discover/shader` | 現行 | Modrinth 検索 (Shaders) |
-| `/discover/modpack` | 現行 | Modrinth 検索 (Modpacks) |
+| `/discover/resourcepacks` | 現行 | Modrinth 検索 (Resource Packs) |
+| `/discover/shaders` | 現行 | Modrinth 検索 (Shaders) |
+| `/discover/modpacks` | 現行 | Modrinth 検索 (Modpacks) |
 
 現状は予約ページ (Coming Soon + 「Modrinth で探す」→ `/discover/*`) を置き、404 にしない。
 BrowseBottomSheet の「探す」は `/discover/*`。予約ハブはルート直下のまま。
@@ -200,10 +217,10 @@ interface EnvironmentSource {
         └───────────────────┬───────────────────┘
                             ▼ ③ Profile Builder
 ┌────────────────────────────────────────────────────────┐
-│ Profile 生成 (新規、または既存 Profile に merge)       │
-│  - Environment (mcVersion / loader / loaderVersion)    │
-│  - Content[] (Mods / RP / Shader、ChatGPT #2 で分離型)│
-│  - UnknownFile[] (照合不可、ChatGPT #3 で location 化)│
+│ Profile 生成 (常に新規 — 既存 Profile への merge なし) │
+│  - environment (mcVersion / loader / loaderVersion)   │
+│  - ProjectItem[] ×3 (mods / resourcepacks / shaders)  │
+│  - unknownFiles[] (照合不可、ChatGPT #3 で location 化)│
 └───────────────────────────┬────────────────────────────┘
                             ▼ ④ Analysis View (Read-only)
 [ ユーザー: 結果確認 → Profile 保存 or 破棄 ]
@@ -239,8 +256,10 @@ fingerprint (SHA-1) を Dexie に snapshot として保存する (ChatGPT #13)�
 ```typescript
 // Phase 11 は 'read' のみ (書き込み権限は求めない)
 const handle = await window.showDirectoryPicker({ mode: 'read' });
-// IndexedDB に永続化して次回起動時に requestPermission で復元
-await dexie.dirHandles.put({ profileId, handle, addedAt: Date.now() });
+// ※ハンドルの IndexedDB 永続化 (dirHandles) と Profile.linkedSource は
+//   Phase 12 (Sync) に延期 (2026-08-26 改定)。Phase 11 では
+//   「選択 → 解析 → Profile 生成」の都度使い捨てで、
+//   フォルダとの恒久的な紐付けは持たない。
 ```
 
 #### 非対応ブラウザ
@@ -363,48 +382,65 @@ Phase 11 で読み取る対象:
 自動検出失敗時 or ユーザーが上書きしたい場合、既存の Profile 作成モーダルの
 ドロップダウンを再利用（Minecraft Version / Loader / Loader Version）。
 
-### 4.5 データモデル (ChatGPT #2, #3, #9 反映)
+### 4.5 データモデル（2026-08-26 改定: ProjectItem 方式）
+
+> **旧案の `ContentItem`（ContentRef + ContentArtifact のネスト構造）は不採用**。
+> 既存 `ModItem` を `ProjectItem` に改名・整理した **flat 型**を採用。理由: 既存コード
+> （useProfiles / ModsPageClient / ZIP / 依存チェック / UI / テスト、約 100 箇所）への
+> 影響を最小化しつつ、Import 情報（provider / artifact）を持たせるため。
 
 Phase 11 で Dexie に永続化するモデル:
 
 ```typescript
 // -----------------------------------------------------------
-// Content Model (ChatGPT #2: identity と artifact を分離)
+// コンテンツ分類 (Profile 内の実体ファイル。modpack は含まない)
+// ※ Modrinth API / 検索ドメインの ProjectType (4値) とは意図的に分離。
+//   modpack は Profile を構成する上位概念 (Phase 12 の modpackSource)。
 // -----------------------------------------------------------
 type ContentCategory = 'mod' | 'resourcepack' | 'shader';
-type ContentProvider = 'modrinth' | 'curseforge' | 'unknown';
 
-interface ContentRef {
-  /** どの provider の project か (Phase 11 は 'modrinth' or 'unknown') */
-  provider: ContentProvider;
-  projectId: string;               // Modrinth の project id
-  versionId?: string;              // Modrinth の version id
-}
+// -----------------------------------------------------------
+// ProjectItem (旧 ModItem を改名・整理。3 カテゴリ共通の flat 型)
+// -----------------------------------------------------------
+interface ProjectItem {
+  /** Modrinth project ID (旧: id) */
+  projectId: string;
+  /** 選択中の Modrinth version ID。未設定 = 最新安定版扱い (旧: selectedVersionId) */
+  versionId?: string;
+  versionNumber?: string;          // (旧: selectedVersionNumber)
+  /** 表示名 (旧: title) */
+  name: string;
+  /** コンテンツ分類 (旧: projectType? を必須化。取りこぼしを型で検出) */
+  type: ContentCategory;
 
-interface ContentArtifact {
-  filename: string;                // 'sodium-fabric-0.6.0.jar'
-  path: string;                    // 'mods/sodium-fabric-0.6.0.jar' (相対)
-  sha1: string;
-  size: number;
-}
+  // ---- 既存フィールドは維持 ----
+  slug?: string;
+  description?: string;
+  icon_url?: string;
+  author?: string;
+  category?: string;
+  versionType?: string;
+  fileUrl?: string;
+  filename?: string;
 
-interface ContentItem {
-  id: string;                      // 内部 UUID (Phase 11 で generateId('content'))
-  category: ContentCategory;
-  content: ContentRef;
-  artifact: ContentArtifact;
-  /** UI 表示用 (project metadata から埋める) */
-  displayName: string;             // 'Sodium'
-  author?: string;                 // 'JellySquid'
-  iconUrl?: string;
+  // ---- Phase 11 追加 ----
+  /** Import 由来の provider。未設定 = 従来の手動追加 ('modrinth' 扱い) */
+  provider?: 'modrinth' | 'curseforge' | 'unknown';
+  /** ローカルファイルの実体情報 (Import 由来のみ設定。Phase 12 の Sync/Backup で再利用) */
+  artifact?: {
+    sha1: string;
+    /** ルートからの相対パス (例: 'mods/sodium-fabric-0.6.0.jar') */
+    path: string;
+    size: number;
+  };
 }
 
 // -----------------------------------------------------------
-// Unknown File (ChatGPT #3: category → location)
+// Unknown File (Modrinth 照合不可。ChatGPT #3: location で記録)
 // -----------------------------------------------------------
 interface UnknownFile {
   id: string;
-  /** どのディレクトリで見つかったか (category は Unknown なので確定できない) */
+  /** どのディレクトリで見つかったか (category は確定できないため location) */
   location: 'mods' | 'resourcepacks' | 'shaderpacks';
   filename: string;
   path: string;                    // 'mods/some-custom.jar'
@@ -417,43 +453,34 @@ interface UnknownFile {
 // Profile (Phase 11 拡張)
 // -----------------------------------------------------------
 interface Profile {
-  // 既存フィールド
   id: string;
   name: string;
-  description: string;
+  description?: string;
 
-  // Environment (ChatGPT #9: Environment を独立サブオブジェクト化)
+  /** 環境情報 (旧: flat な mcVersion / loader / loaderVersion を集約) */
   environment: {
     mcVersion: string;
     loader: 'Fabric' | 'Forge' | 'NeoForge' | 'Quilt' | 'Vanilla';
     loaderVersion?: string;
   };
 
-  // 3 カテゴリの Content (ChatGPT #9: modpack はカテゴリではない)
-  mods: ContentItem[];
-  resourcepacks: ContentItem[];
-  shaderpacks: ContentItem[];
+  /** 3 カテゴリ (modpack はカテゴリではない = ChatGPT #9) */
+  mods: ProjectItem[];
+  resourcepacks?: ProjectItem[];   // 既存 Profile は未設定で OK (optional)
+  shaderpacks?: ProjectItem[];
+  unknownFiles?: UnknownFile[];
 
-  // Unknown Files (照合できなかった)
-  unknownFiles: UnknownFile[];
-
-  // Phase 11 で追加、Phase 12 で活用
-  linkedSource?: {
-    rootType: 'official' | 'prism' | 'multimc' | 'generic';
-    /** Chromium 版のみ、Dexie の dirHandles テーブルに保存 */
-    dirHandleId?: string;
-    /** 最終 Import 日時 */
-    lastImportedAt: number;
-  };
-
-  // Phase 12 で Modpack 対応時に追加予定 (Phase 11 では常に undefined)
-  modpackSource?: never; // Phase 12 で書き換え
+  // linkedSource (フォルダ紐付け) / modpackSource は Phase 12 で追加
 }
 ```
 
-**旧 Profile 型との互換性**: 既存の `Profile` (`types.ts`) は `mcVersion / loader / mods`
-がフラット構造。Phase 11 で `environment` サブオブジェクト化するため、**マイグレーション**
-が必要 (Dexie migrate hook で自動変換)。
+**旧 `ModItem` / flat `Profile` からのマイグレーション**（Dexie schema v2 で一括変換）:
+
+| 変換 | 内容 |
+|---|---|
+| Profile | `mcVersion / loader / loaderVersion` → `environment` に集約（loader の不正値は `'Fabric'` に正規化） |
+| ModItem → ProjectItem | `id`→`projectId`、`title`→`name`、`projectType?`→`type`（未設定は `'mod'`）、`selectedVersionId`→`versionId`、`selectedVersionNumber`→`versionNumber` |
+| 新配列 | `resourcepacks / shaderpacks / unknownFiles` は optional のため既存データはそのまま互換 |
 
 ### 4.6 ファイル解析 (Web Worker、ChatGPT #15)
 
@@ -566,6 +593,16 @@ Chromium 版 UI:
 非対応ブラウザ版:
 - 「.minecraft.zip をアップロード」ボタン + 手順説明
 
+**プロファイル名の自動生成ルール (2026-08-26 確定)**:
+
+| 条件 | デフォルト値 |
+|---|---|
+| フォルダ名が妥当（特定名でない・一定長以下） | フォルダ名 |
+| フォルダ名が不適切（`.minecraft` 等の特定名・一定以上長い） | 検出環境から生成（例: `Fabric 1.21.1`） |
+| 環境検出に失敗 | 空欄 |
+
+※「特定名」「一定長」の閾値は実装時に確定。**すべてユーザーが編集可能**（自動生成はあくまでデフォルト値）。
+
 ### 6.2 インポート・解析結果画面 (Analysis View)
 
 ```text
@@ -599,6 +636,9 @@ Phase 11 は 3 タブ (Mods / RP / Shader)。Modpack タブは Phase 12 で追�
 
 ### 6.4 パーミッション再要求 UX
 
+> **2026-08-26 改定**: ハンドル永続化（`dirHandles` / `linkedSource`）は Phase 12 に延期したため、
+> **Phase 11 では「再許可」は発生しない**（毎回フォルダを選択し直す）。本 UX は Phase 12 で実装する。
+
 Phase 11 は Read-only なので `read` パーミッションのみ:
 
 ```text
@@ -624,16 +664,16 @@ Phase 11 を 3 サブフェーズに分割:
 
 ### Phase 11-A: 基盤 + 公式ランチャー + Read-only MVP (2〜3 週)
 
+- [ ] **データモデル基盤 (最初のコミット)**: `ModItem`→`ProjectItem` リネーム ＋ `Profile.environment` 化 ＋ `resourcepacks / shaderpacks / unknownFiles` 追加 ＋ Dexie v2 migration ＋ sanitize 更新 ＋ 既存アクセス全書き換え（約 14 ファイル）＋ テスト更新
 - [ ] Feature detection ユーティリティ (`lib/env/capabilities.ts`)
 - [ ] `EnvironmentSource` 抽象レイヤー (`lib/env/source.ts`)
-- [ ] `FileSystemDirectoryHandle` の Dexie 永続化 (`lib/db/dexie.ts` に `dirHandles` テーブル追加)
-- [ ] `showDirectoryPicker({ mode: 'read' })` ラッパー + パーミッション管理 (`lib/env/picker.ts`)
+- [ ] ~~`FileSystemDirectoryHandle` の Dexie 永続化~~ → **Phase 12 へ延期**（`linkedSource` と共に）
+- [ ] `showDirectoryPicker({ mode: 'read' })` ラッパー (`lib/env/picker.ts`、ハンドル永続化なし)
 - [ ] `EnvironmentDetector` interface + `OfficialLauncherDetector` (`lib/env/detector/official.ts`)
 - [ ] `GenericDetector` (fallback)
 - [ ] Web Worker で SHA-1 並列計算 (`lib/env/hash.worker.ts`)
 - [ ] Modrinth API 解決 (既存 `fetchModrinthVersionFilesBatch` + `fetchModrinthBatch` 再利用)
-- [ ] `ContentItem` / `UnknownFile` / `Profile.environment` の Dexie migration
-- [ ] 新規 Profile 作成モーダルの「フォルダから」タブ追加
+- [ ] 新規 Profile 作成モーダルの「フォルダから」タブ追加（プロファイル名自動生成ルール込み）
 - [ ] Read-only モードで 3 カテゴリ Import が動く MVP
 
 **成果物**: 公式 `.minecraft` を選択 → 3 カテゴリを Modrinth と照合 → Profile 作成
@@ -650,12 +690,13 @@ Phase 11 を 3 サブフェーズに分割:
 
 **成果物**: 公式 + Prism 両対応、Analysis 結果画面完成。
 
-### Phase 11-C: ZIP フォールバック + Import Snapshot (1 週)
+### Phase 11-C: ZIP フォールバック + 仕上げ (1 週)
 
 - [ ] ZIP フォールバック実装 (既存 `hooks/useZipImport.ts` 拡張)
 - [ ] EnvironmentSource の ZIP 実装
-- [ ] Import 直後の fingerprint snapshot を Dexie に保存 (Phase 12 準備、ChatGPT #13)
-  - **注**: Phase 11 では snapshot を「参照のみ」で使わない。Phase 12 で Sync の基準にする
+- [ ] ~~Import 直後の fingerprint snapshot を Dexie に保存~~ → **廃止 (2026-08-26 改定)**:
+      `ProjectItem.artifact`（sha1/path/size）として Profile 内に保持されるため別途 snapshot は不要。
+      Phase 12-A で `ManagedFileRecord` へ展開する
 - [ ] E2E テスト (Chromium 環境で `__e2e_mock_handle__` 検討)
 - [ ] ドキュメント整備 + Analysis レポート
 
@@ -683,7 +724,7 @@ Phase 11 を 3 サブフェーズに分割:
 ### 8.3 パーミッション UX
 
 - Chrome 122+ でパーミッション persist が改善したが、**タブを閉じると失われる**
-- Dexie に handle 保存 → 次回起動時に `requestPermission({ mode: 'read' })` を叩いて再有効化
+- **2026-08-26 改定**: handle の Dexie 保存（→ 次回起動時の再許可フロー）は **Phase 12 へ延期**。Phase 11 では毎回フォルダを選択し直す
 - **失敗時のフォールバック**: `queryPermission()` が `denied` を返したら、
   ユーザーに「別のフォルダを選び直す」オプションを提示
 
@@ -714,17 +755,20 @@ Phase 11 を 3 サブフェーズに分割:
 
 ---
 
-## 9. 未解決の設計論点（実装前に確定すべき）
+## 9. 設計論点（2026-08-26 すべて解決済み）
 
-- [ ] `.minecraft` ではなく Prism instance root (`instances/<name>/`) を選ばれた場合の
-      「保存フォルダ表示ラベル」の UX
-- [ ] Profile が指定する mcVersion / loader と、Import 元の環境の mcVersion / loader が
-      **不一致** な場合の警告レベル (error / warning / info)
-- [ ] ZIP フォールバックで .minecraft 全体を扱う場合の **メモリ制約** (数百 MB になる可能性)
-      → Stream 処理必須、jszip の `generateAsync({ streamFiles: true })` 検討
-- [ ] Web Worker のロード失敗時のフォールバック (main thread で計算)
-- [ ] 既存 Profile に「フォルダから追加取り込み」した場合の merge 挙動
-      (上書き / 追加のみ / ユーザー選択?)
+- [x] `.minecraft` ではなく Prism instance root (`instances/<name>/`) を選ばれた場合の
+      「保存フォルダ表示ラベル」の UX → **検出した `rootType`（'prism'）とフォルダパスをそのまま表示**
+      （実装詳細として確定）
+- [x] Profile が指定する mcVersion / loader と、Import 元の環境の mcVersion / loader が
+      **不一致** な場合の警告レベル → **発生しない**（Import は常に新規 Profile 作成のみで、
+      `environment` はフォルダから検出した値そのもののため）。**ハンドリング不要・破棄**
+- [x] ZIP フォールバックで .minecraft 全体を扱う場合の **メモリ制約** → **Stream 処理で対応**
+      （実装時、jszip の stream 系 API を検討）
+- [x] Web Worker のロード失敗時のフォールバック → **main thread へフォールバック**
+      （性能は低下するが機能は維持）
+- [x] 既存 Profile に「フォルダから追加取り込み」した場合の merge 挙動 → **不可**
+      （Import は常に新規 Profile 作成のみ。merge 自体が存在しない）
 
 ---
 
@@ -767,6 +811,11 @@ Phase 11 を 3 サブフェーズに分割:
 | 17 | 見積り 10〜14週 | ✅ Phase 11 のみ 4〜6 週 | Phase 12: 4〜5 週、Phase 13: 2〜3 週 |
 | 18 | Scope 縮小 | ✅ CurseForge/config/saves 除外 | — |
 | 19 | Phase 細分 | ✅ 11-A/B/C の 3 段 | Phase 12 も細分予定 |
+
+> **2026-08-26 改定注記**: #2 の「ContentRef + Artifact 分離」は実装簡素化のため
+> **`ProjectItem` の flat 型 + `artifact?` フィールドに統合**（fingerprint 必須 [#12] は
+> `ProjectItem.artifact` が担う）。#13 の「Import 直後 snapshot」は `ProjectItem.artifact`
+> として Profile 内に保持される形に簡素化（別途 snapshot テーブルは作らない）。
 
 ---
 

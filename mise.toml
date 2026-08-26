@@ -8,9 +8,9 @@
 #   インストールするため SEA バイナリを完全に回避できる。
 #   参考: https://github.com/jdx/mise/discussions/9453
 #
-# バージョンはプロジェクトの指定と同一:
-#   node → .nvmrc (22)
-#   pnpm → package.json の packageManager (11.22.0)
+# バージョン方針:
+#   node → 26.7.0 (ユーザー指定)
+#   pnpm → 11.24.0 (ユーザー指定。package.json の packageManager と同一に保つこと)
 [tools]
-node = "22"
-"npm:pnpm" = "11.22.0"
+node = "26.7.0"
+"npm:pnpm" = "11.24.0"

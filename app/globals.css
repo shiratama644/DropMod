@@ -4,7 +4,17 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+/* Tailwind v4: dark: variant を media query ではなく .dark class ベースに変更。
+   端末のシステム設定 (prefers-color-scheme) ではなく、サイト内のテーマ切替に追従させる。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+    /* color-scheme: light — このページはライト配色を自前管理していることを
+       ブラウザに宣言する。宣言がないと Chrome (Android) の「Web コンテンツの
+       自動ダークモード」がライトページを強制反転し、ライトに切り替えても
+       見た目がダークのままになる (端末ダークモード時)。
+       html.dark 側は color-scheme: dark で上書きされる。 */
+    color-scheme: light;
     --bg-base: #f1f5f9;
     --bg-panel: rgba(255, 255, 255, 0.96);
     --bg-card: rgba(255, 255, 255, 0.85);
@@ -30,6 +40,7 @@
 }
 
 html.dark {
+    color-scheme: dark;
     --bg-base: #090d14;
     --bg-panel: rgba(15, 23, 42, 0.92);
     --bg-card: rgba(30, 41, 59, 0.65);

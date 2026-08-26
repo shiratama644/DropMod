@@ -97,7 +97,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover'
+  viewportFit: 'cover',
+  // ブラウザ UI バーの色。サイト内テーマ (html.dark class) に連動させるため
+  // CSS 側の color-scheme と組み合わせて機能する。
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f1f5f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#090d14' }
+  ]
 };
 
 /**
@@ -153,6 +159,10 @@ try {
   return (
     <html lang="ja" className="dark" suppressHydrationWarning>
       <head>
+        {/* color-scheme: ページが両モード対応であることを CSS 読み込み前に
+            ブラウザに伝える (Flash of Wrong Theme + 自動ダークモード対策)。
+            実際の切替は globals.css の :root/html.dark color-scheme が担当。 */}
+        <meta name="color-scheme" content="light dark" />
         {/* Sub-Phase 8-E (E-6): Modrinth CDN と API への preconnect で
             初回リクエスト時の DNS + TLS ハンドシェイクを前倒し。
             Mod アイコン画像 (cdn.modrinth.com/data/...) の LCP 短縮に寄与。 */}

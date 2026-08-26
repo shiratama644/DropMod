@@ -27,6 +27,17 @@
 `ModDetailPageView` ヒーロー CTA (Modrinth/ダウンロード/追加)、`ModCard` の
 追加/追加済みボタン (両状態で同寸 h-9・min-w-[7rem] に統一 = 追加時にカード寸法が変わらない)。
 
+## color-scheme とテーマ (2026-08-27 修正済み)
+
+- **`color-scheme` CSS プロパティは必須**: `:root { color-scheme: light }` + `html.dark { color-scheme: dark }`。
+  宣言がないと Chrome (Android) の「Web コンテンツの自動ダークモード」がライトページを
+  強制反転し、サイト内でライトに切り替えても見た目がダークのままになる (端末ダークモード時)。
+- **`@custom-variant dark (&:where(.dark, .dark *));`** を globals.css に宣言し、
+  Tailwind v4 の `dark:` variant を media query ではなく `.dark` class ベースに変更。
+  端末設定にではなくサイト内テーマ切替に追従する。
+- `<meta name="color-scheme" content="light dark">` を head に置き CSS 読み込み前に宣言。
+- `viewport.themeColor` でブラウザ UI バー色も対応。
+
 ## カテゴリ・通知 (2026-08-27)
 
 - **カテゴリ表示は英語** (Modrinth 準拠。`lib/constants/categories.ts` のラベルがすべて英語)。

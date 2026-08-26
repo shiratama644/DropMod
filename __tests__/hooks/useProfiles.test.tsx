@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
@@ -15,6 +16,7 @@ import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '../test-utils/queryWrapper';
 import { db } from '@/lib/db/dexie';
 import type { ThemeMode } from '@/types';
+import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
 // ------------------ Reset helpers ------------------
 
@@ -58,19 +60,30 @@ async function resetAll() {
 
 // ------------------ Hook harness ------------------
 
+// vitest 4 は vi.fn() を constructor 呼び出し可能な型で返すため、
+// 特定シグネチャの引数へ渡す mock は明示的にジェネリクスで型付けする
+// (vitest 3 時代の ReturnType<typeof vi.fn> は (x: T) => void 系と非互換)。
 interface Harness {
   theme: ThemeMode;
-  setThemeState: ReturnType<typeof vi.fn>;
-  showToast: ReturnType<typeof vi.fn>;
-  confirmDialog: ReturnType<typeof vi.fn>;
+  setThemeState: Mock<(theme: ThemeMode) => void>;
+  showToast: Mock<
+    (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
+  >;
+  confirmDialog: Mock<
+    (options: ConfirmDialogOptions) => Promise<boolean>
+  >;
 }
 
 function makeHarness(confirmValue = true): Harness {
   return {
     theme: 'dark' as ThemeMode,
-    setThemeState: vi.fn(),
-    showToast: vi.fn(),
-    confirmDialog: vi.fn().mockResolvedValue(confirmValue)
+    setThemeState: vi.fn<(theme: ThemeMode) => void>(),
+    showToast: vi.fn<
+      (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
+    >(),
+    confirmDialog: vi
+      .fn<(options: ConfirmDialogOptions) => Promise<boolean>>()
+      .mockResolvedValue(confirmValue)
   };
 }
 

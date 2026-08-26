@@ -159,7 +159,7 @@ pnpm install --frozen-lockfile
 ### 6.1 環境・ツールチェーン
 - Node.js v24.x（LTS）/ pnpm 11.x（corepack 経由）/ Next.js 16 App Router / React 19 / TypeScript 5
 - Biome 2.5 (ESLint は完全撤去済み)、`biome.json` の `overrides` でテストファイルのみ `noNonNullAssertion: off`
-- Vitest 3 + jsdom + fake-indexeddb + MSW v2 + @testing-library/react 16
+- Vitest 4 + jsdom + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 7.x 固定 devDep）
 - Playwright (Chromium 単独、`--disable-gpu` 必須)
 - 状態管理: **Zustand 5**（`lib/store/` 配下）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
 - パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は Vercel 側で自動注入されるので false のままで OK）。

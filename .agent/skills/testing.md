@@ -12,8 +12,12 @@
 
 ## スタック
 
-- Vitest 3 + jsdom + @testing-library/react **16** + user-event 14 + **msw 2.15** + fake-indexeddb 6。
-- 現状: **373 tests / 42 files pass**, カバレッジ **91%+**（per-module threshold 全 pass）。
+- **Vitest 4** + jsdom + @testing-library/react **16** + user-event 14 + **msw 2.15** + fake-indexeddb 6。
+  - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
+  - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
+  - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
+- 現状: **376 tests / 42 files pass**。
+- ⚠ **coverage threshold 違反あり（未解決, 2026-08-26 発覚）**: vitest 4 の V8 coverage は AST ベース再マッピングに変更され branch/function 数値が低下（より正確）。加えて Phase 10-P1 / ルーティング再設計で追加された未テストファイル（landing/*, BottomSheet 系, DesktopSidebar 等）の影響も元からある。`pnpm test:coverage` は global branches・lib/store branches・hooks branches・components で閾値割れ（components stmt/lines は vitest 3 時点から 49.86% < 50% で既に違反）。CI は `pnpm test:coverage` を gate にしているため要対応。
 
 ## msw（Network レベル mock）
 

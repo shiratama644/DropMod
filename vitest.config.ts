@@ -20,12 +20,11 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react()],
   test: {
-    // カスタム環境: jsdom + Node ネイティブ AbortController/AbortSignal。
-    // Node 24 (undici v7) の fetch は jsdom 由来の AbortSignal を拒否するため
-    // vitest 3.x の jsdom 環境では Node 24 で fetch 系テストが全滅する
-    // (vitest#8374)。上流修正 (vitest 4 / #8390) までの回避策。
-    // 詳細は ./vitest.environment.ts のコメント参照。
-    environment: './vitest.environment.ts',
+    // jsdom 環境で React 19 コンポーネントをテスト。
+    // ※ Node 24 (undici v7) の fetch が jsdom 由来の AbortSignal を拒否する
+    //    問題 (vitest#8374) は vitest 4 で上流解決済みのため、
+    //    カスタム環境 (旧 vitest.environment.ts) は削除して素の 'jsdom' に戻した。
+    environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: [

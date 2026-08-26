@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import JSZip from 'jszip';
 import { useZipImport } from '@/hooks/useZipImport';
@@ -58,19 +59,28 @@ async function makeEmptyZip(): Promise<File> {
 
 // ------------------ Hook harness ------------------
 
+// vitest 4 は vi.fn() を constructor 呼び出し可能な型で返すため、
+// 特定シグネチャの引数へ渡す mock は明示的にジェネリクスで型付けする
+// (vitest 3 時代の ReturnType<typeof vi.fn> は (x: T) => void 系と非互換)。
+// setProfiles は呼び出し側で as unknown as React.Dispatch に cast するため
+// 緩い型のまま (mock.calls の中身を any 扱いで検証するテスト本体があるため)。
 interface Harness {
   setProfiles: ReturnType<typeof vi.fn>;
-  setCurrentProfileId: ReturnType<typeof vi.fn>;
-  setIsNewProfileModalOpen: ReturnType<typeof vi.fn>;
-  showToast: ReturnType<typeof vi.fn>;
+  setCurrentProfileId: Mock<(id: string) => void>;
+  setIsNewProfileModalOpen: Mock<(open: boolean) => void>;
+  showToast: Mock<
+    (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
+  >;
 }
 
 function makeHarness(): Harness {
   return {
     setProfiles: vi.fn(),
-    setCurrentProfileId: vi.fn(),
-    setIsNewProfileModalOpen: vi.fn(),
-    showToast: vi.fn()
+    setCurrentProfileId: vi.fn<(id: string) => void>(),
+    setIsNewProfileModalOpen: vi.fn<(open: boolean) => void>(),
+    showToast: vi.fn<
+      (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void
+    >()
   };
 }
 

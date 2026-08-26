@@ -27,10 +27,11 @@ pnpm build                    # next build (turbopack)。ECONNRESET でも exit 
 ## 環境構築（Sandbox 再構築後）
 
 ```bash
-corepack enable pnpm >/dev/null 2>&1
-pnpm install --frozen-lockfile
+bash .agent/hooks/restore-sandbox-env.sh
 ```
-（Sandbox 再構築時の復旧は `hooks/sandbox-rebuild-recovery.md` + AGENT.md §4.1.1 参照）
+（スクリプトが node を `.nvmrc` の LTS に置換し、corepack + pnpm + 依存を再構築する。Sandbox 再構築時の復旧は `hooks/sandbox-rebuild-recovery.md` + AGENT.md §4.1.1 参照）
+
+> ⚠️ **nodejs.org は Sandbox から到達不可**（SSL 接続エラー、§6.2 と同種）。Node バイナリは npm registry の `node-linux-x64` パッケージから取得する（`registry.npmjs.org` は到達可能）。
 
 ## 作業ブランチ（§4.4）
 
@@ -39,7 +40,7 @@ pnpm install --frozen-lockfile
 
 ## その他環境メモ
 
-- Sandbox の node は **v22 系でプラットフォーム固定**（`.nvmrc` の影響を受けない。プロジェクトの `.nvmrc` は 24/LTS）。pnpm は 11.24（corepack が `packageManager` から解決）。TS 5 `strict` + `noUncheckedIndexedAccess`。
+- Sandbox の node は **`restore-sandbox-env.sh` で `.nvmrc` のメジャー版（現行 24/LTS）に自動置換**される（nodejs.org は到達不可のため npm registry の `node-linux-x64` パッケージから取得 → `/usr/local/bin/node` を差し替え）。pnpm は 11.24（corepack が `packageManager` から解決）。TS 5 `strict` + `noUncheckedIndexedAccess`。
 - Biome 2.5（ESLint 撤去済）。formatter は**無効**（フォーマット差分は出さない方針）。
 - `pnpm-workspace.yaml` `allowBuilds`: `sharp:false / esbuild:true / msw:false`。
 

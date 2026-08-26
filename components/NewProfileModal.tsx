@@ -41,6 +41,28 @@ interface NewProfileModalProps {
 // 両経路で使う。Phase 11 は Read-only。
 // ---------------------------------------------------------------------------
 
+/**
+ * ZIP 環境取り込み (pendingImportData) の表示件数。
+ * フォルダ解析の scannedCounts (照合成功 + 未識別の合計) と同じ意味にするため、
+ * 未識別ファイルは location からカテゴリ別に加算する。
+ */
+function countImportedContents(data: PendingImportData | null | undefined): {
+  mods: number;
+  resourcepacks: number;
+  shaderpacks: number;
+} {
+  const unknown = data?.unknownFiles ?? [];
+  return {
+    mods: (data?.mods.length ?? 0) + unknown.filter((f) => f.location === 'mods').length,
+    resourcepacks:
+      (data?.resourcepacks?.length ?? 0) +
+      unknown.filter((f) => f.location === 'resourcepacks').length,
+    shaderpacks:
+      (data?.shaderpacks?.length ?? 0) +
+      unknown.filter((f) => f.location === 'shaderpacks').length
+  };
+}
+
 const ROOT_TYPE_LABELS: Record<string, string> = {
   official: '公式ランチャー (.minecraft)',
   prism: 'Prism / MultiMC インスタンス',
@@ -467,11 +489,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
               counts={
                 folderAnalysis
                   ? folderAnalysis.scannedCounts
-                  : {
-                      mods: initialImportData?.mods.length ?? 0,
-                      resourcepacks: initialImportData?.resourcepacks?.length ?? 0,
-                      shaderpacks: initialImportData?.shaderpacks?.length ?? 0
-                    }
+                  : countImportedContents(initialImportData)
               }
               environment={
                 folderAnalysis

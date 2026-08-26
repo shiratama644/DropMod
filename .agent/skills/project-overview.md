@@ -54,7 +54,7 @@
 
 ## 規模（目安）
 
-`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 548 tests / `e2e/` 8 spec。
+`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 548 tests / `e2e/` 10 spec。
 最大ファイル: `DependencyCheckModal.tsx`(871)・`useProfiles.ts`(818)・`ModDetailPageView.tsx`(676)。
 
 ## 関連

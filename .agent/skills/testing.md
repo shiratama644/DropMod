@@ -78,10 +78,12 @@
 - `__tests__/test-utils/queryWrapper.tsx` — `createTestQueryClient` + `createQueryWrapper`（TSQ Provider 注入）。
 - `__tests__/test-utils/browserApi.ts` — jsdom 未実装 API の stub 群（matchMedia / IntersectionObserver / rAF / scrollY。Phase 10.5-A、詳細は上記セクション）。
 
-## E2E（Playwright, 8 spec）
+## E2E（Playwright, 10 spec）
 
-`e2e/`: smoke / mod-detail-modal / mods-page / offline / theme-persistence / **zip-export / zip-import / dep-check**。
+`e2e/`: smoke / mod-detail-modal / mods-page / offline / theme-persistence / **zip-export / zip-import / dep-check** / **folder-import / zip-env-import**（Phase 11）。
 - `e2e/helpers/mrpack.ts` — jszip で最小 `.mrpack` を動的生成（fixture 不要）。
+- `e2e/helpers/minecraftEnv.ts` (Phase 11) — .minecraft 構造 ZIP 生成 + **`installModrinthApiMock(page)`** (`page.route` で /version_files・/projects を決定論的に差し替え。proxy `/api/modrinth/*` と direct の両方をカバー)。
+- `e2e/helpers/folderPickerMock.ts` (Phase 11) — **`installFolderPickerMock(page, rootName, files)`**: `addInitScript` で window.showDirectoryPicker をメモリ上 fake handle に差し替え (計画書の `__e2e_mock_handle__` 案)。init script はブラウザ側コードのため**文字列で注入** (TS strict / biome any 禁止の回避)。
 - Chromium 単独（`--disable-gpu` 必須）。`playwright.config.ts` webServer = `pnpm build && pnpm start`。
 - **Sandbox は Chromium install 不可 → CI（GitHub Actions）でのみ実行**。ローカルで実行を試みない。
 

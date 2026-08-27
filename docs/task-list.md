@@ -107,7 +107,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-B3 | Analyzer (SHA-1 Worker + Modrinth 照合) | 完了 | 100% | P11-B2 | 3 カテゴリ照合 + 検証 6 項目 | `a2f44ba` |
 | P11-C1 | Import UI 統合 (NewProfileModal 解析) | 完了 | 100% | P11-B3 | Analysis View + 名前自動生成 | `b6a5a54` |
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
-| P11-E2E | E2E spec 2 種 + ドキュメント | 実環境検証待ち | 90% | P11-C2 | **CI 上で E2E green** | `c0d13f8` / ローカル実行は OOM 中断 (e2e-log.txt)。CI (VER-1) で実施予定 |
+| P11-E2E | E2E spec 2 種 + ドキュメント | 完了 | 100% | P11-C2 | **CI 上で E2E green** | `c0d13f8` + spec 修正 `1508a6e` / run `33071105483` 全 green |
 
 ### Phase 12: Sync & Modrinth Modpack (Read/Write) — 未着手
 
@@ -173,11 +173,21 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 ---
 
+## CI 構築 (2026-08-27 完了)
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---:|---|---|---|
+| CI-1 | GitHub Actions ワークフロー起動 (YAML 構文修正) | 完了 | 100% | - | ジョブが開始される | `c415a0b` |
+| CI-2 | pnpm バージョン重複解消 + .next tar 転送方式 | 完了 | 100% | CI-1 | build→e2e 間で成果物が渡る | `90fac49` / `f23623b` |
+| CI-3 | E2E spec 全面修正 (陳腐化 7 件 + hydration 競合) | 完了 | 100% | CI-2 | E2E 全 spec green | `1508a6e` |
+| CI-4 | 失敗テストのアノテーション出力レポーター | 完了 | 100% | - | API から失敗内容が読める | `3741c89` |
+| CI-5 | theme 永続化バグ修正 (debounce 競合 + FOUC) | 完了 | 100% | CI-4 | theme-persistence spec green | `4df29af` / `2e1d302` |
+
 ## 検証待ち・将来タスク
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| VER-1 | E2E 全 spec の CI green 確認 | 実環境検証待ち | - | P11-E2E | GitHub Actions で全 spec green | docs/ops/CI_SETUP.md 手順でユーザー実施 |
+| VER-1 | E2E 全 spec の CI green 確認 | 完了 | 100% | P11-E2E | GitHub Actions で全 spec green | run `33071105483` (2026-08-27, 74 tests pass) |
 | VER-2 | CSP Enforce の実環境表示確認 | 実環境検証待ち | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | ユーザー実施 |
 | DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C, P13-B | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針 (最終ステップ) |
 | EXP-1 | Vite 版資産の .archive 保管維持 | 完了 (継続) | 100% | - | 全タスクで .archive/vite 無変更 | 各コミットの検証チェックリスト |

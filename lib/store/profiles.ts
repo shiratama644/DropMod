@@ -18,7 +18,7 @@
 
 import { create } from 'zustand';
 /** クライアント側の初期テーマを dropmod_theme cookie から読む (SSR は dark 既定)。 */
-function readInitialTheme(): ThemeMode {
+export function readInitialTheme(): ThemeMode {
   if (typeof document === 'undefined') return 'dark';
   try {
     const parts = document.cookie ? document.cookie.split('; ') : [];

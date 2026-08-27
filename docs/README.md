@@ -51,18 +51,18 @@ docs/
 | 見る順 | ドキュメント | 内容 |
 |---:|---|---|
 | 1 | [`../README.md`](../README.md) | アプリ概要、技術スタック、セットアップ |
-| 2 | [`planning/NEXTJS_MIGRATION_PLAN.md`](planning/NEXTJS_MIGRATION_PLAN.md) | Vite → Next.js 16 移行の全体戦略 (Phase 0-7 の骨格) |
-| 3 | [`complete/PHASE9_COMPLETE.md`](complete/PHASE9_COMPLETE.md) | Phase 9 完了時点の最終状態 (現状把握に最短ルート) |
+| 2 | [`task-list.md`](task-list.md) | **タスク管理の正本** (全フェーズの状態・証拠が一覧できる) |
+| 3 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | 直近完了フェーズ (Read-only Import & Analysis) |
 
 ### 「これから開発を継続したい」
 
 | 見る順 | ドキュメント | 内容 |
 |---:|---|---|
-| 1 | [`planning/PHASE09_5_PLAN.md`](planning/PHASE09_5_PLAN.md) | Phase 9.5: ランディングページ Modrinth 風刷新 + BottomNav ハンバーガー化 + Phase 11 準備 |
-| 2 | [`planning/PHASE10_CANDIDATES.md`](planning/PHASE10_CANDIDATES.md) | Phase 10 実施候補と優先度、次に着手すべきタスクの提案 |
-| 3 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | Phase 11: Read-only Import & Analysis (ChatGPT レビュー #1 反映で Sync と分離) |
-| 4 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | Phase 12: Sync (双方向書き込み) & Modrinth Modpack、Managed File Ownership Model |
-| 5 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | Phase 13: CurseForge 完全対応 (Murmur2 fingerprint + Modpack) |
+| 1 | [`task-list.md`](task-list.md) | 次に着手すべきタスクと依存・検証待ち項目の一覧 |
+| 2 | [`planning/_TEMPLATE.md`](planning/_TEMPLATE.md) | 計画書テンプレート (新規タスクはこの形式で計画) |
+| 3 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | **次フェーズ**: Sync (双方向書き込み) & Modrinth Modpack。§12 の設計論点を確定してから着手 |
+| 4 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | Phase 13: CurseForge 完全対応 (Murmur2 fingerprint + Modpack) |
+| 5 | [`planning/SEO_CANDIDATES.md`](planning/SEO_CANDIDATES.md) | SEO 候補 (2-1 重複コンテンツ対策のみ早期実施推奨) |
 | 2 | [`audit/issues-phase9.md`](audit/issues-phase9.md) | 未修正の Low 優先度バグ (17 件、実害なしで放置中) |
 | 3 | [`audit/diff-phase9.md`](audit/diff-phase9.md) | Phase 9 実装と計画書の意図的な齟齬 (背景理解に有用) |
 
@@ -88,9 +88,10 @@ docs/
 
 ### `planning/` — 計画書
 
-- **Phase 開始前**に作成する詳細な計画書
-- 各 Phase の goal / non-goal / DoD / スケジュール / リスク管理を含む
-- 実装で変更があれば `audit/diff-phaseN.md` に記録される (原本は編集しない方針だが Phase 9 では docs 更新も実施)
+- **Phase 開始前**に作成する詳細な計画書 (**`_TEMPLATE.md` 形式**: 目的/変更範囲/禁止事項/
+  完了条件/テスト方法/停止条件 + 設計詳細/Gotchas/実績。2026-08-27〜)
+- 進捗・証拠は `task-list.md` (正本) で管理し、計画書は個別タスクの詳細を担う
+- 実装で変更があれば `audit/diff-phaseN.md` に記録される
 
 ### `complete/` — 完了レポート
 
@@ -114,6 +115,8 @@ docs/
 
 ## 📝 命名規約
 
+- **タスクリスト**: `docs/task-list.md` (固定・唯一の正本)
+- **計画書テンプレート**: `_TEMPLATE.md` (固定)
 - **計画書**: `PHASE{N}_PLAN.md` (例: `PHASE9_PLAN.md`)、または `{TOPIC}_CANDIDATES.md`
 - **完了レポート**: `PHASE{N}_COMPLETE.md`、sub-phase 単独レポートは `PHASE{N}_{S}_COMPLETE.md`
 - **監査 (差分)**: `diff-phase{N}.md` または `diff-{context}.md`

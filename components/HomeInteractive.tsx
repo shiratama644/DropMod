@@ -31,7 +31,8 @@ import { useAppAction } from '@/lib/store/appActions';
 // Home ページの検索 / カテゴリ / ソート / 無限スクロール + Hero Banner の
 // プロファイル操作 (編集 / 複製 / 依存チェック起動) を担う。
 //
-// profile / handleToggleMod は AppContext から取得 (useProfiles と統合)。
+// profile は useCurrentProfileWithFallback (Zustand)、handleToggleMod 等は
+// appActionsStore 経由 (useAppAction) で取得。AppContext は Phase 10-B で削除済。
 //
 // SSR で取得した initialHits はマウント時点の "現在プロファイル" とほぼ
 // 一致する想定 (アクティブプロファイルの mcVersion/loader は LocalStorage

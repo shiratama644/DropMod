@@ -1,6 +1,6 @@
 # Phase 11 完了: E2E spec 作成 (folder-import / zip-env-import) + ドキュメント整備
 
-> Date: 2026-08-26 (JST) / Branch: `arena/01a0337c-dropmod`
+> Date: 2026-08-26 (JST) / Branch: `arena/01a04363-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

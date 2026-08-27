@@ -37,7 +37,9 @@
 | E2E | Playwright 1.62（Chromium 単独） |
 | Pkg | pnpm 11.24 (corepack), Node ≥20（`.nvmrc`=24, LTS） |
 
-## フェーズ進捗（現在 = Phase 10.5 Emergency 計画済み・Phase 11 前）
+## フェーズ進捗（現在 = Phase 11 完了・Phase 12 未着手）
+
+> 進捗の正本は `docs/task-list.md`。下表は要点のみ（2026-08-27 時点）。
 
 | Phase | 内容 | 状態 |
 | :--- | :--- | :--- |
@@ -47,15 +49,24 @@
 | 9.5 | LP 刷新 + BottomNav 再設計 + **PC UI 一新（DesktopSidebar）** | ✅ |
 | 10 | FontAwesome subset(-356KB) / AppContext 完全削除 / Markdown Image / E2E 拡張 / shimmer | ✅ |
 | **10.5** | **Emergency: カバレッジ回復**（A〜C 完了で全 threshold green。D/E は任意） | ✅ A〜C |
-| **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | 🔄 **11-A/B/C 完了**（データモデル + Import パイプライン + Analysis View + ZIP fallback） |
-| 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ |
+| **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ✅ 11-A/B/C + E2E 完了（CI run `33071105483` green / 74 E2E pass） |
+| 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ 未着手（着手前に PHASE12_PLAN §12 の設計論点 6 件を確定） |
 | 13 | CurseForge 完全対応（Murmur2） | ⏳ |
 | 最終 | Vercel 本番デプロイ（Hobby 制約のため全 Phase 後） | ⏳ |
 
-## 規模（目安）
+## 規模（2026-08-27 実測・`*.ts/*.tsx/*.mjs` の行数）
 
-`app/` ~2.6k 行 / `components/` ~8.7k / `lib/` ~3.3k / `hooks/` ~2.3k / `__tests__/` 548 tests / `e2e/` 10 spec。
-最大ファイル: `DependencyCheckModal.tsx`(871)・`useProfiles.ts`(818)・`ModDetailPageView.tsx`(676)。
+| ディレクトリ | 行数 |
+| :--- | ---: |
+| `app/` | 1,871（`globals.css` 575 行は別途） |
+| `components/` | 9,181 |
+| `lib/` | 5,476 |
+| `hooks/` | 2,541 |
+| `__tests__/` | 11,721（**73 files / 637 tests**） |
+| `e2e/` | 1,266（**10 spec**） |
+
+最大ファイル: `DependencyCheckModal.tsx`(907)・`useProfiles.ts`(894)・`ModsPageClient.tsx`(716)・
+`ModDetailPageView.tsx`(689)・`HomeInteractive.tsx`(653)。
 
 ## 関連
 

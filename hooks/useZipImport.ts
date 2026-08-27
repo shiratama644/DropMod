@@ -50,7 +50,7 @@ export const useZipImport = (
   // 前の pendingImportData が消失するバグ)
   const importInFlightRef = useRef<boolean>(false);
 
-  // useCallback ラップ (AppContext の useMemo deps に入るため)。
+  // useCallback ラップ (AppShell の appActionsStore register useEffect の deps に入るため)。
   const handleImportZipFile = useCallback(async (file: File) => {
     // inFlight ガード
     if (importInFlightRef.current) {

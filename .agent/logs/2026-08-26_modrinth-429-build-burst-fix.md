@@ -1,6 +1,6 @@
 # Modrinth 429 ビルドフラッド対策 (事前生成削減 + backoff + サーキットブレーカー)
 
-> Date: 2026-08-26 (JST) / Branch: `arena/01a0337c-dropmod`
+> Date: 2026-08-26 (JST) / Branch: `arena/01a04363-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

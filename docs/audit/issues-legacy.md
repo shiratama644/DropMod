@@ -1,7 +1,7 @@
 # DropMod バグ・課題 完全リスト
 
 > **調査日:** 2026-08-21 (JST)
-> **対象コミット:** `arena/01a01fcf-dropmod` (Vite 6 + Hono 4 + React 18 + TS 5.7)
+> **対象コミット:** `arena/01a04363-dropmod` (Vite 6 + Hono 4 + React 18 + TS 5.7)
 > **調査手法:** `tsc --noEmit` / `vite build` / 全ソース目視レビュー / Modrinth API 公式仕様照合 / react-markdown v9 破壊的変更確認 / セキュリティ観点静的解析
 > **総件数:** 32件 (Critical: 4 / High: 7 / Medium: 11 / Low: 10)
 >
@@ -618,7 +618,7 @@ render") を新規混入させた。
 # 🌊 第4波: Next.js 移行後の完全洗い出し (Phase 7 完了時点)
 
 > **調査日:** 2026-08-21 (JST)
-> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `1edace5` (Next.js 16.3.1 + React 19.2.8 + App Router)
+> **対象コミット:** `arena/01a04363-dropmod` HEAD `1edace5` (Next.js 16.3.1 + React 19.2.8 + App Router)
 >
 > ## ✅ 修正完了ステータス (2026-08-22 更新)
 >
@@ -1322,7 +1322,7 @@ Route (app)                  Revalidate  Expire
 # 🌊 第5波: 第4波修正後の完全リサーチ (全 55 ファイル徹底検査)
 
 > **調査日:** 2026-08-22 (JST)
-> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `b6155f7` (第4波修正完了直後)
+> **対象コミット:** `arena/01a04363-dropmod` HEAD `b6155f7` (第4波修正完了直後)
 >
 > ## ✅ 修正完了ステータス (2026-08-22 更新)
 >
@@ -2186,7 +2186,7 @@ Route (app)                  Revalidate  Expire
 # 🌊 第6波: 第5波修正後の Phase 8 前 最終監査 (39 検査項目)
 
 > **調査日:** 2026-08-22 (JST)
-> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `718ce63` (第5波修正完了直後)
+> **対象コミット:** `arena/01a04363-dropmod` HEAD `718ce63` (第5波修正完了直後)
 > **調査手法:**
 > - 判断留保 5 件の再評価 (実は隠れたバグか)
 > - 前波修正の副作用チェック (H5-4 batch, C5-1/2 二重遷移解消, H5-6 inflight ガード)
@@ -2796,7 +2796,7 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.js"
 # 🌊 第7波: Phase 8 完了後 完全検証 (45 検査項目)
 
 > **調査日:** 2026-08-23 (JST)
-> **対象コミット:** `arena/01a01fcf-dropmod` HEAD `5747545` (Phase 8 完了レポート含む)
+> **対象コミット:** `arena/01a04363-dropmod` HEAD `5747545` (Phase 8 完了レポート含む)
 > **調査手法:**
 > - PHASE8_PLAN.md と実装の 1:1 突き合わせ (§5〜§13)
 > - 各 sub-phase の実装レビュー (依存関係・命名・deps 補完)

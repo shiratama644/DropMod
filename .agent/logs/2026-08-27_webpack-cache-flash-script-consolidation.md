@@ -1,6 +1,6 @@
 # webpack キャッシュ修正 + 白フラッシュ修正 + script/ 統合
 
-> Date: 2026-08-27 (JST) / Branch: `arena/01a0337c-dropmod`
+> Date: 2026-08-27 (JST) / Branch: `arena/01a04363-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

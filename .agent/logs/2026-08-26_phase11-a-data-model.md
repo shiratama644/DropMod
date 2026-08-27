@@ -1,6 +1,6 @@
 # Phase 11-A: ProjectItem データモデル基盤 + Dexie v2 migration
 
-> Date: 2026-08-26 (JST) / Branch: `arena/01a0337c-dropmod`
+> Date: 2026-08-26 (JST) / Branch: `arena/01a04363-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

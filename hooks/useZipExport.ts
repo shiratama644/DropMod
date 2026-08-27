@@ -262,9 +262,9 @@ export const useZipExport = (
     };
   }, []);
 
-  // useCallback ラップ (AppContext の useMemo deps に入るため参照安定化)。
-  // currentProfile は上位で変化するので deps に含める必要があるが、少なくとも
-  // profile 変化なしのレンダー間では同一参照を維持できる。
+  // useCallback ラップ (AppShell の appActionsStore register useEffect の deps に
+  // 入るため参照安定化)。currentProfile は上位で変化するので deps に含める必要が
+  // あるが、少なくとも profile 変化なしのレンダー間では同一参照を維持できる。
   const handleDownloadZip = useCallback(async () => {
     // 1. ガード節（プロファイル内にModがない場合）
     if (currentProfile.mods.length === 0) {

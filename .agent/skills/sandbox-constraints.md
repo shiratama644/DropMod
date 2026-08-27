@@ -36,8 +36,12 @@ bash .agent/hooks/restore-sandbox-env.sh
 
 ## 作業ブランチ（§4.4）
 
-- セッション固定ブランチ（今 = `arena/01a0337c-dropmod`）。他ブランチに push しない。
-- ※ AGENT.md §4.4 に書かれている `arena/01a01fcf-dropmod` は**古いブランチ名**。実際のブランチは `git branch --show-current` で確認すること。
+- セッション固定ブランチ（今 = `arena/01a04363-dropmod`）。他ブランチに push しない。
+- ※ ブランチ名は**セッションごとに変わる**。AGENT.md §4.4 の記載値を鵜呑みにせず、
+  必ず `git branch --show-current` で確認すること（過去セッションのブランチ名は
+  文書に残さない方針。AGENT.md §4.4 参照）。
+- **push は事前許可済み**（AGENT.md §4.3.1）。§3.1 の検証が通ったら確認なしで
+  `git push origin <セッション固定ブランチ>` を実行する。
 
 ## その他環境メモ
 

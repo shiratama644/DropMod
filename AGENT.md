@@ -95,8 +95,8 @@ git log -5 --oneline
 Arena のサンドボックスは再構築されることがあり、その場合ワークツリーには「起点コミットのファイル」＋「push 済みコミットで追加されたファイルの未追跡バージョン」が混在した状態で立ち上がる（`git status` が「大量の削除 + 大量の未追跡」を示す）。この時点でファイルは破損していないので、以下の手順で確実に復旧すること。
 
 ```bash
-# 1. リモートの最新を fetch
-git fetch origin arena/01a01fcf-dropmod
+# 1. リモートの最新を fetch（ブランチ名は `git branch --show-current` で確認した現在値を使う）
+git fetch origin arena/01a04363-dropmod
 
 # 2. FETCH_HEAD にワークツリーごとリセット（この場合の --hard は例外的に必要）
 git reset --hard FETCH_HEAD
@@ -123,13 +123,30 @@ pnpm install --frozen-lockfile
   - ただし §4.1.1 のサンドボックス再構築復旧時の `git reset --hard FETCH_HEAD` のみ例外
 - `git rebase` / `git commit --amend`（既存履歴の改変）
 - `git push --force` / `git push --force-with-lease`
-- 明示的な許可のない `git push`
+
+#### 4.3.1 通常の `git push` は**事前許可済み**（2026-08-28 ユーザー指示で恒久化）
+
+- **push のたびにユーザー確認を取らないこと。** §3.1 の 4 検証がすべて PASS し、
+  `.archive/vite/` 無変更・意図しない差分なしを確認できたら、その場で
+  `git push origin <セッション固定ブランチ>` を実行する。
+- **理由（ユーザー明示）**: Sandbox は予告なく再構築され、**ローカルコミットのみだと
+  作業が破棄される**。早急な復旧のため、成果物は常に origin へ上げておく。
+- push 先は**セッション固定ブランチのみ**（§4.4）。`main` 等への直接 push、
+  他ブランチへの push、force push は引き続き禁止。
+- PR の作成も許可済み（`gh pr create`）。作成後は URL を報告する。
+- push が失敗した場合の切り分けは §4.1.1 と「GitHub 接続の確認」を参照。
 
 ### 4.4 ブランチ運用（本セッション固有ルール）
-- **作業ブランチは `arena/01a01fcf-dropmod` 固定**。Arena はこのブランチ名でセッションを追跡しており、他ブランチに push した作業は**セッションと紐付かず失われる**。
-- ユーザーから「別ブランチを使ってほしい」と依頼された場合も、`arena/01a01fcf-dropmod` から離れる前に「このセッションは `arena/01a01fcf-dropmod` に固定です」と説明し、そのまま作業を続ける。
-- PR は作らず `arena/01a01fcf-dropmod` へ直接 commit + push（feature branch を切らない）。マージ判断はユーザー側に委ねる。
-- push は `git push origin arena/01a01fcf-dropmod` の明示指定で行う。default remote/branch 依存の `git push` は避ける。
+- **作業ブランチはセッション固定**。Arena はこのブランチ名でセッションを追跡しており、他ブランチに push した作業は**セッションと紐付かず失われる**。
+  - ブランチ名は**セッションごとに変わる**ため、本ドキュメントの記載値を鵜呑みにせず
+    **必ず `git branch --show-current` で確認**すること（pre-task フックの最初の手順）。
+  - 今セッションの値: **`arena/01a04363-dropmod`**（2026-08-28 確認）。
+    ※ **過去セッションのブランチ名は本ドキュメントに残さない**。古いブランチ名を
+    文書へ残すと、後続セッションが別セッションのブランチを fetch/push する事故になる。
+    必要な情報は「毎回 `git branch --show-current` で確認する」という手順だけで十分。
+- ユーザーから「別ブランチを使ってほしい」と依頼された場合も、セッション固定ブランチから離れる前に「このセッションは `arena/01a04363-dropmod` に固定です」と説明し、そのまま作業を続ける。
+- feature branch は切らない。セッション固定ブランチへ直接 commit + push し、`gh pr create` で `main` 向け PR を作成する（2026-08-28 ユーザー指示）。マージ判断はユーザー側に委ねる。
+- push は `git push origin arena/01a04363-dropmod` の明示指定で行う。default remote/branch 依存の `git push` は避ける。
 
 ### 4.5 .archive/vite/ の絶対不変ルール
 - リポジトリには Vite 版アーカイブ `/.archive/vite/` が存在し、**Phase 全期間で一切変更してはならない**（Next.js 移行前の完全な状態を歴史として保存するため）。
@@ -148,7 +165,7 @@ pnpm install --frozen-lockfile
 - [ ] `.archive/vite/` に一切の変更がない（§4.5）
 - [ ] 適切なメッセージで Git Commit が完了している
 - [ ] Working tree が clean である（`git status` で確認）
-- [ ] `git push origin arena/01a01fcf-dropmod` が完了している（§4.4）
+- [ ] `git push origin <セッション固定ブランチ>` が完了している（§4.4。今セッションは `arena/01a04363-dropmod`）
 
 ---
 

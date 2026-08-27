@@ -61,7 +61,7 @@
 | **9-E.7** | `8247ee0` | CI_SETUP.md 動作確認手順追加 | docs only |
 | **9-E.4/5** | `577c31a` | PHASE8_COMPLETE + diff.md に Phase 9 追記 | docs only |
 
-**総コミット数**: 22 (計画書 + 順序変更記録を含む)、全て `arena/01a01fcf-dropmod` に直接 push。
+**総コミット数**: 22 (計画書 + 順序変更記録を含む)、全て `arena/01a04363-dropmod` に直接 push。
 
 ---
 

@@ -1,6 +1,6 @@
 # Phase 10.5-A: browser API mock 基盤 + hooks 3 種テスト
 
-> Date: 2026-08-26 (JST) / Commit: `57d5bc9` / Branch: `arena/01a0337c-dropmod`
+> Date: 2026-08-26 (JST) / Commit: `57d5bc9` / Branch: `arena/01a04363-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

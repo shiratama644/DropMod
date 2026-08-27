@@ -30,11 +30,11 @@ js-yaml (strict/json モード) で再現・検証 → `bad indentation of a map
 ## ユーザーの次作業
 
 ```bash
-git pull origin arena/01a0337c-dropmod
+git pull origin arena/01a04363-dropmod
 cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
 git add .github/workflows/ci.yml
 git commit -m "fix(ci): apply YAML fix to workflow file"
-git push origin arena/01a0337c-dropmod
+git push origin arena/01a04363-dropmod
 ```
 push をトリガーに CI (static-checks → build → e2e) が自動実行される。
 エージェント側から gh CLI で run 状況を監視・報告可能。

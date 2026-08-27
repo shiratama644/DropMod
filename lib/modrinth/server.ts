@@ -27,6 +27,7 @@
 //   - タイムアウト時は throw され、上位の try/catch で fallback される。
 // ============================================================================
 
+import { logger } from '@/lib/server/logger';
 import { unstable_cache } from 'next/cache';
 import type { ModrinthHit, ModrinthProject, ModrinthVersion } from '@/types';
 
@@ -104,8 +105,8 @@ function registerRateLimitFailure(endpoint: string): void {
   if (rateLimitStrikes >= RATE_LIMIT_BREAKER_THRESHOLD) {
     rateLimitOpenUntil = Date.now() + RATE_LIMIT_BREAKER_COOLDOWN_MS;
     rateLimitStrikes = 0;
-    console.warn(
-      `[DropMod] Modrinth rate-limit breaker OPEN (${endpoint}): ${RATE_LIMIT_BREAKER_COOLDOWN_MS}ms 間 fail-fast します`
+    logger.warn(
+      `Modrinth rate-limit breaker OPEN (${endpoint}): ${RATE_LIMIT_BREAKER_COOLDOWN_MS}ms 間 fail-fast します`
     );
   }
 }
@@ -239,8 +240,8 @@ async function fetchModrinthServer<T>(
     // テストは MODRINTH_429_MIN_WAIT_MS=1 で高速化)
     const backoff = parsed ?? rateLimitMinWaitMs() * 2 * (attempt + 1);
     const waitMs = Math.max(backoff, rateLimitMinWaitMs());
-    console.warn(
-      `[DropMod] Modrinth 429 (server). Waiting ${waitMs}ms then retrying (${attempt + 1}/${RATE_LIMIT_MAX_RETRIES}): ${endpoint}`
+    logger.warn(
+      `Modrinth 429 (server). Waiting ${waitMs}ms then retrying (${attempt + 1}/${RATE_LIMIT_MAX_RETRIES}): ${endpoint}`
     );
     await sleep(waitMs);
     attempt++;
@@ -364,7 +365,7 @@ export async function fetchModrinthProjectAuthor(
     const name = owner?.user?.name?.trim() || owner?.user?.username?.trim();
     return name || null;
   } catch (e) {
-    console.warn('[DropMod] fetchModrinthProjectAuthor failed:', slug, e);
+    logger.warn('fetchModrinthProjectAuthor failed:', slug, e);
     return null;
   }
 }
@@ -496,7 +497,7 @@ export async function fetchLatestMinecraftVersions(
       .map((v) => v.version);
     if (releaseVersions.length > 0) return releaseVersions;
   } catch (e) {
-    console.warn('[DropMod] fetchLatestMinecraftVersions fell back:', e);
+    logger.warn('fetchLatestMinecraftVersions fell back:', e);
   }
   return [
     '1.21.4',

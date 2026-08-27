@@ -55,3 +55,4 @@ JEI(8MB)・no-chat-reports(6.7MB) 等が Next **Data Cache の 2MB 上限**に�
 ## 関連
 
 - [image-strategy.md](./image-strategy.md)（CDN 画像）/ [routing-and-pages.md](./routing-and-pages.md)（/api/*）
+- [app-profile.md](./app-profile.md)（プロキシ Route の CORS/レート制限は `lib/server/rate-limit.ts` に集約済み。APP_PROFILE=development で無効化）

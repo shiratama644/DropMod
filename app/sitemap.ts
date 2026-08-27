@@ -10,6 +10,7 @@
 // baseUrl の解決は layout.tsx の metadataBase と同じロジックを使う。
 // -----------------------------------------------------------------------------
 
+import { logger } from '@/lib/server/logger';
 import type { MetadataRoute } from 'next';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { detailPathFromProject } from '@/lib/constants/search';
@@ -25,7 +26,7 @@ function resolveBaseUrl(): string {
     try {
       return new URL(explicit).origin;
     } catch {
-      console.warn('[DropMod] NEXT_PUBLIC_SITE_URL が不正な URL:', explicit);
+      logger.warn('NEXT_PUBLIC_SITE_URL が不正な URL:', explicit);
     }
   }
   const vercelUrl = process.env.VERCEL_URL;
@@ -125,7 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
     return [...staticEntries, ...detailEntries];
   } catch (e) {
-    console.warn('[DropMod] sitemap: Modrinth 取得失敗、静的ルートのみ出力:', e);
+    logger.warn('sitemap: Modrinth 取得失敗、静的ルートのみ出力:', e);
     return staticEntries;
   }
 }

@@ -7,6 +7,7 @@
 // 薄く保つ（二重実装・二重 fetch を防ぐ）。
 // ============================================================================
 
+import { logger } from '@/lib/server/logger';
 import type { Metadata } from 'next';
 import {
   fetchModrinthProject,
@@ -39,11 +40,11 @@ export interface ProjectDetailData {
 export async function fetchProjectDetailData(slug: string): Promise<ProjectDetailData> {
   const [project, versions, author] = await Promise.all([
     fetchModrinthProject(slug).catch((e) => {
-      console.warn('[DropMod] project fetch failed:', slug, e);
+      logger.warn('project fetch failed:', slug, e);
       return null;
     }),
     fetchModrinthProjectVersions(slug).catch((e) => {
-      console.warn('[DropMod] versions fetch failed:', slug, e);
+      logger.warn('versions fetch failed:', slug, e);
       return [];
     }),
     fetchModrinthProjectAuthor(slug).catch(() => null)
@@ -72,7 +73,7 @@ export async function generateDetailStaticParams(
       .filter((s): s is string => Boolean(s))
       .map((slug) => ({ slug }));
   } catch (e) {
-    console.warn(`[DropMod] generateDetailStaticParams(${type}) failed:`, e);
+    logger.warn(`generateDetailStaticParams(${type}) failed:`, e);
     return [];
   }
 }
@@ -114,7 +115,7 @@ export async function buildDetailMetadata(
       }
     };
   } catch (e) {
-    console.warn(`[DropMod] buildDetailMetadata(${type}, ${slug}) failed:`, e);
+    logger.warn(`buildDetailMetadata(${type}, ${slug}) failed:`, e);
     return {
       title: slug,
       description: 'Modrinth Mod 詳細',

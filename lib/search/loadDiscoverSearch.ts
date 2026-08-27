@@ -1,3 +1,4 @@
+import { logger } from '@/lib/server/logger';
 import { cookies } from 'next/headers';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { SEARCH_LIMIT, type ProjectType } from '@/lib/constants/search';
@@ -49,7 +50,7 @@ export async function loadDiscoverSearch(query: string, projectType: ProjectType
     limit: SEARCH_LIMIT,
     projectType
   }).catch((e) => {
-    console.warn('[DropMod] discover SSR search failed:', e);
+    logger.warn('discover SSR search failed:', e);
     return { hits: [], total_hits: 0, offset: 0, limit: SEARCH_LIMIT };
   });
 

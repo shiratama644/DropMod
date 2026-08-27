@@ -15,11 +15,99 @@
  * - X-Powered-By ヘッダは公開情報として不要なので無効化
  * - Modrinth CDN の画像を <Image> で使えるように許可
  * - パフォーマンス最適化: 大きめのパッケージを optimizePackageImports
- * - 全ページに標準的なセキュリティヘッダを付与
- *   (Vercel + Next.js の最小ハードニング。CSP は Markdown 内の任意 HTML を
- *    許容する必要があるためここでは付与せず、rehype-sanitize 側の allowlist に
- *    任せる。将来的に Report-Only モードで追加検討)
+ * - 全ページに標準的なセキュリティヘッダを付与。
+ *   CSP / HSTS は APP_PROFILE (production=Enforce+HSTS / development=
+ *   Report-Only+HSTS なし) で切り替わる (下方の APP_PROFILE ブロック参照)。
+ *   Markdown 内の任意 HTML は rehype-sanitize 側の allowlist で Sanitize 済み。
  */
+
+// ============================================================================
+// APP_PROFILE (production | development) — セキュリティレベル切替
+// ============================================================================
+// .env / 環境変数の APP_PROFILE で本番/開発の挙動を切り替える。
+//
+//   | 項目                       | production         | development     |
+//   |----------------------------|--------------------|-----------------|
+//   | CSP                        | Enforce            | Report-Only     |
+//   | HSTS                       | あり (2 年+preload) | なし            |
+//   | upgrade-insecure-requests  | あり               | なし            |
+//   | connect-src (HMR websocket)| なし               | ws://localhost  |
+//
+// 解決優先度 (ランタイム側 lib/server/profile.ts と同一ロジック):
+//   1. APP_PROFILE  — 明示指定。常に最優先
+//   2. VERCEL_ENV   — production|preview → production / development → development
+//   3. NODE_ENV     — development → development / それ以外 → production
+//   不正な値は production 扱い (fail-secure)。
+//
+// ※ Next.js は .env 系ファイルを next.config 評価 **前に** 読み込むため
+//   (next/dist/server/config.js の loadEnvConfig → import 順、2026-08-27 実証済み)、
+//   .env / .env.local / .env.development / .env.production に書いた APP_PROFILE が
+//   そのまま反映される。実環境変数が常に優先される (@next/env 仕様)。
+//
+// 重要: headers() の結果は **build 時に** routes manifest へ確定する。
+//   - next dev: .env 変更で dev server が自動再起動し即反映
+//   - next build / start / Vercel: APP_PROFILE を変えたら再ビルドが必要
+//   (ランタイム側のロガー・レート制限は lib/server/profile.ts が都度解決するため、
+//    ビルドし直さないとヘッダーだけ旧プロファイルのまま混在する点に注意)
+// ============================================================================
+function resolveAppProfile(env = process.env) {
+  const explicit = (env.APP_PROFILE ?? '').trim().toLowerCase();
+  if (explicit === 'production' || explicit === 'development') return explicit;
+  if (explicit) {
+    console.warn(
+      `[DropMod] APP_PROFILE="${env.APP_PROFILE}" は不正な値です。production | development のいずれかを指定してください (production として扱います)`
+    );
+    return 'production';
+  }
+  const vercel = (env.VERCEL_ENV ?? '').trim().toLowerCase();
+  if (vercel === 'development') return 'development';
+  if (vercel === 'production' || vercel === 'preview') return 'production';
+  return env.NODE_ENV === 'development' ? 'development' : 'production';
+}
+
+const appProfile = resolveAppProfile();
+const isProductionProfile = appProfile === 'production';
+
+if (!process.env.VITEST) {
+  console.info(
+    isProductionProfile
+      ? '[DropMod] APP_PROFILE=production — CSP=Enforce / HSTS=有効 / レート制限=有効'
+      : '[DropMod] APP_PROFILE=development — CSP=Report-Only / HSTS=無効 / レート制限=無効 (本番相当で確認するには APP_PROFILE=production)'
+  );
+}
+
+// CSP ディレクティブ共通部 (プロファイルで変わるのは connect-src と
+// upgrade-insecure-requests のみ)。
+//   - script-src 'unsafe-inline' は theme init script (1 箇所) のみに必要。
+//   - style-src 'unsafe-inline' は Tailwind CSS v4 / React style={} 用。
+//   - worker-src は Phase 11 の SHA-1 Web Worker 用。
+//   - manifest-src は PWA manifest 用。
+//   - object-src 'none' + base-uri + form-action + frame-ancestors で
+//     主要攻撃ベクトル (object embed / base hijack / form hijack /
+//     clickjacking) を封じる。
+const cspDirectives = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://cdn.modrinth.com https://raw.githubusercontent.com https://avatars.githubusercontent.com",
+  "font-src 'self' data:",
+  // development のみ HMR websocket (ws://localhost:3000 等) を明示許可。
+  // CSP3 の 'self' は同一 origin の ws: も包含するはずだが、ブラウザ間の
+  // 解釈差があるため Report-Only の違反レポート噪音を減らす意図で追加。
+  `connect-src 'self' https://api.modrinth.com https://cdn.modrinth.com${
+    isProductionProfile ? '' : ' ws://localhost:* ws://127.0.0.1:*'
+  }`,
+  'frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://player.twitch.tv https://clips.twitch.tv https://streamable.com',
+  "media-src 'self' https://cdn.modrinth.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  // upgrade-insecure-requests は本番のみ (開発は http://localhost で動くため)。
+  ...(isProductionProfile ? ['upgrade-insecure-requests'] : [])
+];
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -35,45 +123,29 @@ const securityHeaders = [
   // Strict-Transport-Security:
   //   Vercel は自動で HSTS を付与するが、本番以外 (self-hosted / preview) でも
   //   確実に付くよう明示。max-age=63072000 (2 年) + includeSubDomains + preload。
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload'
-  },
+  //   development プロファイルでは無効化 (localhost の http に意味がなく、
+  //   HSTS はブラウザに永続キャッシュされるため誤って付与すると事故になる)。
+  ...(isProductionProfile
+    ? [
+        {
+          key: 'Strict-Transport-Security',
+          value: 'max-age=63072000; includeSubDomains; preload'
+        }
+      ]
+    : []),
   // Cross-Origin-Opener-Policy:
   //   Spectre 系 side-channel 攻撃対策として popup を同一 origin に限定。
   //   本アプリは window.open で外部 URL を新規タブに開くが noopener 付きなので影響なし。
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-  // 2026-08-27: CSP を Report-Only から本番 (Enforce) モードに移行。
-  //   - Report-Only は「違反を報告するが阻止しない」ため、実質 CSP 無しと同じ。
-  //   - script-src 'unsafe-inline' は theme init script (1 箇所) のみに必要。
-  //     Next.js の inline script は hash ベースで許可するのが理想だが、
-  //     ビルドごとに hash が変わるため、当面 'unsafe-inline' を残しつつ
-  //     object-src 'none' + base-uri + form-action + frame-ancestors で
-  //     主要攻撃ベクトル (object embed / base hijack / form hijack /
-  //     clickjacking) をすべて封じる。
-  //   - style-src 'unsafe-inline' は Tailwind CSS v4 が CSS-in-JS で
-  //     inline style を注入するため必須 (React の style={} も CSP 管轄)。
-  //   - worker-src を追加 (Phase 11 の SHA-1 Web Worker 用)。
-  //   - manifest-src を追加 (PWA manifest)。
+  // CSP: production は Enforce、development は Report-Only。
+  //   - Report-Only は「違反を報告するが阻止しない」ため、dev ツール
+  //     (React DevTools / HMR / ブラウザ拡張) を壊さずに違反を検出できる。
+  //   - 本番 (Enforce) 移行済み (2026-08-27)。APP_PROFILE=production が既定。
   {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://cdn.modrinth.com https://raw.githubusercontent.com https://avatars.githubusercontent.com",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.modrinth.com https://cdn.modrinth.com",
-      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://player.twitch.tv https://clips.twitch.tv https://streamable.com",
-      "media-src 'self' https://cdn.modrinth.com",
-      "worker-src 'self' blob:",
-      "manifest-src 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'self'",
-      "upgrade-insecure-requests"
-    ].join('; ')
+    key: isProductionProfile
+      ? 'Content-Security-Policy'
+      : 'Content-Security-Policy-Report-Only',
+    value: cspDirectives.join('; ')
   }
   // 注: Cross-Origin-Resource-Policy は当初 same-origin で全ページに付けようとしたが、
   //     favicon / icon.png / apple-icon.png / og:image などの静的リソースが Discord や

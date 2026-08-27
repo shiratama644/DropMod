@@ -24,6 +24,7 @@
 // Component として SSR HTML の完全性を維持 (SEO + LCP)。
 // ============================================================================
 
+import { logger } from '@/lib/server/logger';
 import Link from 'next/link';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { RevealSection } from '@/components/landing/RevealSection';
@@ -59,7 +60,7 @@ async function fetchLandingHits(sortBy: 'popular' | 'newest', limit: number): Pr
     });
     return result.hits;
   } catch (e) {
-    console.warn(`[DropMod] landing ${sortBy} fetch failed, using empty:`, e);
+    logger.warn(`landing ${sortBy} fetch failed, using empty:`, e);
     return [];
   }
 }

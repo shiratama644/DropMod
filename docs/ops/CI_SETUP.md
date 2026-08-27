@@ -19,12 +19,26 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
    ```bash
    git add .github/workflows/ci.yml
    git commit -m "ci: enable GitHub Actions workflow"
-   git push origin arena/01a01fcf-dropmod
+   git push origin arena/01a0337c-dropmod   # 現在の作業ブランチ
    ```
 
 4. GitHub リポジトリ Settings > Actions > General で:
    - **Actions permissions**: "Allow all actions and reusable workflows"
    - **Workflow permissions**: "Read and write permissions" (artifact upload に必要)
+
+## ローカル PRoot 環境での E2E 実行について (2026-08-27 追記)
+
+Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモリ不足
+(signal 9 / OOM killer) により実行が強制終了されることが実測されています
+(12 GB RAM でも 4 workers で中断 — `e2e-log.txt`)。
+
+- **E2E は GitHub Actions での実行を推奨** (ubuntu-latest 16 GB・workers: 2・retries: 2 で安定)
+- ローカルで実行する場合の回避策:
+  ```bash
+  pnpm test:e2e -- --workers=1   # worker 数を 1 に絞ってメモリ消費を抑制
+  ```
+- `playwright-report/` / `test-results/` は `.gitignore` 対象のためリポジトリに
+  入らない。CI では失敗時に artifact として自動アップロードされる (下記)。
 
 ## ワークフロー概要
 
@@ -32,7 +46,7 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
 |---|---|---|---|
 | `static-checks` | push / PR | tsc + lint + vitest+coverage | ~3-5 min |
 | `build` | static-checks 後 | pnpm build | ~2 min |
-| `e2e` | push のみ (PR は skip) | Playwright chromium + iPhone14 | ~5-10 min |
+| `e2e` | push のみ (PR は skip) | Playwright (chromium-desktop + chromium-mobile=Pixel 7) | ~5-10 min |
 
 ## 失敗時の artifact
 
@@ -59,14 +73,14 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
 |---|---:|---|
 | `static-checks` | 3-5 分 | tsc + lint + vitest + coverage が全て pass、artifact `coverage-report` が upload されている |
 | `build` | 2-3 分 | pnpm build が成功、`.next` artifact (`next-build`) が upload されている |
-| `e2e` | 5-10 分 | Playwright (Chromium + iPhone14 emulation) 全 spec pass、失敗時のみ `playwright-report` upload |
+| `e2e` | 5-10 分 | Playwright (chromium-desktop / chromium-mobile=Pixel 7) 全 spec pass、失敗時のみ `playwright-report` upload |
 
 ### 3. カバレッジ確認
 
 - Actions summary > `static-checks` job > `coverage-report` artifact をダウンロード
 - `coverage/index.html` をブラウザで開くと per-file カバレッジが見える
 - 現状目標: **All files 60%+, per-module thresholds (計画書 §7.5) 全 pass**
-  (Phase 9-C 完了時 91.34% 実測)
+  (2026-08-27 実測: 629 tests / statements 84.5%)
 
 ### 4. 依存の verify
 

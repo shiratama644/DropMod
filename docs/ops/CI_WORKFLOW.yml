@@ -5,6 +5,8 @@ on:
     branches: [main, 'arena/**']
   pull_request:
     branches: [main]
+  # Actions タブから手動実行も可能 (初回配置後の動作確認に便利)
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -82,7 +84,7 @@ jobs:
           path: |
             .next/cache
             .cache/dropmod-build
-          key: dropmod-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'next.config.ts') }}
+          key: dropmod-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'next.config.mjs') }}
           restore-keys: |
             dropmod-build-${{ runner.os }}-
 

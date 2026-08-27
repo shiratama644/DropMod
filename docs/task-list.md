@@ -107,7 +107,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-B3 | Analyzer (SHA-1 Worker + Modrinth 照合) | 完了 | 100% | P11-B2 | 3 カテゴリ照合 + 検証 6 項目 | `a2f44ba` |
 | P11-C1 | Import UI 統合 (NewProfileModal 解析) | 完了 | 100% | P11-B3 | Analysis View + 名前自動生成 | `b6a5a54` |
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
-| P11-E2E | E2E spec 2 種 + ドキュメント | 実環境検証待ち | 90% | P11-C2 | **CI 上で E2E green** | `c0d13f8` (CI 実行はユーザー) |
+| P11-E2E | E2E spec 2 種 + ドキュメント | 実環境検証待ち | 90% | P11-C2 | **CI 上で E2E green** | `c0d13f8` / ローカル実行は OOM 中断 (e2e-log.txt)。CI (VER-1) で実施予定 |
 
 ### Phase 12: Sync & Modrinth Modpack (Read/Write) — 未着手
 

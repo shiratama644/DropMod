@@ -117,6 +117,8 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P12-B | Preview UI + Transaction + Executor + Rollback | 未着手 | 0% | P12-A | Chromium で Direct Write 動作 | - |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | 未着手 | 0% | P12-B | Firefox/Safari で ZIP Sync | - |
 
+※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
+
 ### Phase 13: CurseForge 完全対応 — 未着手
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |

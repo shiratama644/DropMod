@@ -24,6 +24,52 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// ============================================================================
+// 2026-08-27 セキュリティ強化
+// ============================================================================
+
+// CORS: Same-Origin のみ (外部サイトからの API 悪用を防止)。
+// Next.js の Route Handler は default で CORS ヘッダーを返さないため、
+// 悪意あるサイトが <script src="..."> や fetch() でこの API を直接
+// 叩くことを防ぐ。
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': 'same-origin',
+  'Vary': 'Origin',
+  'X-Content-Type-Options': 'nosniff'
+};
+
+// 簡易レート制限 (in-memory、single instance 用)。
+// Vercel の serverless は instance 毎に独立するため完全ではないが、
+// 悪用の抑止には有効。本格運用は Upstash Redis 等を推奨。
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 120; // /api 経由は 120 req/min (Modrinth の 300 req/min より厳しく)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    // 期限切れエントリの掃除 (メモリリーク対策)
+    if (rateLimitMap.size > 1000) {
+      for (const [key, val] of rateLimitMap) {
+        if (val.resetAt < now) rateLimitMap.delete(key);
+      }
+    }
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+  entry.count++;
+  return { allowed: entry.count <= RATE_LIMIT_MAX, remaining: Math.max(0, RATE_LIMIT_MAX - entry.count) };
+}
+
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
 const MODRINTH_HOST = 'api.modrinth.com';
 const MODRINTH_BASE = 'https://api.modrinth.com/v2';
 // MODRINTH_USER_AGENT 環境変数を参照 (lib/modrinth/server.ts と同じ挙動)。
@@ -58,7 +104,24 @@ async function handler(
   if (!isSafePath(path)) {
     return Response.json(
       { error: 'Invalid path: traversal segments are not allowed' },
-      { status: 400 }
+      { status: 400, headers: CORS_HEADERS }
+    );
+  }
+
+  // 2026-08-27 セキュリティ強化: レート制限チェック
+  const clientIp = getClientIp(req);
+  const rateLimit = checkRateLimit(clientIp);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: 'Too Many Requests' },
+      {
+        status: 429,
+        headers: {
+          ...CORS_HEADERS,
+          'Retry-After': '60',
+          'X-RateLimit-Remaining': '0'
+        }
+      }
     );
   }
 

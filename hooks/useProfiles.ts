@@ -334,7 +334,7 @@ export const useProfiles = (
       //   読むため client 側 cookie 書き込みが必須。cookieStore API は
       //   Safari 未対応 (2026 時点 experimental) なので document.cookie 直接操作。
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 active profile cookie 書き込み (cookieStore は Safari 未対応)
-      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Lax${cookieSecureSuffix()}`;
+      document.cookie = `dropmod_active_profile=${value}; path=/; max-age=31536000; SameSite=Strict${cookieSecureSuffix()}`;
     } catch (e) {
       console.warn('[DropMod] cookie 書き込みに失敗:', e);
     }
@@ -345,7 +345,7 @@ export const useProfiles = (
     if (!hasHydrated) return;
     try {
       // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC 用 cookie (cookieStore は Safari 未対応)
-      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Lax${cookieSecureSuffix()}`;
+      document.cookie = `dropmod_theme=${theme}; path=/; max-age=31536000; SameSite=Strict${cookieSecureSuffix()}`;
     } catch (e) {
       console.warn('[DropMod] theme cookie 書き込みに失敗:', e);
     }

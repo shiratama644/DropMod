@@ -256,9 +256,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       // (2026 時点 experimental) なので document.cookie 直接操作。
       const secure = window.location.protocol === 'https:' ? '; Secure' : '';
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 cookie 削除 (max-age=0)
-      document.cookie = `dropmod_active_profile=; path=/; max-age=0; SameSite=Lax${secure}`;
+      document.cookie = `dropmod_active_profile=; path=/; max-age=0; SameSite=Strict${secure}`;
       // biome-ignore lint/suspicious/noDocumentCookie: theme cookie 削除 (max-age=0)
-      document.cookie = `dropmod_theme=; path=/; max-age=0; SameSite=Lax${secure}`;
+      document.cookie = `dropmod_theme=; path=/; max-age=0; SameSite=Strict${secure}`;
     } catch (e) {
       console.warn('[DropMod] データ初期化中に例外:', e);
     }

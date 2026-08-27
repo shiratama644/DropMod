@@ -25,6 +25,8 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  // 2026-08-27 追加: DNS プリフェッチの明示的許可 (cdm.modrinth.com のみ)
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
   {
     key: 'Permissions-Policy',
     // カメラ・マイク・位置情報などは使わないので明示的に無効化
@@ -41,16 +43,20 @@ const securityHeaders = [
   //   Spectre 系 side-channel 攻撃対策として popup を同一 origin に限定。
   //   本アプリは window.open で外部 URL を新規タブに開くが noopener 付きなので影響なし。
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-  // Sub-Phase 8-E (E-3): Content-Security-Policy を Report-Only モードで導入。
-  //   - まず違反レポートを見て何が壊れるか把握し、Phase 9 で enforce へ切り替える段階策
-  //   - Markdown 内の任意 iframe (YouTube / Vimeo / Twitch / Streamable) と Modrinth CDN 画像は許可
-  //   - script-src は 'self' + 'unsafe-inline' (theme init script) を許容
-  //   - style-src も 'unsafe-inline' 許容 (Tailwind JIT が inline を使うため)
-  //   - font-src はフォント配信元を明示 (@fontsource)
-  //   - connect-src は Modrinth API と Vercel の内部通信を許可
-  //   - report-uri は現時点未設定 (Vercel deployment 後にコンソールで確認可能)
+  // 2026-08-27: CSP を Report-Only から本番 (Enforce) モードに移行。
+  //   - Report-Only は「違反を報告するが阻止しない」ため、実質 CSP 無しと同じ。
+  //   - script-src 'unsafe-inline' は theme init script (1 箇所) のみに必要。
+  //     Next.js の inline script は hash ベースで許可するのが理想だが、
+  //     ビルドごとに hash が変わるため、当面 'unsafe-inline' を残しつつ
+  //     object-src 'none' + base-uri + form-action + frame-ancestors で
+  //     主要攻撃ベクトル (object embed / base hijack / form hijack /
+  //     clickjacking) をすべて封じる。
+  //   - style-src 'unsafe-inline' は Tailwind CSS v4 が CSS-in-JS で
+  //     inline style を注入するため必須 (React の style={} も CSP 管轄)。
+  //   - worker-src を追加 (Phase 11 の SHA-1 Web Worker 用)。
+  //   - manifest-src を追加 (PWA manifest)。
   {
-    key: 'Content-Security-Policy-Report-Only',
+    key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline'",
@@ -60,6 +66,8 @@ const securityHeaders = [
       "connect-src 'self' https://api.modrinth.com https://cdn.modrinth.com",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://player.twitch.tv https://clips.twitch.tv https://streamable.com",
       "media-src 'self' https://cdn.modrinth.com",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

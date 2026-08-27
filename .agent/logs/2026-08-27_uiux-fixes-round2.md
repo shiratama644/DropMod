@@ -100,3 +100,37 @@
 - cookie: Secure flag は https 条件付き (前回修正済み)
 
 検証: typecheck 0 / biome 0 / **test:unit 555 passed / 65 files** / build exit 0 / **coverage exit 0** (総計 stmt 84.23)。
+
+---
+
+## 追記: 第 6 弾 — セキュリティ全面強化 (同日)
+
+### セキュリティ監査結果と施策
+
+#### 実施したセキュリティ強化 (6 項目)
+
+| # | 項目 | Before | After |
+|---|---|---|---|
+| 1 | **CSP** | Report-Only (= 実質 CSP 無し) | **本番 Enforce** モードに移行。`object-src 'none'` + `base-uri 'self'` + `form-action 'self'` + `frame-ancestors 'self'` + `worker-src 'self' blob:` + `manifest-src 'self'` 追加 |
+| 2 | **API CORS** | CORS ヘッダーなし | `Access-Control-Allow-Origin: same-origin` + `Vary: Origin` + `X-Content-Type-Options: nosniff` を全 API Route に追加 |
+| 3 | **API レート制限** | なし (Modrinth 側にのみ任せていた) | **`/api/modrinth/*` 120 req/min** + **`/api/loaders/*` 60 req/min** (in-memory、IP ベース)。`X-RateLimit-Remaining` ヘッダー付き |
+| 4 | **Cookie** | `SameSite=Lax` | **`SameSite=Strict`** に強化 (CSRF 対策最強レベル) |
+| 5 | **iframe sandbox** | `sandbox` 属性なし | **`sandbox="allow-scripts allow-same-origin allow-presentation"`** を全 iframe に追加 (YouTube / Vimeo / Twitch / Streamable の動画再生のみ許可、popup/form/navigation は拒否) |
+| 6 | **referrerPolicy** | iframe なし、img なし | iframe に `strict-origin-when-cross-origin`、Markdown 内 img に `no-referrer` 追加 |
+
+#### 追加したセキュリティヘッダー
+
+- `X-DNS-Prefetch-Control: on` (DNS プリフェッチの明示的制御)
+
+#### 確認済み (問題なし)
+
+- XSS: rehype-sanitize + iframe host allowlist (9 ホスト) + HTTPS + sandbox
+- 外部リンク: 全 5 箇所 `rel="noopener noreferrer"` 付き
+- API: path traversal 検出 + ホスト検証 + GET/POST 制限 + CORS + レート制限
+- 機密情報: ハードコーディングなし
+- innerHTML / eval / new Function / postMessage / window.open: 使用なし
+- プロトタイプ汚染: `__proto__` / `constructor[` の直接使用なし
+- HSTS / X-Frame-Options / Referrer-Policy / Permissions-Policy / COOP: 設定済み
+- rehype-sanitize: `style` 属性を全タグで削除 (CSS injection 対策)
+
+検証: typecheck 0 / biome 0 / **test:unit 555 passed** / build exit 0 / **coverage exit 0**。

@@ -113,6 +113,11 @@ const ALLOWED_IFRAME_HOSTS = new Set<string>([
   'streamable.com'
 ]);
 
+// sandbox 属性: 動画プレイヤーに必要な最小権限のみ許可。
+// allow-popups / allow-forms / allow-downloads は不要。
+// allow-top-navigation は絶対に許可しない (クリックジャッキング防止)。
+const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
+
 function isAllowedIframeSrc(src: string | undefined): boolean {
   if (!src) return false;
   try {
@@ -156,6 +161,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
+                      sandbox={IFRAME_SANDBOX}
+                      referrerPolicy="strict-origin-when-cross-origin"
                       className="w-full h-full"
                     ></iframe>
                   </div>
@@ -194,7 +201,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  sandbox={IFRAME_SANDBOX}
+                  referrerPolicy="strict-origin-when-cross-origin"
                   className="w-full h-full"
+                  loading="lazy"
                   {...props}
                 ></iframe>
               </div>

@@ -108,7 +108,7 @@ describe('ModCard', () => {
     expect(img.tagName).toBe('IMG');
   });
 
-  it('未追加なら「追加」ボタン、追加済なら「追加済み」ボタン', () => {
+  it('未追加なら「追加」(緑)、追加済なら「削除」(赤) のトグルボタン', () => {
     // 未追加
     const { rerender } = render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
@@ -125,7 +125,11 @@ describe('ModCard', () => {
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByRole('button', { name: /追加済み/ })).toBeInTheDocument();
+    const removeButton = screen.getByRole('button', { name: /削除$/ });
+    expect(removeButton).toBeInTheDocument();
+    // 色も追加 (緑塗り) → 削除 (赤枠) に切り替わる
+    expect(removeButton.className).toContain('bg-red-500/20');
+    expect(removeButton.className).not.toContain('bg-emerald-600');
   });
 
   it('追加ボタンクリックで onToggleMod(project_id) が呼ばれる', async () => {
@@ -138,7 +142,7 @@ describe('ModCard', () => {
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
-  it('追加済みボタンクリックで削除トグルが発火する', async () => {
+  it('削除ボタンクリックで削除トグルが発火する', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     render(
@@ -150,7 +154,7 @@ describe('ModCard', () => {
         onToggleMod={onToggle}
       />
     );
-    await user.click(screen.getByRole('button', { name: /追加済み/ }));
+    await user.click(screen.getByRole('button', { name: /削除$/ }));
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
@@ -208,7 +212,7 @@ describe('ModCard', () => {
         onToggleMod={vi.fn()}
       />
     );
-    const addedButton = screen.getByRole('button', { name: /追加済み/ });
+    const addedButton = screen.getByRole('button', { name: /削除$/ });
     expect(addedButton.className).toContain('h-9');
     expect(addedButton.className).toContain('min-w-[7rem]');
   });
@@ -223,7 +227,7 @@ describe('ModCard', () => {
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByRole('button', { name: /追加済み/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /削除$/ })).toBeInTheDocument();
   });
 });
 
@@ -296,5 +300,35 @@ describe('ModCard: モバイル 3 カラム compact カード (Phase 11 UI)', ()
     expect(addButton.className).toContain('h-7');
     await user.click(addButton);
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
+  });
+
+  it('compact カードの追加済みは 削除 ボタン (赤・全幅 h-7) に切り替わる', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    render(
+      <ModCard
+        hit={baseHit}
+        profile={makeProfile([
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
+        ])}
+        onToggleMod={vi.fn()}
+        layout="3"
+      />
+    );
+    const removeButton = screen.getByRole('button', { name: 'プロファイルから削除' });
+    expect(removeButton.className).toContain('w-full');
+    expect(removeButton.className).toContain('h-7');
+    expect(removeButton.className).toContain('bg-red-500/20');
   });
 });

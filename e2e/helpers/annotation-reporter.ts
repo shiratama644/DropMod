@@ -26,6 +26,7 @@ export default class GitHubAnnotationReporter implements Reporter {
     const err = result.error?.message ?? '(エラーメッセージなし)';
     // アノテーションは 1 行。ANSI カラーコードと改行を除去。
     const message = err
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI カラーコード (ESC) 除去のための意図的な制御文字
       .replace(/\u001b\[\d*m/g, '')
       .replace(/[\r\n]+/g, ' ')
       .trim()

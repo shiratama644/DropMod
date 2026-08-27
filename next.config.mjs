@@ -34,25 +34,40 @@
 //   | connect-src (HMR websocket)| なし               | ws://localhost  |
 //
 // 解決優先度 (ランタイム側 lib/server/profile.ts と同一ロジック):
-//   1. APP_PROFILE  — 明示指定。常に最優先
-//   2. VERCEL_ENV   — production|preview → production / development → development
-//   3. NODE_ENV     — development → development / それ以外 → production
+//   1. APP_PROFILE — 明示指定 (development は NODE_ENV !== production のみ有効)
+//   2. VERCEL_ENV  — production|preview → production / development → development
+//   3. NODE_ENV    — development → development / それ以外 → production
 //   不正な値は production 扱い (fail-secure)。
 //
-// ※ Next.js は .env 系ファイルを next.config 評価 **前に** 読み込むため
+// ■ development は next dev (NODE_ENV=development) 専用 (2026-08-27 修正):
+//   Next.js は .env 系ファイルを next.config 評価 **前に** 読み込むため
 //   (next/dist/server/config.js の loadEnvConfig → import 順、2026-08-27 実証済み)、
-//   .env / .env.local / .env.development / .env.production に書いた APP_PROFILE が
-//   そのまま反映される。実環境変数が常に優先される (@next/env 仕様)。
+//   .env.local に APP_PROFILE=development を書くと next build にも適用され、
+//   CSP Report-Only / HSTS なし の本番ビルドが作成される重大な footgun があった。
+//   そのため NODE_ENV=production (= next build / next start) では development 指定を
+//   無視して常に production とする (警告 1 回)。生の next build を含む全経路で保護。
 //
-// 重要: headers() の結果は **build 時に** routes manifest へ確定する。
-//   - next dev: .env 変更で dev server が自動再起動し即反映
-//   - next build / start / Vercel: APP_PROFILE を変えたら再ビルドが必要
-//   (ランタイム側のロガー・レート制限は lib/server/profile.ts が都度解決するため、
-//    ビルドし直さないとヘッダーだけ旧プロファイルのまま混在する点に注意)
+// headers() の結果は build 時に routes manifest へ確定するが、上記により
+// build/start は常に production profile になるため、プロファイル混在は発生しない。
 // ============================================================================
 function resolveAppProfile(env = process.env) {
   const explicit = (env.APP_PROFILE ?? '').trim().toLowerCase();
-  if (explicit === 'production' || explicit === 'development') return explicit;
+  if (explicit === 'production' || explicit === 'development') {
+    // development は開発サーバー (next dev) でのみ有効。NODE_ENV=production
+    // (= next build / next start) では本番ビルドへの緩和漏れを防ぐため無視。
+    if (explicit === 'development' && env.NODE_ENV === 'production') {
+      if (!process.env.__DROPMOD_APP_PROFILE_DEV_IGNORED_WARNED) {
+        process.env.__DROPMOD_APP_PROFILE_DEV_IGNORED_WARNED = '1';
+        console.warn(
+          '[DropMod] APP_PROFILE=development は next dev (NODE_ENV=development) でのみ有効です。' +
+            'このプロセスは NODE_ENV=production のため production として扱います ' +
+            '(.env.local に書いた場合も build / start には反映されません)'
+        );
+      }
+      return 'production';
+    }
+    return explicit;
+  }
   if (explicit) {
     // 不正値の警告も build 時の config 再評価 (main + jest-worker) で重複するため
     // process.env ガードでプロセスツリー全体で 1 回だけ出す
@@ -91,15 +106,11 @@ const isProductionProfile = appProfile === 'production';
 const BANNER_GUARD_KEY = '__DROPMOD_APP_PROFILE_BANNER_SHOWN';
 if (!process.env.VITEST && process.env[BANNER_GUARD_KEY] !== appProfile) {
   process.env[BANNER_GUARD_KEY] = appProfile;
-  let banner = isProductionProfile
+  const banner = isProductionProfile
     ? '[DropMod] APP_PROFILE=production — CSP=Enforce / HSTS=有効 / レート制限=有効'
-    : '[DropMod] APP_PROFILE=development — CSP=Report-Only / HSTS=無効 / レート制限=無効';
-  // 本番ビルド (NODE_ENV=production) を development プロファイルで作ろうとして
-  // いる場合は追加警告 (.env.local に書きっぱなしによる見落とし防止)。
-  if (!isProductionProfile && process.env.NODE_ENV === 'production') {
-    banner +=
-      ' ⚠ この production build が development 設定で作られます。本番デプロイ用なら .env.local 等の APP_PROFILE を外してください (開発専用なら .env.development へ)';
-  }
+    : '[DropMod] APP_PROFILE=development — CSP=Report-Only / HSTS=無効 / レート制限=無効 (next dev 専用)';
+  // 2026-08-27 修正: development は NODE_ENV=production では解決段階で無視される
+  // ため、このバナーが development になるのは next dev のみ。
   console.info(banner);
 }
 

@@ -197,12 +197,14 @@ describe('next.config.mjs — APP_PROFILE 連動セキュリティヘッダー',
     // (子プロセス分は env 継承により同じガードが効く)。
     const BANNER_GUARD_KEY = '__DROPMOD_APP_PROFILE_BANNER_SHOWN';
     const INVALID_WARN_GUARD_KEY = '__DROPMOD_APP_PROFILE_INVALID_WARNED';
+    const DEV_IGNORED_GUARD_KEY = '__DROPMOD_APP_PROFILE_DEV_IGNORED_WARNED';
     let infoSpy: ReturnType<typeof vi.spyOn>;
     let warnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
       delete process.env[BANNER_GUARD_KEY];
       delete process.env[INVALID_WARN_GUARD_KEY];
+      delete process.env[DEV_IGNORED_GUARD_KEY];
       infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
       warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       // バナーは process.env.VITEST が設定されていると抑制されるため外す
@@ -212,6 +214,7 @@ describe('next.config.mjs — APP_PROFILE 連動セキュリティヘッダー',
     afterEach(() => {
       delete process.env[BANNER_GUARD_KEY];
       delete process.env[INVALID_WARN_GUARD_KEY];
+      delete process.env[DEV_IGNORED_GUARD_KEY];
       vi.unstubAllEnvs();
       vi.restoreAllMocks();
     });
@@ -227,15 +230,26 @@ describe('next.config.mjs — APP_PROFILE 連動セキュリティヘッダー',
       expect(typeof msg === 'string' && msg.includes('⚠')).toBe(false);
     });
 
-    it('本番ビルドを development で作る場合は ⚠ 警告が付く', async () => {
+    it('NODE_ENV=production では APP_PROFILE=development を無視し production バナーになる (2026-08-27 修正)', async () => {
+      // next build / next start 相当。.env.local の development が本番ビルドを
+      // 緩和する footgun 対策の回帰テスト。
       vi.stubEnv('APP_PROFILE', 'development');
       vi.stubEnv('NODE_ENV', 'production');
+      const h = await getSecurityHeaders();
       await loadNextConfig();
 
+      // バナーは production (旧 ⚠ 追加警告は廃止)
       expect(infoSpy).toHaveBeenCalledTimes(1);
       const msg = infoSpy.mock.calls[0]?.[0];
-      expect(typeof msg === 'string' && msg.includes('APP_PROFILE=development')).toBe(true);
-      expect(typeof msg === 'string' && msg.includes('⚠')).toBe(true);
+      expect(typeof msg === 'string' && msg.includes('APP_PROFILE=production')).toBe(true);
+      expect(typeof msg === 'string' && msg.includes('⚠')).toBe(false);
+      // 代わりに「無視した」旨の警告が 1 回出る
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0]?.[0])).toContain('next dev');
+      // ヘッダーも本番 (CSP Enforce + HSTS)
+      expect(h['Content-Security-Policy']).toBeDefined();
+      expect(h['Content-Security-Policy-Report-Only']).toBeUndefined();
+      expect(h['Strict-Transport-Security']).toBeDefined();
     });
 
     it('next dev 相当 (NODE_ENV=development) の development バナーには警告が付かない', async () => {

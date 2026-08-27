@@ -5,15 +5,22 @@
 
 ## 解決優先度 (lib/server/profile.ts と next.config.mjs の 2 箇所で同一ロジック)
 
-1. `APP_PROFILE` — 明示指定 (最優先)
+1. `APP_PROFILE` — 明示指定 (最優先)。**development は NODE_ENV !== production
+   のときのみ有効** (2026-08-27 修正: NODE_ENV=production では無視して production)
 2. `VERCEL_ENV` — production|preview → production / development → development
 3. `NODE_ENV` — development → development / それ以外 (test 含む) → production
 
 - 不正な値は **fail-secure** で production 扱い (+ 警告 1 回)。
+- **development が有効なのは next dev のみ**。next build / next start では
+  APP_PROFILE=development は無視され常に production (+ 警告 1 回)。
+  理由: .env.local は build にも適用されるため、開発緩和を .env.local に
+  書くと本番ビルドが緩和される重大な footgun があった。ランタイム側も
+  同一ルールで、ビルド成果物とのプロファイル混在を根絶。
 - 通常は未設定で運用してよい (next dev → development、build/start → production、
   Vercel → VERCEL_ENV で自動判定)。
-- 主なユースケース: `APP_PROFILE=production` を .env.local に書いて
-  next dev で本番相当の Enforce CSP を試す、等。
+- 主なユースケース: 開発緩和 (`APP_PROFILE=development` を .env.local へ —
+  build に漏れないので安全)、本番相当の Enforce CSP を dev で試す
+  (`APP_PROFILE=production`)。
 
 ## 何が切り替わるか
 
@@ -48,12 +55,13 @@
    既存の `console.warn('[DropMod] msg', ...)` と同じ出力形式 (prefix 連結) なので
    spy テスト互換。クライアントコードでは使わない (誤 import 時は静かに fail-quiet)。
 
-## .env ファイルの使い分け (footgun 注意)
+## .env ファイルの扱い (2026-08-27 修正後は安全)
 
-- `.env.local` は **next dev と next build 両方** に適用される。
-  ここに `APP_PROFILE=development` を書きっぱなしにすると本番ビルドまで
-  CSP Report-Only で作られる (build 時に ⚠ 警告が出る)。
-- 開発専用の指定は **`.env.development`** に書く (next dev 時のみロード)。
+- `.env.local` は next dev と next build 両方に適用されるが、
+  APP_PROFILE=development は NODE_ENV=production で無視されるため
+  **.env.local に書いても本番ビルド・本番ランタイムは緩和されない**。
+  開発緩和用に .env.local へ itsまま書ける (修正前は .env.development へ
+  書く必要があった)。
 
 ## テスト
 

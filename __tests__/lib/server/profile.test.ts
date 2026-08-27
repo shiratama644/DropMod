@@ -12,15 +12,40 @@ describe('lib/server/profile — APP_PROFILE 解決', () => {
       expect(resolveAppProfile({ APP_PROFILE: 'production' })).toBe('production');
     });
 
-    it('APP_PROFILE=development を尊重する (NODE_ENV より優先)', () => {
-      expect(
-        resolveAppProfile({ APP_PROFILE: 'development', NODE_ENV: 'production' })
-      ).toBe('development');
+    it('APP_PROFILE=development を尊重する (NODE_ENV 未指定時)', () => {
+      expect(resolveAppProfile({ APP_PROFILE: 'development' })).toBe('development');
     });
 
     it('APP_PROFILE=production が VERCEL_ENV=development より優先される', () => {
       expect(
         resolveAppProfile({ APP_PROFILE: 'production', VERCEL_ENV: 'development' })
+      ).toBe('production');
+    });
+
+    it('NODE_ENV=development なら APP_PROFILE=development を尊重する (next dev)', () => {
+      expect(
+        resolveAppProfile({ APP_PROFILE: 'development', NODE_ENV: 'development' })
+      ).toBe('development');
+    });
+
+    it('NODE_ENV=production では APP_PROFILE=development を無視して production (2026-08-27 修正)', () => {
+      // next build / next start 相当。.env.local の開発緩和設定が本番ビルドへ
+      // 漏れる footgun 対策 (警告 1 回 + fail-secure)。
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      expect(
+        resolveAppProfile({ APP_PROFILE: 'development', NODE_ENV: 'production' })
+      ).toBe('production');
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0]?.[0])).toContain('next dev');
+      // 警告は 1 回だけ (重複防止)
+      resolveAppProfile({ APP_PROFILE: 'development', NODE_ENV: 'production' });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
+    });
+
+    it('APP_PROFILE=production は NODE_ENV=production でも尊重される', () => {
+      expect(
+        resolveAppProfile({ APP_PROFILE: 'production', NODE_ENV: 'production' })
       ).toBe('production');
     });
 

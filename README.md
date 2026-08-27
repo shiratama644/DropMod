@@ -113,13 +113,13 @@ DROP_MOD_BUNDLER=webpack pnpm build   # 環境変数でも指定可
 | `.env.production` | **`next build` / `next start` のみ** | 本番ビルド専用設定 |
 | `.env` | すべて (優先度は最下位) | チーム共通の既定値 |
 
-> ⚠️ `APP_PROFILE=development` を **`.env.local` に書くと本番ビルドにも適用され**、CSP が Report-Only の production build が作られてしまいます (ビルド時に警告が出ます)。開発専用の緩和は **`.env.development`** に書いてください。実環境変数 (shell や CI で設定) は常に `.env` ファイルより優先されます。
+> 💡 `APP_PROFILE=development` は **next dev (NODE_ENV=development) でのみ有効** です。`next build` / `next start` (NODE_ENV=production) では無視され **常に production** として扱われるため (警告 1 行が出ます)、開発緩和用に `.env.local` へ安心して書けます — 本番ビルドが緩和されることはありません。実環境変数 (shell や CI で設定) は常に `.env` ファイルより優先されます。
 
 ### アプリ動作系
 
 | 変数 | 用途 | 既定値 |
 | --- | --- | --- |
-| `APP_PROFILE` | セキュリティ / ログのプロファイル (`production` \| `development`)。未設定は `VERCEL_ENV` → `NODE_ENV` で自動判定 (不正値は fail-secure で `production`) | 自動判定 |
+| `APP_PROFILE` | セキュリティ / ログのプロファイル (`production` \| `development`)。**`development` は next dev でのみ有効** (build / start では無視され常に production)。未設定は `VERCEL_ENV` → `NODE_ENV` で自動判定 (不正値は fail-secure で `production`) | 自動判定 |
 | `NEXT_PUBLIC_SITE_URL` | OGP / sitemap / robots / metadataBase の正規 URL | `VERCEL_URL` → `http://localhost:3000` |
 | `MODRINTH_USER_AGENT` | Modrinth API に送る User-Agent (規約・レートリミット緩和のため **推奨**)。例: `DropMod/1.1.0 (https://github.com/shiratama644/DropMod)` | `DropMod/1.1.0 (...)` |
 | `MODRINTH_FETCH_TIMEOUT_MS` | Server 側の Modrinth fetch タイムアウト (Vercel Hobby の 10s Function timeout に合わせて既定 8s) | `8000` |
@@ -135,7 +135,7 @@ DROP_MOD_BUNDLER=webpack pnpm build   # 環境変数でも指定可
 | API レート制限 (`/api/*`) | 120 / 60 req/min | 無効 |
 | サーバログ debug/info | 抑制 | 出力 |
 
-> **注意**: CSP / HSTS ヘッダーは **ビルド時に確定** します。`APP_PROFILE` を変更したら `pnpm build` をやり直してください (`next dev` は `.env` 変更で自動再起動するため即反映)。ロガー・レート制限・`/api/health` の `profile` フィールドはランタイム解決です。解決結果は `GET /api/health` で確認できます。
+> `next build` / `next start` は常に production プロファイルで動作するため、プロファイルの混在を意識する必要はありません。`next dev` は `.env` 変更で自動再起動するため開発中の切替も即反映されます。解決結果は `GET /api/health` の `profile` フィールドで確認できます。
 
 ### ビルド系 (scripts/build.ts)
 

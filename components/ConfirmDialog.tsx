@@ -45,7 +45,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる、useModalA11y 参照)
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();

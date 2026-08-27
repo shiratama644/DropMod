@@ -335,7 +335,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Modrinth で見る"
-                className="flex-1 min-w-0 max-w-56 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
                 Modrinth
@@ -346,7 +346,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   onClick={() => handleJarDownload(latestFile)}
                   disabled={isJarDownloading}
                   aria-label=".jar ファイルをダウンロード"
-                  className="flex-1 min-w-0 max-w-56 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isJarDownloading ? (
                     <>
@@ -367,7 +367,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
                   aria-label="プロファイルから削除"
-                  className="flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>

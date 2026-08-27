@@ -265,7 +265,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
         // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4"
+          className="modal-overlay fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
           onClick={handleClose}
         >
@@ -505,7 +505,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="btn-hover-effect shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             閉じる
           </button>
@@ -515,7 +515,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
             href={discoverPathFromProjectType(project.project_type)}
-            className="shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
+            className="btn-hover-effect shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
             検索に戻る
@@ -525,7 +525,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           <Link
             href={detailPathFromProject(project.project_type, slug)}
             aria-label="詳細ページ"
-            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
             詳細
@@ -537,7 +537,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
             onClick={() => handleJarDownload(latestFile)}
             disabled={isJarDownloading}
             aria-label=".jar ファイルをダウンロード"
-            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isJarDownloading ? (
               <>
@@ -558,7 +558,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
             aria-label="プロファイルから削除"
-            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
@@ -578,7 +578,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
             aria-label="プロファイルに追加"
-            className="flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
@@ -604,7 +604,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
       // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
       <div
-        className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4  touch-action-none"
+        className="modal-overlay fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4  touch-action-none"
         style={{ backgroundColor: 'var(--modal-overlay)' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();

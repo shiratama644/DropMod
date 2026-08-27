@@ -120,7 +120,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

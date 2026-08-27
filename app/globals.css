@@ -290,7 +290,9 @@ code, input, textarea {
     to   { opacity: 1; transform: none; }
 }
 .mod-card-item {
-    animation: mod-card-appear 0.28s ease-out both;
+    /* fill-mode は backwards のみ: both だと最終キーフレーム (transform: none) が
+       永続適用され、下記 :hover の translateY が効かなくなるため */
+    animation: mod-card-appear 0.28s ease-out backwards;
 }
 .mod-card-item:nth-child(2)  { animation-delay: 0.03s; }
 .mod-card-item:nth-child(3)  { animation-delay: 0.06s; }
@@ -303,6 +305,26 @@ code, input, textarea {
 .mod-card-item:nth-child(n+10) { animation-delay: 0.27s; }
 @media (prefers-reduced-motion: reduce) {
     .mod-card-item { animation: none; }
+}
+
+/* カードのホバー浮遊 (2026-08-27): Modrinth 風のリフト演出。
+   :hover は hover 対応デバイス (マウス等) のみで発火 = タッチ端末では無効。
+   .mod-card-item は <Link>。上記アニメを backwards fill にしたことで
+   アニメ終了後に transform が解放され、hover 移動が効く。 */
+@media (hover: hover) {
+    .mod-card-item {
+        transition:
+            transform 180ms ease-out,
+            box-shadow 180ms ease-out,
+            border-color 180ms ease-out;
+    }
+    .mod-card-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -14px rgba(0, 0, 0, 0.45);
+    }
+    .mod-card-item:active {
+        transform: translateY(-1px);
+    }
 }
 /* 追加⇄削除トグルボタンのアイコン入れ替え演出 (2026-08-27)。
    ボタンは再マウントせず <i> だけ key={isAdded} で再マウントするため、
@@ -353,6 +375,51 @@ code, input, textarea {
         /* 即時 hidden (スライド演出なし) */
         transition-delay: 0s, 0s;
     }
+}
+
+/* -----------------------------------------------------------------
+ * モーダル出現演出 (2026-08-27)
+ *
+ *   - .modal-overlay: 背景オーバーレイのフェードイン (0.2s)
+ *   - .modal-card:    カードのポップイン (translateY + scale、0.26s)
+ *
+ * 全モーダル (NewProfile / EditProfile / DependencyCheck / ZipProgress /
+ * ConfirmDialog / ModDetailModalShell / ScreenshotGallery) が同じクラスを
+ * 使うため、ここを定義するだけで一括適用される。
+ * (BottomSheet は独自のスライド演出を持つため対象外)
+ * ----------------------------------------------------------------- */
+@keyframes modal-pop {
+    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-card {
+    animation: modal-pop 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes modal-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.modal-overlay {
+    animation: modal-overlay-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .modal-card,
+    .modal-overlay {
+        animation: none;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * .btn-hover-effect: アプリ全体のボタン押し込み演出 (2026-08-27)
+ *
+ * 旧 Vite 版由来のクラス名で、これまで CSS 定義が無かった (機能しない空クラス)。
+ * 多数の主要ボタン (Header / DesktopSidebar / HomeInteractive / ModCard /
+ * 詳細 CTA 等) が既に付与しているため、ここで active 時の縮小を定義すると
+ * アプリ全体に一律のタップフィードバックが有効になる。
+ * transition は各ボタンの Tailwind transition クラスに任せる。
+ * ----------------------------------------------------------------- */
+.btn-hover-effect:active {
+    transform: scale(0.97);
 }
 
 /* ---------------------------------------------------------------

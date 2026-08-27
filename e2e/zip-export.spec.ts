@@ -21,6 +21,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { waitForAppHydrated } from './helpers/appReady';
 
 test.describe('ZIP export flow (Phase 10-D)', () => {
   test('Desktop: ZIP 保存ボタンで download or toast 通知が発生する', async ({
@@ -33,6 +34,8 @@ test.describe('ZIP export flow (Phase 10-D)', () => {
     );
 
     await page.goto('/profile');
+    // hydration 完了を待つ (クリックが no-op になる競合対策。2026-08-27)
+    await waitForAppHydrated(page);
     // DesktopSidebar が md 以上で表示
     const sidebar = page.locator('#desktop-sidebar');
     await sidebar.waitFor({ state: 'visible', timeout: 10_000 });
@@ -72,6 +75,8 @@ test.describe('ZIP export flow (Phase 10-D)', () => {
 
     await page.goto('/profile');
     await page.waitForSelector('#bottom-nav', { state: 'visible', timeout: 10_000 });
+    // hydration 完了を待つ (クリックが no-op になる競合対策。2026-08-27)
+    await waitForAppHydrated(page);
 
     // ハンバーガーメニュー (メニュー) タブ = 4 番目のボタン (aria-controls=menu-bottom-sheet)
     const menuBtn = page.locator('button[aria-controls="menu-bottom-sheet"]');

@@ -90,6 +90,18 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     else html.classList.add('dark');
   }, [theme]);
 
+  // E2E 用 hydration 完了マーカー (2026-08-27)。
+  // AppShell は Root Layout 直下の Client Component のため、この effect が走った時点で
+  // React hydration が完了しイベントハンドラが有効。Playwright 側は
+  // `html[data-hydrated]` の出現を待つことで hydration 前の click の no-op 化
+  // (テストが安定して失敗する原因) を回避できる。
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = '1';
+    return () => {
+      delete document.documentElement.dataset.hydrated;
+    };
+  }, []);
+
   // ---------- Profiles ----------
   const {
     profiles,

@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
 
 test('/discover/mods (Modrinth 検索一覧) renders and shows search UI', async ({ page }) => {
   await page.goto('/discover/mods');
-  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
+  await page.locator('#desktop-sidebar:visible, #app-header:visible').first().waitFor({ state: 'visible' });
 
   // タイトル
   await expect(page).toHaveTitle(/DropMod/);
@@ -27,7 +27,7 @@ test('/profile (選択中プロファイル一覧) renders and shows profile inf
   page
 }) => {
   await page.goto('/profile');
-  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
+  await page.locator('#desktop-sidebar:visible, #app-header:visible').first().waitFor({ state: 'visible' });
 
   // タイトル
   await expect(page).toHaveTitle(/DropMod/);
@@ -38,6 +38,6 @@ test('/profile (選択中プロファイル一覧) renders and shows profile inf
 
 test('settings page renders', async ({ page }) => {
   await page.goto('/settings');
-  await page.locator('#desktop-sidebar, #app-header').first().waitFor({ state: 'visible' });
+  await page.locator('#desktop-sidebar:visible, #app-header:visible').first().waitFor({ state: 'visible' });
   await expect(page).toHaveTitle(/DropMod/);
 });

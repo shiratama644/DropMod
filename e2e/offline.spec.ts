@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Offline detection', () => {
   test('shows offline banner when offline, hides when online', async ({ page, context }) => {
     await page.goto('/');
-    await page.locator('#desktop-sidebar, #bottom-nav, main').first().waitFor({ state: 'visible' });
+    await page.locator('#desktop-sidebar:visible, #bottom-nav:visible, main').first().waitFor({ state: 'visible' });
 
     // 初期はオンライン、バナー無し
     expect(await page.locator('[role="status"]').filter({ hasText: /オフライン中/ }).count()).toBe(0);

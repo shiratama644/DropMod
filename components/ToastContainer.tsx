@@ -95,6 +95,10 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: () => void }> = ({ toast, o
   return (
     <div
       ref={elRef}
+      // 2026-08-27: スクリーンリーダー / E2E から通知を検出できるよう role を付与。
+      // error は alert (assertive)、それ以外は status (polite)。
+      role={toast.type === 'error' ? 'alert' : 'status'}
+      aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
       className={`pointer-events-auto px-3.5 py-2.5 rounded-2xl border shadow-2xl text-xs font-semibold flex items-center gap-2.5 text-left w-auto max-w-[85vw] sm:max-w-md ${bgClass}`}
     >
       <i className={`${iconClass} text-sm shrink-0`} aria-hidden />

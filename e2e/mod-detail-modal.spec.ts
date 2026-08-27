@@ -25,7 +25,7 @@ test.describe('Project preview modal & detail page flow', () => {
     await firstCard.waitFor({ state: 'visible', timeout: 15_000 });
 
     // モバイルは Header、PC は DesktopSidebar が常時表示
-    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
+    await expect(page.locator('#desktop-sidebar:visible, #app-header:visible').first()).toBeVisible();
 
     // クリック前の URL は一覧
     await expect(page).toHaveURL('/discover/mods');
@@ -89,10 +89,11 @@ test.describe('Project preview modal & detail page flow', () => {
       timeout: 15_000
     });
     // モバイル Header / PC DesktopSidebar は表示されたまま
-    await expect(page.locator('#desktop-sidebar, #app-header').first()).toBeVisible();
+    await expect(page.locator('#desktop-sidebar:visible, #app-header:visible').first()).toBeVisible();
     // dialog は無い (フルページ)
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // ページ h1 = Mod タイトル (SEO)
-    await expect(page.locator('h1').first()).toBeVisible();
+    // ページ h1 = Mod タイトル (SEO)。Header ロゴの h1 は PC で md:hidden のため
+    // first() だと非表示側を掴む → タイトルの h1 を直接指定する
+    await expect(page.getByRole('heading', { level: 1, name: 'Sodium' })).toBeVisible();
   });
 });

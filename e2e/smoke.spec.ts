@@ -34,9 +34,12 @@ test('GET /nonexistent returns 404', async ({ request }) => {
   expect(res.status()).toBe(404);
 });
 
-test('Home page renders header with h1 "DropMod"', async ({ page }) => {
+test('Home page renders hero h1 (ランディングの回転タイトル)', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toHaveText(/DropMod/);
+  // Phase 9.5 の LP 刷新以降、/ の h1 は HeroRotator の回転タイトル
+  // 「Minecraft を彩る、<Mods|Modpacks|...>の玄関口。」(LP は Header 非表示のため
+  // ロゴ h1 は存在しない)。型名部分は回転するため固定プレフィックスで検証する。
+  await expect(page.locator('h1')).toHaveText(/Minecraft を彩る/);
   // h1 は 1 個だけ (C6-1 継続確認)
   await expect(page.locator('h1')).toHaveCount(1);
 });

@@ -51,7 +51,7 @@ test.describe('.minecraft ZIP 取り込み (Phase 11-C fallback)', () => {
     // NewProfileModal が開く
     const dialog = page
       .getByRole('dialog')
-      .filter({ hasText: /新規プロファイル/ })
+      .filter({ hasText: /新規プロファイル|ZIPからプロファイル作成/ })
       .first();
     await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -107,7 +107,7 @@ test.describe('.minecraft ZIP 取り込み (Phase 11-C fallback)', () => {
 
     const dialog = page
       .getByRole('dialog')
-      .filter({ hasText: /新規プロファイル/ })
+      .filter({ hasText: /新規プロファイル|ZIPからプロファイル作成/ })
       .first();
     await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -152,7 +152,7 @@ test.describe('.minecraft ZIP 取り込み (Phase 11-C fallback)', () => {
 
     const dialog = page
       .getByRole('dialog')
-      .filter({ hasText: /新規プロファイル/ })
+      .filter({ hasText: /新規プロファイル|ZIPからプロファイル作成/ })
       .first();
     await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 

@@ -189,4 +189,99 @@ describe('next.config.mjs — APP_PROFILE 連動セキュリティヘッダー',
       ]);
     });
   });
+
+  describe('プロファイルバナー (重複出力の回帰防止)', () => {
+    // 背景: next build は main プロセス + jest-worker 子プロセスで next.config を
+    // 再評価するため、ガードなしだと同じバナーが 3〜4 回出力されていた。
+    // ここでは同一プロセス内での再 import をシミュレートして重複抑止を検証する
+    // (子プロセス分は env 継承により同じガードが効く)。
+    const BANNER_GUARD_KEY = '__DROPMOD_APP_PROFILE_BANNER_SHOWN';
+    const INVALID_WARN_GUARD_KEY = '__DROPMOD_APP_PROFILE_INVALID_WARNED';
+    let infoSpy: ReturnType<typeof vi.spyOn>;
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      delete process.env[BANNER_GUARD_KEY];
+      delete process.env[INVALID_WARN_GUARD_KEY];
+      infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      // バナーは process.env.VITEST が設定されていると抑制されるため外す
+      vi.stubEnv('VITEST', '');
+    });
+
+    afterEach(() => {
+      delete process.env[BANNER_GUARD_KEY];
+      delete process.env[INVALID_WARN_GUARD_KEY];
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    });
+
+    it('通常の production バナーには警告が付かない', async () => {
+      vi.stubEnv('APP_PROFILE', 'production');
+      vi.stubEnv('NODE_ENV', 'production');
+      await loadNextConfig();
+
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+      const msg = infoSpy.mock.calls[0]?.[0];
+      expect(typeof msg === 'string' && msg.includes('APP_PROFILE=production')).toBe(true);
+      expect(typeof msg === 'string' && msg.includes('⚠')).toBe(false);
+    });
+
+    it('本番ビルドを development で作る場合は ⚠ 警告が付く', async () => {
+      vi.stubEnv('APP_PROFILE', 'development');
+      vi.stubEnv('NODE_ENV', 'production');
+      await loadNextConfig();
+
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+      const msg = infoSpy.mock.calls[0]?.[0];
+      expect(typeof msg === 'string' && msg.includes('APP_PROFILE=development')).toBe(true);
+      expect(typeof msg === 'string' && msg.includes('⚠')).toBe(true);
+    });
+
+    it('next dev 相当 (NODE_ENV=development) の development バナーには警告が付かない', async () => {
+      vi.stubEnv('APP_PROFILE', 'development');
+      vi.stubEnv('NODE_ENV', 'development');
+      await loadNextConfig();
+
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+      const msg = infoSpy.mock.calls[0]?.[0];
+      expect(typeof msg === 'string' && msg.includes('⚠')).toBe(false);
+    });
+
+    it('同一プロセスでの再評価ではバナーが重複しない', async () => {
+      vi.stubEnv('APP_PROFILE', 'production');
+      vi.stubEnv('NODE_ENV', 'production');
+      await loadNextConfig();
+      // next build の worker による config 再評価をシミュレート
+      await loadNextConfig();
+      await loadNextConfig();
+
+      expect(infoSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('profile が変わった場合は新しいバナーが 1 回だけ出る', async () => {
+      vi.stubEnv('APP_PROFILE', 'development');
+      vi.stubEnv('NODE_ENV', 'development');
+      await loadNextConfig();
+
+      vi.stubEnv('APP_PROFILE', 'production');
+      await loadNextConfig();
+
+      expect(infoSpy).toHaveBeenCalledTimes(2);
+      const secondMsg = infoSpy.mock.calls[1]?.[0];
+      expect(typeof secondMsg === 'string' && secondMsg.includes('APP_PROFILE=production')).toBe(
+        true
+      );
+    });
+
+    it('不正な APP_PROFILE の警告も再評価で重複しない', async () => {
+      vi.stubEnv('APP_PROFILE', 'staging');
+      vi.stubEnv('NODE_ENV', 'production');
+      await loadNextConfig();
+      await loadNextConfig();
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0]?.[0])).toContain('APP_PROFILE');
+    });
+  });
 });

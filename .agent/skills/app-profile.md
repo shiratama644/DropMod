@@ -37,10 +37,23 @@
    APP_PROFILE を変えたら `pnpm build` し直すこと (next dev は .env 変更で
    自動再起動)。ランタイム側 (logger/rate-limit/health) は起動時に解決するため、
    ビルドとランタイムでプロファイルが混在し得る (デバッグ時に混乱しやすいので注意)。
-3. サーバーロガーは `lib/server/logger.ts` を使う:
+3. **next.config の module scope の console 出力は build 中に複数回評価される**
+   (main プロセス 1 + jest-worker processChild × 3 = webpack で最大 4 回)。
+   1 回だけ出したい場合は `process.env` ガードを使う
+   (同一プロセスの再評価は env 共有で、子プロセスは fork 時の env 継承で抑止。
+   ガード値を profile にすると変更時のみ再表示)。実装例は next.config.mjs の
+   `BANNER_GUARD_KEY` 参照。
+4. サーバーロガーは `lib/server/logger.ts` を使う:
    `logger.debug/info` は development のみ、`logger.warn/error` は常時出力。
    既存の `console.warn('[DropMod] msg', ...)` と同じ出力形式 (prefix 連結) なので
    spy テスト互換。クライアントコードでは使わない (誤 import 時は静かに fail-quiet)。
+
+## .env ファイルの使い分け (footgun 注意)
+
+- `.env.local` は **next dev と next build 両方** に適用される。
+  ここに `APP_PROFILE=development` を書きっぱなしにすると本番ビルドまで
+  CSP Report-Only で作られる (build 時に ⚠ 警告が出る)。
+- 開発専用の指定は **`.env.development`** に書く (next dev 時のみロード)。
 
 ## テスト
 

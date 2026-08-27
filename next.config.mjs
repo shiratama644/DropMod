@@ -54,9 +54,14 @@ function resolveAppProfile(env = process.env) {
   const explicit = (env.APP_PROFILE ?? '').trim().toLowerCase();
   if (explicit === 'production' || explicit === 'development') return explicit;
   if (explicit) {
-    console.warn(
-      `[DropMod] APP_PROFILE="${env.APP_PROFILE}" は不正な値です。production | development のいずれかを指定してください (production として扱います)`
-    );
+    // 不正値の警告も build 時の config 再評価 (main + jest-worker) で重複するため
+    // process.env ガードでプロセスツリー全体で 1 回だけ出す
+    if (!process.env.__DROPMOD_APP_PROFILE_INVALID_WARNED) {
+      process.env.__DROPMOD_APP_PROFILE_INVALID_WARNED = '1';
+      console.warn(
+        `[DropMod] APP_PROFILE="${env.APP_PROFILE}" は不正な値です。production | development のいずれかを指定してください (production として扱います)`
+      );
+    }
     return 'production';
   }
   const vercel = (env.VERCEL_ENV ?? '').trim().toLowerCase();
@@ -68,12 +73,34 @@ function resolveAppProfile(env = process.env) {
 const appProfile = resolveAppProfile();
 const isProductionProfile = appProfile === 'production';
 
-if (!process.env.VITEST) {
-  console.info(
-    isProductionProfile
-      ? '[DropMod] APP_PROFILE=production — CSP=Enforce / HSTS=有効 / レート制限=有効'
-      : '[DropMod] APP_PROFILE=development — CSP=Report-Only / HSTS=無効 / レート制限=無効 (本番相当で確認するには APP_PROFILE=production)'
-  );
+// ----------------------------------------------------------------------------
+// プロファイルバナー (プロセスツリー全体で 1 回だけ表示)
+//
+// next build は main プロセスに加えて jest-worker の子プロセス (型チェック /
+// static generation 等) がそれぞれ next.config を再評価するため、素朴に
+// console.info すると同じ行が 3〜4 回出力される (2026-08-27 実測: webpack 4 回 /
+// turbopack 2 回。main 1 + processChild.js × 3)。
+//
+// process.env にガードを置く理由:
+//   - 同一プロセスでの再評価 → process.env は共有されるため抑止できる
+//   - 子プロセス → fork 時に親の env を継承するため抑止できる
+//     (親は必ず最初に config を読むので、worker 起動時にはガード済み)
+//   - ガード値を profile そのものにするので、profile が変われば再表示される
+//     (next dev で .env を書き換えた場合も新しい状態が 1 回だけ出る)
+// ----------------------------------------------------------------------------
+const BANNER_GUARD_KEY = '__DROPMOD_APP_PROFILE_BANNER_SHOWN';
+if (!process.env.VITEST && process.env[BANNER_GUARD_KEY] !== appProfile) {
+  process.env[BANNER_GUARD_KEY] = appProfile;
+  let banner = isProductionProfile
+    ? '[DropMod] APP_PROFILE=production — CSP=Enforce / HSTS=有効 / レート制限=有効'
+    : '[DropMod] APP_PROFILE=development — CSP=Report-Only / HSTS=無効 / レート制限=無効';
+  // 本番ビルド (NODE_ENV=production) を development プロファイルで作ろうとして
+  // いる場合は追加警告 (.env.local に書きっぱなしによる見落とし防止)。
+  if (!isProductionProfile && process.env.NODE_ENV === 'production') {
+    banner +=
+      ' ⚠ この production build が development 設定で作られます。本番デプロイ用なら .env.local 等の APP_PROFILE を外してください (開発専用なら .env.development へ)';
+  }
+  console.info(banner);
 }
 
 // CSP ディレクティブ共通部 (プロファイルで変わるのは connect-src と

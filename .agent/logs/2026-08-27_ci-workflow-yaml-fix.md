@@ -69,3 +69,22 @@ CI_SETUP.md のトラブルシューティングに追記。
 備考: Actions のログ blob (productionresultssa3.blob.core.windows.net) は
 Sandbox から到達不可のため、check-runs の annotations API で原因取得した
 (失敗原因調査時の定石)。
+
+## 追記 (第 3 障害): .next を artifact 化できない (同日)
+
+run 33060388012: static-checks ✓ (1m4s) / build ✓ (39s) / e2e ✗ (15s)。
+e2e は「Download .next build output」で失敗 — build job の upload が
+「No files were found with the provided path: .next/」で空だったため。
+
+原因: **upload-artifact v4 は隠し (ドット) ディレクトリ配下を対象外**
+(excludeHiddenFiles)。`.next/**` はパターン変更では救えない。
+@actions/glob を excludeHiddenFiles: true で実行して 0 件マッチを実証。
+
+修正 (docs/ops/CI_WORKFLOW.yml):
+- build job: `tar --exclude='.next/cache' -czf next-build.tgz .next` →
+  単一ファイルを upload (cache 除外でサイズ削減)
+- e2e job: download → `tar -xzf` で復元
+- 存在しない `.next/diagnostics/` の Upload build stats step を削除
+
+備考: 前回 run で PR event の run 33060389625 は success (1m58s) —
+static-checks + build は CI 上で green を確認済み。

@@ -113,6 +113,20 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
   ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
 
+### upload-artifact が「No files were found」で .next を転送できない (2026-08-27 実証)
+
+- 原因: **upload-artifact v4 は隠し (ドット) ディレクトリ配下のファイルを対象外**
+  (内部の excludeHiddenFiles 挙動)。`.next/**` はパターンをどう変えても 0 件になる。
+  (@actions/glob を excludeHiddenFiles: true で実行して再現・実証済み)
+- 対策: **tar でアーカイブして単一ファイルとしてアップロード**し、
+  取得側で展開する (正本 CI_WORKFLOW.yml は修正済み):
+  ```yaml
+  run: tar --exclude='.next/cache' -czf next-build.tgz .next   # build job
+  run: tar -xzf next-build.tgz                                  # e2e job
+  ```
+- 副次的修正: `Upload build stats` (.next/diagnostics/) は対象ディレクトリが
+  存在しないため常に空警告だった → 削除。
+
 ### `pnpm/action-setup` が「Multiple versions of pnpm specified」で失敗する (2026-08-27 実績)
 
 - 原因: workflow の `version:` 入力と package.json の `packageManager` が重複指定。

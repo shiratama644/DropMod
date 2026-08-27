@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* .archive (旧 Vite 版ソース) / .agent (エージェント記憶) は描画されない
+   ファイル群のため Tailwind v4 の自動コンテンツ走査から除外する
+   (旧実装のクラス名が dead CSS として流出するのを防ぐ。2026-08-27) */
+@source not "../.archive";
+@source not "../.agent";
 
 @theme {
   --font-mono: "JetBrains Mono", monospace;
@@ -388,8 +393,24 @@ code, input, textarea {
  * 使うため、ここを定義するだけで一括適用される。
  * (BottomSheet は独自のスライド演出を持つため対象外)
  * ----------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+ * モーダルの高さ制限 — 全ブラウザ対応 (2026-08-27、Samsung Browser 修正)
+ *
+ * 問題: 90vh 等の viewport 単位 (max-h の任意値) はアドレスバーを含む
+ * 基準。アドレスバーが常時表示される Samsung Internet 等では 90vh が可視領域
+ * を超え、中央寄せモーダルの上下端 (特にフッターのボタン) が画面外に切れる。
+ *
+ * 対策: モーダルカードの親は fixed inset-0 の overlay (= 可視領域に正確に一致)
+ * なので、その割合 (% ) で max-height を制限する。vh と異なりどのブラウザ
+ * (旧 Samsung Internet 含む) でも画面内に必ず収まる。dvh 非対応環境でも
+ * 追加フォールバックが不要になる方式。
+ * ----------------------------------------------------------------- */
+.modal-max-h {
+    max-height: 92%;
+}
+
 @keyframes modal-pop {
-    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .modal-card {

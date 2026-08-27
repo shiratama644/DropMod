@@ -68,6 +68,12 @@ export const ModCard: React.FC<ModCardProps> = ({
   const isMobile = useIsMobile();
   const compact = layout === '3' && isMobile;
 
+  // モバイルの 2 カラムはカード幅が狭く作者名が圧縮・折り返しで潰れるため、
+  // ダウンロード数のみ表示する (2026-08-27 ユーザー指定)。
+  // PC の 2 カラム・モバイルの max/1 カラムは幅に余裕があるので作者も出す。
+  // (compact 3 カラムは元々 DL 数のみのため対象外)
+  const showAuthor = !(layout === '2' && isMobile);
+
   // 検索一覧のカード → プレビューモーダル (/discover/<複数>/<slug>)。
   // 一覧 (children) は Intercept で破棄されず、戻るで状態保持される。
   const detailPath = modalPathFromProject(
@@ -219,8 +225,12 @@ export const ModCard: React.FC<ModCardProps> = ({
                 {hit.title}
               </h3>
               <div className="flex items-center gap-1.5 text-xs theme-text-muted">
-                <span className="truncate">{hit.author || 'Modrinth'}</span>
-                <span>•</span>
+                {showAuthor && (
+                  <>
+                    <span className="truncate">{hit.author || 'Modrinth'}</span>
+                    <span>•</span>
+                  </>
+                )}
                 <span>
                   <i className="fa-solid fa-download text-[10px] mr-0.5"></i>
                   {formatDownloads(hit.downloads)}

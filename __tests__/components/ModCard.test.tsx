@@ -45,6 +45,41 @@ describe('ModCard', () => {
     expect(screen.getByText('Performance')).toBeInTheDocument();
   });
 
+  describe('モバイル 2 カラムの作者名省略 (2026-08-27)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const mobileMatchMedia = () =>
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }));
+
+    it('モバイル 2 カラムは作者名を省略し DL 数のみ表示', () => {
+      vi.stubGlobal('matchMedia', mobileMatchMedia());
+      render(
+        <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout="2" />
+      );
+      expect(screen.queryByText('JellySquid')).toBeNull();
+      expect(screen.getByText('1.5M')).toBeInTheDocument();
+    });
+
+    it('PC (非モバイル) の 2 カラムは作者名も表示', () => {
+      render(
+        <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout="2" />
+      );
+      expect(screen.getByText('JellySquid')).toBeInTheDocument();
+      expect(screen.getByText('1.5M')).toBeInTheDocument();
+    });
+  });
+
   it('追加ボタン左はローダーではなくカテゴリーを出す', () => {
     render(
       <ModCard

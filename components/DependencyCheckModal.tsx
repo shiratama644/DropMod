@@ -548,7 +548,7 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="dependency-modal-title"
-        className="modal-card glass-panel w-full max-w-2xl rounded-3xl p-4 sm:p-6 border shadow-2xl relative flex flex-col max-h-[88vh] sm:max-h-[90vh]"
+        className="modal-card glass-panel w-full max-w-2xl rounded-3xl p-4 sm:p-6 border shadow-2xl relative flex flex-col modal-max-h"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3 shrink-0">

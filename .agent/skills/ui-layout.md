@@ -64,6 +64,9 @@
 - **2 / 3 カラムはモバイルでもそのまま適用** (grid クラスに sm: prefix を付けない。
   Modrinth と同じ挙動)。旧実装は `sm:grid-cols-2` のためモバイルで常に 1 カラムになる
   バグがあった。
+- **モバイルの 2 カラムは作者名を表示しない** (2026-08-27 ユーザー指定)。
+  `ModCard` の `showAuthor = !(layout === '2' && isMobile)` で DL 数のみ表示。
+  (SSR は非モバイル扱いのため hydration 後に消える = ごく短いフェードあり)
 - **モバイルの 3 カラムは compact カード** (`ModCard` が `useIsMobile()` で切替):
   aspect-square アイコン + line-clamp-2 タイトル + DL 数 + 全幅 h-7 追加ボタンの
   最小構成。PC 版カードの縮小ではなく独自 UI (スマホでも 3 カラムするため)。
@@ -100,6 +103,22 @@
 | 詳細モーダル（ModDetailModalShell） | `z-[70]` |
 | ConfirmDialog 等アプリ最上位 | `z-[100]+` |
 | ScreenshotGalleryModal | `z-[110]` |
+
+## モーダルの高さ制限 — .modal-max-h (2026-08-27、Samsung Browser 修正)
+
+- **モーダルの max-height に vh 単位を使わない**。vh はアドレスバーを含む
+  「最大ビューポート」基準のため、アドレスバー常時表示の Samsung Internet 等では
+  90vh が可視領域を超え、中央寄せモーダルの上下 (特にフッター) が画面外に切れる。
+- 対策: globals.css の `.modal-max-h { max-height: 92% }`。親が fixed inset-0 の
+  overlay (= 可視領域に一致) なので % ならどのブラウザでも画面内に収まる
+  (dvh 非対応の旧ブラウザでもフォールバック不要)。
+- 適用: NewProfile / EditProfile / DependencyCheck / ModDetailModalShell (modal)。
+  ScreenshotGalleryModal は `h-[min(92%,56rem)]`。
+- **注意: BottomSheet 本体 (fixed・top/bottom 無し) は % の基準が ICB になるため
+  この手法は使えない** (max-h-[35vh] 等のまま。35vh は実害なし)。
+- Tailwind v4 の自動走査は **.archive / .agent を @source not で除外済み**
+  (旧 Vite コードのクラスが dead CSS として流出するのを防止。
+  CSS 内コメントに vh 任意値クラスのリテラルを書くと候補抽出されるため表記注意)。
 
 ## BottomNav とモーダルの連動 (2026-08-27)
 

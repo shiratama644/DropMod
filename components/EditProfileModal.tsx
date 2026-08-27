@@ -131,7 +131,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={modalTitleId}
-        className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto"
+        className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 modal-max-h overflow-y-auto"
       >
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
           <h3 id={modalTitleId} className="font-bold text-base sm:text-lg flex items-center gap-2">

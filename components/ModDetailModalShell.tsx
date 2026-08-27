@@ -318,7 +318,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       {...dialogProps}
         className={
         isModal
-          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
+          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col modal-max-h overflow-hidden'
           : 'modal-card glass-panel w-full max-w-3xl mx-auto rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden'
       }
       onClick={(e) => {

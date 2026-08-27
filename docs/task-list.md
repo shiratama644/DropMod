@@ -113,7 +113,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P12-A | linkedSource + ManagedFile + Diff Engine | 未着手 | 0% | P11-E2E | computeSyncPlan の unit test 全分類 | - |
+| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
 | P12-B | Preview UI + Transaction + Executor + Rollback | 未着手 | 0% | P12-A | Chromium で Direct Write 動作 | - |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | 未着手 | 0% | P12-B | Firefox/Safari で ZIP Sync | - |
 

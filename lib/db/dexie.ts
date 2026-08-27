@@ -15,8 +15,9 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Profile, ProjectItem } from '@/types';
+import type { ManagedFileRecord, Profile, ProjectItem } from '@/types';
 import { normalizeProfileForV2 } from '@/lib/state/sanitize';
+import { generateId } from '@/lib/utils/id';
 
 // ============================================================================
 // 行 (Row) 型定義
@@ -67,6 +68,35 @@ export interface MetaRow {
   value: string;
 }
 
+/**
+ * managedFiles テーブル行 (Phase 12-A)。
+ *
+ * `ManagedFileRecord` そのもの。`id` = `${profileId}::${path}` で一意。
+ * Sync の削除可否判定 (PHASE12_PLAN.md §10.2 の 3 条件) に使う台帳。
+ */
+export type ManagedFileRow = ManagedFileRecord;
+
+/**
+ * dirHandles テーブル行 (Phase 12-A)。
+ *
+ * `FileSystemDirectoryHandle` は IndexedDB の structured clone でそのまま保存できる
+ * (File System Access API の設計どおり)。ただし **JSON 直列化はできない**ため
+ * `Profile` 本体には持たせず、このテーブルへ分離する
+ * (`Profile.linkedSource.handleId` から参照)。
+ *
+ * ブラウザ再起動後は `handle.requestPermission()` で再許可が必要な場合がある
+ * (§11 Gotchas: dirHandles の再許可フロー)。
+ */
+export interface DirHandleRow {
+  /** 一意 ID (`generateId('dh')`)。Profile.linkedSource.handleId が指す */
+  id: string;
+  profileId: string;
+  handle: FileSystemDirectoryHandle;
+  /** フォルダ名 (表示用。handle.name の複製) */
+  name: string;
+  savedAt: number;
+}
+
 // ============================================================================
 // DB クラス
 // ============================================================================
@@ -76,6 +106,9 @@ class DropModDatabase extends Dexie {
   profiles!: Table<ProfileRow, string>;
   apiCache!: Table<ApiCacheRow, string>;
   meta!: Table<MetaRow, string>;
+  // ---- Phase 12-A で追加 ----
+  managedFiles!: Table<ManagedFileRow, string>;
+  dirHandles!: Table<DirHandleRow, string>;
 
   constructor() {
     super('DropModDB');
@@ -126,6 +159,26 @@ class DropModDatabase extends Dexie {
           await table.bulkPut(converted);
         }
       });
+
+    // v3 (Phase 12-A): Sync 基盤のテーブルを追加。
+    //   - managedFiles: 管理下ファイルの台帳 (削除可否の fingerprint 判定に使用)
+    //   - dirHandles:   FileSystemDirectoryHandle の永続化 (Profile.linkedSource から参照)
+    //
+    // **既存テーブルの index は不変・upgrade 関数なし**。新規テーブルの追加のみなので
+    // 既存データは無変換のまま読み出せる (v2 の Profile 形状変換とは独立)。
+    // 旧バージョンの DB を開いたユーザーは「空の台帳」から始まる = 紐付け直後の
+    // 初回 Sync まで deletion は発生しない (§10.2 の「台帳に存在する」条件を満たさないため)。
+    // これは安全側の挙動であり、意図したもの。
+    //
+    // ※ SyncTransaction テーブルは P12-B (Executor / Rollback) で v4 として追加する。
+    //   P12-A のスコープ (§9) に含めないため、ここで先回りはしない。
+    this.version(3).stores({
+      profiles: 'id, updatedAt',
+      apiCache: 'key, expiresAt',
+      meta: 'key',
+      managedFiles: 'id, profileId, category, projectId, sha1',
+      dirHandles: 'id, profileId'
+    });
   }
 }
 
@@ -214,6 +267,75 @@ export async function getAllProfiles(): Promise<ProfileRow[]> {
 }
 
 // ============================================================================
+// Phase 12-A: Managed File 台帳 / DirectoryHandle の操作
+// ============================================================================
+
+/**
+ * Profile 1 件分の `ManagedFileRecord` を台帳へ**差分同期**する。
+ *
+ * 「現在の Profile から導出した台帳」を正として、
+ * DB にあるが records に無い行を削除し、records を bulkPut する。
+ * 単一 transaction のため中断されても整合性が保たれる (`syncProfiles` と同じ方針)。
+ */
+export async function syncManagedFiles(
+  profileId: string,
+  records: ManagedFileRow[]
+): Promise<void> {
+  await db.transaction('rw', db.managedFiles, async () => {
+    const currentIds = new Set(records.map((r) => r.id));
+    const dbIds = await db.managedFiles.where('profileId').equals(profileId).primaryKeys();
+    const idsToDelete = dbIds.filter((id) => !currentIds.has(String(id)));
+    if (idsToDelete.length > 0) {
+      await db.managedFiles.bulkDelete(idsToDelete as string[]);
+    }
+    if (records.length > 0) {
+      await db.managedFiles.bulkPut(records);
+    }
+  });
+}
+
+/** Profile 1 件分の台帳を取得 (path 昇順。Diff Engine / Preview 表示用) */
+export async function getManagedFiles(profileId: string): Promise<ManagedFileRow[]> {
+  const rows = await db.managedFiles.where('profileId').equals(profileId).toArray();
+  return rows.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * Profile の台帳を全削除する。
+ * Profile 削除時・ローカル環境の紐付け解除時に呼ぶ。
+ * ⚠️ 台帳を消すと Sync は該当ファイルを「管理外」とみなし**削除対象外**にする
+ *    (§10.2 の 3 条件の 1 つ目を満たさなくなるため)。安全側の挙動。
+ */
+export async function deleteManagedFilesForProfile(profileId: string): Promise<void> {
+  await db.managedFiles.where('profileId').equals(profileId).delete();
+}
+
+/**
+ * `FileSystemDirectoryHandle` を保存し、参照用 ID を返す。
+ * 返り値を `Profile.linkedSource.handleId` に保存する。
+ */
+export async function saveDirHandle(
+  profileId: string,
+  handle: FileSystemDirectoryHandle,
+  name: string
+): Promise<string> {
+  const id = generateId('dh');
+  await db.dirHandles.put({ id, profileId, handle, name, savedAt: Date.now() });
+  return id;
+}
+
+/** 保存済み handle を取得。無ければ null (再選択を促す) */
+export async function getDirHandle(id: string): Promise<DirHandleRow | null> {
+  const row = await db.dirHandles.get(id);
+  return row ?? null;
+}
+
+/** 保存済み handle を削除 (紐付け解除時) */
+export async function deleteDirHandle(id: string): Promise<void> {
+  await db.dirHandles.delete(id);
+}
+
+// ============================================================================
 // テスト用 (fake-indexeddb 環境で DB をリセット)
 // ============================================================================
 
@@ -222,11 +344,21 @@ export async function getAllProfiles(): Promise<ProfileRow[]> {
  * ⚠️ ユーザーデータが消えるので本番機能からは呼ばない。
  */
 export async function _clearAllForTesting(): Promise<void> {
-  await db.transaction('rw', db.profiles, db.apiCache, db.meta, async () => {
-    await db.profiles.clear();
-    await db.apiCache.clear();
-    await db.meta.clear();
-  });
+  await db.transaction(
+    'rw',
+    db.profiles,
+    db.apiCache,
+    db.meta,
+    db.managedFiles,
+    db.dirHandles,
+    async () => {
+      await db.profiles.clear();
+      await db.apiCache.clear();
+      await db.meta.clear();
+      await db.managedFiles.clear();
+      await db.dirHandles.clear();
+    }
+  );
 }
 
 // 型 re-export (ProjectItem を使う側の import 減らし)

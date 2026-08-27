@@ -2,8 +2,8 @@
 
 > 対応 task-list ID: `P12-A` 〜 `P12-C` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 未着手** (2026-08-26 改定 / **2026-08-27 に §12 の設計論点 6 件をユーザーと確定済み**。
-> P12-A から着手可能)
+> **状態: 実装中** (2026-08-26 改定 / 2026-08-27 に §12 の設計論点 6 件を確定 /
+> **2026-08-27 P12-A 完了**。残: P12-B / P12-C)
 
 ## 1. 開始前確認
 
@@ -83,7 +83,7 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 
 | ID | テーマ | 主要成果物 | 依存 |
 |---|---|---|---|
-| P12-A | 基盤 + Managed File + Diff Engine | linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan | P11 完了 |
+| P12-A | 基盤 + Managed File + Diff Engine | linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan | P11 完了 (**完了**) |
 | P12-B | Preview UI + Transaction + Executor + Rollback | SyncTransaction / executeSync / OPFS Backup / History UI | P12-A |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | ZipSink / .mrpack パーサ / Modpack UI / CF 検出表示 | P12-B |
 
@@ -233,3 +233,32 @@ async function executeSync(tx: SyncTransaction, sink: EnvironmentSink) {
 - `executeSync` は起動時の Journal 検査（D-4）を含む必要がある。
 - Backup の LRU 実装は「直近 3 回保護」（D-5）を必須条件としてテストする。
 - `.mrpack` unbind フロー（D-6）は P12-C の Modpack UI に含める。
+
+---
+
+## 13. 実績と証拠
+
+| ID | 状態 | テスト | 成果物 |
+|---|---|---|---|
+| P12-A | **完了** (2026-08-27) | 47 tests / 3 ファイル新規<br>(`diff` 18・`managed` 19・`dexie.managed` 10)<br>全体 **76 files / 684 tests** pass・coverage 全 threshold green | `types.ts` (`LinkedSource` / `ManagedFileRecord` / `ManagedFileSource` / `Profile.linkedSource`)、`lib/db/dexie.ts` (**schema v3**: `managedFiles` / `dirHandles` + ヘルパ 6 種)、`lib/env/managed.ts`、`lib/env/diff.ts` (`computeSyncPlan` / `selectExternallyModified` / `selectDeletionsRequiringConfirm`) |
+| P12-B | 未着手 | - | Preview UI / `SyncTransaction` (Dexie **v4**) / `executeSync` / OPFS Backup / Rollback / History UI |
+| P12-C | 未着手 | - | `ZipSink` / `.mrpack` パーサ / `ModrinthProvider` / Modpack UI / CurseForge 検出表示 |
+
+### P12-A の実装上の決定 (実装時に確定した細目)
+
+- **`SyncTransaction` テーブルは v3 に含めず、P12-B で v4 として追加する**。
+  §9 の P12-A スコープ (`linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan`) に
+  絞り、先回りしない方針。
+- **`expandProfileToManaged` は `artifact` を持つ ProjectItem のみ台帳化する**。
+  `artifact` 無し (= DropMod から追加しただけでローカル実体が無い) アイテムは
+  台帳に載せず、Diff Engine 側で `addition` + `needsDownload: true` として扱う。
+- **`mergeManagedRecords` で既存台帳の `source` / `managedAt` / `syncedAt` を保護する**。
+  Profile から再導出すると `source` が `'import'` に戻ってしまうため、
+  D-6 (modpack 解除で `'import'` へ昇格) の結果を守るには既存値の引き継ぎが必須。
+- **パス移動の扱い**: Profile が同じ project を**別パス**で要求している場合、
+  旧パスのファイルは削除候補にする (fingerprint 検証は同じルールを適用)。
+- **`unmanaged` のエントリーに `source` バッジは付けない** (§10.3 のバッジは
+  管理下ファイルの由来表示であり、管理外ファイルには由来が無い)。
+- **到達不能な防御コードは削除した**: 「Profile が同じ project を同じパスで要求しているのに
+  local ループに到達する」分岐は `handledPaths` により構造的に到達不能なため実装から除去
+  (未テストの死んだコードを残さない)。

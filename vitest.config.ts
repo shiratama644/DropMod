@@ -20,6 +20,10 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react()],
   test: {
+    // jsdom 環境で React 19 コンポーネントをテスト。
+    // ※ Node 24 (undici v7) の fetch が jsdom 由来の AbortSignal を拒否する
+    //    問題 (vitest#8374) は vitest 4 で上流解決済みのため、
+    //    カスタム環境 (旧 vitest.environment.ts) は削除して素の 'jsdom' に戻した。
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
@@ -60,6 +64,7 @@ export default defineConfig({
         'app/**/default.tsx',
         'app/**/page.tsx',            // Server Components: RSC 統合は E2E で
         'app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
+        'app/**/layout.tsx',          // nested layout も同様 (RSC wrapper = E2E 担保。Phase 10.5-A)
         'types.ts',                   // 純粋な型定義 (JS 実体なし)
 
         // ---- Large orchestrator Client Components (E2E で担保) ----

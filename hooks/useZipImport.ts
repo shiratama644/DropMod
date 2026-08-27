@@ -2,7 +2,14 @@
 
 import { useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import type { Profile, ModItem, MrpackIndex, ModrinthProject, ModrinthVersion } from '@/types';
+import type {
+  Profile,
+  ProfileLoader,
+  ProjectItem,
+  MrpackIndex,
+  ModrinthProject,
+  ModrinthVersion
+} from '@/types';
 import { calculateSha1, isWebCryptoAvailable, InsecureContextError } from '@/lib/utils/hash';
 import {
   fetchModrinthBatch,
@@ -12,6 +19,10 @@ import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
 import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import { primaryCategoryId } from '@/lib/constants/categories';
+import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
+import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
+import { analyzeImportHealth } from '@/lib/env/analysis';
+import { generateProfileName } from '@/lib/env/profileName';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
@@ -61,13 +72,12 @@ export const useZipImport = (
         // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
         //   fabric-loader / forge / neoforge / quilt-loader
         // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
-        let loader = 'Fabric';
-        if (mrpackData.dependencies?.['fabric-loader']) loader = 'Fabric';
+        let loader: ProfileLoader = 'Fabric';
         if (mrpackData.dependencies?.forge) loader = 'Forge';
         if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
         if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
 
-        const importedMods: ModItem[] = [];
+        const importedMods: ProjectItem[] = [];
         if (mrpackData.files) {
           const hashes = mrpackData.files
             .map((f) => f.hashes?.sha1)
@@ -116,20 +126,20 @@ export const useZipImport = (
               matched?.files?.find((file) => file.primary) || matched?.files?.[0];
 
             importedMods.push({
-              id: matched?.project_id || generateId('mrpack'),
+              projectId: matched?.project_id || generateId('mrpack'),
               slug: proj?.slug,
-              title: proj?.title || filename.replace('.jar', ''),
+              name: proj?.title || filename.replace('.jar', ''),
               description: proj?.description || 'Imported from .mrpack',
               icon_url: proj?.icon_url,
               author: proj?.author,
-              projectType: proj
+              type: proj
                 ? contentCategoryFromProject(proj)
                 : contentCategoryFromPath(f.path),
               category: proj
                 ? primaryCategoryId(proj.display_categories, proj.categories)
                 : undefined,
-              selectedVersionId: matched?.id,
-              selectedVersionNumber: matched?.version_number || 'mrpack',
+              versionId: matched?.id,
+              versionNumber: matched?.version_number || 'mrpack',
               versionType: matched?.version_type || 'release',
               fileUrl: downloadUrl || primaryFile?.url || '',
               filename
@@ -140,8 +150,10 @@ export const useZipImport = (
         const newProfile: Profile = {
           id: generateId('mrpack'),
           name: `${mrpackData.name || 'Modrinth Pack'} (インポート)`,
-          mcVersion: mcVer,
-          loader: loader,
+          environment: {
+            mcVersion: mcVer,
+            loader: loader
+          },
           description: 'Modrinth .mrpack からインポート',
           mods: importedMods
         };
@@ -150,6 +162,55 @@ export const useZipImport = (
         setCurrentProfileId(newProfile.id);
         showToast(`「${newProfile.name}」のインポート完了！`, 'success');
         return;
+      }
+
+      // 1.5. .minecraft フォルダ全体 ZIP (Phase 11-C: Firefox/Safari フォールバック)
+      //   mods/ や versions/ 等を含む ZIP を環境として解析し、NewProfileModal で
+      //   解析結果 (Analysis View) を確認してから作成する。
+      if (!mrpackFile && isMinecraftFolderZip(zip)) {
+        // ZIP が「.minecraft フォルダ自身」を含む場合はサブフォルダを root にする
+        const hasDotMinecraftRoot = Object.keys(zip.files).some((path) =>
+          path.startsWith('.minecraft/')
+        );
+        // 2026-08-27 修正: zip.folder() ではなく pathPrefix 方式。
+        //   folder() は file() には相対パスで動くが files の key は
+        //   フルパスのまま → exists/listFiles が壊れる。
+        const pathPrefix = hasDotMinecraftRoot ? '.minecraft/' : '';
+        {
+          showToast('.minecraft を解析中...', 'info');
+          const source = new ZipSource(
+            zip,
+            file.name.replace(/\.[^/.]+$/, ''),
+            pathPrefix
+          );
+          const analysis = await analyzeEnvironmentSource(source);
+          const analysisIssues = analyzeImportHealth(analysis);
+          const total =
+            analysis.mods.length +
+            analysis.resourcepacks.length +
+            analysis.shaderpacks.length;
+
+          setPendingImportData({
+            name: generateProfileName(source.rootName, analysis.environment),
+            mods: analysis.mods,
+            resourcepacks:
+              analysis.resourcepacks.length > 0 ? analysis.resourcepacks : undefined,
+            shaderpacks:
+              analysis.shaderpacks.length > 0 ? analysis.shaderpacks : undefined,
+            unknownFiles:
+              analysis.unknownFiles.length > 0 ? analysis.unknownFiles : undefined,
+            analysisIssues,
+            rootType: analysis.environment.rootType,
+            mcVersion: analysis.environment.mcVersion,
+            loader: analysis.environment.loader,
+            loaderVersion: analysis.environment.loaderVersion,
+            description: `環境取り込み (${total} 個 / 未識別 ${analysis.unknownFiles.length} 個)`,
+            source: 'import'
+          });
+          setIsNewProfileModalOpen(true);
+          showToast(`${total} 個のアイテムを認識しました`, 'success');
+          return;
+        }
       }
 
       // 2. .jar 詰め合わせ ZIP インポート (.jarハッシュ照合 ➔ プロファイル作成モーダル開く)
@@ -214,22 +275,22 @@ export const useZipImport = (
         projectMap.set(p.id, p);
       });
 
-      const initialMods: ModItem[] = [];
+      const initialMods: ProjectItem[] = [];
       for (const ver of foundVersions) {
         const proj = projectMap.get(ver.project_id);
         if (proj) {
           const primaryFile = ver.files.find((f) => f.primary) || ver.files[0];
           initialMods.push({
-            id: proj.id,
+            projectId: proj.id,
             slug: proj.slug,
-            title: proj.title,
+            name: proj.title,
             description: proj.description,
             icon_url: proj.icon_url,
             author: proj.author || 'Modrinth',
-            projectType: contentCategoryFromProject(proj),
+            type: contentCategoryFromProject(proj),
             category: primaryCategoryId(proj.display_categories, proj.categories),
-            selectedVersionId: ver.id,
-            selectedVersionNumber: ver.version_number,
+            versionId: ver.id,
+            versionNumber: ver.version_number,
             versionType: ver.version_type || 'release',
             fileUrl: primaryFile ? primaryFile.url : '',
             filename: primaryFile ? primaryFile.filename : ''

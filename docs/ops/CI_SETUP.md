@@ -19,12 +19,26 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
    ```bash
    git add .github/workflows/ci.yml
    git commit -m "ci: enable GitHub Actions workflow"
-   git push origin arena/01a01fcf-dropmod
+   git push origin arena/01a0337c-dropmod   # 現在の作業ブランチ
    ```
 
 4. GitHub リポジトリ Settings > Actions > General で:
    - **Actions permissions**: "Allow all actions and reusable workflows"
    - **Workflow permissions**: "Read and write permissions" (artifact upload に必要)
+
+## ローカル PRoot 環境での E2E 実行について (2026-08-27 追記)
+
+Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモリ不足
+(signal 9 / OOM killer) により実行が強制終了されることが実測されています
+(12 GB RAM でも 4 workers で中断 — `e2e-log.txt`)。
+
+- **E2E は GitHub Actions での実行を推奨** (ubuntu-latest 16 GB・workers: 2・retries: 2 で安定)
+- ローカルで実行する場合の回避策:
+  ```bash
+  pnpm test:e2e -- --workers=1   # worker 数を 1 に絞ってメモリ消費を抑制
+  ```
+- `playwright-report/` / `test-results/` は `.gitignore` 対象のためリポジトリに
+  入らない。CI では失敗時に artifact として自動アップロードされる (下記)。
 
 ## ワークフロー概要
 
@@ -32,7 +46,7 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
 |---|---|---|---|
 | `static-checks` | push / PR | tsc + lint + vitest+coverage | ~3-5 min |
 | `build` | static-checks 後 | pnpm build | ~2 min |
-| `e2e` | push のみ (PR は skip) | Playwright chromium + iPhone14 | ~5-10 min |
+| `e2e` | push のみ (PR は skip) | Playwright (chromium-desktop + chromium-mobile=Pixel 7) | ~5-10 min |
 
 ## 失敗時の artifact
 
@@ -59,14 +73,14 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
 |---|---:|---|
 | `static-checks` | 3-5 分 | tsc + lint + vitest + coverage が全て pass、artifact `coverage-report` が upload されている |
 | `build` | 2-3 分 | pnpm build が成功、`.next` artifact (`next-build`) が upload されている |
-| `e2e` | 5-10 分 | Playwright (Chromium + iPhone14 emulation) 全 spec pass、失敗時のみ `playwright-report` upload |
+| `e2e` | 5-10 分 | Playwright (chromium-desktop / chromium-mobile=Pixel 7) 全 spec pass、失敗時のみ `playwright-report` upload |
 
 ### 3. カバレッジ確認
 
 - Actions summary > `static-checks` job > `coverage-report` artifact をダウンロード
 - `coverage/index.html` をブラウザで開くと per-file カバレッジが見える
 - 現状目標: **All files 60%+, per-module thresholds (計画書 §7.5) 全 pass**
-  (Phase 9-C 完了時 91.34% 実測)
+  (2026-08-27 実測: 629 tests / statements 84.5%)
 
 ### 4. 依存の verify
 
@@ -84,6 +98,41 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
   API rate limit (300 req/min) が原因の flake を疑う (CI キャッシュに載っていない直後の run で発生しやすい)
 
 ## トラブルシューティング
+
+### Actions が「workflow file issue」で 0 秒 failure になる (2026-08-27 実績)
+
+- 原因: YAML の引用符なしスカラーに **「: 」(コロン+スペース)** が含まれると
+  mapping entry の誤パースになり、GitHub がワークフローを起動できない
+  (実例: `name: Biome lint (Phase 10-P5: ESLint から移行)` → 引用符で修正)
+- ローカル検証方法 (js-yaml の strict モード):
+  ```bash
+  pnpm add -D js-yaml && node -e "require('js-yaml').load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'),{json:true})"
+  ```
+- **Arena エージェント (GitHub App) は `.github/workflows/` を push できない**
+  (`refusing to allow a GitHub App to create or update workflow`)。
+  ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
+  ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
+
+### upload-artifact が「No files were found」で .next を転送できない (2026-08-27 実証)
+
+- 原因: **upload-artifact v4 は隠し (ドット) ディレクトリ配下のファイルを対象外**
+  (内部の excludeHiddenFiles 挙動)。`.next/**` はパターンをどう変えても 0 件になる。
+  (@actions/glob を excludeHiddenFiles: true で実行して再現・実証済み)
+- 対策: **tar でアーカイブして単一ファイルとしてアップロード**し、
+  取得側で展開する (正本 CI_WORKFLOW.yml は修正済み):
+  ```yaml
+  run: tar --exclude='.next/cache' -czf next-build.tgz .next   # build job
+  run: tar -xzf next-build.tgz                                  # e2e job
+  ```
+- 副次的修正: `Upload build stats` (.next/diagnostics/) は対象ディレクトリが
+  存在しないため常に空警告だった → 削除。
+
+### `pnpm/action-setup` が「Multiple versions of pnpm specified」で失敗する (2026-08-27 実績)
+
+- 原因: workflow の `version:` 入力と package.json の `packageManager` が重複指定。
+  pnpm/action-setup はバージョン不整合 (ERR_PNPM_BAD_PM_VERSION) 防止のため失敗する。
+- 対策: **workflow 側に `version:` を書かない**。package.json の
+  `packageManager: pnpm@11.24.0` から自動解決される (正本 CI_WORKFLOW.yml は修正済み)。
 
 ### `pnpm install` が失敗する
 

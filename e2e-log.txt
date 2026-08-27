@@ -1,0 +1,7 @@
+$ playwright test
+[WebServer] $ node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/build.ts
+[WebServer] $ next start --port 3000 --hostname 0.0.0.0
+
+Running 74 tests using 4 workers
+
+  -   1 [chromium-desktop] › e2e/dep-check.spec.ts:51:3 › Dependency check modal (Phase 10-D) › Mobile: Header モバイルアクションから依存・競合チェックを起動

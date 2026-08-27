@@ -170,8 +170,7 @@ describe('lib/db/migrate', () => {
       await db.profiles.put({
         id: 'garbage',
         name: 'Garbage',
-        mcVersion: '1.0',
-        loader: 'X',
+        environment: { mcVersion: '1.0', loader: 'Fabric' },
         description: '',
         mods: [],
         updatedAt: Date.now()

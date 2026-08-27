@@ -43,7 +43,9 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: [
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
-    ['list']
+    ['list'],
+    // 失敗テストを GitHub アノテーションに出力 (エージェントが API で読めるように。2026-08-27)
+    ['./e2e/helpers/annotation-reporter.ts']
   ],
   timeout: 30_000,
   expect: {

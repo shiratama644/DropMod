@@ -5,62 +5,64 @@ export interface CategoryOption {
   label: string;
 }
 
-const ALL: CategoryOption = { id: 'All', label: 'すべて' };
+// 2026-08-27: カテゴリ表示は Modrinth に合わせてすべて英語表記に統一
+// (facet id と表示ラベルが一致するため照合しやすい)
+const ALL: CategoryOption = { id: 'All', label: 'All' };
 
 /** 互換: 従来の Mods カテゴリ */
 export const CATEGORIES: CategoryOption[] = [
   ALL,
-  { id: 'utility', label: 'ユーティリティ' },
-  { id: 'optimization', label: '軽量化' },
-  { id: 'technology', label: '工業' },
-  { id: 'adventure', label: '冒険' },
-  { id: 'magic', label: '魔法' },
-  { id: 'storage', label: 'ストレージ' },
-  { id: 'decoration', label: '装飾' },
-  { id: 'worldgen', label: 'ワールド生成' },
-  { id: 'equipment', label: '装備' }
+  { id: 'utility', label: 'Utility' },
+  { id: 'optimization', label: 'Optimization' },
+  { id: 'technology', label: 'Technology' },
+  { id: 'adventure', label: 'Adventure' },
+  { id: 'magic', label: 'Magic' },
+  { id: 'storage', label: 'Storage' },
+  { id: 'decoration', label: 'Decoration' },
+  { id: 'worldgen', label: 'World Gen' },
+  { id: 'equipment', label: 'Equipment' }
 ];
 
 const MODPACK_CATEGORIES: CategoryOption[] = [
   ALL,
-  { id: 'challenging', label: '高難度' },
-  { id: 'combat', label: '戦闘' },
-  { id: 'kitchen-sink', label: 'キッチンシンク' },
-  { id: 'lightweight', label: '軽量' },
-  { id: 'multiplayer', label: 'マルチプレイ' },
-  { id: 'quests', label: 'クエスト' },
-  { id: 'technology', label: '工業' }
+  { id: 'challenging', label: 'Challenging' },
+  { id: 'combat', label: 'Combat' },
+  { id: 'kitchen-sink', label: 'Kitchen Sink' },
+  { id: 'lightweight', label: 'Lightweight' },
+  { id: 'multiplayer', label: 'Multiplayer' },
+  { id: 'quests', label: 'Quests' },
+  { id: 'technology', label: 'Technology' }
 ];
 
 const RESOURCEPACK_CATEGORIES: CategoryOption[] = [
   ALL,
-  { id: 'vanilla-like', label: 'バニラ風' },
-  { id: 'realistic', label: 'リアル' },
-  { id: 'simplistic', label: 'シンプル' },
-  { id: 'themed', label: 'テーマ' },
-  { id: 'tweaks', label: '小改変' },
+  { id: 'vanilla-like', label: 'Vanilla-like' },
+  { id: 'realistic', label: 'Realistic' },
+  { id: 'simplistic', label: 'Simplistic' },
+  { id: 'themed', label: 'Themed' },
+  { id: 'tweaks', label: 'Tweaks' },
   { id: '16x', label: '16x' },
   { id: '32x', label: '32x' },
   { id: '64x', label: '64x' },
   { id: '128x', label: '128x+' },
-  { id: 'audio', label: '音声' },
-  { id: 'font', label: 'フォント' }
+  { id: 'audio', label: 'Audio' },
+  { id: 'font', label: 'Font' }
 ];
 
 const SHADER_CATEGORIES: CategoryOption[] = [
   ALL,
-  { id: 'cartoon', label: 'カートゥーン' },
-  { id: 'cursed', label: 'カースド' },
-  { id: 'fantasy', label: 'ファンタジー' },
-  { id: 'realistic', label: 'リアル' },
-  { id: 'semi-realistic', label: 'セミリアル' },
-  { id: 'vanilla-like', label: 'バニラ風' },
-  { id: 'bloom', label: 'ブルーム' },
-  { id: 'colored-lighting', label: 'カラーライティング' },
-  { id: 'path-tracing', label: 'パストレーシング' },
+  { id: 'cartoon', label: 'Cartoon' },
+  { id: 'cursed', label: 'Cursed' },
+  { id: 'fantasy', label: 'Fantasy' },
+  { id: 'realistic', label: 'Realistic' },
+  { id: 'semi-realistic', label: 'Semi-realistic' },
+  { id: 'vanilla-like', label: 'Vanilla-like' },
+  { id: 'bloom', label: 'Bloom' },
+  { id: 'colored-lighting', label: 'Colored Lighting' },
+  { id: 'path-tracing', label: 'Path Tracing' },
   { id: 'pbr', label: 'PBR' },
-  { id: 'reflections', label: '反射' },
-  { id: 'shadows', label: '影' }
+  { id: 'reflections', label: 'Reflections' },
+  { id: 'shadows', label: 'Shadows' }
 ];
 
 export const CATEGORIES_BY_TYPE: Record<ProjectType, CategoryOption[]> = {
@@ -114,32 +116,32 @@ const NON_CONTENT_CATEGORY_IDS = new Set([
   'plugin'
 ]);
 
-/** フィルタチップに無い公式タグの日本語。チップ側ラベルが無いときだけ使う */
+/** フィルタチップに無い公式タグのラベル。チップ側ラベルが無いときだけ使う */
 const EXTRA_CATEGORY_LABELS: Record<string, string> = {
-  economy: '経済',
-  food: '食料',
-  'game-mechanics': 'ゲームメカニクス',
-  library: 'ライブラリ',
-  management: '管理',
-  minigame: 'ミニゲーム',
-  mobs: 'モブ',
-  social: 'ソーシャル',
-  transportation: '移動',
-  performance: '軽量化',
+  economy: 'Economy',
+  food: 'Food',
+  'game-mechanics': 'Game Mechanics',
+  library: 'Library',
+  management: 'Management',
+  minigame: 'Minigame',
+  mobs: 'Mobs',
+  social: 'Social',
+  transportation: 'Transportation',
+  performance: 'Performance',
   '8x-': '8x',
   '256x': '256x',
   '512x+': '512x+',
-  'core-shaders': 'コアシェーダー',
-  entities: 'エンティティ',
-  environment: '環境',
+  'core-shaders': 'Core Shaders',
+  entities: 'Entities',
+  environment: 'Environment',
   gui: 'GUI',
-  items: 'アイテム',
-  locale: '言語',
-  models: 'モデル',
-  blocks: 'ブロック',
-  atmosphere: '大気',
-  foliage: '植生',
-  fonts: 'フォント'
+  items: 'Items',
+  locale: 'Language',
+  models: 'Models',
+  blocks: 'Blocks',
+  atmosphere: 'Atmosphere',
+  foliage: 'Foliage',
+  fonts: 'Fonts'
 };
 
 const CATEGORY_LABELS: Record<string, string> = (() => {
@@ -174,6 +176,6 @@ export function primaryCategoryId(
 }
 
 export function categoryLabel(id: string | undefined | null): string {
-  if (!id) return '未分類';
+  if (!id) return 'Uncategorized';
   return CATEGORY_LABELS[id] ?? CATEGORY_LABELS[id.toLowerCase()] ?? id;
 }

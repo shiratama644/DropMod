@@ -47,7 +47,7 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { discoverPathFromProjectType, modrinthProjectUrl } from '@/lib/constants/search';
@@ -213,7 +213,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   const latestVersion = safeVersions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
   const isAdded = (currentProfile.mods ?? []).some(
-    (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+    (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
   );
   const externalLinks = collectExternalLinks(project);
 
@@ -262,12 +262,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
           <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl bg-slate-800/80 p-1.5 flex items-center justify-center shadow-lg shrink-0 overflow-hidden border border-slate-700/50 relative">
             {project.icon_url ? (
               <Image
-                src={project.icon_url}
+                src={project.raw_icon_url || project.icon_url}
                 alt={project.title}
                 width={112}
                 height={112}
                 className="w-full h-full object-contain rounded-2xl"
                 priority
+                // Modrinth CDN は既に最適化済み。プロキシ経由だと sharp 未導入環境で
+                // 重くなるため直接 CDN から取得 (lib/utils/image.ts 参照)。
+                unoptimized={shouldUnoptimizeImage(
+                  project.raw_icon_url || project.icon_url
+                )}
               />
             ) : (
               <i className="fa-solid fa-cube text-4xl sm:text-5xl text-emerald-400" aria-hidden />
@@ -320,24 +325,59 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
               </div>
             )}
 
-            {/* CTA 行 */}
-            <div className="mt-5 flex flex-wrap gap-2">
+            {/* CTA 行 — デザインルール (skills/ui-layout.md):
+                主操作 (追加) を右端に配置。緑の塗りつぶしは主操作のみで、
+                ダウンロード / Modrinth は枠線 or ダークグレーに統一。
+                全ボタン高さ 48px (h-12)・等幅 (flex-1) で均等に並べる。 */}
+            <div className="mt-5 flex flex-wrap sm:flex-nowrap items-stretch gap-2">
+              <a
+                href={modrinthProjectUrl(project.slug, project.project_type)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Modrinth で見る"
+                className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
+                Modrinth
+              </a>
+              {latestFile && (
+                <button
+                  type="button"
+                  onClick={() => handleJarDownload(latestFile)}
+                  disabled={isJarDownloading}
+                  aria-label=".jar ファイルをダウンロード"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isJarDownloading ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                      DL中
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-download" aria-hidden />
+                      ダウンロード
+                    </>
+                  )}
+                </button>
+              )}
               {isAdded ? (
                 <button
                   type="button"
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
-                  className="px-4 py-2.5 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  aria-label="プロファイルから削除"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      処理中...
+                      処理中
                     </>
                   ) : (
                     <>
                       <i className="fa-solid fa-trash-can" aria-hidden />
-                      プロファイルから削除
+                      削除
                     </>
                   )}
                 </button>
@@ -346,50 +386,22 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   type="button"
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
-                  className="btn-hover-effect px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  aria-label="プロファイルに追加"
+                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      追加中...
+                      追加中
                     </>
                   ) : (
                     <>
                       <i className="fa-solid fa-plus" aria-hidden />
-                      プロファイルに追加
+                      追加
                     </>
                   )}
                 </button>
               )}
-              {latestFile && (
-                <button
-                  type="button"
-                  onClick={() => handleJarDownload(latestFile)}
-                  disabled={isJarDownloading}
-                  className="btn-hover-effect px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition flex items-center gap-2 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isJarDownloading ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                      DL中...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-download" aria-hidden />
-                      .jar 直DL
-                    </>
-                  )}
-                </button>
-              )}
-              <a
-                href={modrinthProjectUrl(project.slug, project.project_type)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 rounded-xl theme-sub-box text-sm font-semibold hover:bg-slate-700/40 transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
-                Modrinth
-              </a>
             </div>
           </div>
         </div>
@@ -445,19 +457,20 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   ギャラリー・スクリーンショットを閲覧
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {/* ギャラリー: 1 行の横スクロール (折り返さない、モーダルと統一) */}
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {galleryList.map((img) => (
                   <figure
                     key={img.url}
-                    className="relative aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 m-0"
+                    className="relative w-48 sm:w-64 aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 m-0"
                   >
                     <Image
                       src={img.url}
                       alt={img.title || 'Gallery image'}
                       fill
-                      sizes="(min-width: 1024px) 240px, (min-width: 640px) 33vw, 50vw"
+                      sizes="(min-width: 640px) 256px, 192px"
                       className="object-cover"
-                      unoptimized={isAnimatedImageUrl(img.url)}
+                      unoptimized={shouldUnoptimizeImage(img.url)}
                     />
                     {img.title && (
                       <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10">
@@ -476,7 +489,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
               <i className="fa-solid fa-file-lines theme-text-brand" aria-hidden />
               詳細説明
             </h2>
-            <div className="theme-sub-box p-4 sm:p-6 rounded-2xl border border-slate-500/15">
+            <div className="theme-sub-box p-4 sm:p-6 rounded-2xl border border-slate-500/15 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
               {project.body ? (
                 <MarkdownRenderer content={project.body} />
               ) : (

@@ -19,8 +19,7 @@ function makeProfile(mods: Profile['mods']): Profile {
   return {
     id: 'p1',
     name: 'Test',
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods
   };
@@ -62,16 +61,18 @@ describe('useDependencyCheck', () => {
     );
     const profile = makeProfile([
       {
-        id: 'proj-a',
-        title: 'A',
+        projectId: 'proj-a',
+        name: 'A',
+        type: 'mod',
         description: '',
-        selectedVersionId: 'v-a'
+        versionId: 'v-a'
       },
       {
-        id: 'proj-b',
-        title: 'B',
+        projectId: 'proj-b',
+        name: 'B',
+        type: 'mod',
         description: '',
-        selectedVersionId: 'v-b'
+        versionId: 'v-b'
       }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
@@ -100,7 +101,7 @@ describe('useDependencyCheck', () => {
       )
     );
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'v-a' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'v-a' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -128,8 +129,8 @@ describe('useDependencyCheck', () => {
       )
     );
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'v-a' },
-      { id: 'proj-b', title: 'B', description: '', selectedVersionId: 'v-b' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'v-a' },
+      { projectId: 'proj-b', name: 'B', type: 'mod', description: '', versionId: 'v-b' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -157,7 +158,7 @@ describe('useDependencyCheck', () => {
       )
     );
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'v-a' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'v-a' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -177,8 +178,8 @@ describe('useDependencyCheck', () => {
       })
     );
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'latest' },
-      { id: 'proj-b', title: 'B', description: '', selectedVersionId: 'v-b' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'latest' },
+      { projectId: 'proj-b', name: 'B', type: 'mod', description: '', versionId: 'v-b' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -205,7 +206,7 @@ describe('useDependencyCheck', () => {
     );
     useDepCheckStore.getState().setHasDepWarning(true); // 前回値
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'v-a' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'v-a' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -223,8 +224,8 @@ describe('useDependencyCheck', () => {
   it('B23 修正: 全 mod が selectedVersionId="latest" のとき前回警告を保持', async () => {
     useDepCheckStore.getState().setHasDepWarning(true); // 前回警告あり
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'latest' },
-      { id: 'proj-b', title: 'B', description: '', selectedVersionId: 'latest' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'latest' },
+      { projectId: 'proj-b', name: 'B', type: 'mod', description: '', versionId: 'latest' }
     ]);
     const { result } = renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()
@@ -259,7 +260,7 @@ describe('useDependencyCheck', () => {
       })
     );
     const profile = makeProfile([
-      { id: 'proj-a', title: 'A', description: '', selectedVersionId: 'v-a' }
+      { projectId: 'proj-a', name: 'A', type: 'mod', description: '', versionId: 'v-a' }
     ]);
     renderHook(() => useDependencyCheck(profile), {
       wrapper: createQueryWrapper()

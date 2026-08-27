@@ -8,9 +8,15 @@ import {
   parseFabricOrQuiltLoaders,
   parseMavenVersions
 } from '@/lib/loaders/versions';
+import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { logger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// loader versions は頻繁に変わらない → 60 req/min。
+// APP_PROFILE=development ではレート制限が無効化される (lib/server/rate-limit.ts 参照)。
+const RATE_LIMIT_MAX = 60;
 
 const USER_AGENT =
   process.env.MODRINTH_USER_AGENT ||
@@ -56,23 +62,39 @@ export async function GET(req: Request): Promise<Response> {
   const loaderRaw = url.searchParams.get('loader') ?? '';
   const mcVersion = url.searchParams.get('mc') ?? '';
   if (!isLoaderId(loaderRaw)) {
-    return Response.json({ error: 'Unknown loader' }, { status: 400 });
+    return Response.json({ error: 'Unknown loader' }, { status: 400, headers: API_CORS_HEADERS });
+  }
+
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit('loaders', clientIp, RATE_LIMIT_MAX).allowed) {
+    return Response.json(
+      { error: 'Too Many Requests' },
+      {
+        status: 429,
+        headers: { ...API_CORS_HEADERS, 'Retry-After': '60' }
+      }
+    );
   }
 
   const fallback = getLoaderVersions(loaderRaw);
   try {
     const live = await liveVersions(loaderRaw, mcVersion);
     const versions = mergeVersionLists(live, fallback);
+    logger.debug('loader versions:', loaderRaw, `live=${live.length} fallback=${fallback.length}`);
     return Response.json(
       { loader: loaderRaw, versions, source: live.length > 0 ? 'live' : 'fallback' },
       {
         headers: {
+          ...API_CORS_HEADERS,
           'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400'
         }
       }
     );
   } catch (err) {
-    console.warn('[DropMod] loader versions fallback:', loaderRaw, err);
-    return Response.json({ loader: loaderRaw, versions: fallback, source: 'fallback' });
+    logger.warn('loader versions fallback:', loaderRaw, err);
+    return Response.json(
+      { loader: loaderRaw, versions: fallback, source: 'fallback' },
+      { headers: API_CORS_HEADERS }
+    );
   }
 }

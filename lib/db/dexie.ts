@@ -15,7 +15,8 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Profile, ModItem } from '@/types';
+import type { Profile, ProjectItem } from '@/types';
+import { normalizeProfileForV2 } from '@/lib/state/sanitize';
 
 // ============================================================================
 // 行 (Row) 型定義
@@ -84,6 +85,47 @@ class DropModDatabase extends Dexie {
       apiCache: 'key, expiresAt',
       meta: 'key'
     });
+
+    // v2 (Phase 11-A): Profile 形状変更。index は不変 (スキーマ宣言は v1 と同一)、
+    // upgrade で保存済み row を新形状に一括変換する:
+    //   - flat な mcVersion / loader / loaderVersion → environment に集約
+    //     (loader の不正値は 'Fabric' に正規化)
+    //   - ModItem → ProjectItem: id→projectId / title→name /
+    //     projectType?→type (未設定は 'mod') / selectedVersionId→versionId /
+    //     selectedVersionNumber→versionNumber
+    //   - resourcepacks / shaderpacks / unknownFiles は optional のため
+    //     旧データはそのまま互換 (設定されないだけ)
+    // 変換ロジックは lib/state/sanitize.ts の normalizeProfileForV2 と共用
+    // (LocalStorage 旧データの流入経路と同一 semantics を保証)。
+    this.version(2)
+      .stores({
+        profiles: 'id, updatedAt',
+        apiCache: 'key, expiresAt',
+        meta: 'key'
+      })
+      .upgrade(async (tx) => {
+        const table = tx.table('profiles');
+        const rows = (await table.toArray()) as Array<
+          Record<string, unknown> & { updatedAt?: unknown }
+        >;
+        const converted = rows
+          .map((row) => {
+            const normalized = normalizeProfileForV2(row);
+            if (!normalized) return null;
+            return {
+              ...normalized,
+              updatedAt:
+                typeof row.updatedAt === 'number' && Number.isFinite(row.updatedAt)
+                  ? row.updatedAt
+                  : Date.now()
+            };
+          })
+          .filter((row): row is Profile & { updatedAt: number } => row !== null);
+        if (converted.length > 0) {
+          await table.clear();
+          await table.bulkPut(converted);
+        }
+      });
   }
 }
 
@@ -95,7 +137,7 @@ export const db = new DropModDatabase();
 // ============================================================================
 
 /**
- * ModItem[] を含む Profile 全体をそのまま IndexedDB に put する。
+ * ProjectItem[] を含む Profile 全体をそのまま IndexedDB に put する。
  * upsert 挙動 (同 id が既にあれば上書き) なので冪等に使える。
  *
  * ⚠️ Sub-Phase 8-A 時点では未使用 (現状は syncProfiles を diff 同期に使用中)。
@@ -187,5 +229,5 @@ export async function _clearAllForTesting(): Promise<void> {
   });
 }
 
-// 型 re-export (ModItem を使う側の import 減らし)
-export type { Profile, ModItem };
+// 型 re-export (ProjectItem を使う側の import 減らし)
+export type { Profile, ProjectItem };

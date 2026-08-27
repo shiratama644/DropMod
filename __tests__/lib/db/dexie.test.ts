@@ -22,8 +22,7 @@ function makeProfile(id: string, name = `P-${id}`): Profile {
   return {
     id,
     name,
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods: []
   };

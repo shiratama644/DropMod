@@ -1,22 +1,28 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
-import type { Profile, ModItem } from '@/types';
+import type { Profile, ProjectItem } from '@/types';
 
 const P1: Profile = {
-  id: 'p1', name: 'P1', mcVersion: '1.20.1', loader: 'Fabric', description: '', mods: []
+  id: 'p1', name: 'P1',
+  environment: { mcVersion: '1.20.1', loader: 'Fabric' },
+  description: '', mods: []
 };
 const P2: Profile = {
-  id: 'p2', name: 'P2', mcVersion: '1.21.4', loader: 'Forge', description: '', mods: []
+  id: 'p2', name: 'P2',
+  environment: { mcVersion: '1.21.4', loader: 'Forge' },
+  description: '', mods: []
 };
-const M1: ModItem = {
-  id: 'm1', slug: 'sodium', title: 'Sodium', fileUrl: '', filename: '',
-  selectedVersionId: 'v1', selectedVersionNumber: '1.0'
-} as ModItem;
-const M2: ModItem = {
-  id: 'm2', slug: 'lithium', title: 'Lithium', fileUrl: '', filename: '',
-  selectedVersionId: 'v2', selectedVersionNumber: '2.0'
-} as ModItem;
+const M1: ProjectItem = {
+  projectId: 'm1', slug: 'sodium', name: 'Sodium', type: 'mod',
+  fileUrl: '', filename: '',
+  versionId: 'v1', versionNumber: '1.0'
+};
+const M2: ProjectItem = {
+  projectId: 'm2', slug: 'lithium', name: 'Lithium', type: 'mod',
+  fileUrl: '', filename: '',
+  versionId: 'v2', versionNumber: '2.0'
+};
 
 describe('useProfilesStore', () => {
   beforeEach(() => {
@@ -66,7 +72,7 @@ describe('useProfilesStore', () => {
       expect(result).toBe(true);
       const p = useProfilesStore.getState().profiles.find((p) => p.id === 'p1');
       expect(p?.mods).toHaveLength(1);
-      expect(p?.mods[0]?.id).toBe('m1');
+      expect(p?.mods[0]?.projectId).toBe('m1');
     });
 
     it('returns false when duplicate id', () => {
@@ -113,25 +119,25 @@ describe('useProfilesStore', () => {
     });
 
     it('removes by mod id and returns the removed item', () => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       act(() => {
         removed = useProfilesStore.getState().removeModFromProfile('p1', 'm1');
       });
-      expect((removed as ModItem | null)?.id).toBe('m1');
+      expect((removed as ProjectItem | null)?.projectId).toBe('m1');
       const p = useProfilesStore.getState().profiles.find((p) => p.id === 'p1');
       expect(p?.mods).toEqual([M2]);
     });
 
     it('removes by slug', () => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       act(() => {
         removed = useProfilesStore.getState().removeModFromProfile('p1', 'sodium');
       });
-      expect((removed as ModItem | null)?.slug).toBe('sodium');
+      expect((removed as ProjectItem | null)?.slug).toBe('sodium');
     });
 
     it('returns null when mod not found', () => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       act(() => {
         removed = useProfilesStore.getState().removeModFromProfile('p1', 'nonexistent');
       });
@@ -139,7 +145,7 @@ describe('useProfilesStore', () => {
     });
 
     it('returns null when profile does not exist', () => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       act(() => {
         removed = useProfilesStore.getState().removeModFromProfile('missing', 'm1');
       });
@@ -163,8 +169,8 @@ describe('useProfilesStore', () => {
       let ok = false;
       act(() => {
         ok = useProfilesStore.getState().updateModVersionInProfile('p1', 'm1', {
-          selectedVersionId: 'new-version',
-          selectedVersionNumber: '3.0',
+          versionId: 'new-version',
+          versionNumber: '3.0',
           versionType: 'beta'
         });
       });
@@ -172,9 +178,9 @@ describe('useProfilesStore', () => {
       const mod = useProfilesStore
         .getState()
         .profiles.find((p) => p.id === 'p1')
-        ?.mods.find((m) => m.id === 'm1');
-      expect(mod?.selectedVersionId).toBe('new-version');
-      expect(mod?.selectedVersionNumber).toBe('3.0');
+        ?.mods.find((m) => m.projectId === 'm1');
+      expect(mod?.versionId).toBe('new-version');
+      expect(mod?.versionNumber).toBe('3.0');
       expect(mod?.versionType).toBe('beta');
     });
 
@@ -183,7 +189,7 @@ describe('useProfilesStore', () => {
       act(() => {
         ok = useProfilesStore
           .getState()
-          .updateModVersionInProfile('p1', 'no-mod', { selectedVersionId: 'x' });
+          .updateModVersionInProfile('p1', 'no-mod', { versionId: 'x' });
       });
       expect(ok).toBe(false);
     });

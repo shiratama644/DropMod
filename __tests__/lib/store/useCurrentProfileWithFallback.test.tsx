@@ -17,6 +17,7 @@ import {
   _EMPTY_PROFILE_FOR_TEST
 } from '@/lib/store/useCurrentProfileWithFallback';
 import { useProfilesStore } from '@/lib/store/profiles';
+import type { Profile } from '@/types';
 
 describe('useCurrentProfileWithFallback (B33 修正)', () => {
   beforeEach(() => {
@@ -42,11 +43,10 @@ describe('useCurrentProfileWithFallback (B33 修正)', () => {
   });
 
   it('currentProfileId が profiles に一致すれば実 profile を返す', () => {
-    const profile = {
+    const profile: Profile = {
       id: 'p1',
       name: 'Real',
-      mcVersion: '1.20.1',
-      loader: 'Fabric',
+      environment: { mcVersion: '1.20.1', loader: 'Fabric' },
       description: '',
       mods: []
     };
@@ -62,19 +62,17 @@ describe('useCurrentProfileWithFallback (B33 修正)', () => {
   });
 
   it('currentProfileId が profiles に無ければ profiles[0] にフォールバック', () => {
-    const p1 = {
+    const p1: Profile = {
       id: 'p1',
       name: 'First',
-      mcVersion: '1.20.1',
-      loader: 'Fabric',
+      environment: { mcVersion: '1.20.1', loader: 'Fabric' },
       description: '',
       mods: []
     };
-    const p2 = {
+    const p2: Profile = {
       id: 'p2',
       name: 'Second',
-      mcVersion: '1.21.1',
-      loader: 'Forge',
+      environment: { mcVersion: '1.21.1', loader: 'Forge' },
       description: '',
       mods: []
     };

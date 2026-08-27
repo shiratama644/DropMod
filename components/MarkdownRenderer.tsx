@@ -1,40 +1,27 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
 
 // -----------------------------------------------------------------------
-// Phase 10-C: Markdown 内 <img> の next/image 最適化対象ホスト。
+// Markdown 内画像の方針
 //
-// これらの origin (Modrinth CDN 等、next.config.ts の remotePatterns に
-// 登録済みのホスト) を持つ画像は <Image> で描画され、Vercel の Image
-// Optimization / AVIF/WebP 自動変換 / lazy loading / srcset 生成の恩恵
-// を受ける。
+// Mod 本文 (body) の画像・GIF は、作者が imgur / GitHub raw / Modrinth CDN 等
+// **任意のホスト** にホストしており、URL もサイズも予測不可能。これらを
+// next/image の最適化プロキシ (/_next/image) に通すと:
+//   - sharp 未導入環境 (Sandbox / dev) で再エンコードが非常に重い
+//   - remotePatterns に無いホストは next/image が 400 で弾き **表示されない**
+//   - GIF は最適化できず再生されない
+// いずれも「Markdown 画像が表示されない / 遅い / GIF が動かない」の原因。
 //
-// それ以外の origin (ユーザー自己 host / 未登録 CDN) は従来通り <img>
-// フォールバック描画。
+// よって Markdown 内の画像は **ネイティブ <img>** (loading=lazy + decoding=async)
+// で直接配信する。任意ホストを表示でき、GIF も再生され、プロキシを経由しない分
+// 最も高速。Modrinth CDN 画像は既に WebP 最適化済みのため品質問題も無い。
 // -----------------------------------------------------------------------
-const OPTIMIZED_IMAGE_HOSTS = new Set<string>([
-  'cdn.modrinth.com',
-  'raw.githubusercontent.com',
-]);
-
-function isOptimizableImageSrc(src: string | undefined): boolean {
-  if (!src) return false;
-  try {
-    const u = new URL(src);
-    if (u.protocol !== 'https:') return false;
-    return OPTIMIZED_IMAGE_HOSTS.has(u.host);
-  } catch {
-    return false;
-  }
-}
 
 interface MarkdownRendererProps {
   content: string;
@@ -126,6 +113,11 @@ const ALLOWED_IFRAME_HOSTS = new Set<string>([
   'streamable.com'
 ]);
 
+// sandbox 属性: 動画プレイヤーに必要な最小権限のみ許可。
+// allow-popups / allow-forms / allow-downloads は不要。
+// allow-top-navigation は絶対に許可しない (クリックジャッキング防止)。
+const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
+
 function isAllowedIframeSrc(src: string | undefined): boolean {
   if (!src) return false;
   try {
@@ -169,6 +161,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
+                      sandbox={IFRAME_SANDBOX}
+                      referrerPolicy="strict-origin-when-cross-origin"
                       className="w-full h-full"
                     ></iframe>
                   </div>
@@ -207,45 +201,21 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  sandbox={IFRAME_SANDBOX}
+                  referrerPolicy="strict-origin-when-cross-origin"
                   className="w-full h-full"
+                  loading="lazy"
                   {...props}
                 ></iframe>
               </div>
             );
           },
-          // 画像スタイリング (Phase 10-C: Modrinth CDN 経由の画像は <Image> 最適化)
-          //
-          // 【方針】
-          //   - src の origin が OPTIMIZED_IMAGE_HOSTS (Modrinth CDN /
-          //     raw.githubusercontent.com) なら next/image 使用
-          //     → Vercel Image Optimization / AVIF/WebP 変換 / lazy /
-          //        srcset 生成の恩恵で LCP 100〜300 ms 改善見込み
-          //   - width/height 不定なので暫定値 (1200x675 = 16:9) を渡し、
-          //     style={{ height: 'auto', width: '100%' }} でブラウザに
-          //     aspect ratio 保持任せ + sizes で最適サイズ選択
-          //   - それ以外の origin (自己 host / 未登録 CDN) は従来通り <img>
+          // Markdown 内画像: 任意ホストを直接描画 (next/image プロキシ不使用)。
+          // 詳細はファイル先頭の「Markdown 内画像の方針」コメント参照。
           img: ({ node: _node, src, alt, ...props }) => {
             const srcStr = typeof src === 'string' ? src : undefined;
-            if (isOptimizableImageSrc(srcStr)) {
-              return (
-                <span className="block my-3 rounded-2xl overflow-hidden shadow-md border border-slate-500/20">
-                  <Image
-                    src={srcStr as string}
-                    alt={alt || ''}
-                    width={1200}
-                    height={675}
-                    sizes="(max-width: 640px) 100vw, 720px"
-                    style={{ height: 'auto', width: '100%' }}
-                    className="hover:opacity-95 transition"
-                    loading="lazy"
-                    unoptimized={isAnimatedImageUrl(srcStr)}
-                  />
-                </span>
-              );
-            }
             return (
-              // Modrinth CDN 外 origin (ユーザー自己 host 等) は width/height 事前取得不可 → <img> 維持。
-              // biome-ignore lint/performance/noImgElement: Markdown 内画像 (未登録 origin) は width/height 不定
+              // biome-ignore lint/performance/noImgElement: 任意ホスト・不定サイズの本文画像はネイティブ img が最適
               <img
                 src={srcStr}
                 alt={alt || ''}

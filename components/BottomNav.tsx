@@ -20,6 +20,7 @@ import type React from 'react';
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { TabName, ThemeMode } from '@/types';
+import { useUiState } from '@/lib/store/uiState';
 import { BrowseBottomSheet } from './BrowseBottomSheet';
 import { MenuBottomSheet } from './MenuBottomSheet';
 
@@ -72,6 +73,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const [sheetStack, setSheetStack] = useState<SheetEntry[]>([]);
   const [nextKey, setNextKey] = useState(1);
+
+  // モーダル表示中はナビを画面外へスライドして隠す (2026-08-27)。
+  // モーダル側が useModalRegistration で open を登録する。
+  // (BottomSheet は対象外: ナビのトグルボタンで開閉するため)
+  const openModalCount = useUiState((s) => s.openModalCount);
+  const hiddenByModal = openModalCount > 0;
 
   const safeModCount = Number.isFinite(modCount) ? Math.max(0, Math.floor(modCount)) : 0;
   const displayModCount = safeModCount > 999 ? '999+' : safeModCount.toString();
@@ -188,7 +195,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       <nav
         id="bottom-nav"
         aria-label="メインナビゲーション"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-[60] glass-panel border-t shadow-2xl${
+          hiddenByModal ? ' nav-modal-hidden' : ''
+        }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="max-w-md mx-auto grid grid-cols-4 h-16">

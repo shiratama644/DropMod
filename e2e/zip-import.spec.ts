@@ -5,13 +5,14 @@
  *   1. /profile にアクセス
  *   2. ハンバーガーメニュー (モバイル) or DesktopSidebar (PC) の
  *      「ZIP 読込」<label> input[type=file] にダミー .mrpack を setInputFiles
- *   3. useZipImport が .mrpack を検知 → NewProfileModal が
- *      pendingImportData 付きで開く
- *   4. NewProfileModal が可視化されることを確認 (プロファイル作成モーダル)
+ *   3. useZipImport が .mrpack を検知 → 解析 → プロファイルを
+ *      **直接作成** (モーダルは開かない) → 成功 Toast が表示される
+ *
+ * 2026-08-27 修正: .mrpack は「モーダルで確認」から「ダイレクト追加」仕様に
+ * 変更されている (hooks/useZipImport.ts)。旧仕様 (NewProfileModal が開く) の
+ * アサーションは失敗するため、現在の挙動 (Toast role=status で検出) に更新。
  *
  * ダミー .mrpack は e2e/helpers/mrpack.ts で jszip 生成 (Node 側)。
- * setInputFiles は buffer を渡せるので fs 書き込み不要。
- *
  * Sandbox は Chromium install 不可のため CI 上のみ実行。
  */
 
@@ -43,16 +44,13 @@ test.describe('ZIP import (.mrpack) flow (Phase 10-D)', () => {
       buffer: mrpackBuffer,
     });
 
-    // NewProfileModal (プロファイル作成) が開くはず
-    // dialog role で「新規プロファイル」など
-    const dialog = page
-      .getByRole('dialog')
-      .filter({ hasText: /新規プロファイル|プロファイル作成|E2E Import Pack/ })
+    // .mrpack はダイレクト追加 (モーダルなし) → 成功 Toast (role=status) が出る
+    const toast = page
+      .getByRole('status')
+      .filter({ hasText: /インポート完了/ })
       .first();
-    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
-
-    // 開いていることが確認できれば OK (自動 close は URL 変化不要)
-    await expect(dialog).toBeVisible();
+    await toast.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(toast).toBeVisible();
   });
 
   test('Mobile: ハンバーガーメニュー → ZIP 読込で NewProfileModal が開く', async ({
@@ -85,12 +83,12 @@ test.describe('ZIP import (.mrpack) flow (Phase 10-D)', () => {
       buffer: mrpackBuffer,
     });
 
-    // NewProfileModal が開く
-    const dialog = page
-      .getByRole('dialog')
-      .filter({ hasText: /新規プロファイル|プロファイル作成|E2E Mobile Import/ })
+    // .mrpack はダイレクト追加 (モーダルなし) → 成功 Toast (role=status) が出る
+    const toast = page
+      .getByRole('status')
+      .filter({ hasText: /インポート完了/ })
       .first();
-    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
-    await expect(dialog).toBeVisible();
+    await toast.waitFor({ state: 'visible', timeout: 10_000 });
+    await expect(toast).toBeVisible();
   });
 });

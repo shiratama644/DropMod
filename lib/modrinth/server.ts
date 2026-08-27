@@ -27,6 +27,7 @@
 //   - タイムアウト時は throw され、上位の try/catch で fallback される。
 // ============================================================================
 
+import { logger } from '@/lib/server/logger';
 import { unstable_cache } from 'next/cache';
 import type { ModrinthHit, ModrinthProject, ModrinthVersion } from '@/types';
 
@@ -58,6 +59,68 @@ export const REVALIDATE = {
   VERSION_LIST: 1800, // 30分
   TAG: 86400 // 24時間
 } as const;
+
+// -----------------------------------------------------
+// 429 レート制限対策 (2026-08-26: build 時バースト保護)
+//
+// 問題: build の generateStaticParams が詳細ページを大量に事前生成し、
+// 各ページ 3 fetch × 400 ページ ≒ 1,200 req をバースト → Modrinth の
+// 300 req/min を確実に超過し全面 429 になっていた。また Modrinth は
+// `Retry-After: 0` を返すことがあり、旧実装は 0ms 待ちで即再試行して
+// いたためレート制限の穴を深めるだけだった。
+//
+// 対策 (2026-08-26 実施、PHASE10_5_PLAN.md 続報):
+//   1. Retry-After の値が小さくても最低 MODRINTH_429_MIN_WAIT_MS (既定 1s)
+//      待ってから再試行 (2 回まで、待ち時間は倍々 backoff)
+//   2. サーキットブレーカー: 429 で最終失敗したリクエストが連続
+//      RATE_LIMIT_BREAKER_THRESHOLD 回 (既定 3) に達したら、
+//      RATE_LIMIT_BREAKER_COOLDOWN_MS (既定 60s) 間は fetch せず
+//      即座に throw (fail-fast)。build の残りページはフォールバック
+//      表示で素早く完了し、レート制限の回復を待つ。
+// -----------------------------------------------------
+const RATE_LIMIT_MAX_RETRIES = 2;
+const RATE_LIMIT_DEFAULT_MIN_WAIT_MS = 1_000;
+const RATE_LIMIT_BREAKER_THRESHOLD = 3;
+const RATE_LIMIT_BREAKER_COOLDOWN_MS = 60_000;
+
+/** Retry-After の最小ウェイト (ms)。テスト高速化のため call 時に env を読む。 */
+function rateLimitMinWaitMs(): number {
+  const raw = process.env.MODRINTH_429_MIN_WAIT_MS;
+  if (!raw) return RATE_LIMIT_DEFAULT_MIN_WAIT_MS;
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  return RATE_LIMIT_DEFAULT_MIN_WAIT_MS;
+}
+
+let rateLimitStrikes = 0;
+let rateLimitOpenUntil = 0;
+
+function isRateLimitBreakerOpen(): boolean {
+  return Date.now() < rateLimitOpenUntil;
+}
+
+/** 429 最終失敗を記録。連続 THRESHOLD 回で breaker を開く。 */
+function registerRateLimitFailure(endpoint: string): void {
+  rateLimitStrikes++;
+  if (rateLimitStrikes >= RATE_LIMIT_BREAKER_THRESHOLD) {
+    rateLimitOpenUntil = Date.now() + RATE_LIMIT_BREAKER_COOLDOWN_MS;
+    rateLimitStrikes = 0;
+    logger.warn(
+      `Modrinth rate-limit breaker OPEN (${endpoint}): ${RATE_LIMIT_BREAKER_COOLDOWN_MS}ms 間 fail-fast します`
+    );
+  }
+}
+
+/** 成功で連続失敗カウントをリセット。 */
+function resetRateLimitStrikes(): void {
+  rateLimitStrikes = 0;
+}
+
+/** テスト用: breaker / strikes 状態を初期化 (実コードからは使わない)。 */
+export function _resetRateLimitStateForTesting(): void {
+  rateLimitStrikes = 0;
+  rateLimitOpenUntil = 0;
+}
 
 // -----------------------------------------------------
 // 内部ヘルパー
@@ -111,8 +174,9 @@ function combineSignals(external: AbortSignal | undefined, timeoutMs: number): A
  * - fetch キャッシュ (revalidate + tags) を有効化
  *   ※ ただし呼び出し側で `cache: 'no-store'` を渡した場合は Data Cache
  *      をバイパスする (2MB 超のレスポンス回避のため)
- * - 429 Too Many Requests の場合 Retry-After を尊重して 1 回だけリトライ
  * - AbortSignal.timeout(8s) を必ず適用してハングを防ぐ
+ * - 429 Too Many Requests は Retry-After を尊重して backoff 再試行
+ *   (最大 2 回、最低 1s)。連続失敗時はサーキットブレーカーで fail-fast
  */
 async function fetchModrinthServer<T>(
   endpoint: string,
@@ -140,6 +204,12 @@ async function fetchModrinthServer<T>(
   const queryString = params.toString() ? `?${params.toString()}` : '';
   const url = `${MODRINTH_BASE}${endpoint}${queryString}`;
 
+  // サーキットブレーカーが開いている間は fetch せず即座に失敗させる
+  // (build 時の全面 429 で残りページの fetch を打ち切る)。
+  if (isRateLimitBreakerOpen()) {
+    throw new Error(`Modrinth ${endpoint}: rate-limit circuit breaker open (fail fast)`);
+  }
+
   const doFetch = () => {
     const signal = combineSignals(init.signal, FETCH_TIMEOUT_MS);
     const fetchInit: RequestInit & { next?: { revalidate: number; tags?: string[] } } = {
@@ -160,18 +230,32 @@ async function fetchModrinthServer<T>(
 
   let res = await doFetch();
 
-  if (res.status === 429) {
-    const retryAfterMs = parseRetryAfterMs(res.headers.get('Retry-After')) ?? 2000;
-    console.warn(
-      `[DropMod] Modrinth 429 (server). Waiting ${retryAfterMs}ms then retrying: ${endpoint}`
+  // 429: Retry-After を尊重しつつ、最小ウェイトを保証して backoff 再試行。
+  // Modrinth は Retry-After: 0 を返すことがあるため、0ms 待ちの即再試行
+  // (レート穴を深めるだけ) を防ぐ。
+  let attempt = 0;
+  while (res.status === 429 && attempt < RATE_LIMIT_MAX_RETRIES) {
+    const parsed = parseRetryAfterMs(res.headers.get('Retry-After'));
+    // ヘッダなし: 最小ウェイトの 2 倍から倍々 backoff (既定 2s → 4s。
+    // テストは MODRINTH_429_MIN_WAIT_MS=1 で高速化)
+    const backoff = parsed ?? rateLimitMinWaitMs() * 2 * (attempt + 1);
+    const waitMs = Math.max(backoff, rateLimitMinWaitMs());
+    logger.warn(
+      `Modrinth 429 (server). Waiting ${waitMs}ms then retrying (${attempt + 1}/${RATE_LIMIT_MAX_RETRIES}): ${endpoint}`
     );
-    await sleep(retryAfterMs);
+    await sleep(waitMs);
+    attempt++;
     res = await doFetch();
   }
 
+  if (res.status === 429) {
+    registerRateLimitFailure(endpoint);
+    throw new Error(`Modrinth ${endpoint}: HTTP ${res.status} ${res.statusText}`);
+  }
   if (!res.ok) {
     throw new Error(`Modrinth ${endpoint}: HTTP ${res.status} ${res.statusText}`);
   }
+  resetRateLimitStrikes();
   return (await res.json()) as T;
 }
 
@@ -281,7 +365,7 @@ export async function fetchModrinthProjectAuthor(
     const name = owner?.user?.name?.trim() || owner?.user?.username?.trim();
     return name || null;
   } catch (e) {
-    console.warn('[DropMod] fetchModrinthProjectAuthor failed:', slug, e);
+    logger.warn('fetchModrinthProjectAuthor failed:', slug, e);
     return null;
   }
 }
@@ -413,7 +497,7 @@ export async function fetchLatestMinecraftVersions(
       .map((v) => v.version);
     if (releaseVersions.length > 0) return releaseVersions;
   } catch (e) {
-    console.warn('[DropMod] fetchLatestMinecraftVersions fell back:', e);
+    logger.warn('fetchLatestMinecraftVersions fell back:', e);
   }
   return [
     '1.21.4',

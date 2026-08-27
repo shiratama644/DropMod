@@ -1,12 +1,27 @@
 @import "tailwindcss";
+/* .archive (旧 Vite 版ソース) / .agent (エージェント記憶) は描画されない
+   ファイル群のため Tailwind v4 の自動コンテンツ走査から除外する
+   (旧実装のクラス名が dead CSS として流出するのを防ぐ。2026-08-27) */
+@source not "../.archive";
+@source not "../.agent";
 
 @theme {
   --font-mono: "JetBrains Mono", monospace;
 }
 
+/* Tailwind v4: dark: variant を media query ではなく .dark class ベースに変更。
+   端末のシステム設定 (prefers-color-scheme) ではなく、サイト内のテーマ切替に追従させる。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+    /* color-scheme: light — このページはライト配色を自前管理していることを
+       ブラウザに宣言する。宣言がないと Chrome (Android) の「Web コンテンツの
+       自動ダークモード」がライトページを強制反転し、ライトに切り替えても
+       見た目がダークのままになる (端末ダークモード時)。
+       html.dark 側は color-scheme: dark で上書きされる。 */
+    color-scheme: light;
     --bg-base: #f1f5f9;
-    --bg-panel: rgba(255, 255, 255, 0.92);
+    --bg-panel: rgba(255, 255, 255, 0.96);
     --bg-card: rgba(255, 255, 255, 0.85);
     --bg-card-hover: rgba(255, 255, 255, 0.98);
     --bg-input: #e2e8f0;
@@ -30,8 +45,9 @@
 }
 
 html.dark {
+    color-scheme: dark;
     --bg-base: #090d14;
-    --bg-panel: rgba(15, 23, 42, 0.85);
+    --bg-panel: rgba(15, 23, 42, 0.92);
     --bg-card: rgba(30, 41, 59, 0.65);
     --bg-card-hover: rgba(30, 41, 59, 0.90);
     --bg-input: #0f172a;
@@ -39,7 +55,7 @@ html.dark {
     --border-card: rgba(255, 255, 255, 0.08);
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
+    --text-muted: #a9b7c9;
     --sub-box-bg: rgba(15, 23, 42, 0.85);
     --modal-overlay: rgba(0, 0, 0, 0.80);
     --badge-bg: #1e293b;
@@ -105,8 +121,12 @@ code, input, textarea {
 
 .glass-panel {
     background: var(--bg-panel);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    /* backdrop-filter は意図的に使わない (2026-08-27):
+       GPU のない環境 (PRoot / software rendering・低スペック端末) では
+       背面の再合成が発生するたび (ボタン押下・ページ遷移・スクロール) に
+       blur レイヤーの再ラスタライズで「白く一瞬光る」フラッシュが起きる。
+       パネル背景は 0.9 程度の不透明度があり、背面がフラットなページ背景
+       であるケースが大半のため、視覚差はほぼ無い。*/
     border: 1px solid var(--border-main);
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -201,9 +221,9 @@ code, input, textarea {
 .custom-dropdown-menu-portal {
     position: fixed;
     z-index: 99999;
+    /* bg が 0.98 不透明のため backdrop-filter の blur はほぼ視覚効果がなく、
+       software rendering での白フラッシュの原因にしかならないため削除。 */
     background: var(--dropdown-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--dropdown-border);
     border-radius: 0.75rem;
     box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0,0,0,0.1);
@@ -274,23 +294,10 @@ code, input, textarea {
     from { opacity: 0; transform: translateY(10px) scale(0.98); }
     to   { opacity: 1; transform: none; }
 }
-/* 検索「自動」: viewport 幅でカラム数を決め、dense で空きを埋める。
-   個別カードの sm:col-span-2 は画像アスペクト比で付与する。 */
-.search-grid-auto {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
-    grid-auto-flow: dense;
-    align-items: stretch;
-    gap: 0.75rem;
-}
-@media (min-width: 640px) {
-    .search-grid-auto {
-        gap: 1rem;
-    }
-}
-
 .mod-card-item {
-    animation: mod-card-appear 0.28s ease-out both;
+    /* fill-mode は backwards のみ: both だと最終キーフレーム (transform: none) が
+       永続適用され、下記 :hover の translateY が効かなくなるため */
+    animation: mod-card-appear 0.28s ease-out backwards;
 }
 .mod-card-item:nth-child(2)  { animation-delay: 0.03s; }
 .mod-card-item:nth-child(3)  { animation-delay: 0.06s; }
@@ -303,6 +310,137 @@ code, input, textarea {
 .mod-card-item:nth-child(n+10) { animation-delay: 0.27s; }
 @media (prefers-reduced-motion: reduce) {
     .mod-card-item { animation: none; }
+}
+
+/* カードのホバー浮遊 (2026-08-27): Modrinth 風のリフト演出。
+   :hover は hover 対応デバイス (マウス等) のみで発火 = タッチ端末では無効。
+   .mod-card-item は <Link>。上記アニメを backwards fill にしたことで
+   アニメ終了後に transform が解放され、hover 移動が効く。 */
+@media (hover: hover) {
+    .mod-card-item {
+        transition:
+            transform 180ms ease-out,
+            box-shadow 180ms ease-out,
+            border-color 180ms ease-out;
+    }
+    .mod-card-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -14px rgba(0, 0, 0, 0.45);
+    }
+    .mod-card-item:active {
+        transform: translateY(-1px);
+    }
+}
+/* 追加⇄削除トグルボタンのアイコン入れ替え演出 (2026-08-27)。
+   ボタンは再マウントせず <i> だけ key={isAdded} で再マウントするため、
+   focus はボタンに残ったまま (a11y 維持) アイコンだけ弾む。 */
+@keyframes icon-swap-in {
+    from { transform: scale(0.4) rotate(-90deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.icon-swap {
+    display: inline-block;
+    animation: icon-swap-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .icon-swap { animation: none; }
+}
+
+/* モーダル表示中は BottomNav を画面外へスライドして隠す (2026-08-27)。
+   モーダル側 (NewProfile / EditProfile / DepCheck / Zip / Confirm /
+   ModDetailModalShell / ScreenshotGallery) が useModalRegistration で
+   lib/store/uiState の openModalCount に登録し、BottomNav が
+   .nav-modal-hidden クラスを付与する。
+
+   - transform で 110% (自高の 1.1 倍 = safe-area 分も含めて) 下へ移動
+   - visibility は transform 完了後 (280ms) に hidden へ遷移
+     → アニメ中は見えたままスライドし、完了で完全に非表示 + タブ順序から除去
+   - クラス除去 (モーダル close) 時は visibility が即時 visible に戻り
+     スライドアップして復帰
+   - pointer-events: none は transition 対象外のため、クラス付与の瞬間から
+     タップ不能 (アニメ中にナビを誤タップしてページ遷移するのを防ぐ)
+   - body.mod-detail-modal 方式 (display: none) から置き換え。
+     E2E (mod-detail-modal.spec.ts) の toBeHidden は visibility:hidden で成立。 */
+#bottom-nav {
+    transition:
+        transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0s;
+}
+#bottom-nav.nav-modal-hidden {
+    transform: translateY(110%);
+    visibility: hidden;
+    pointer-events: none;
+    /* visibility の遷移だけ 280ms 遅らせる = スライド完了後に完全非表示。
+       base 側の transition 宣言は (1,0,0) < (1,1,0) で上書きされないため、
+       transition-delay のみ上書きする方式 (Biome noDescendingSpecificity 対策) */
+    transition-delay: 0s, 280ms;
+}
+@media (prefers-reduced-motion: reduce) {
+    #bottom-nav.nav-modal-hidden {
+        /* 即時 hidden (スライド演出なし) */
+        transition-delay: 0s, 0s;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * モーダル出現演出 (2026-08-27)
+ *
+ *   - .modal-overlay: 背景オーバーレイのフェードイン (0.2s)
+ *   - .modal-card:    カードのポップイン (translateY + scale、0.26s)
+ *
+ * 全モーダル (NewProfile / EditProfile / DependencyCheck / ZipProgress /
+ * ConfirmDialog / ModDetailModalShell / ScreenshotGallery) が同じクラスを
+ * 使うため、ここを定義するだけで一括適用される。
+ * (BottomSheet は独自のスライド演出を持つため対象外)
+ * ----------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+ * モーダルの高さ制限 — 全ブラウザ対応 (2026-08-27、Samsung Browser 修正)
+ *
+ * 問題: 90vh 等の viewport 単位 (max-h の任意値) はアドレスバーを含む
+ * 基準。アドレスバーが常時表示される Samsung Internet 等では 90vh が可視領域
+ * を超え、中央寄せモーダルの上下端 (特にフッターのボタン) が画面外に切れる。
+ *
+ * 対策: モーダルカードの親は fixed inset-0 の overlay (= 可視領域に正確に一致)
+ * なので、その割合 (% ) で max-height を制限する。vh と異なりどのブラウザ
+ * (旧 Samsung Internet 含む) でも画面内に必ず収まる。dvh 非対応環境でも
+ * 追加フォールバックが不要になる方式。
+ * ----------------------------------------------------------------- */
+.modal-max-h {
+    max-height: 92%;
+}
+
+@keyframes modal-pop {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-card {
+    animation: modal-pop 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes modal-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.modal-overlay {
+    animation: modal-overlay-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .modal-card,
+    .modal-overlay {
+        animation: none;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * .btn-hover-effect: アプリ全体のボタン押し込み演出 (2026-08-27)
+ *
+ * 旧 Vite 版由来のクラス名で、これまで CSS 定義が無かった (機能しない空クラス)。
+ * 多数の主要ボタン (Header / DesktopSidebar / HomeInteractive / ModCard /
+ * 詳細 CTA 等) が既に付与しているため、ここで active 時の縮小を定義すると
+ * アプリ全体に一律のタップフィードバックが有効になる。
+ * transition は各ボタンの Tailwind transition クラスに任せる。
+ * ----------------------------------------------------------------- */
+.btn-hover-effect:active {
+    transform: scale(0.97);
 }
 
 /* ---------------------------------------------------------------
@@ -327,11 +465,44 @@ body.mod-fullpage {
     padding-bottom: 0;
 }
 
-/* インターセプト詳細モーダル中はモバイル BottomNav を隠す。
-   overlay は z-[70] で BottomNav (z-[60]) より上だが、ナビ自体も消して
-   タップ貫通・読み上げ対象に残らないようにする。 */
-body.mod-detail-modal #bottom-nav {
-    display: none;
+/* -----------------------------------------------------------------
+ * 404 ページ (app/not-found.tsx) — 2026-08-27 リニューアル
+ *
+ *   - nf-rise:   カード要素のフェードイン上昇 (0.08s 刻みの 3 段 stagger)
+ *   - nf-float:  「missing texture」ブロックのゆったり浮遊 (infinite alternate)
+ *
+ * missing texture ブロックは conic-gradient の 2×2 チェッカーで描く
+ * (Minecraft の「存在しないテクスチャ」表現。div 1 つで完結)。
+ * ----------------------------------------------------------------- */
+@keyframes nf-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.not-found-rise   { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.not-found-rise-2 { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) 0.08s both; }
+.not-found-rise-3 { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) 0.16s both; }
+
+@keyframes nf-float {
+    from { transform: translateY(-4px) rotate(-2deg); }
+    to   { transform: translateY(5px) rotate(2deg); }
+}
+.not-found-block {
+    background: conic-gradient(
+        #f800f8 25%,
+        #000 0 50%,
+        #f800f8 0 75%,
+        #000 0
+    );
+    background-size: 50% 50%;
+    animation: nf-float 2.8s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+    .not-found-rise,
+    .not-found-rise-2,
+    .not-found-rise-3,
+    .not-found-block {
+        animation: none;
+    }
 }
 
 /* -----------------------------------------------------------------

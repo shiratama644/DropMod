@@ -5,7 +5,7 @@
  * unoptimized=false でも jsdom 上で <img> にレンダーされる。
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ModCard } from '@/components/ModCard';
@@ -29,8 +29,7 @@ function makeProfile(mods: Profile['mods'] = []): Profile {
   return {
     id: 'p1',
     name: 'Test',
-    mcVersion: '1.20.1',
-    loader: 'Fabric',
+    environment: { mcVersion: '1.20.1', loader: 'Fabric' },
     description: '',
     mods
   };
@@ -43,7 +42,42 @@ describe('ModCard', () => {
     );
     expect(screen.getByText('Sodium')).toBeInTheDocument();
     expect(screen.getByText('JellySquid')).toBeInTheDocument();
-    expect(screen.getByText('軽量化')).toBeInTheDocument();
+    expect(screen.getByText('Performance')).toBeInTheDocument();
+  });
+
+  describe('モバイル 2 カラムの作者名省略 (2026-08-27)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const mobileMatchMedia = () =>
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }));
+
+    it('モバイル 2 カラムは作者名を省略し DL 数のみ表示', () => {
+      vi.stubGlobal('matchMedia', mobileMatchMedia());
+      render(
+        <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout="2" />
+      );
+      expect(screen.queryByText('JellySquid')).toBeNull();
+      expect(screen.getByText('1.5M')).toBeInTheDocument();
+    });
+
+    it('PC (非モバイル) の 2 カラムは作者名も表示', () => {
+      render(
+        <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout="2" />
+      );
+      expect(screen.getByText('JellySquid')).toBeInTheDocument();
+      expect(screen.getByText('1.5M')).toBeInTheDocument();
+    });
   });
 
   it('追加ボタン左はローダーではなくカテゴリーを出す', () => {
@@ -58,7 +92,7 @@ describe('ModCard', () => {
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByText('ユーティリティ')).toBeInTheDocument();
+    expect(screen.getByText('Utility')).toBeInTheDocument();
     expect(screen.queryByText('fabric')).not.toBeInTheDocument();
   });
 
@@ -109,7 +143,7 @@ describe('ModCard', () => {
     expect(img.tagName).toBe('IMG');
   });
 
-  it('未追加なら「追加」ボタン、追加済なら「追加済み」ボタン', () => {
+  it('未追加なら「追加」(緑)、追加済なら「削除」(赤) のトグルボタン', () => {
     // 未追加
     const { rerender } = render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
@@ -121,12 +155,16 @@ describe('ModCard', () => {
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'proj-1', title: 'Sodium', description: '' }
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByRole('button', { name: /追加済み/ })).toBeInTheDocument();
+    const removeButton = screen.getByRole('button', { name: /削除$/ });
+    expect(removeButton).toBeInTheDocument();
+    // 色も追加 (緑塗り) → 削除 (赤枠) に切り替わる
+    expect(removeButton.className).toContain('bg-red-500/20');
+    expect(removeButton.className).not.toContain('bg-emerald-600');
   });
 
   it('追加ボタンクリックで onToggleMod(project_id) が呼ばれる', async () => {
@@ -139,31 +177,31 @@ describe('ModCard', () => {
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
-  it('追加済みボタンクリックで削除トグルが発火する', async () => {
+  it('削除ボタンクリックで削除トグルが発火する', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     render(
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'proj-1', title: 'Sodium', description: '' }
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={onToggle}
       />
     );
-    await user.click(screen.getByRole('button', { name: /追加済み/ }));
+    await user.click(screen.getByRole('button', { name: /削除$/ }));
     expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
   });
 
-  it('Link href は /mods/{slug} を優先 (Phase 9-F: 旧 /mod/{slug})', () => {
+  it('Link href はモーダル URL /discover/mods/{slug} (ルーティング再設計)', () => {
     render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mods/sodium');
+    expect(link.getAttribute('href')).toBe('/discover/mods/sodium');
   });
 
-  it('slug 無しなら /mods/{project_id} で fallback (Phase 9-F)', () => {
+  it('slug 無しなら /discover/mods/{project_id} で fallback', () => {
     render(
       <ModCard
         hit={{ ...baseHit, slug: '' as unknown as string }}
@@ -172,23 +210,46 @@ describe('ModCard', () => {
       />
     );
     const link = screen.getByRole('link');
-    expect(link.getAttribute('href')).toBe('/mods/proj-1');
+    expect(link.getAttribute('href')).toBe('/discover/mods/proj-1');
   });
 
-  it('自動レイアウトで横長バナーは sm:col-span-2 を付ける', () => {
+  it('最大レイアウトはヘッダー画像スロットを大きく表示する (h-44/sm:h-60)', () => {
     const { container } = render(
       <ModCard
         hit={{
           ...baseHit,
-          description: 'x'.repeat(200),
           featured_gallery: 'https://example.com/banner.png'
         }}
         profile={makeProfile()}
         onToggleMod={vi.fn()}
-        layout="auto"
+        layout="max"
       />
     );
-    expect(container.querySelector('a')?.className).toContain('sm:col-span-2');
+    const banner = container.querySelector('a')?.firstElementChild;
+    expect(banner?.className).toContain('h-44');
+    expect(banner?.className).toContain('sm:h-60');
+  });
+
+  it('追加済みと未追加でボタン寸法が同一 (h-9 + min-w-[7rem])', () => {
+    const { rerender } = render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
+    );
+    const addButton = screen.getByRole('button', { name: /追加/ });
+    expect(addButton.className).toContain('h-9');
+    expect(addButton.className).toContain('min-w-[7rem]');
+
+    rerender(
+      <ModCard
+        hit={baseHit}
+        profile={makeProfile([
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
+        ])}
+        onToggleMod={vi.fn()}
+      />
+    );
+    const addedButton = screen.getByRole('button', { name: /削除$/ });
+    expect(addedButton.className).toContain('h-9');
+    expect(addedButton.className).toContain('min-w-[7rem]');
   });
 
   it('slug 一致でも追加済み判定される', () => {
@@ -196,11 +257,113 @@ describe('ModCard', () => {
       <ModCard
         hit={baseHit}
         profile={makeProfile([
-          { id: 'other-id', slug: 'sodium', title: 'Sodium', description: '' }
+          { projectId: 'other-id', slug: 'sodium', name: 'Sodium', type: 'mod', description: '' }
         ])}
         onToggleMod={vi.fn()}
       />
     );
-    expect(screen.getByRole('button', { name: /追加済み/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /削除$/ })).toBeInTheDocument();
+  });
+});
+
+describe('ModCard: モバイル 3 カラム compact カード (Phase 11 UI)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function renderMobile(layout: '3' | '2' = '3') {
+    // max-width: 767px に一致する matchMedia を注入
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    return render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout={layout} />
+    );
+  }
+
+  it('3 カラム + モバイルは compact カード (aspect-square アイコン + 小タイトル)', () => {
+    const { container } = renderMobile('3');
+    const card = container.querySelector('a');
+    // compact カードのクラス (rounded-xl p-1.5)
+    expect(card?.className).toContain('rounded-xl');
+    expect(card?.className).toContain('p-1.5');
+    expect(card?.className).not.toContain('justify-between');
+    // アイコン領域は aspect-square
+    expect(card?.querySelector('div')?.className).toContain('aspect-square');
+    // 標準カードのフッター (カテゴリバッジ) は出さない
+    expect(screen.queryByText('Optimization')).toBeNull();
+  });
+
+  it('2 カラム + モバイルは標準カードのまま', () => {
+    const { container } = renderMobile('2');
+    const card = container.querySelector('a');
+    expect(card?.className).not.toContain('aspect-square');
+    expect(card?.className).toContain('justify-between');
+  });
+
+  it('compact カードの 追加 ボタンは全幅・高さ h-7 でトグルが発火する', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={onToggle} layout="3" />
+    );
+    const addButton = screen.getByRole('button', { name: 'プロファイルに追加' });
+    expect(addButton.className).toContain('w-full');
+    expect(addButton.className).toContain('h-7');
+    await user.click(addButton);
+    expect(onToggle).toHaveBeenCalledWith('proj-1', expect.anything());
+  });
+
+  it('compact カードの追加済みは 削除 ボタン (赤・全幅 h-7) に切り替わる', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    render(
+      <ModCard
+        hit={baseHit}
+        profile={makeProfile([
+          { projectId: 'proj-1', name: 'Sodium', type: 'mod', description: '' }
+        ])}
+        onToggleMod={vi.fn()}
+        layout="3"
+      />
+    );
+    const removeButton = screen.getByRole('button', { name: 'プロファイルから削除' });
+    expect(removeButton.className).toContain('w-full');
+    expect(removeButton.className).toContain('h-7');
+    expect(removeButton.className).toContain('bg-red-500/20');
   });
 });

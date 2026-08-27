@@ -6,7 +6,8 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import type { ModrinthGalleryImage } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { useModalRegistration } from '@/hooks/useModalUi';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 
 interface ScreenshotGalleryModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
   const [index, setIndex] = useState(0);
 
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,7 +89,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景 (Escape で閉じる)
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 backdrop-blur-md"
+      className="modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-6 "
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -97,7 +100,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="modal-card glass-panel w-full max-w-6xl h-[min(92vh,56rem)] rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden"
+        className="modal-card glass-panel w-full max-w-6xl h-[min(92%,56rem)] rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-500/20 px-4 sm:px-6 py-3 shrink-0">
           <div className="min-w-0">
@@ -123,12 +126,12 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
         <div className="relative flex-1 min-h-0 bg-slate-950/40">
           {current ? (
             <Image
-              src={current.url}
+              src={current.raw_url || current.url}
               alt={current.title || 'ギャラリー画像'}
               fill
               sizes="100vw"
               className="object-contain p-2 sm:p-4"
-              unoptimized={isAnimatedImageUrl(current.url)}
+              unoptimized={shouldUnoptimizeImage(current.raw_url || current.url)}
               priority
             />
           ) : (
@@ -189,7 +192,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
                       fill
                       sizes="80px"
                       className="object-cover"
-                      unoptimized={isAnimatedImageUrl(img.url)}
+                      unoptimized={shouldUnoptimizeImage(img.url)}
                     />
                   </button>
                 );

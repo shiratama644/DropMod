@@ -97,7 +97,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover'
+  viewportFit: 'cover',
+  // ブラウザ UI バーの色。サイト内テーマ (html.dark class) に連動させるため
+  // CSS 側の color-scheme と組み合わせて機能する。
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f1f5f9' },
+    { media: '(prefers-color-scheme: dark)', color: '#090d14' }
+  ]
 };
 
 /**
@@ -151,8 +157,16 @@ try {
   `.trim();
 
   return (
-    <html lang="ja" className="dark" suppressHydrationWarning>
+    // 2026-08-27: className="dark" を削除。React hydration が vdom 値 (SSR 時点の
+    // "dark") で上書きし、init script が cookie に基づき外した dark クラスを
+    // 復活させていた (ライトテーマ ユーザーの FOUC / E2E 失敗)。
+    // html のクラスは head 内の init script (描画前・同期) が唯一設定する。
+    <html lang="ja" suppressHydrationWarning>
       <head>
+        {/* color-scheme: ページが両モード対応であることを CSS 読み込み前に
+            ブラウザに伝える (Flash of Wrong Theme + 自動ダークモード対策)。
+            実際の切替は globals.css の :root/html.dark color-scheme が担当。 */}
+        <meta name="color-scheme" content="light dark" />
         {/* Sub-Phase 8-E (E-6): Modrinth CDN と API への preconnect で
             初回リクエスト時の DNS + TLS ハンドシェイクを前倒し。
             Mod アイコン画像 (cdn.modrinth.com/data/...) の LCP 短縮に寄与。 */}
@@ -165,7 +179,7 @@ try {
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme FOUC 対策のハードコード script */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen flex flex-col pb-28 md:pb-24 antialiased selection:bg-emerald-500 selection:text-white">
+      <body className="min-h-screen flex flex-col pb-28 md:pb-0 antialiased selection:bg-emerald-500 selection:text-white">
         {/* C7-2 修正 追随: QueryClientProvider を Root Layout に移動。
              AppShell の中で useQueryClient() を使うため、AppShell 全体を
              PersistQueryClientProvider の中に入れる必要がある。 */}

@@ -8,6 +8,7 @@
 // - sitemap.xml の場所を明示
 // -----------------------------------------------------------------------------
 
+import { logger } from '@/lib/server/logger';
 import type { MetadataRoute } from 'next';
 
 function resolveBaseUrl(): string {
@@ -17,7 +18,7 @@ function resolveBaseUrl(): string {
     try {
       return new URL(explicit).origin;
     } catch {
-      console.warn('[DropMod] NEXT_PUBLIC_SITE_URL が不正な URL:', explicit);
+      logger.warn('NEXT_PUBLIC_SITE_URL が不正な URL:', explicit);
     }
   }
   const vercelUrl = process.env.VERCEL_URL;

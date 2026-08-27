@@ -13,15 +13,15 @@ const TITLES: Record<DiscoverSegment, { title: string; description: string }> = 
     title: 'Mods を探す - DropMod',
     description: 'Modrinth から Mod を検索・追加できます。'
   },
-  modpack: {
+  modpacks: {
     title: 'Modpacks を探す - DropMod',
     description: 'Modrinth から Modpack を検索できます。'
   },
-  resourcepack: {
+  resourcepacks: {
     title: 'Resource Packs を探す - DropMod',
     description: 'Modrinth から Resource Pack を検索できます。'
   },
-  shader: {
+  shaders: {
     title: 'Shaders を探す - DropMod',
     description: 'Modrinth から Shader を検索できます。'
   }
@@ -42,9 +42,9 @@ export async function generateMetadata({
 export function generateStaticParams() {
   return [
     { type: 'mods' },
-    { type: 'modpack' },
-    { type: 'resourcepack' },
-    { type: 'shader' }
+    { type: 'modpacks' },
+    { type: 'resourcepacks' },
+    { type: 'shaders' }
   ];
 }
 

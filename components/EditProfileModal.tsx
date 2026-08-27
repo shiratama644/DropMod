@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import type { Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
 import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
 
@@ -24,9 +25,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave,
 }) => {
   const [name, setName] = useState(profile?.name || '');
-  const [version, setVersion] = useState(profile?.mcVersion || '');
-  const [loader, setLoader] = useState(profile?.loader || 'Fabric');
-  const [loaderVersion, setLoaderVersion] = useState(profile?.loaderVersion || '');
+  const [version, setVersion] = useState(profile?.environment.mcVersion || '');
+  const [loader, setLoader] = useState<string>(profile?.environment.loader || 'Fabric');
+  const [loaderVersion, setLoaderVersion] = useState(
+    profile?.environment.loaderVersion || ''
+  );
   const [desc, setDesc] = useState(profile?.description || '');
 
   const nameInputId = useId();
@@ -60,9 +63,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
     if (profile) {
       setName(profile.name || '');
-      setVersion(profile.mcVersion || '');
-      setLoader(profile.loader || 'Fabric');
-      setLoaderVersion(profile.loaderVersion || '');
+      setVersion(profile.environment.mcVersion || '');
+      setLoader(profile.environment.loader || 'Fabric');
+      setLoaderVersion(profile.environment.loaderVersion || '');
       setDesc(profile.description || '');
     }
   }, [isOpen]);
@@ -71,12 +74,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     loader,
     version,
     isOpen,
-    profile?.loaderVersion
+    profile?.environment.loaderVersion
   );
 
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -115,7 +120,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
     // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'var(--modal-overlay)' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -126,7 +131,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={modalTitleId}
-        className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto"
+        className="modal-card glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border shadow-2xl relative space-y-4 modal-max-h overflow-y-auto"
       >
         <div className="flex items-center justify-between border-b border-slate-500/20 pb-3">
           <h3 id={modalTitleId} className="font-bold text-base sm:text-lg flex items-center gap-2">

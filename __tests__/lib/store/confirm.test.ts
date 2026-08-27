@@ -90,4 +90,41 @@ describe('useConfirmStore', () => {
     // 後始末
     act(() => useConfirmStore.getState().handleCancel());
   });
+
+  it('cleanup は自 owner の queued 項目も false で破棄し、他 owner の項目は開く (Phase 10.5-C)', async () => {
+    const ownerA = Symbol('hook-a');
+    const ownerB = Symbol('hook-b');
+    let first: Promise<boolean>; // ownerA: すぐ開く
+    let queuedA: Promise<boolean>; // ownerA: queue に積まれる
+    let queuedB: Promise<boolean>; // ownerB: queue に積まれる
+    act(() => {
+      first = useConfirmStore.getState().confirm({ title: '1', message: 'm' }, ownerA);
+    });
+    act(() => {
+      queuedA = useConfirmStore.getState().confirm({ title: '2', message: 'm' }, ownerA);
+    });
+    act(() => {
+      queuedB = useConfirmStore.getState().confirm({ title: '3', message: 'm' }, ownerB);
+    });
+
+    // ownerA の cleanup: pending(1) と queue 内の 2 を false 解決、3 は次に開く
+    act(() => useConfirmStore.getState().cleanup(ownerA));
+
+    await expect(first!).resolves.toBe(false);
+    await expect(queuedA!).resolves.toBe(false);
+    expect(useConfirmStore.getState().state.isOpen).toBe(true);
+    expect(useConfirmStore.getState().state.title).toBe('3');
+
+    // 他 owner の queued 項目は通常どおり操作できる
+    act(() => useConfirmStore.getState().handleConfirm());
+    await expect(queuedB!).resolves.toBe(true);
+    expect(useConfirmStore.getState().state.isOpen).toBe(false);
+  });
+
+  it('cleanup は pending/queue が空のときの owner 付き呼び出しでも安全 (Phase 10.5-C)', () => {
+    expect(() => {
+      act(() => useConfirmStore.getState().cleanup(Symbol('nobody')));
+    }).not.toThrow();
+    expect(useConfirmStore.getState().state.isOpen).toBe(false);
+  });
 });

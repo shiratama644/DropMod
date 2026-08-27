@@ -24,6 +24,7 @@
 // Component として SSR HTML の完全性を維持 (SEO + LCP)。
 // ============================================================================
 
+import { logger } from '@/lib/server/logger';
 import Link from 'next/link';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { RevealSection } from '@/components/landing/RevealSection';
@@ -59,7 +60,7 @@ async function fetchLandingHits(sortBy: 'popular' | 'newest', limit: number): Pr
     });
     return result.hits;
   } catch (e) {
-    console.warn(`[DropMod] landing ${sortBy} fetch failed, using empty:`, e);
+    logger.warn(`landing ${sortBy} fetch failed, using empty:`, e);
     return [];
   }
 }
@@ -418,9 +419,9 @@ function LandingFooter() {
           {/* Mod カテゴリ */}
           <FooterColumn title="カテゴリ">
             <FooterLink href="/discover/mods">Mods</FooterLink>
-            <FooterLink href="/discover/modpack">Modpacks</FooterLink>
-            <FooterLink href="/discover/resourcepack">Resource Packs</FooterLink>
-            <FooterLink href="/discover/shader">Shaders</FooterLink>
+            <FooterLink href="/discover/modpacks">Modpacks</FooterLink>
+            <FooterLink href="/discover/resourcepacks">Resource Packs</FooterLink>
+            <FooterLink href="/discover/shaders">Shaders</FooterLink>
           </FooterColumn>
 
           {/* 外部リンク */}

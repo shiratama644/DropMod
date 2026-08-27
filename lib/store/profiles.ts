@@ -17,8 +17,24 @@
 'use client';
 
 import { create } from 'zustand';
+/** クライアント側の初期テーマを dropmod_theme cookie から読む (SSR は dark 既定)。 */
+export function readInitialTheme(): ThemeMode {
+  if (typeof document === 'undefined') return 'dark';
+  try {
+    const parts = document.cookie ? document.cookie.split('; ') : [];
+    for (const p of parts) {
+      if (p.startsWith('dropmod_theme=')) {
+        const v = decodeURIComponent(p.slice('dropmod_theme='.length));
+        if (v === 'light' || v === 'dark') return v;
+      }
+    }
+  } catch {
+    /* 破損 cookie は既定にフォールバック */
+  }
+  return 'dark';
+}
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
-import type { Profile, ModItem, ThemeMode } from '@/types';
+import type { Profile, ProjectItem, ThemeMode } from '@/types';
 
 // Sub-Phase 8-E (E-8): Zustand DevTools を dev モードのみ有効化。
 // production では devtools ラップを外して zero-cost にする。
@@ -49,24 +65,24 @@ export interface ProfilesState {
    * 特定プロファイル内で mod を追加。既存 (同 id / slug) があれば何もせず false を返す。
    * @returns 追加できたら true, 既存で追加しなかったら false, profile が見つからなければ null
    */
-  addModToProfile: (profileId: string, mod: ModItem) => boolean | null;
+  addModToProfile: (profileId: string, mod: ProjectItem) => boolean | null;
 
   /**
-   * 特定プロファイルから mod を削除。削除された ModItem を返す (無ければ null)。
+   * 特定プロファイルから mod を削除。削除された ProjectItem を返す (無ければ null)。
    */
   removeModFromProfile: (
     profileId: string,
     modIdOrSlug: string
-  ) => ModItem | null;
+  ) => ProjectItem | null;
 
   /**
    * 特定プロファイル内の mod のバージョン情報を更新。
-   * (selectedVersionId / selectedVersionNumber / versionType / fileUrl / filename を上書き)
+   * (versionId / versionNumber / versionType / fileUrl / filename を上書き)
    */
   updateModVersionInProfile: (
     profileId: string,
     modId: string,
-    updates: Partial<Pick<ModItem, 'selectedVersionId' | 'selectedVersionNumber' | 'versionType' | 'fileUrl' | 'filename'>>
+    updates: Partial<Pick<ProjectItem, 'versionId' | 'versionNumber' | 'versionType' | 'fileUrl' | 'filename'>>
   ) => boolean;
 
   /**
@@ -82,8 +98,10 @@ export interface ProfilesState {
 const DEFAULT_PROFILE: Profile = {
   id: 'default-profile',
   name: '1.20.1 Fabric 軽量化・ユーティリティ',
-  mcVersion: '1.20.1',
-  loader: 'Fabric',
+  environment: {
+    mcVersion: '1.20.1',
+    loader: 'Fabric'
+  },
   description: 'Modrinthから直接Modを取得・ダウンロードする標準構成',
   mods: []
 };
@@ -104,7 +122,11 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     profiles: [DEFAULT_PROFILE],
     currentProfileId: DEFAULT_PROFILE.id,
     hasHydrated: false,
-    theme: 'dark',
+    // 2026-08-27: 初期テーマはクライアントでは dropmod_theme cookie から。
+    // (トグル直後のリロードで Dexie 保存が debounce に間に合わず旧テーマに
+    // 戻る競合への対策。cookie はトグル時に即時書き込まれるため最新。)
+    // SSR / cookie 無し / 破損値の場合は従来どおり dark 既定。
+    theme: readInitialTheme(),
 
     // ---- Setters ----
     setProfiles: (updater) =>
@@ -136,7 +158,7 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
           return s;
         }
         const duplicate = target.mods.some(
-          (m) => m.id === mod.id || (mod.slug && m.slug === mod.slug)
+          (m) => m.projectId === mod.projectId || (mod.slug && m.slug === mod.slug)
         );
         if (duplicate) {
           result = false;
@@ -151,14 +173,14 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     },
 
     removeModFromProfile: (profileId, modIdOrSlug) => {
-      let removed: ModItem | null = null;
+      let removed: ProjectItem | null = null;
       set((s) => {
         const idx = s.profiles.findIndex((p) => p.id === profileId);
         if (idx < 0) return s;
         const target = s.profiles[idx];
         if (!target) return s;
         const modIdx = target.mods.findIndex(
-          (m) => m.id === modIdOrSlug || m.slug === modIdOrSlug
+          (m) => m.projectId === modIdOrSlug || m.slug === modIdOrSlug
         );
         if (modIdx < 0) return s;
         removed = target.mods[modIdx] ?? null;
@@ -179,7 +201,7 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
         if (idx < 0) return s;
         const target = s.profiles[idx];
         if (!target) return s;
-        const modIdx = target.mods.findIndex((m) => m.id === modId);
+        const modIdx = target.mods.findIndex((m) => m.projectId === modId);
         if (modIdx < 0) return s;
         const existingMod = target.mods[modIdx];
         if (!existingMod) return s;

@@ -313,6 +313,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       el.style.transition = 'transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1)';
       el.style.transform = 'translateY(0px)';
       // アニメーション終了後に inline style を消して Anime.js に返却
+      // 2026-08-27 修正: cleanup が transitionend 発火時しか removeEventListener
+      // しないため、アニメーションが中断 (unmount 等) するとリスナーが残る。
+      // → setTimeout で 200ms 後に強制 cleanup (transition 150ms + 余裕)
       const cleanup = () => {
         if (!sheetRef.current) return;
         sheetRef.current.style.transition = '';
@@ -320,6 +323,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         sheetRef.current.removeEventListener('transitionend', cleanup);
       };
       el.addEventListener('transitionend', cleanup);
+      setTimeout(cleanup, 200);
     } else {
       // close 遷移: inline transform を残したまま Anime.js に上書きさせる。
       // Anime.js は translateY: ['0%', '100%'] で発火するので現在位置から
@@ -434,7 +438,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     // biome-ignore lint/a11y/useKeyWithClickEvents: 背景クリックのみ、Escape は自前
     <div
       ref={backdropRef}
-      className={`fixed inset-0 ${zIndexClass} flex flex-col justify-end backdrop-blur-[2px] pointer-events-auto`}
+      className={`fixed inset-0 ${zIndexClass} flex flex-col justify-end pointer-events-auto`}
       style={{ backgroundColor: 'var(--modal-overlay)', opacity: 0 }}
       onClick={handleBackdropClick}
     >

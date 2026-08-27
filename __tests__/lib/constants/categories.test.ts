@@ -36,11 +36,13 @@ describe('primaryCategoryId / categoryLabel', () => {
     expect(primaryCategoryId(['fabric'], ['neoforge', 'mod'])).toBeUndefined();
   });
 
-  it('既知 id は日本語ラベル、未知は id のまま、空は未分類', () => {
-    expect(categoryLabel('utility')).toBe('ユーティリティ');
-    expect(categoryLabel('performance')).toBe('軽量化');
+  it('既知 id は英語ラベル、未知は id のまま、空は Uncategorized', () => {
+    // 2026-08-27: カテゴリ表示は Modrinth に合わせて英語表記に統一
+    expect(categoryLabel('utility')).toBe('Utility');
+    expect(categoryLabel('performance')).toBe('Performance');
+    expect(categoryLabel('library')).toBe('Library');
     expect(categoryLabel('pbr')).toBe('PBR');
     expect(categoryLabel('custom-tag')).toBe('custom-tag');
-    expect(categoryLabel(undefined)).toBe('未分類');
+    expect(categoryLabel(undefined)).toBe('Uncategorized');
   });
 });

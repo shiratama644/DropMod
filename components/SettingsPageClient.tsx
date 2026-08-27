@@ -34,6 +34,10 @@ export const SettingsPageClient: React.FC = () => {
   const showToast = useToastStore((s) => s.showToast);
   const confirm = useConfirmStore((s) => s.confirm);
 
+  // ---- トースト通知 ON/OFF (2026-08-27) ----
+  const toastEnabled = useToastStore((s) => s.enabled);
+  const setToastEnabled = useToastStore((s) => s.setToastEnabled);
+
   // ---- appActionsStore 経由 (AppShell 内 hook 由来の関数群) ----
   const handleDownloadZip = useAppAction('handleDownloadZip');
   const handleImportZipInput = useAppAction('handleImportZipInput');
@@ -183,6 +187,42 @@ export const SettingsPageClient: React.FC = () => {
           </div>
         </div>
 
+        <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3">
+          <h3 className="text-xs sm:text-sm font-bold">通知設定 (Toast Notifications)</h3>
+          <p className="text-xs theme-text-muted">
+            モバイルで通知が邪魔な場合はオフにできます (プロファイル作成・Mod 追加などの
+            操作結果通知が表示されなくなります)。
+          </p>
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            <button
+              type="button"
+              onClick={() => setToastEnabled(true)}
+              aria-pressed={toastEnabled}
+              className={`btn-hover-effect p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                toastEnabled
+                  ? 'border-2 border-emerald-500 bg-emerald-500/10 theme-text-brand shadow'
+                  : 'border-slate-700 bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <i className="fa-solid fa-bell" aria-hidden />
+              <span>表示する</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setToastEnabled(false)}
+              aria-pressed={!toastEnabled}
+              className={`btn-hover-effect p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                !toastEnabled
+                  ? 'border-2 border-emerald-500 bg-emerald-500/10 theme-text-brand shadow'
+                  : 'border-slate-700 bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <i className="fa-solid fa-bell-slash" aria-hidden />
+              <span>オフにする</span>
+            </button>
+          </div>
+        </div>
+
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3 sm:space-y-4">
           <h3 className="text-xs sm:text-sm font-bold">
             ZIPファイルのインポート / エクスポート
@@ -300,7 +340,7 @@ export const SettingsPageClient: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs theme-text-muted mt-0.5">
-                        {`MC ${p.mcVersion} (${p.loader}) • ${p.mods.length} 個のMod`}
+                        {`MC ${p.environment.mcVersion} (${p.environment.loader}) • ${p.mods.length} 個のMod`}
                       </div>
                     </div>
                   </div>

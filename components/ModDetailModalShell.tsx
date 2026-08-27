@@ -9,11 +9,12 @@ import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/ty
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { isAnimatedImageUrl } from '@/lib/utils/image';
+import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
-import { discoverPathFromProjectType } from '@/lib/constants/search';
+import { discoverPathFromProjectType, detailPathFromProject } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
 // ModDetailModalShell
@@ -191,16 +192,12 @@ export const ModDetailModalShell: React.FC<Props> = ({
   }, [isModal]);
 
   // インターセプト詳細モーダル中はモバイル BottomNav を隠す。
-  // BottomNav は z-[60]、従来のモーダル overlay は z-50 だったため
-  // ナビが前面に出て操作できてしまう不具合があった。
-  useEffect(() => {
-    if (!isModal) return;
-    if (typeof document === 'undefined') return;
-    document.body.classList.add('mod-detail-modal');
-    return () => {
-      document.body.classList.remove('mod-detail-modal');
-    };
-  }, [isModal]);
+  // 2026-08-27: body クラス (mod-detail-modal) 方式から useModalRegistration
+  // (lib/store/uiState のカウンタ) 方式に統一。他のモーダル (NewProfile 等) と
+  // 同じ仕組みで、ナビがスライドアウトして隠れる (globals.css
+  // #bottom-nav.nav-modal-hidden)。オーバーレイは z-[70] で BottomNav (z-[60])
+  // より上だが、ナビ自体も隠してタップ貫通・読み上げ対象に残らないようにする。
+  useModalRegistration(isModal);
 
   // Phase 10-P3: モーダル (variant="modal") マウント中は背景 (Modrinth 検索一覧)
   // のスクロールを抑止する。従来 AppShell 側で `pathname.startsWith('/mods/')`
@@ -268,7 +265,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
         // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-[2px]"
+          className="modal-overlay fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4"
           style={{ backgroundColor: 'var(--modal-overlay)' }}
           onClick={handleClose}
         >
@@ -289,7 +286,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const latestFile = pickPrimaryFile(latestVersion);
 
   const isAdded = currentProfile.mods.some(
-    (m) => m.id === project.id || (project.slug && m.slug === project.slug)
+    (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
   );
 
   // -------- 内側カード (両バリアント共通) --------
@@ -321,7 +318,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       {...dialogProps}
         className={
         isModal
-          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden'
+          ? 'modal-card glass-panel w-full max-w-3xl md:max-w-6xl rounded-3xl border shadow-2xl relative flex flex-col modal-max-h overflow-hidden'
           : 'modal-card glass-panel w-full max-w-3xl mx-auto rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden'
       }
       onClick={(e) => {
@@ -340,6 +337,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 width={48}
                 height={48}
                 className="w-full h-full object-contain rounded-xl"
+                unoptimized={shouldUnoptimizeImage(project.icon_url)}
               />
             ) : (
               <i className="fa-solid fa-cube text-2xl text-emerald-400" aria-hidden />
@@ -440,7 +438,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
                     fill
                     sizes="(min-width: 640px) 176px, 128px"
                     className="object-cover"
-                    unoptimized={isAnimatedImageUrl(img.url)}
+                    unoptimized={shouldUnoptimizeImage(img.url)}
                   />
                   {img.title && (
                     <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
@@ -497,13 +495,17 @@ export const ModDetailModalShell: React.FC<Props> = ({
         )}
       </div>
 
-      {/* 固定フッターアクション */}
-      <div className="flex justify-end gap-2 p-4 sm:p-6 pt-3 border-t border-slate-500/20 shrink-0 bg-transparent flex-wrap">
+      {/* 固定フッターアクション
+          デザインルール (skills/ui-layout.md「アクションボタン デザインルール」):
+          主操作 (追加) を右端に配置。緑の塗りつぶしは主操作のみで、
+          詳細 / DL は枠線ボタン、閉じるはダークグレー。全ボタン高さ 44px
+          (h-11)・主要 3 ボタンは等幅 (flex-1) で均等に並べる。 */}
+      <div className="flex items-stretch gap-2 p-4 sm:p-6 pt-3 border-t border-slate-500/20 shrink-0 bg-transparent">
         {isModal ? (
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="btn-hover-effect shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
             閉じる
           </button>
@@ -513,10 +515,20 @@ export const ModDetailModalShell: React.FC<Props> = ({
           //   直接 URL でアクセスされた際、Mod 詳細と同じセグメントで自然な戻り先。
           <Link
             href={discoverPathFromProjectType(project.project_type)}
-            className="px-4 py-2 rounded-xl theme-sub-box text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
+            className="btn-hover-effect shrink-0 px-4 h-11 rounded-xl theme-sub-box theme-text-secondary text-xs font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 inline-flex items-center gap-1.5"
           >
             <i className="fa-solid fa-magnifying-glass" aria-hidden />
             検索に戻る
+          </Link>
+        )}
+        {isModal && (
+          <Link
+            href={detailPathFromProject(project.project_type, slug)}
+            aria-label="詳細ページ"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
+            詳細
           </Link>
         )}
         {latestFile && (
@@ -524,17 +536,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={() => handleJarDownload(latestFile)}
             disabled={isJarDownloading}
-            className="btn-hover-effect px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label=".jar ファイルをダウンロード"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isJarDownloading ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                DL中...
+                DL中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-download" aria-hidden />
-                .jar 直DL
+                DL
               </>
             )}
           </button>
@@ -544,17 +557,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
-            className="px-4 py-2 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+            aria-label="プロファイルから削除"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-xs font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                処理中...
+                処理中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-trash-can" aria-hidden />
-                プロファイルから削除
+                削除
               </>
             )}
           </button>
@@ -563,17 +577,18 @@ export const ModDetailModalShell: React.FC<Props> = ({
             type="button"
             onClick={(e) => handleProfileToggle(project.id, e)}
             disabled={isTogglePending}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+            aria-label="プロファイルに追加"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
             {isTogglePending ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                追加中...
+                追加中
               </>
             ) : (
               <>
                 <i className="fa-solid fa-plus" aria-hidden />
-                プロファイルに追加
+                追加
               </>
             )}
           </button>
@@ -589,7 +604,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       // biome-ignore lint/a11y/noStaticElementInteractions: モーダル背景
       // biome-ignore lint/a11y/useKeyWithClickEvents: 同上
       <div
-        className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-md touch-action-none"
+        className="modal-overlay fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4  touch-action-none"
         style={{ backgroundColor: 'var(--modal-overlay)' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();

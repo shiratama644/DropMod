@@ -24,6 +24,17 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// ============================================================================
+// 2026-08-27 セキュリティ強化 → 2026-08-27 APP_PROFILE 対応で lib/server に集約
+// ============================================================================
+
+import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
+import { logger } from '@/lib/server/logger';
+
+// /api 経由は 120 req/min (Modrinth の 300 req/min より厳しく)。
+// APP_PROFILE=development ではレート制限が無効化される (lib/server/rate-limit.ts 参照)。
+const RATE_LIMIT_MAX = 120;
+
 const MODRINTH_HOST = 'api.modrinth.com';
 const MODRINTH_BASE = 'https://api.modrinth.com/v2';
 // MODRINTH_USER_AGENT 環境変数を参照 (lib/modrinth/server.ts と同じ挙動)。
@@ -58,7 +69,24 @@ async function handler(
   if (!isSafePath(path)) {
     return Response.json(
       { error: 'Invalid path: traversal segments are not allowed' },
-      { status: 400 }
+      { status: 400, headers: API_CORS_HEADERS }
+    );
+  }
+
+  // 2026-08-27 セキュリティ強化: レート制限チェック
+  const clientIp = getClientIp(req);
+  const rateLimit = checkRateLimit('modrinth', clientIp, RATE_LIMIT_MAX);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      { error: 'Too Many Requests' },
+      {
+        status: 429,
+        headers: {
+          ...API_CORS_HEADERS,
+          'Retry-After': '60',
+          'X-RateLimit-Remaining': '0'
+        }
+      }
     );
   }
 
@@ -102,13 +130,15 @@ async function handler(
     if (retryAfter) respHeaders.set('Retry-After', retryAfter);
 
     // ストリームでパススルー
+    // development プロファイルでのみプロキシの詳細ログを出力 (本番は静黙)
+    logger.debug('modrinth proxy:', req.method, `/${path.join('/')}`, `-> ${upstream.status}`);
     return new Response(upstream.body, {
       status: upstream.status,
       headers: respHeaders
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Proxy Error';
-    console.error('[DropMod] Modrinth proxy error:', err);
+    logger.error('Modrinth proxy error:', err);
     return Response.json({ error: message }, { status: 502 });
   }
 }

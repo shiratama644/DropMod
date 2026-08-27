@@ -1,10 +1,10 @@
-import type { ContentCategory, ModItem, ModrinthProject } from '@/types';
+import type { ContentCategory, ProjectItem, ModrinthProject } from '@/types';
 
 export function contentCategoryOf(
-  item: Pick<ModItem, 'projectType'> | { projectType?: string }
+  item: Pick<ProjectItem, 'type'> | { type?: string }
 ): ContentCategory {
-  if (item.projectType === 'resourcepack' || item.projectType === 'shader') {
-    return item.projectType;
+  if (item.type === 'resourcepack' || item.type === 'shader') {
+    return item.type;
   }
   return 'mod';
 }

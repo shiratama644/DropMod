@@ -63,10 +63,9 @@ const PATH_TO_TAB: Record<string, TabName> = {
   '/': 'home',
   '/discover': 'mods',
   '/discover/mods': 'mods',
-  '/discover/modpack': 'mods',
-  '/discover/resourcepack': 'mods',
-  '/discover/shader': 'mods',
-  '/mods': 'mods',
+  '/discover/modpacks': 'mods',
+  '/discover/resourcepacks': 'mods',
+  '/discover/shaders': 'mods',
   '/profile': 'profile',
   '/settings': 'settings'
 };
@@ -90,6 +89,18 @@ export const AppShell: React.FC<Props> = ({ children }) => {
     if (theme === 'light') html.classList.remove('dark');
     else html.classList.add('dark');
   }, [theme]);
+
+  // E2E 用 hydration 完了マーカー (2026-08-27)。
+  // AppShell は Root Layout 直下の Client Component のため、この effect が走った時点で
+  // React hydration が完了しイベントハンドラが有効。Playwright 側は
+  // `html[data-hydrated]` の出現を待つことで hydration 前の click の no-op 化
+  // (テストが安定して失敗する原因) を回避できる。
+  useEffect(() => {
+    document.documentElement.dataset.hydrated = '1';
+    return () => {
+      delete document.documentElement.dataset.hydrated;
+    };
+  }, []);
 
   // ---------- Profiles ----------
   const {
@@ -169,9 +180,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
         profiles.map((p) => p.name)
       ),
       mods: currentProfile.mods.map((m) => ({ ...m })),
-      mcVersion: currentProfile.mcVersion,
-      loader: currentProfile.loader,
-      loaderVersion: currentProfile.loaderVersion,
+      mcVersion: currentProfile.environment.mcVersion,
+      loader: currentProfile.environment.loader,
+      loaderVersion: currentProfile.environment.loaderVersion,
       description: currentProfile.description,
       source: 'duplicate'
     });
@@ -250,14 +261,16 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       // SSR プロファイル情報を保持する cookie も削除。
       // これが無いと reload 後の SSR で旧プロファイル用 Mod カードが並び、
       // ユーザーには「初期化バグ」に見える。
-      // 書き込み側と同じく Secure フラグを付けて削除リクエスト
-      // (localhost では自動的に無視される)
-      // Phase 10-P5 (noDocumentCookie): SSR 用 active profile cookie の削除。
-      //   cookieStore API は Safari 未対応 (2026 時点 experimental) なので直接操作。
+      // 書き込み側と同じく、アクセス protocol に応じて Secure フラグを付けて
+      // 削除リクエスト (http LAN IP では Secure 付きの書き込み/削除が
+      // 黙って拒否されるため条件分岐。localhost は Secure 要件から除外される)
+      // Phase 10-P5 (noDocumentCookie): cookieStore API は Safari 未対応
+      // (2026 時点 experimental) なので document.cookie 直接操作。
+      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
       // biome-ignore lint/suspicious/noDocumentCookie: SSR 用 cookie 削除 (max-age=0)
-      document.cookie = 'dropmod_active_profile=; path=/; max-age=0; SameSite=Lax; Secure';
-      // biome-ignore lint/suspicious/noDocumentCookie: theme FOUC cookie 削除
-      document.cookie = 'dropmod_theme=; path=/; max-age=0; SameSite=Lax; Secure';
+      document.cookie = `dropmod_active_profile=; path=/; max-age=0; SameSite=Strict${secure}`;
+      // biome-ignore lint/suspicious/noDocumentCookie: theme cookie 削除 (max-age=0)
+      document.cookie = `dropmod_theme=; path=/; max-age=0; SameSite=Strict${secure}`;
     } catch (e) {
       console.warn('[DropMod] データ初期化中に例外:', e);
     }
@@ -273,8 +286,13 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   //   - その他マッチしないパスは 'home' フォールバック
   const activeTab: TabName = useMemo(() => {
     const path = pathname ?? '/';
-    // /mods/[slug] の場合は 'mods' タブを active に (Mod 詳細はモーダル or フルページ)
-    if (path.startsWith('/mods/') || path.startsWith('/discover/')) return 'mods';
+    // 詳細ページ (/<型>/<slug>) または モーダル/一覧 (/discover/...) は 'mods' 扱い
+    if (
+      path.startsWith('/discover/') ||
+      /^\/(mod|modpack|resourcepack|shader)\//.test(path)
+    ) {
+      return 'mods';
+    }
     return PATH_TO_TAB[path] ?? 'home';
   }, [pathname]);
 

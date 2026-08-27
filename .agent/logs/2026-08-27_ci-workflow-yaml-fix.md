@@ -50,3 +50,22 @@ push をトリガーに CI (static-checks → build → e2e) が自動実行さ�
 
 - 修正後 YAML を js-yaml strict で両ファイルともパース OK (jobs 3 つ認識)
 - typecheck / lint 実施 (docs + yml のみ)
+
+## 追記 (第 2 障害): pnpm バージョン重複指定 (同日)
+
+ユーザーの再 push 後の run 33059506807 は YAML を通過したが、
+`pnpm/action-setup` が 5 秒で失敗:
+
+```
+Error: Multiple versions of pnpm specified:
+  - version 11 in the GitHub Action config with the key "version"
+  - version pnpm@11.24.0 in the package.json with the key "packageManager"
+```
+
+→ 3 ジョブの `version: 11` を削除し packageManager から解決させるよう修正。
+js-yaml strict で再検証 (jobs 3 つ・version キーなし)。
+CI_SETUP.md のトラブルシューティングに追記。
+
+備考: Actions のログ blob (productionresultssa3.blob.core.windows.net) は
+Sandbox から到達不可のため、check-runs の annotations API で原因取得した
+(失敗原因調査時の定石)。

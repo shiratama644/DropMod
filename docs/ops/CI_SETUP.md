@@ -113,6 +113,13 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
   ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
 
+### `pnpm/action-setup` が「Multiple versions of pnpm specified」で失敗する (2026-08-27 実績)
+
+- 原因: workflow の `version:` 入力と package.json の `packageManager` が重複指定。
+  pnpm/action-setup はバージョン不整合 (ERR_PNPM_BAD_PM_VERSION) 防止のため失敗する。
+- 対策: **workflow 側に `version:` を書かない**。package.json の
+  `packageManager: pnpm@11.24.0` から自動解決される (正本 CI_WORKFLOW.yml は修正済み)。
+
 ### `pnpm install` が失敗する
 
 - `pnpm-lock.yaml` が古い → 手動で `pnpm install` してから commit / push

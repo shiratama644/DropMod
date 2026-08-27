@@ -25,7 +25,9 @@
 
 適用済み (2026-08-27): `ModDetailModalShell` フッター (閉じる/詳細/DL/追加)、
 `ModDetailPageView` ヒーロー CTA (Modrinth/ダウンロード/追加)、`ModCard` の
-追加/追加済みボタン (両状態で同寸 h-9・min-w-[7rem] に統一 = 追加時にカード寸法が変わらない)。
+追加/削除トグルボタン (2026-08-27 改定: 追加=緑塗り / 削除=赤枠+trash アイコン。
+詳細の 削除 ボタンと同色・同アイコン。両状態で同寸 h-9・min-w-[7rem] に統一 =
+トグルでカード寸法が変わらない)。
 
 ## color-scheme とテーマ (2026-08-27 修正済み)
 
@@ -99,6 +101,38 @@
 | ConfirmDialog 等アプリ最上位 | `z-[100]+` |
 | ScreenshotGalleryModal | `z-[110]` |
 
+## BottomNav とモーダルの連動 (2026-08-27)
+
+- **モーダル表示中は BottomNav が画面外へスライドして非表示** (280ms、
+  visibility 遅延遷移で完了後に完全 hidden = タブ順序からも除去)。
+- 仕組み: 各モーダルが `hooks/useModalUi.ts` の `useModalRegistration(isOpen)` で
+  `lib/store/uiState.ts` (Zustand) の openModalCount に登録 → BottomNav が
+  `.nav-modal-hidden` クラスを付与 (globals.css)。
+- 対象 7 モーダル: NewProfile / EditProfile / DependencyCheck / ZipProgress /
+  ConfirmDialog / ModDetailModalShell (modal) / ScreenshotGallery。
+  **BottomSheet (探す/メニュー) は対象外** (ナビのトグルボタンで開閉するため)。
+- 旧 `body.mod-detail-modal` クラス方式 (display:none 即時) は廃止・統一済み。
+- E2E の toBeHidden は visibility:hidden で成立 (スライド 280ms は retry で吸収)。
+
+## アニメーション目録 (2026-08-27 整備)
+
+| 演出 | 実装 | 対象 |
+| :--- | :--- | :--- |
+| モーダル ポップイン | `.modal-card` (modal-pop 0.26s) | 全 7 モーダル |
+| モーダル overlay フェード | `.modal-overlay` (0.2s) | 全 7 モーダル |
+| BottomNav スライド | `.nav-modal-hidden` (280ms) | モーダル open 中 |
+| カード出現 stagger | `.mod-card-item` (mod-card-appear, fill **backwards**) | 検索一覧 |
+| カード hover 浮遊 | `:hover translateY(-3px)` @media(hover:hover) | 検索一覧 |
+| 追加⇄削除アイコン swap | `.icon-swap` (`<i>` を key={isAdded} で再マウント、ボタンは再マウントしない = focus 維持) | ModCard |
+| ボタン押し込み | `.btn-hover-effect:active scale(0.97)` (旧空クラスを具現化) | 全主要ボタン |
+| 404 入場/浮遊 | `.not-found-rise*` / `.not-found-block` (nf-float) | 404 ページ |
+| Toast / BottomSheet / LP | GSAP / Anime.js / CSS (既存) | 各所 |
+
+- 新規アニメはすべて `prefers-reduced-motion: reduce` で停止 (WCAG 2.3.3)。
+- **`backdrop-filter` は引き続き禁止** (§ガラス表現)。transform/opacity のみ使用。
+- fill-mode `both` は最終キーフレーム transform が永続適用され hover 演出と
+  競合するため、entrance 系は `backwards` を使うこと。
+
 ## BottomSheet（`components/BottomSheet.tsx`）
 
 - 共通コンポーネント。`useModalA11y`（Escape + focus trap）再利用。
@@ -121,6 +155,14 @@
 
 - `app/globals.css` に `--bg-panel` / `--color-text-brand` 等の CSS 変数で定義。`dark` クラスを `<html>` に付与（`.dark` / `:root`）。
 - Tailwind v4 CSS-in-CSS 方式（`@import "tailwindcss"`）。config ファイル無し。
+
+## 404 ページ (app/not-found.tsx、2026-08-27 リニューアル)
+
+- Modrinth / GitHub 風: Minecraft「missing texture」ブロック (conic-gradient の
+  マゼンタ×黒 2×2 チェッカー、div 1 つ) + 大きな 404 (font-mono) + CTA 2 択。
+- 主操作「ホームに戻る」(緑・h-12) は右端/下端。「Mod を探す」は theme-sub-box。
+- 全ルートの notFound() がこの 1 ページを使う (ネストした not-found は無し)。
+- 入場アニメ (nf-rise 3 段 stagger) + ブロック浮遊 (nf-float)。
 
 ## 関連
 

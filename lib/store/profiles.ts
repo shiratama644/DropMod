@@ -17,6 +17,22 @@
 'use client';
 
 import { create } from 'zustand';
+/** クライアント側の初期テーマを dropmod_theme cookie から読む (SSR は dark 既定)。 */
+function readInitialTheme(): ThemeMode {
+  if (typeof document === 'undefined') return 'dark';
+  try {
+    const parts = document.cookie ? document.cookie.split('; ') : [];
+    for (const p of parts) {
+      if (p.startsWith('dropmod_theme=')) {
+        const v = decodeURIComponent(p.slice('dropmod_theme='.length));
+        if (v === 'light' || v === 'dark') return v;
+      }
+    }
+  } catch {
+    /* 破損 cookie は既定にフォールバック */
+  }
+  return 'dark';
+}
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import type { Profile, ProjectItem, ThemeMode } from '@/types';
 
@@ -106,7 +122,11 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     profiles: [DEFAULT_PROFILE],
     currentProfileId: DEFAULT_PROFILE.id,
     hasHydrated: false,
-    theme: 'dark',
+    // 2026-08-27: 初期テーマはクライアントでは dropmod_theme cookie から。
+    // (トグル直後のリロードで Dexie 保存が debounce に間に合わず旧テーマに
+    // 戻る競合への対策。cookie はトグル時に即時書き込まれるため最新。)
+    // SSR / cookie 無し / 破損値の場合は従来どおり dark 既定。
+    theme: readInitialTheme(),
 
     // ---- Setters ----
     setProfiles: (updater) =>

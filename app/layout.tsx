@@ -157,7 +157,11 @@ try {
   `.trim();
 
   return (
-    <html lang="ja" className="dark" suppressHydrationWarning>
+    // 2026-08-27: className="dark" を削除。React hydration が vdom 値 (SSR 時点の
+    // "dark") で上書きし、init script が cookie に基づき外した dark クラスを
+    // 復活させていた (ライトテーマ ユーザーの FOUC / E2E 失敗)。
+    // html のクラスは head 内の init script (描画前・同期) が唯一設定する。
+    <html lang="ja" suppressHydrationWarning>
       <head>
         {/* color-scheme: ページが両モード対応であることを CSS 読み込み前に
             ブラウザに伝える (Flash of Wrong Theme + 自動ダークモード対策)。

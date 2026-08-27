@@ -351,6 +351,17 @@ export const useProfiles = (
     }
   }, [hasHydrated, theme]);
 
+  // 2026-08-27: テーマ meta は debounce を介さず即時保存する。
+  // 従来は 500ms debounce 内にリロードすると Dexie に旧テーマが残り、
+  // リロード後にテーマが戻ってしまう競合があった (E2E theme-persistence で検出)。
+  // テーマ変更はユーザー操作起点で頻度が低く、即時書き込みのコストは無視できる。
+  useEffect(() => {
+    if (!hasHydrated) return;
+    void dexieSetMeta(META_KEYS.THEME, theme).catch(() => {
+      /* 保存失敗時も cookie があるため次回起動で復元される */
+    });
+  }, [hasHydrated, theme]);
+
   // ---------------------------------------------------------------------
   // profiles が空配列になった場合の安全弁
   //

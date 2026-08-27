@@ -1,6 +1,6 @@
 # UI/UX 修正第 2 弾: 白フラッシュ完全解消 + テーマ cookie + 表示形式刷新
 
-> Date: 2026-08-27 (JST) / Branch: `arena/01a04363-dropmod`
+> Date: 2026-08-27 (JST) / Branch: `arena/01a0337c-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

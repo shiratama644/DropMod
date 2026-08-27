@@ -1,6 +1,6 @@
 # Phase 10.5-B: 軽量 components 10 ファイルのテスト追加
 
-> Date: 2026-08-26 (JST) / Commit: 57d5bc9 の次 / Branch: `arena/01a04363-dropmod`
+> Date: 2026-08-26 (JST) / Commit: 57d5bc9 の次 / Branch: `arena/01a0337c-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

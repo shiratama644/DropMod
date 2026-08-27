@@ -1,6 +1,6 @@
 # vitest 3.2.7 → 4.1.11 アップグレード + Node 24 回避策 (vitest.environment.ts) の削除
 
-> Date: 2026-08-26 (JST) / Commit: `ccd5f98` / Branch: `arena/01a04363-dropmod`
+> Date: 2026-08-26 (JST) / Commit: `ccd5f98` / Branch: `arena/01a0337c-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

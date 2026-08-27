@@ -72,30 +72,43 @@ build exit 0。**coverage exit 0** (全 threshold green)。`.archive/vite/` 無�
 - **PR 作成も許可**された（`gh pr create`）。§4.4 の「PR は作らず直接 push」を改訂。
 - `.agent/skills/sandbox-constraints.md` にも同じ方針を追記。
 
-### B. 旧セッションブランチ名の一括置換
+### B. 旧セッションブランチ名の一括置換（過去ログは対象外）
 
 ユーザー指示: 「旧ブランチ名は新しいブランチ名に変更してください」
 
-- `arena/01a01fcf-dropmod` / `arena/01a0337c-dropmod` → **`arena/01a04363-dropmod`** へ
-  **26 箇所 / 19 ファイル**を一括置換（`docs/audit/issues-legacy.md` 5 箇所、
-  `docs/audit/diff-vite-vs-nextjs.md` 1、`docs/complete/PHASE9_COMPLETE.md` 1、
-  `.agent/logs/` 16 ファイル 19 箇所、AGENT.md / pre-task.md / sandbox-constraints.md の
-  「過去セッション列挙」3 箇所）。
-- AGENT.md §4.4 / pre-task.md / sandbox-constraints.md では、旧名を列挙する代わりに
-  「**過去セッションのブランチ名は文書に残さない**（後続セッションが dead branch を
-  fetch/push する事故防止）」という方針文へ書き換えた。
-- 置換後、リポジトリ内（`.git` / `.archive` / `node_modules` 除く）に旧ブランチ名の残存は **0 件**。
+- `arena/01a01fcf-dropmod` / `arena/01a0337c-dropmod` → **`arena/01a04363-dropmod`** へ置換。
+  対象は**現用ドキュメントのみ**:
+  - `docs/audit/issues-legacy.md` 5 箇所
+  - `docs/audit/diff-vite-vs-nextjs.md` 1 箇所
+  - `docs/complete/PHASE9_COMPLETE.md` 1 箇所
+  - `AGENT.md` / `.agent/hooks/pre-task.md` / `.agent/skills/sandbox-constraints.md` の
+    「過去セッション列挙」3 箇所 → 旧名の列挙をやめ、「**過去セッションのブランチ名は
+    文書に残さない**（後続セッションが他セッションのブランチを fetch/push する事故防止）＋
+    毎回 `git branch --show-current` で確認」という方針文へ書き換え
+- ⚠️ **`.agent/logs/` の過去ログ 15 ファイルも当初はまとめて置換してしまった。
+  これは AGENT.md §8.1「ログは追記専用（過去のログを書き換えない）」違反であり、
+  ユーザー指摘を受けて `git checkout a875122 -- <15 files>` で全て原文に復元した。**
+  過去ログ中のブランチ名は当時の事実の記録なので書き換えない（教訓は C 項）。
+- `docs/audit/issues-legacy.md` 等の「対象コミット: <branch> HEAD <sha>」は
+  ブランチ名のみ現行名へ統一され、**コミット SHA は当時のもの**。監査対象の特定には SHA を正とする。
 
-### C. 記録しておくべき事実（§8.1 の追記専用原則に対する例外の明示）
+### C. 教訓と、旧ブランチのマージ状態調査結果（ユーザー指摘による是正）
 
-- 今回の一括置換は **`.agent/logs/` 内の過去ログ 16 ファイルも対象**にした。これは
-  AGENT.md §8.1「ログは追記専用（過去のログを書き換えない）」に対する
-  **ユーザー明示指示による例外的な一括更新**である。
-- 置換前の実ブランチ名は `arena/01a01fcf-dropmod`（Phase 0–9 期）と
-  `arena/01a0337c-dropmod`（Phase 10–11 期）であり、**2026-08-27 時点でも origin 上に実在**する
-  （`git ls-remote --heads origin` で確認。ほかに `arena/01a02eb5-dropmod` も実在）。
-  したがって過去ログ中の「push 先ブランチ」記述は、置換により**当時の事実とは一致しなくなった**。
-  当時の正確なブランチ名が必要になった場合は本項を参照すること。
-- 同様に `docs/audit/issues-legacy.md` 等の「対象コミット: <branch> HEAD <sha>」は、
-  ブランチ名が現行名に統一された一方 **コミット SHA は当時のもの**である。
-  監査対象の特定には SHA を正とする。
+**教訓（自分の誤り）**: 「旧ブランチ名を変更して」という指示を `.agent/logs/` の過去ログにまで
+機械的に適用し、§8.1 を破った。指示の射程は「後続セッションを誤誘導しうる現用ドキュメント」
+であって、**時点記録である過去ログの事実記述ではない**。
+今後、一括置換の対象に `.agent/logs/` が含まれうる場合は**必ず事前に確認する**。
+
+**旧ブランチのマージ状態（GitHub API `compare/main...<branch>` で実測・2026-08-27）**:
+
+| ブランチ | PR | マージ日時 (UTC) | tip | merge commit | status | ahead_by |
+|---|---|---|---|---|---|---|
+| `arena/01a01fcf-dropmod` | #1 MERGED | 2026-08-23 12:57 | `8b3663a` | `d4548a1` | behind | **0** |
+| `arena/01a02eb5-dropmod` | #2 MERGED | 2026-08-24 08:39 | `177a1ea` | `67e10b6` | behind | **0** |
+| `arena/01a0337c-dropmod` | #3 MERGED | 2026-08-27 13:21 | `f646b6b` | `a875122` | behind | **0** |
+
+- `ahead_by = 0` は「**main に未取込のコミットが 0 件**」を意味する。よって 3 ブランチとも
+  **完全に main へ取り込み済み**（マージ後の追加 push は無し）で、未マージの作業は存在しない。
+- `main` の tip は `a875122` = PR #3 のマージコミット。
+- したがって **3 ブランチは削除しても作業は失われない**。ただし削除は破壊的操作なので、
+  ユーザーの明示指示があるまで実行しない。

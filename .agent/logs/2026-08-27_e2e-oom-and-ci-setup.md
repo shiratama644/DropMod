@@ -19,7 +19,7 @@
    - cache key の `next.config.ts` → `next.config.mjs` (2026-08-27 リネーム漏れ)
    - `workflow_dispatch` 追加 (Actions タブから手動実行可)
 3. CI_SETUP.md の修正:
-   - 旧ブランチ名 arena/01a04363-dropmod → arena/01a04363-dropmod
+   - 旧ブランチ名 arena/01a01fcf-dropmod → arena/01a0337c-dropmod
    - E2E ブラウザ表記 iPhone14 → chromium-desktop + Pixel 7 (現行)
    - カバレッジ実測値更新 (629 tests / 84.5%)
    - 「ローカル PRoot での OOM」節を追記 (CI 推奨 + `--workers=1` 回避策)
@@ -28,7 +28,7 @@
 ## 配置手順 (ユーザー実施 — AGENT.md §6.3 で Agent は .github/ に書けない)
 
 docs/ops/CI_SETUP.md に記載のとおり:
-1. `git pull origin arena/01a04363-dropmod` (修正済み yml を取得)
+1. `git pull origin arena/01a0337c-dropmod` (修正済み yml を取得)
 2. `mkdir -p .github/workflows && cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml`
 3. commit & push → push to arena/** が CI を trigger (E2E 含む全 job)
 

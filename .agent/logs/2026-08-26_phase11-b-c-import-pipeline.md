@@ -1,6 +1,6 @@
 # Phase 11-B/C: Import パイプライン (Source / Detector / Analyzer / Analysis / UI / ZIP)
 
-> Date: 2026-08-26 (JST) / Commits: `1c43693` `b3f8d40` `a2f44ba` + 本 commit / Branch: `arena/01a04363-dropmod`
+> Date: 2026-08-26 (JST) / Commits: `1c43693` `b3f8d40` `a2f44ba` + 本 commit / Branch: `arena/01a0337c-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

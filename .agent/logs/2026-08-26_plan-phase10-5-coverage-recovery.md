@@ -1,6 +1,6 @@
 # Phase 10.5 (Emergency) カバレッジ回復計画書の作成
 
-> Date: 2026-08-26 (JST) / Commit: `37b8787` / Branch: `arena/01a04363-dropmod`
+> Date: 2026-08-26 (JST) / Commit: `37b8787` / Branch: `arena/01a0337c-dropmod`
 
 ## 1. 指示内容 (Task Summary)
 

@@ -99,6 +99,20 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
 
 ## トラブルシューティング
 
+### Actions が「workflow file issue」で 0 秒 failure になる (2026-08-27 実績)
+
+- 原因: YAML の引用符なしスカラーに **「: 」(コロン+スペース)** が含まれると
+  mapping entry の誤パースになり、GitHub がワークフローを起動できない
+  (実例: `name: Biome lint (Phase 10-P5: ESLint から移行)` → 引用符で修正)
+- ローカル検証方法 (js-yaml の strict モード):
+  ```bash
+  pnpm add -D js-yaml && node -e "require('js-yaml').load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'),{json:true})"
+  ```
+- **Arena エージェント (GitHub App) は `.github/workflows/` を push できない**
+  (`refusing to allow a GitHub App to create or update workflow`)。
+  ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
+  ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
+
 ### `pnpm install` が失敗する
 
 - `pnpm-lock.yaml` が古い → 手動で `pnpm install` してから commit / push

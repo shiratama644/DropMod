@@ -95,23 +95,19 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Upload build stats
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-stats
-          path: .next/diagnostics/
-          retention-days: 7
+      # H7-5: .next 成果物を E2E job に渡す。
+      # upload-artifact v4 は隠し (ドット) ディレクトリ配下を対象にできない
+      # (excludeHiddenFiles により .next/** が 0 件マッチ。2026-08-27 実証) ため、
+      # cache を除外して tar 化し単一ファイルとしてアップロードする。
+      - name: Archive .next build output
+        run: tar --exclude='.next/cache' -czf next-build.tgz .next
 
-      # H7-5: .next 成果物を E2E job に渡す。cache でも良いが artifact の方が確実。
       - name: Upload .next build output
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: next-build
-          path: |
-            .next/
-            !.next/cache/
+          path: next-build.tgz
           retention-days: 1
 
   # ==========================================================================
@@ -143,12 +139,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # H7-5: build job の .next を復元
+      # H7-5: build job の .next を復元 (tar を展開)
       - name: Download .next build output
         uses: actions/download-artifact@v4
         with:
           name: next-build
-          path: .next/
+
+      - name: Extract .next build output
+        run: tar -xzf next-build.tgz
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium

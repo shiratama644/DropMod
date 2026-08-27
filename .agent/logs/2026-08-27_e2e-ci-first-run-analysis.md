@@ -40,3 +40,39 @@
 
 typecheck 0 error / biome 0 warning / test:unit 629 passed / build exit 0。
 E2E は push をトリガーに CI で再実行 → 結果を gh CLI で監視する。
+
+## 追記: CI 全面 green 達成 (2026-08-27 12:20)
+
+run `33071105483` (commit `2e1d302`) で全ジョブ success:
+- Type / Lint / Unit Tests: 1m03s
+- Next.js Build: 38s
+- E2E (Playwright): 1m43s — 74 tests 全 pass
+
+### 追加修正 (第 2〜4 ラウンド)
+
+1. **アノテーションレポーター** (`3741c89`): 失敗テストを `::error` で
+   GitHub アノテーションに出すカスタムレポーター。Sandbox からログ blob が
+   読めない制約を突破し、API 経由の自主デバッグを可能にした。
+   - 注意: 同一 SHA に push と pull_request の 2 check-run が出来るので
+     annotations 取得は conclusion=failure 側を指定すること
+2. **lint エラー**: 正規表現の制御文字 (\u001b) → biome-ignore で対応 (`4552579`)
+3. **残存 2 失敗の原因 = 実アプリのバグ** (`4df29af`):
+   - theme: Dexie 保存が 500ms debounce のためトグル直後のリロードで旧テーマに
+     復元される競合 → テーマ meta を即時保存 + store 初期値を cookie から復元
+   - theme: <html className="dark"> が hydration で上書きしライトの FOUC →
+     className を削除し init script がクラスを唯一管理
+   - zip-export: download 5s 待機後に 3s で消える Toast を確認する構造 →
+     並行監視に変更 + :visible で非表示 BottomNav バッジ (role=status) を除外
+4. **カバレッジしきい値**: readInitialTheme の分岐で lib/store branches 80% 割れ
+   → 8 件の単体テスト追加 (`2e1d302`)。**テストを通すための閾値緩和はしない**
+
+### 確定した運用知見
+
+- .gitignore の /playwright-report/ が一時的にコメントアウトされていたため
+  誤 commit が繰り返された → 復元済み (`5bd75c3`)
+- E2E 失敗の調査は「check-runs annotations API → それでも足りなければ
+  レポート artifact をユーザーに commit してもらいトレース解析」の 2 段構え
+- **E2E spec は「書いたら CI で即走らせる」が原則**。一度も走っていない spec は
+  陳腐化している前提 (仕様変更 7 件が潜在していた)
+- SSR ページでの E2E クリックは hydration 完了を待つこと
+  (html[data-hydrated] マーカー方式を確立)

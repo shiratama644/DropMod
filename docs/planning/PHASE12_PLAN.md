@@ -2,12 +2,12 @@
 
 > 対応 task-list ID: `P12-A` 〜 `P12-C` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 未着手** (2026-08-26 改定・着手前。§9 の設計論点を確定してから開始する)
+> **状態: 未着手** (2026-08-26 改定・着手前。§12 の設計論点を確定してから開始する)
 
 ## 1. 開始前確認
 
 - Phase 11 完了 (P11-E2E の CI green = VER-1) を確認
-- 本書 §9 (未解決の設計論点) をユーザーと確定する
+- 本書 §12 (未解決の設計論点) をユーザーと確定する
 - `git status` clean・skills/env-import.md を読む
 
 ## 2. 目的 (Why)

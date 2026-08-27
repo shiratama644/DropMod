@@ -1,5 +1,5 @@
 /**
- * showDirectoryPicker のラッパー (PHASE11_PLAN.md §4.1)。
+ * showDirectoryPicker のラッパー (PHASE11_PLAN.md §10.5)。
  *
  * - Phase 11 は Read-only のため mode: 'read' のみ
  *   (Phase 12 の Sync で 'readwrite' に昇格)

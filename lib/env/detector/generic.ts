@@ -1,5 +1,5 @@
 /**
- * GenericDetector (PHASE11_PLAN.md §4.2)。
+ * GenericDetector (PHASE11_PLAN.md §10.3)。
  *
  * mods/ 等のコンテンツディレクトリが直接あるだけの構造向け fallback。
  * 環境情報 (MC Version / Loader) は検出できないため undefined を返し、

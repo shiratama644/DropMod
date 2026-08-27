@@ -1,5 +1,5 @@
 /**
- * Import Analyzer (PHASE11_PLAN.md §3.1 の ②〜③、§4.6)。
+ * Import Analyzer (PHASE11_PLAN.md §10.3)。
  *
  * EnvironmentSource を解析して Profile 構成要素 (ProjectItem ×3 カテゴリ +
  * UnknownFile[]) を生成する。常に「新規 Profile 用の解析結果」であり、

@@ -5,7 +5,7 @@
 // (Vercel サーバ) から直接 Modrinth を叩く。ISR / Data Cache のため
 // fetch(..., { next: { revalidate, tags } }) を活用する。
 //
-// キャッシュ戦略 (docs/planning/NEXTJS_MIGRATION_PLAN.md §7 参照):
+// キャッシュ戦略 (docs/planning/NEXTJS_MIGRATION_PLAN.md §10.5 参照):
 //   - /search:            5分   (人気順の並びは頻繁に微変動するが安定性を優先)
 //   - /project/{id}:      1時間 (メタ情報は数日〜数週間単位で更新)
 //   - /project/{id}/version: 1時間 (新版が出たら 1時間以内に反映)

@@ -1,5 +1,5 @@
 /**
- * PrismDetector (PHASE11_PLAN.md §4.4.2)。
+ * PrismDetector (PHASE11_PLAN.md §10.3)。
  *
  * Prism Launcher / MultiMC / PolyMC のインスタンス定義 `mmc-pack.json` から
  * MC バージョンと Loader を検出する。

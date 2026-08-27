@@ -3,7 +3,7 @@
 > 対応 task-list ID: `P11-FIX` / `P11-A` / `P11-B1`〜`B3` / `P11-C1`〜`C2` / `P11-E2E`
 > ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-26 改定・実施 / P11-E2E の CI green 確認のみ `実環境検証待ち`)
+> **状態: 完了** (2026-08-26 改定・実施 / P11-E2E の CI green は run `33071105483` で確認済み = `VER-1` 完了)
 
 ## 1. 開始前確認
 
@@ -153,3 +153,17 @@ Shader 前提 (Iris/OptiFine 未導入警告)。既存 `useDependencyCheck` と
 | P11-B3 | `a2f44ba` | analyzer / hashCore / analysis test | SHA-1 Worker |
 | P11-C1/C2 | `b6a5a54` | NewProfileModal.folderImport.test | Analysis View + ZIP |
 | P11-E2E | `c0d13f8` | (CI で実行) | folder-import / zip-env-import |
+
+> **節番号について (2026-08-27 追記)**: 本書は DOC-2 で計画書テンプレート形式へ再構成されたため、
+> 設計仕様が旧 §2〜§6 から **§10.1〜§10.5** へ移動している。これに合わせて
+> `lib/env/*` `lib/state/sanitize.ts` および関連テストの**コード内コメント 15 ファイルの参照先を
+> §10.x へ修正済み**。旧番号 (§2.2 / §2.3 / §3.1 / §4.1 / §4.2 / §4.4.1 / §4.4.2 / §4.5 /
+> §4.6 / §4.6.1 / §5 / §6.1) を指す記述が残っていたら、それは陳腐化した参照である。
+>
+> | 旧参照 | 新参照 | 内容 |
+> |---|---|---|
+> | §5 | §10.4 | Analysis 検証 6 項目 |
+> | §6.1 | §10.1 | 2026-08-26 セッション合意 (プロファイル名ルール含む) |
+> | §2.2 / §2.3 / §3.1 / §4.2 / §4.4.1 / §4.4.2 / §4.6 / §4.6.1 | §10.3 | アーキテクチャ (Source → Detector chain → Analyzer) |
+> | §4.1 | §10.5 | ブラウザ対応 (FS Access API / ZIP フォールバック) |
+> | §4.5 | §10.1 | `Profile.environment` 化・loader 正規化 |

@@ -172,7 +172,9 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-3 | ドキュメント/設定ドリフトの是正 (実測値・ブランチ名・削除済み参照) | 完了 | 100% | - | 記載値が実測と一致・stale 参照 0 件・4 検証 pass | 本コミット / `.agent/logs/2026-08-27_doc-config-drift-fix.md` |
 | DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENT.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
 | DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
-| SEO-1 | SEO 改善候補 (重複コンテンツ対策等) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
+| DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
+| SEO-1 | SEO 改善候補 (JSON-LD 2-2 / 動的 OGP 2-3 / 低優先 2-6〜) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
+| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | 未着手 | 0% | - | `/{type}/[slug]` 直接 URL に noindex・一覧とモーダルは index 維持 | SEO_CANDIDATES.md 2-1 (🥇高 / Effort 極小 / 早期実施推奨) |
 
 ---
 

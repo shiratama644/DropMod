@@ -1,5 +1,5 @@
 /**
- * lib/env/analysis.ts test (Phase 11-B / PHASE11_PLAN.md §5)
+ * lib/env/analysis.ts test (Phase 11-B / PHASE11_PLAN.md §10.4)
  *
  * ImportAnalysis fixture を直接構築して検証エンジン (analyzeImportHealth)
  * の各チェックを検証する (pure function、API 不要)。

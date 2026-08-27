@@ -1,5 +1,5 @@
 /**
- * Import Analysis の検証エンジン (PHASE11_PLAN.md §5)。
+ * Import Analysis の検証エンジン (PHASE11_PLAN.md §10.4)。
  *
  * Import 完了時に表示する検査結果 (Analysis View 用) を pure function で
  * 生成する。Phase 11 は Read-only: 何も書き換えない。

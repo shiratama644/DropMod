@@ -11,6 +11,7 @@ import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { discoverPathFromProjectType, detailPathFromProject } from '@/lib/constants/search';
@@ -191,16 +192,12 @@ export const ModDetailModalShell: React.FC<Props> = ({
   }, [isModal]);
 
   // インターセプト詳細モーダル中はモバイル BottomNav を隠す。
-  // BottomNav は z-[60]、従来のモーダル overlay は z-50 だったため
-  // ナビが前面に出て操作できてしまう不具合があった。
-  useEffect(() => {
-    if (!isModal) return;
-    if (typeof document === 'undefined') return;
-    document.body.classList.add('mod-detail-modal');
-    return () => {
-      document.body.classList.remove('mod-detail-modal');
-    };
-  }, [isModal]);
+  // 2026-08-27: body クラス (mod-detail-modal) 方式から useModalRegistration
+  // (lib/store/uiState のカウンタ) 方式に統一。他のモーダル (NewProfile 等) と
+  // 同じ仕組みで、ナビがスライドアウトして隠れる (globals.css
+  // #bottom-nav.nav-modal-hidden)。オーバーレイは z-[70] で BottomNav (z-[60])
+  // より上だが、ナビ自体も隠してタップ貫通・読み上げ対象に残らないようにする。
+  useModalRegistration(isModal);
 
   // Phase 10-P3: モーダル (variant="modal") マウント中は背景 (Modrinth 検索一覧)
   // のスクロールを抑止する。従来 AppShell 側で `pathname.startsWith('/mods/')`

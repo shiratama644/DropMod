@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useRef, useId } from 'react';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 
 export interface ConfirmDialogOptions {
   title: string;
@@ -31,6 +32,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModalA11y(isOpen, onCancel, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   if (!isOpen) return null;
 

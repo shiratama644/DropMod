@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef, useId } from 'react';
 import type { Profile } from '@/types';
 import { CustomDropdown } from './CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { LOADER_DROPDOWN_OPTIONS } from '@/lib/constants/loaderVersions';
 import { useLoaderVersionOptions } from '@/hooks/useLoaderVersionOptions';
 
@@ -79,6 +80,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useId } from 'react';
 import { CustomDropdown } from './CustomDropdown';
 import type { ProjectItem, ProfileContentExtras, UnknownFile } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { pickMinecraftDirectory } from '@/lib/env/picker';
 import {
@@ -280,6 +281,8 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const loaderVersionSelectId = useId();
   const descInputId = useId();
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   if (!isOpen) return null;
 

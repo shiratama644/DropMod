@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import type { ModrinthGalleryImage } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 
 interface ScreenshotGalleryModalProps {
@@ -26,6 +27,8 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
   const [index, setIndex] = useState(0);
 
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;

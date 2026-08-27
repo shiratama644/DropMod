@@ -305,6 +305,42 @@ code, input, textarea {
     .mod-card-item { animation: none; }
 }
 
+/* モーダル表示中は BottomNav を画面外へスライドして隠す (2026-08-27)。
+   モーダル側 (NewProfile / EditProfile / DepCheck / Zip / Confirm /
+   ModDetailModalShell / ScreenshotGallery) が useModalRegistration で
+   lib/store/uiState の openModalCount に登録し、BottomNav が
+   .nav-modal-hidden クラスを付与する。
+
+   - transform で 110% (自高の 1.1 倍 = safe-area 分も含めて) 下へ移動
+   - visibility は transform 完了後 (280ms) に hidden へ遷移
+     → アニメ中は見えたままスライドし、完了で完全に非表示 + タブ順序から除去
+   - クラス除去 (モーダル close) 時は visibility が即時 visible に戻り
+     スライドアップして復帰
+   - pointer-events: none は transition 対象外のため、クラス付与の瞬間から
+     タップ不能 (アニメ中にナビを誤タップしてページ遷移するのを防ぐ)
+   - body.mod-detail-modal 方式 (display: none) から置き換え。
+     E2E (mod-detail-modal.spec.ts) の toBeHidden は visibility:hidden で成立。 */
+#bottom-nav {
+    transition:
+        transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0s;
+}
+#bottom-nav.nav-modal-hidden {
+    transform: translateY(110%);
+    visibility: hidden;
+    pointer-events: none;
+    /* visibility の遷移だけ 280ms 遅らせる = スライド完了後に完全非表示。
+       base 側の transition 宣言は (1,0,0) < (1,1,0) で上書きされないため、
+       transition-delay のみ上書きする方式 (Biome noDescendingSpecificity 対策) */
+    transition-delay: 0s, 280ms;
+}
+@media (prefers-reduced-motion: reduce) {
+    #bottom-nav.nav-modal-hidden {
+        /* 即時 hidden (スライド演出なし) */
+        transition-delay: 0s, 0s;
+    }
+}
+
 /* ---------------------------------------------------------------
  * /mods/[slug] のフルページ表示時は (Phase 9-F: 旧 /mod/[slug])
  *   グローバル Header と BottomNav を非表示にし、モーダルアプリ風の
@@ -325,13 +361,6 @@ body.mod-fullpage #bottom-nav {
    詳細カードが画面下部に無駄なスペースを作らないようにする */
 body.mod-fullpage {
     padding-bottom: 0;
-}
-
-/* インターセプト詳細モーダル中はモバイル BottomNav を隠す。
-   overlay は z-[70] で BottomNav (z-[60]) より上だが、ナビ自体も消して
-   タップ貫通・読み上げ対象に残らないようにする。 */
-body.mod-detail-modal #bottom-nav {
-    display: none;
 }
 
 /* -----------------------------------------------------------------

@@ -17,6 +17,7 @@ import {
   fetchModrinthBatch
 } from '@/lib/modrinth/client';
 import { useModalA11y } from '@/hooks/useModalA11y';
+import { useModalRegistration } from '@/hooks/useModalUi';
 
 interface DependencyCheckModalProps {
   isOpen: boolean;
@@ -362,6 +363,8 @@ export const DependencyCheckModal: React.FC<DependencyCheckModalProps> = ({
   // a11y: Escape + フォーカストラップ (共通フックに統一)
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalA11y(isOpen, onClose, dialogRef);
+  // モーダル open 中は BottomNav を隠す (2026-08-27)
+  useModalRegistration(isOpen);
 
   // ---------------------------------------------------------------------
   // ⚠️ Rules of Hooks 遵守:

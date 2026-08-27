@@ -9,7 +9,9 @@ DropMod のドキュメント一式を種類別に整理したものです。ル
 ```
 docs/
 ├── README.md                          ← 本ファイル (全ドキュメントの目次)
-├── planning/                          # 計画書 (Phase 単位のロードマップ)
+├── task-list.md                       ★ タスク管理の唯一の正本 (進捗・証拠)
+├── planning/                          # 計画書 (Phase 単位・_TEMPLATE.md 形式)
+│   ├── _TEMPLATE.md                   # 計画書テンプレート (新規計画書は必ず本形式)
 │   ├── NEXTJS_MIGRATION_PLAN.md       # Vite → Next.js 16 段階的移行計画 (Phase 0-7)
 │   ├── PHASE8_PLAN.md                 # Phase 8 (Dexie/TSQ/Zustand + テスト土台)
 │   ├── PHASE9_PLAN.md                 # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)

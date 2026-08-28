@@ -28,7 +28,12 @@ import type { EnvironmentSource } from './source';
 import { computeHashes } from './hashWorker';
 
 /** カテゴリごとの対象拡張子 (計画書 §4.3) */
-const CATEGORY_EXTENSIONS: Record<ContentCategory, readonly string[]> = {
+/**
+ * カテゴリごとに「管理対象とみなす拡張子」。
+ * `lib/env/scan.ts` (Sync 用スキャン) と共有するため export する —
+ * Import と Sync で拡張子ルールがずれると台帳と実体が噛み合わなくなる。
+ */
+export const CATEGORY_EXTENSIONS: Record<ContentCategory, readonly string[]> = {
   mod: ['.jar'],
   resourcepack: ['.zip'],
   shader: ['.zip']
@@ -73,7 +78,8 @@ export interface ImportAnalysis {
   versionsByProject: Map<string, ModrinthVersion>;
 }
 
-function hasExtension(filename: string, extensions: readonly string[]): boolean {
+/** 大文字小文字を区別せず拡張子を判定する (scan.ts と共有) */
+export function hasExtension(filename: string, extensions: readonly string[]): boolean {
   const lower = filename.toLowerCase();
   return extensions.some((ext) => lower.endsWith(ext));
 }

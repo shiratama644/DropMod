@@ -118,6 +118,9 @@ export async function prepareSync(input: PrepareSyncInput): Promise<PrepareSyncO
   };
 }
 
+/** Preview を出せる状態の結果だけを取り出した型 */
+export type ReadySyncOutcome = Extract<PrepareSyncOutcome, { status: 'ready' }>;
+
 /** OPFS の空き容量 (取得できなければ undefined = 容量チェックを行わない) */
 export async function estimateFreeBytes(): Promise<number | undefined> {
   try {

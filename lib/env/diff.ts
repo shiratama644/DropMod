@@ -439,3 +439,41 @@ export function selectExternallyModified(plan: SyncPlan): SyncPlanEntry[] {
 export function selectDeletionsRequiringConfirm(plan: SyncPlan): SyncPlanEntry[] {
   return plan.deletions.filter((e) => e.source !== 'dropmod');
 }
+
+// ============================================================================
+// Phase 12-B: ユーザーが「保持」を選んだ削除を Plan から外す
+// ============================================================================
+
+/**
+ * 削除予定のうち指定パスを除外した Plan を返す (**pure function**)。
+ *
+ * §10.3: Import / Modpack 由来の削除はユーザーが「削除する / 保持する」を選ぶ。
+ * 「保持」を選んだものは実行対象から外し、**容量の合計も合わせて減らす**
+ * (合計を実態と食い違ったまま executeSync に渡すと D-5 の空き容量判定が
+ * 過大評価になってしまう)。
+ *
+ * @returns 除外するものが無ければ引数の plan をそのまま返す
+ */
+export function excludeDeletions(plan: SyncPlan, paths: readonly string[]): SyncPlan {
+  if (paths.length === 0) return plan;
+  const excluded = new Set(paths);
+  const removed = plan.deletions.filter((d) => excluded.has(d.path));
+  if (removed.length === 0) return plan;
+
+  // 削除のバックアップ量 = 環境側に実在する実体のサイズ (computeTotals と同じ定義)
+  const removedBytes = removed.reduce((sum, d) => sum + d.size, 0);
+
+  return {
+    ...plan,
+    deletions: plan.deletions.filter((d) => !excluded.has(d.path)),
+    totals: {
+      ...plan.totals,
+      counts: {
+        ...plan.totals.counts,
+        deletion: plan.totals.counts.deletion - removed.length
+      },
+      removeBytes: plan.totals.removeBytes - removedBytes,
+      backupBytes: plan.totals.backupBytes - removedBytes
+    }
+  };
+}

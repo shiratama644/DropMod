@@ -15,13 +15,14 @@
 
 import { getManagedFiles, getSyncTransaction, syncManagedFiles } from '@/lib/db/dexie';
 import type { Profile } from '@/types';
+import { excludeDeletions } from './diff';
 import { executeSync, type ExecuteSyncResult } from './executor';
 import { applyJournalToLedger } from './managed';
 import { createContentResolver } from './resolve';
 import { OpfsBackupStore, type BackupStore } from './backup';
-import { estimateFreeBytes, type PrepareSyncOutcome } from './syncPrep';
+import { estimateFreeBytes, type ReadySyncOutcome } from './syncPrep';
 
-export type ReadySyncOutcome = Extract<PrepareSyncOutcome, { status: 'ready' }>;
+export type { ReadySyncOutcome };
 
 export interface ApplySyncDeps {
   backup?: BackupStore;
@@ -36,6 +37,11 @@ export interface ApplySyncDeps {
 export interface ApplySyncInput {
   profile: Profile;
   prepared: ReadySyncOutcome;
+  /**
+   * Preview でユーザーが「保持」を選んだ削除予定のパス (§10.3)。
+   * 指定すると実行前に Plan から外す。
+   */
+  excludedDeletionPaths?: readonly string[];
   onProgress?: (progress: { done: number; total: number; path: string }) => void;
   deps?: ApplySyncDeps;
 }
@@ -52,7 +58,7 @@ export interface ApplySyncResult {
  * 例外を投げない (`executeSync` が失敗を `outcome` で返す設計に揃える)。
  */
 export async function applySync(input: ApplySyncInput): Promise<ApplySyncResult> {
-  const { profile, prepared, onProgress, deps = {} } = input;
+  const { profile, prepared, excludedDeletionPaths, onProgress, deps = {} } = input;
   const backup = deps.backup ?? new OpfsBackupStore();
   const estimateFree = deps.estimateFreeBytes ?? estimateFreeBytes;
   const execute = deps.execute ?? executeSync;
@@ -62,7 +68,7 @@ export async function applySync(input: ApplySyncInput): Promise<ApplySyncResult>
 
   const result = await execute({
     profileId: profile.id,
-    plan: prepared.plan,
+    plan: excludeDeletions(prepared.plan, excludedDeletionPaths ?? []),
     sink: prepared.sink,
     backup,
     resolveContent: createContentResolver({

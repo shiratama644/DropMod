@@ -12,6 +12,10 @@ import { EnvironmentSyncSection } from '@/components/EnvironmentSyncSection';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
 import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
+import { useSync } from '@/hooks/useSync';
+import { useAppActionsStore } from '@/lib/store/appActions';
+import type { SyncPlan } from '@/lib/env/diff';
+import type { EnvironmentSink } from '@/lib/env/sink';
 import type { LinkedSource, Profile } from '@/types';
 
 // link.ts は自前のテストを持つため、フックごと差し替えて表示分岐に絞る
@@ -19,6 +23,10 @@ vi.mock('@/hooks/useEnvironmentLink', () => ({
   useEnvironmentLink: vi.fn()
 }));
 const mockUseLink = vi.mocked(useEnvironmentLink);
+
+// useSync も自前のテストを持つため、ここでは接続 (ボタン → Preview) に絞る
+vi.mock('@/hooks/useSync', () => ({ useSync: vi.fn() }));
+const mockUseSync = vi.mocked(useSync);
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
@@ -45,6 +53,39 @@ function linkedSource(overrides: Partial<LinkedSource> = {}): LinkedSource {
 const link = vi.fn(async () => true);
 const unlink = vi.fn(async () => true);
 
+const prepareMock = vi.fn();
+const applyMock = vi.fn(async () => undefined);
+const resetMock = vi.fn();
+
+const EMPTY_PLAN: SyncPlan = {
+  profileId: 'p1',
+  generatedAt: 1,
+  additions: [],
+  updates: [],
+  deletions: [],
+  unchanged: [],
+  unmanaged: [],
+  totals: {
+    counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+    writeBytes: 0,
+    removeBytes: 0,
+    backupBytes: 0
+  }
+};
+
+function readyOutcome(writable = true) {
+  return {
+    status: 'ready' as const,
+    rootName: '.minecraft',
+    check: { ok: true, mismatches: [], unverified: [] },
+    plan: EMPTY_PLAN,
+    sink: { kind: 'filesystem' } as unknown as EnvironmentSink,
+    writable,
+    writableReason: writable ? null : '書き込み権限がありません',
+    scanSkipped: []
+  };
+}
+
 describe('EnvironmentSyncSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,6 +99,17 @@ describe('EnvironmentSyncSection', () => {
       dismissError: vi.fn()
     });
     useConfirmStore.setState({ confirm: vi.fn(async () => true) });
+    mockUseSync.mockReturnValue({
+      phase: 'idle',
+      outcome: null,
+      scanProgress: null,
+      applyProgress: null,
+      result: null,
+      error: null,
+      prepare: prepareMock,
+      apply: applyMock,
+      reset: resetMock
+    });
     useProfilesStore.setState({
       profiles: [makeProfile()],
       currentProfileId: 'p1',
@@ -212,5 +264,148 @@ describe('EnvironmentSyncSection', () => {
 
     const button = screen.getByRole('button', { name: /フォルダを選択中/ });
     expect(button).toBeDisabled();
+  });
+
+
+// ============================================================================
+// Phase 12-B: Sync ボタン → Preview モーダルの接続
+// ============================================================================
+
+    describe('EnvironmentSyncSection: Sync ボタン', () => {
+    beforeEach(() => {
+      useProfilesStore.setState({
+        profiles: [makeProfile({ linkedSource: linkedSource() })],
+        currentProfileId: 'p1',
+        hasHydrated: true
+      });
+    });
+
+    it('紐付け済みなら「差分を確認して同期」ボタンを出す', () => {
+      render(<EnvironmentSyncSection />);
+      expect(screen.getByRole('button', { name: '差分を確認して同期' })).toBeInTheDocument();
+    });
+
+    it('未紐付けでは Sync ボタンを出さない', () => {
+      useProfilesStore.setState({ profiles: [makeProfile()], currentProfileId: 'p1' });
+      render(<EnvironmentSyncSection />);
+      expect(screen.queryByRole('button', { name: /差分を確認して同期/ })).not.toBeInTheDocument();
+    });
+
+    it('クリックで prepare を呼び、ready なら Preview を開く', async () => {
+      prepareMock.mockResolvedValue(readyOutcome());
+      render(<EnvironmentSyncSection />);
+
+      fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: '同期プレビュー' })).toBeInTheDocument();
+      });
+      expect(prepareMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('**D-1**: blocked-environment では Preview を開かない', async () => {
+      prepareMock.mockResolvedValue({
+        status: 'blocked-environment',
+        rootName: '.minecraft',
+        check: { ok: false, mismatches: [], unverified: [], message: '環境が一致しません' }
+      });
+      render(<EnvironmentSyncSection />);
+
+      fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+
+      await waitFor(() => expect(prepareMock).toHaveBeenCalled());
+      expect(screen.queryByRole('dialog', { name: '同期プレビュー' })).not.toBeInTheDocument();
+    });
+
+    it('prepare が null (プロファイル無し) でも Preview を開かない', async () => {
+      prepareMock.mockResolvedValue(null);
+      render(<EnvironmentSyncSection />);
+
+      fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+
+      await waitFor(() => expect(prepareMock).toHaveBeenCalled());
+      expect(screen.queryByRole('dialog', { name: '同期プレビュー' })).not.toBeInTheDocument();
+    });
+
+    it('Preview で「同期する」を押すと apply → 閉じる → reset', async () => {
+      prepareMock.mockResolvedValue(readyOutcome());
+      render(<EnvironmentSyncSection />);
+
+      fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: '同期プレビュー' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
+
+      await waitFor(() => {
+        expect(applyMock).toHaveBeenCalledWith([]);
+        expect(resetMock).toHaveBeenCalled();
+        expect(screen.queryByRole('dialog', { name: '同期プレビュー' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('Preview をキャンセルすると閉じて reset する', async () => {
+      prepareMock.mockResolvedValue(readyOutcome());
+      render(<EnvironmentSyncSection />);
+
+      fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: '同期プレビュー' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+      await waitFor(() => {
+        expect(resetMock).toHaveBeenCalled();
+        expect(applyMock).not.toHaveBeenCalled();
+      });
+    });
+
+    it('**D-10**: 書き込み権限が無いと ZIP 代替導線を出す', async () => {
+    const handleDownloadZip = vi.fn();
+    useAppActionsStore.setState({ actions: { handleDownloadZip } } as never);
+    prepareMock.mockResolvedValue(readyOutcome(false));
+
+    render(<EnvironmentSyncSection />);
+    fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'ZIP で書き出す' })).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('alert').some((a) => a.textContent?.includes('読み取り専用'))).toBe(
+      true
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'ZIP で書き出す' }));
+    expect(handleDownloadZip).toHaveBeenCalledTimes(1);
+  });
+
+  it('**D-10**: 書き込みできる場合は ZIP 代替導線を出さない', async () => {
+    prepareMock.mockResolvedValue(readyOutcome(true));
+    render(<EnvironmentSyncSection />);
+    fireEvent.click(screen.getByRole('button', { name: '差分を確認して同期' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: '同期プレビュー' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'ZIP で書き出す' })).not.toBeInTheDocument();
+  });
+
+  it('実行中 (running) は Sync ボタンを押せない', () => {
+      mockUseSync.mockReturnValue({
+        phase: 'running',
+        outcome: null,
+        scanProgress: null,
+        applyProgress: { done: 1, total: 2, path: 'mods/a.jar' },
+        result: null,
+        error: null,
+        prepare: prepareMock,
+        apply: applyMock,
+        reset: resetMock
+      });
+      render(<EnvironmentSyncSection />);
+      expect(screen.getByRole('button', { name: '差分を確認して同期' })).toBeDisabled();
+    });
   });
 });

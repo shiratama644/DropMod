@@ -15,7 +15,10 @@
  */
 
 import type React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { SyncButton } from '@/components/SyncButton';
+import { useAppAction } from '@/lib/store/appActions';
+import type { ReadySyncOutcome } from '@/lib/env/syncPrep';
 import {
   checkEnvironmentMatch,
   ENVIRONMENT_FIELD_LABEL
@@ -35,6 +38,9 @@ export const EnvironmentSyncSection: React.FC = () => {
   );
   const confirm = useConfirmStore((s) => s.confirm);
   const { supported, linking, unlinking, error, link, unlink } = useEnvironmentLink();
+  const handleDownloadZip = useAppAction('handleDownloadZip');
+  /** **D-10**: 直近の prepare で「解析はできたが書き込み権限が無い」結果 */
+  const [readOnly, setReadOnly] = useState<ReadySyncOutcome | null>(null);
 
   const linkedSource = currentProfile?.linkedSource;
 
@@ -174,6 +180,16 @@ export const EnvironmentSyncSection: React.FC = () => {
             )}
 
             <div className="flex flex-wrap gap-2 pt-1">
+              <SyncButton
+                variant="primary"
+                disabled={linking || unlinking}
+                onPrepared={(outcome) => {
+                  // 解析は成功したが書き込めない = D-2。ZIP 代替導線を出す
+                  setReadOnly(
+                    outcome?.status === 'ready' && !outcome.writable ? outcome : null
+                  );
+                }}
+              />
               <button
                 type="button"
                 onClick={() => void link()}
@@ -194,6 +210,30 @@ export const EnvironmentSyncSection: React.FC = () => {
               </button>
             </div>
           </>
+        )}
+
+        {/* **D-10**: 書き込み権限が取れないときの ZIP 代替導線 */}
+        {readOnly && (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 space-y-2"
+          >
+            <p className="text-xs font-bold theme-text-amber flex items-center gap-1.5">
+              <i className="fa-solid fa-lock" aria-hidden />
+              読み取り専用で同期できません
+            </p>
+            <p className="text-[11px] theme-text-secondary leading-relaxed">
+              {readOnly.writableReason}
+            </p>
+            <button
+              type="button"
+              onClick={() => handleDownloadZip()}
+              className="btn-hover-effect px-3.5 py-2 theme-sub-box text-xs font-semibold rounded-xl transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <i className="fa-solid fa-file-zipper theme-text-brand" aria-hidden />
+              ZIP で書き出す
+            </button>
+          </div>
         )}
 
         {error && (

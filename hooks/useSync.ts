@@ -45,10 +45,16 @@ export interface UseSyncResult {
   applyProgress: ApplyProgress | null;
   result: ExecuteSyncResult | null;
   error: string | null;
-  /** Preview 用の SyncPlan を用意する (書き込みは行わない) */
-  prepare: () => Promise<void>;
-  /** Preview を承認して実行する */
-  apply: () => Promise<void>;
+  /**
+   * Preview 用の SyncPlan を用意する (書き込みは行わない)。
+   * @returns 用意した結果。呼び出し側は `status === 'ready'` のときだけ Preview を出す
+   */
+  prepare: () => Promise<PrepareSyncOutcome | null>;
+  /**
+   * Preview を承認して実行する。
+   * @param excludedDeletionPaths 「保持」を選んだ削除予定のパス (§10.3)
+   */
+  apply: (excludedDeletionPaths?: readonly string[]) => Promise<void>;
   reset: () => void;
 }
 
@@ -89,7 +95,7 @@ export function useSync(): UseSyncResult {
     if (!profile) {
       setError('プロファイルが選択されていません。');
       setPhase('idle');
-      return;
+      return null;
     }
 
     setPhase('preparing');
@@ -104,18 +110,20 @@ export function useSync(): UseSyncResult {
       if (next.status === 'blocked-environment') {
         setPhase('idle');
         setError(next.check.message ?? '環境が一致しないため Sync できません。');
-        return;
+        return next;
       }
       setPhase('ready');
+      return next;
     } catch (e) {
       const message = errorMessage(e);
       setError(message);
       setPhase('idle');
       useToastStore.getState().showToast(`Sync の準備に失敗しました: ${message}`, 'error');
+      return null;
     }
   }, []);
 
-  const apply = useCallback(async () => {
+  const apply = useCallback(async (excludedDeletionPaths: readonly string[] = []) => {
     const prepared = outcomeRef.current;
     // D-2: 書き込み権限が無いときは実行しない (ボタンも無効化しているが二重で防ぐ)
     if (prepared?.status !== 'ready' || !prepared.writable) return;
@@ -134,6 +142,7 @@ export function useSync(): UseSyncResult {
       const { result: execResult, ledgerUpdated } = await applySync({
         profile,
         prepared,
+        excludedDeletionPaths,
         onProgress: setApplyProgress
       });
       setResult(execResult);

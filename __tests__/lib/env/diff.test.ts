@@ -11,10 +11,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeSyncPlan,
+  excludeDeletions,
   selectDeletionsRequiringConfirm,
   selectExternallyModified,
   type LocalFileEntry
 } from '@/lib/env/diff';
+import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
 import type { ManagedFileRecord, Profile, ProjectItem } from '@/types';
 
 const NOW = 1_700_000_000_000;
@@ -475,6 +477,88 @@ describe('computeSyncPlan: カテゴリ分離・集計', () => {
       deletion: 0,
       unchanged: 0,
       unmanaged: 0
+    });
+  });
+});
+
+
+// ============================================================================
+// Phase 12-B: ユーザーが「保持」を選んだ削除を Plan から外す
+// ============================================================================
+
+describe('excludeDeletions (§10.3 のユーザー選択)', () => {
+  function makePlan(overrides: Partial<SyncPlan> = {}): SyncPlan {
+    return {
+      profileId: 'p1',
+      generatedAt: 1,
+      additions: [],
+      updates: [],
+      deletions: [],
+      unchanged: [],
+      unmanaged: [],
+      totals: {
+        counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+        writeBytes: 0,
+        removeBytes: 0,
+        backupBytes: 0
+      },
+      ...overrides
+    };
+  }
+
+  function entry(overrides: Partial<SyncPlanEntry> = {}): SyncPlanEntry {
+    return {
+      kind: 'deletion',
+      category: 'mod',
+      path: 'mods/a.jar',
+      name: 'A',
+      size: 0,
+      ...overrides
+    };
+  }
+
+  const plan = makePlan({
+    deletions: [
+      entry({ path: 'mods/dm.jar', source: 'dropmod', size: 100 }),
+      entry({ path: 'mods/im.jar', source: 'import', size: 200 })
+    ],
+    totals: {
+      counts: { addition: 0, update: 0, deletion: 2, unchanged: 0, unmanaged: 0 },
+      writeBytes: 0,
+      removeBytes: 300,
+      backupBytes: 300
+    }
+  });
+
+  it('空配列なら同一オブジェクトを返す', () => {
+    expect(excludeDeletions(plan, [])).toBe(plan);
+  });
+
+  it('該当が無ければ同一オブジェクトを返す', () => {
+    expect(excludeDeletions(plan, ['mods/other.jar'])).toBe(plan);
+  });
+
+  it('除外した削除を落とし、容量の合計も減らす', () => {
+    const next = excludeDeletions(plan, ['mods/im.jar']);
+    expect(next.deletions.map((d) => d.path)).toEqual(['mods/dm.jar']);
+    expect(next.totals.counts.deletion).toBe(1);
+    expect(next.totals.removeBytes).toBe(100);
+    expect(next.totals.backupBytes).toBe(100);
+  });
+
+  it('元 Plan は変更しない', () => {
+    excludeDeletions(plan, ['mods/im.jar']);
+    expect(plan.deletions).toHaveLength(2);
+    expect(plan.totals.removeBytes).toBe(300);
+  });
+
+  it('全部除外すると deletion 0 になる', () => {
+    const next = excludeDeletions(plan, ['mods/dm.jar', 'mods/im.jar']);
+    expect(next.deletions).toEqual([]);
+    expect(next.totals).toMatchObject({
+      counts: expect.objectContaining({ deletion: 0 }),
+      removeBytes: 0,
+      backupBytes: 0
     });
   });
 });

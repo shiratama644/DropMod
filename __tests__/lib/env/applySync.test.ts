@@ -298,6 +298,61 @@ describe('applySync', () => {
     expect(seen).toEqual([{ done: 1, total: 1, path: 'mods/a.jar' }]);
   });
 
+  it('excludedDeletionPaths の削除は実行しない (§10.3)', async () => {
+    const sink = new MemorySink({ files: { 'mods/keep.jar': 'keep', 'mods/gone.jar': 'gone' } });
+    const existing: ManagedFileRecord[] = [
+      {
+        id: 'p1::mods/keep.jar',
+        profileId: 'p1',
+        category: 'mod',
+        projectId: 'k',
+        path: 'mods/keep.jar',
+        sha1: await sha1Of('keep'),
+        size: 4,
+        source: 'import',
+        managedAt: 1
+      },
+      {
+        id: 'p1::mods/gone.jar',
+        profileId: 'p1',
+        category: 'mod',
+        projectId: 'g',
+        path: 'mods/gone.jar',
+        sha1: await sha1Of('gone'),
+        size: 4,
+        source: 'import',
+        managedAt: 1
+      }
+    ];
+    const saveLedger = vi.fn(syncManagedFiles);
+
+    await applySync({
+      profile: makeProfile(),
+      prepared: prepared(
+        sink,
+        makePlan({
+          deletions: [
+            entry({ kind: 'delete' as never, path: 'mods/keep.jar', name: 'keep', source: 'import' }),
+            entry({ kind: 'delete' as never, path: 'mods/gone.jar', name: 'gone', source: 'import' })
+          ]
+        })
+      ),
+      excludedDeletionPaths: ['mods/keep.jar'],
+      deps: {
+        backup: new MemoryBackupStore(),
+        estimateFreeBytes: async () => undefined,
+        saveLedger,
+        getManaged: async () => existing,
+        fetchImpl: okFetch()
+      }
+    });
+
+    // 「保持」を選んだ方は残り、選ばなかった方は消える
+    expect(sink.snapshot()).toEqual({ 'mods/keep.jar': 'keep' });
+    const records = await getManagedFiles('p1');
+    expect(records.map((r) => r.path)).toEqual(['mods/keep.jar']);
+  });
+
   it('空プランは completed だが台帳は更新しない (トランザクションが無いため)', async () => {
     const saveLedger = vi.fn(syncManagedFiles);
     const result = await applySync({

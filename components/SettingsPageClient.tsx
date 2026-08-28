@@ -12,6 +12,7 @@ import {
   restoreFromLocalStorageBackup
 } from '@/lib/db/migrate';
 import { EnvironmentSyncSection } from './EnvironmentSyncSection';
+import { SyncHistorySection } from './SyncHistorySection';
 
 // ============================================================================
 // SettingsPageClient (Phase 9-A.1: useAppContext 撤去)
@@ -275,6 +276,8 @@ export const SettingsPageClient: React.FC = () => {
         {/* Phase 12-B / D-9: フォルダ紐付け + Sync の入口 */}
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6">
           <EnvironmentSyncSection />
+          {/* D-9: 履歴と Undo も同じ「環境との同期」エリアに集約する */}
+          <SyncHistorySection />
         </div>
 
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3 sm:space-y-4">

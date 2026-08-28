@@ -139,7 +139,7 @@ describe('syncTransactions — v4', () => {
     await expect(markOperationDone('tx-nope', 0)).resolves.toBeUndefined();
   });
 
-  it('findInterruptedSyncTransactions は running だけを古い順で返す (D-4)', async () => {
+  it('findInterruptedSyncTransactions は running を古い順で返す (D-4)', async () => {
     const old = await createSyncTransaction('p1', [op()]);
     const newer = await createSyncTransaction('p2', [op()]);
     const done = await createSyncTransaction('p1', [op()]);
@@ -155,6 +155,20 @@ describe('syncTransactions — v4', () => {
     // 復旧済みになれば検出されなくなる
     await updateSyncTransactionStatus(newer, 'rolled-back', { rolledBackAt: 999 });
     expect((await findInterruptedSyncTransactions()).map((r) => r.id)).toEqual([old]);
+  });
+
+  it('**pending も検出する** (createSyncTransaction と running 更新の間で閉じた場合)', async () => {
+    // createSyncTransaction は pending で作る。running になる前にタブを閉じられると
+    // pending のまま残る — running だけ見ると二度と拾えず行が永久に溜まる
+    const pending = await createSyncTransaction('p1', [op()]);
+    await setStartedAt(pending, 100);
+    const running = await createSyncTransaction('p1', [op()]);
+    await setStartedAt(running, 200);
+    await updateSyncTransactionStatus(running, 'running');
+
+    const found = await findInterruptedSyncTransactions();
+    expect(found.map((r) => r.id)).toEqual([pending, running]);
+    expect(found.map((r) => r.status)).toEqual(['pending', 'running']);
   });
 
   it('deleteSyncTransaction で履歴を消せる (Sync History の prune)', async () => {

@@ -537,12 +537,20 @@ export async function markOperationDone(
 }
 
 /**
- * **D-4**: 中断された (`status === 'running'` のまま残った) トランザクションを検出する。
+ * **D-4**: 中断されたトランザクションを検出する。
  * アプリ起動時に呼び、ユーザーに「巻き戻しますか？」を確認する。
+ *
+ * **`pending` も含める。** `createSyncTransaction()` は `pending` で行を作り、
+ * `executeSync()` が `running` に更新する。その**間**でタブを閉じられると
+ * `pending` のまま残る — `running` だけを見ると二度と検出されず、
+ * 行が永久に溜まり続ける。どちらも「完了していない Journal」なので同じ扱い。
  */
 export async function findInterruptedSyncTransactions(): Promise<SyncTransactionRow[]> {
-  const rows = await db.syncTransactions.where('status').equals('running').toArray();
-  return rows.sort((a, b) => a.startedAt - b.startedAt);
+  const [running, pending] = await Promise.all([
+    db.syncTransactions.where('status').equals('running').toArray(),
+    db.syncTransactions.where('status').equals('pending').toArray()
+  ]);
+  return [...running, ...pending].sort((a, b) => a.startedAt - b.startedAt);
 }
 
 /** トランザクションを削除する (履歴の prune 用) */

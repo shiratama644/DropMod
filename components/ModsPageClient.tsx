@@ -1,5 +1,7 @@
 'use client';
 
+import { SyncButton } from '@/components/SyncButton';
+import { useFolderLinked } from '@/hooks/useFolderLinked';
 import type React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -70,6 +72,7 @@ export const ModsPageClient: React.FC = () => {
   const handleToggleMod = useAppAction('handleToggleMod');
   const handleUpdateModVersion = useAppAction('handleUpdateModVersion');
   const handleRemoveMods = useAppAction('handleRemoveMods');
+  const folderLinked = useFolderLinked();
   const handleDownloadZip = useAppAction('handleDownloadZip');
   const openDependencyCheckModal = useAppAction('openDependencyCheckModal');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -308,14 +311,23 @@ export const ModsPageClient: React.FC = () => {
             <i className="fa-solid fa-trash-can" aria-hidden />
             {`選択を削除${selectedVisibleCount > 0 ? ` (${selectedVisibleCount})` : ''}`}
           </button>
-          <button
-            type="button"
-            onClick={handleDownloadZip}
-            className="btn-hover-effect flex-1 sm:flex-none justify-center px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 md:hidden"
-          >
-            <i className="fa-solid fa-file-zipper" aria-hidden />
-            ZIP保存 (全.jar)
-          </button>
+          {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
+          {folderLinked ? (
+            <SyncButton
+              variant="primary"
+              label="フォルダへ同期 (全.jar)"
+              className="flex-1 sm:flex-none md:hidden"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={handleDownloadZip}
+              className="btn-hover-effect flex-1 sm:flex-none justify-center px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 md:hidden"
+            >
+              <i className="fa-solid fa-file-zipper" aria-hidden />
+              ZIP保存 (全.jar)
+            </button>
+          )}
         </div>
       </div>
 

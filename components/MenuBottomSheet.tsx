@@ -14,6 +14,8 @@
 //      onClose を明示すると close アニメが 2 回走る)
 // -----------------------------------------------------------------------------
 
+import { SyncButton } from '@/components/SyncButton';
+import { useFolderLinked } from '@/hooks/useFolderLinked';
 import type React from 'react';
 import { useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -41,6 +43,7 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
   onDownloadZip,
   onImportZip,
 }) => {
+  const folderLinked = useFolderLinked();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadClick = useCallback(() => {
@@ -74,19 +77,23 @@ export const MenuBottomSheet: React.FC<MenuBottomSheetProps> = ({
       zIndexClass={zIndexClass}
     >
       <div className="grid grid-cols-2 gap-2">
-        {/* Primary: ZIP 保存 (DropMod の目玉機能、色で primary 感) */}
-        <button
-          type="button"
-          onClick={handleDownloadClick}
-          className="btn-hover-effect flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-md shadow-emerald-600/30 min-h-[52px]"
-        >
-          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center text-base shrink-0">
-            <i className="fa-solid fa-file-zipper" aria-hidden />
-          </div>
-          <span className="font-bold text-sm leading-tight truncate">
-            ZIP 保存
-          </span>
-        </button>
+        {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
+        {folderLinked ? (
+          <SyncButton variant="primaryLg" label="フォルダへ同期" className="min-h-[52px]" />
+        ) : (
+          <button
+            type="button"
+            onClick={handleDownloadClick}
+            className="btn-hover-effect flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.97] transition focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-md shadow-emerald-600/30 min-h-[52px]"
+          >
+            <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center text-base shrink-0">
+              <i className="fa-solid fa-file-zipper" aria-hidden />
+            </div>
+            <span className="font-bold text-sm leading-tight truncate">
+              ZIP 保存
+            </span>
+          </button>
+        )}
 
         {/* ZIP 読込 (label で hidden input を trigger、input の onClick は付けない) */}
         <label className="flex flex-row items-center gap-3 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 active:scale-[0.97] transition cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500 min-h-[52px]">

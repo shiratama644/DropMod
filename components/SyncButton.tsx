@@ -24,11 +24,14 @@ import { SyncPreviewModal } from '@/components/SyncPreviewModal';
 import { useSync } from '@/hooks/useSync';
 import type { PrepareSyncOutcome } from '@/lib/env/syncPrep';
 
-export type SyncButtonVariant = 'primary' | 'ghost' | 'icon';
+export type SyncButtonVariant = 'primary' | 'primaryLg' | 'ghost' | 'icon';
 
 const VARIANT_CLASS: Record<SyncButtonVariant, string> = {
   primary:
     'px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-xs font-bold rounded-xl shadow',
+  /** サイドバー / ボトムシート用 (置き換える ZIP ボタンと同じ大きさ) */
+  primaryLg:
+    'w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md shadow-emerald-600/20',
   ghost:
     'px-3.5 py-2 theme-sub-box text-xs font-semibold rounded-xl border border-transparent hover:border-emerald-500/50',
   icon:

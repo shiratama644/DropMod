@@ -41,6 +41,17 @@ export interface ModpackUpdateReport {
   checkedCount: number;
   /** 確認できなかった件数 */
   unresolvedCount: number;
+  /**
+   * **Modpack 本体を確認できなかった理由**。
+   *
+   * `.mrpack` の `modrinth.index.json` には `name` と `versionId` (パック独自の
+   * バージョン文字列) は入っているが、**Modrinth の project id は入っていない**。
+   * そのため Import 直後の Profile では本体の更新を確認しようがない。
+   *
+   * 黙って「更新なし」にするとユーザーは「確認した结果 最新だった」と誤解するので、
+   * **確認していない事実を理由付きで返す**。
+   */
+  modpackUncheckedReason?: string;
 }
 
 export interface CheckModpackUpdatesInput {
@@ -66,6 +77,9 @@ function categoryOf(item: ProjectItem): 'mod' | 'resourcepack' | 'shader' {
 function currentVersionIdOf(item: ProjectItem): string | undefined {
   return item.versionId;
 }
+
+/** `generateId('mrpack')` が生成する DropMod 内部 id の prefix */
+const INTERNAL_ID_PREFIX = 'mrpack-';
 
 function entryFromInfo(
   info: ProviderUpdateInfo,
@@ -104,6 +118,12 @@ export async function checkModpackUpdates(
 
   // ---- 1. Modpack 本体 ----
   const modpack = profile.modpackSource;
+  let modpackUncheckedReason: string | undefined;
+  if (modpack && !modpack.projectId) {
+    // `.mrpack` には project id が入っていないので確認できない
+    modpackUncheckedReason =
+      'Modpack 本体は確認していません (.mrpack に Modrinth のプロジェクト ID が含まれていないため)';
+  }
   if (modpack?.projectId) {
     try {
       const info = await provider.checkForUpdate(modpack.projectId, modpack.versionId, context);
@@ -136,10 +156,19 @@ export async function checkModpackUpdates(
       // CurseForge 由来は Phase 13 まで未対応なので問い合わせない
       .filter(({ item }) => item.provider !== 'curseforge');
 
-    for (const { item, category } of items.slice(0, limit)) {
-      // projectId が DropMod 内部の生成 id (`mrpack-…` 等) の場合は Modrinth に
-      // 存在しないので問い合わせない (404 の無駄打ちを避ける)
-      if (!item.projectId) continue;
+    // 問い合わせる意味の無い projectId を**先に**除く。
+    //
+    // - 空: Import 由来で Modrinth project に紐付かなかったもの
+    // - `mrpack-…`: `generateId('mrpack')` が作った **DropMod 内部の id**。
+    //   Modrinth に存在しないので問い合わせると必ず 404 になる
+    //
+    // **`slice(0, limit)` より前で除く**こと。後にすると無効な項目が
+    // limit の枠を食い、確認できるはずの Mod が確認されない。
+    const queryable = items.filter(
+      ({ item }) => item.projectId && !item.projectId.startsWith(INTERNAL_ID_PREFIX)
+    );
+
+    for (const { item, category } of queryable.slice(0, limit)) {
 
       const base = { projectId: item.projectId, name: item.name, category };
       try {
@@ -164,7 +193,8 @@ export async function checkModpackUpdates(
     entries,
     updatableCount: entries.filter((e) => e.hasUpdate).length,
     checkedCount: entries.filter((e) => !e.unresolved).length,
-    unresolvedCount: entries.filter((e) => e.unresolved).length
+    unresolvedCount: entries.filter((e) => e.unresolved).length,
+    ...(modpackUncheckedReason ? { modpackUncheckedReason } : {})
   };
 }
 

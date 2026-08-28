@@ -279,6 +279,24 @@ describe('ModpackHubClient: 更新の確認', () => {
     expect(screen.getByText(/1 件は最新です/)).toBeInTheDocument();
   });
 
+  it('**Modpack 本体を確認できない理由を出す** (黙って「最新」にしない)', async () => {
+    mockCheck.mockResolvedValue(
+      report({
+        checkedCount: 1,
+        entries: [{ projectId: 'proj-1', name: 'Sodium', category: 'mod', hasUpdate: false }],
+        modpackUncheckedReason:
+          'Modpack 本体は確認していません (.mrpack に Modrinth のプロジェクト ID が含まれていないため)'
+      })
+    );
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: /更新を確認/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Modpack 本体は確認していません/)).toBeInTheDocument()
+    );
+  });
+
   it('**取得できなかった項目は警告として分けて出す**', async () => {
     mockCheck.mockResolvedValue(
       report({

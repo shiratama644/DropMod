@@ -300,6 +300,13 @@ const UpdateReport: React.FC<{ report: ModpackUpdateReport }> = ({ report }) => 
         </ul>
       )}
 
+      {report.modpackUncheckedReason ? (
+        <p className="theme-text-secondary text-xs mt-3">
+          <i className="fa-solid fa-circle-info mr-1.5 theme-text-tertiary" />
+          {report.modpackUncheckedReason}
+        </p>
+      ) : null}
+
       {unresolved.length > 0 ? (
         <p className="theme-text-amber text-xs mt-3">
           <i className="fa-solid fa-triangle-exclamation mr-1.5" />

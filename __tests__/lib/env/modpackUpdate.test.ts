@@ -323,3 +323,89 @@ describe('updateIssueFromReport', () => {
     expect(issue.details).toEqual(['A: ? → ?']);
   });
 });
+
+describe('checkModpackUpdates: 問い合わせない項目 (体系的バグチェックで発見)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** 問い合わせられた projectId を順に返す */
+  function calledIds(provider: { checkForUpdate: ReturnType<typeof vi.fn> }): string[] {
+    return provider.checkForUpdate.mock.calls.map((c) => c[0] as string);
+  }
+
+  it('**DropMod 内部生成 id (`mrpack-…`) には問い合わせない**', async () => {
+    const provider = stubProvider({});
+    const p = profile({
+      mods: [
+        item({ projectId: 'mrpack-3f1c2a', name: 'Unresolved Import' }),
+        item({ projectId: 'proj-1', name: 'Sodium' })
+      ]
+    });
+
+    const report = await checkModpackUpdates({ profile: p, provider });
+
+    // 内部 id は Modrinth に存在せず 404 確定なので問い合わせない
+    expect(calledIds(provider)).toEqual(['proj-1']);
+    expect(report.entries.map((e) => e.projectId)).toEqual(['proj-1']);
+  });
+
+  it('**無効な projectId が limit の枠を食わない**', async () => {
+    const provider = stubProvider({});
+    // 無効 id 5 件 + 有効 id 1 件、limit=1
+    const p = profile({
+      mods: [
+        ...Array.from({ length: 5 }, (_, i) =>
+          item({ projectId: `mrpack-${i}`, name: `Bad ${i}` })
+        ),
+        item({ projectId: 'proj-1', name: 'Sodium' })
+      ]
+    });
+
+    const report = await checkModpackUpdates({ profile: p, provider, limit: 1 });
+
+    // slice を絞り込みより後にすると 0 件になる
+    expect(calledIds(provider)).toEqual(['proj-1']);
+    expect(report.checkedCount).toBe(1);
+  });
+
+  it('空 projectId にも問い合わせない', async () => {
+    const provider = stubProvider({});
+    const p = profile({ mods: [item({ projectId: '' })] });
+
+    const report = await checkModpackUpdates({ profile: p, provider });
+
+    expect(calledIds(provider)).toEqual([]);
+    expect(report.entries).toEqual([]);
+  });
+
+  it('**modpackSource に projectId が無ければ理由を返す** (.mrpack には入っていない)', async () => {
+    const provider = stubProvider({});
+    const p = profile({
+      modpackSource: { provider: 'modrinth', name: 'CF Pack', versionId: '1.0', importedAt: 1 }
+    });
+
+    const report = await checkModpackUpdates({ profile: p, provider, includeMods: false });
+
+    // 「確認した結果 最新」と誤解させないため、確認していない事実を理由付きで返す
+    expect(report.modpackUncheckedReason).toContain('プロジェクト ID');
+    expect(report.entries).toEqual([]);
+  });
+
+  it('projectId があれば本体を確認する (理由は付かない)', async () => {
+    const provider = stubProvider({});
+    const p = profile({
+      modpackSource: {
+        provider: 'modrinth',
+        projectId: 'pack-1',
+        name: 'CF Pack',
+        versionId: 'v1',
+        importedAt: 1
+      }
+    });
+
+    const report = await checkModpackUpdates({ profile: p, provider, includeMods: false });
+
+    expect(calledIds(provider)).toEqual(['pack-1']);
+    expect(report.modpackUncheckedReason).toBeUndefined();
+    expect(report.entries[0]?.category).toBe('modpack');
+  });
+});

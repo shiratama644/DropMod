@@ -13,7 +13,12 @@
  * 実体と fingerprint が食い違い、次回 Sync の削除判定 (§10.2) が壊れる。
  */
 
-import { getManagedFiles, getSyncTransaction, syncManagedFiles } from '@/lib/db/dexie';
+import {
+  getManagedFiles,
+  getSyncTransaction,
+  setSyncTransactionLedgerBefore,
+  syncManagedFiles
+} from '@/lib/db/dexie';
 import type { Profile } from '@/types';
 import { excludeDeletions } from './diff';
 import { executeSync, type ExecuteSyncResult } from './executor';
@@ -31,6 +36,7 @@ export interface ApplySyncDeps {
   getManaged?: typeof getManagedFiles;
   saveLedger?: typeof syncManagedFiles;
   getTx?: typeof getSyncTransaction;
+  setLedgerBefore?: typeof setSyncTransactionLedgerBefore;
   fetchImpl?: typeof fetch;
 }
 
@@ -65,6 +71,7 @@ export async function applySync(input: ApplySyncInput): Promise<ApplySyncResult>
   const getManaged = deps.getManaged ?? getManagedFiles;
   const saveLedger = deps.saveLedger ?? syncManagedFiles;
   const getTx = deps.getTx ?? getSyncTransaction;
+  const setLedgerBefore = deps.setLedgerBefore ?? setSyncTransactionLedgerBefore;
 
   const result = await execute({
     profileId: profile.id,
@@ -89,6 +96,10 @@ export async function applySync(input: ApplySyncInput): Promise<ApplySyncResult>
   if (!tx) return { result, ledgerUpdated: false };
 
   const existing = await getManaged(profile.id);
+  // **Undo 用**: 書き換える前の台帳を Journal に保存する。
+  // Journal を逆にたどる復元では update の元 fingerprint や delete の元レコードを
+  // 完全には戻せないため、Sync 前の状態をそのまま持つ。
+  await setLedgerBefore(result.transactionId, existing);
   const records = applyJournalToLedger(profile.id, tx.operations, existing);
   await saveLedger(profile.id, records);
 

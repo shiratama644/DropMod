@@ -180,6 +180,17 @@ export interface SyncTransactionRow {
   rolledBackAt?: number;
   /** 失敗理由 (`status === 'failed'` のとき) */
   error?: string;
+  /**
+   * **この Sync を実行する前の台帳スナップショット** (Undo 用)。
+   *
+   * Journal を逆にたどって台帳を復元することもできるが、`update` の
+   * 元 fingerprint や `delete` の元レコードを Journal から完全には復元できない。
+   * 「Sync 前の状態」をそのまま持っているほうが確実なので保存する。
+   *
+   * Dexie のスキーマは**インデックスだけ**を宣言するため、非インデックスの
+   * フィールド追加にマイグレーションは不要 (既存行は undefined になる)。
+   */
+  ledgerBefore?: ManagedFileRow[];
 }
 
 // ============================================================================
@@ -489,6 +500,20 @@ export async function updateSyncTransactionStatus(
     ...(isTerminal ? { finishedAt: Date.now() } : {}),
     ...extra
   });
+}
+
+/**
+ * Sync 前の台帳スナップショットを保存する (Undo 用)。
+ *
+ * 見つからない id に対しては何もしない (executeSync の失敗フローと揃える)。
+ */
+export async function setSyncTransactionLedgerBefore(
+  id: string,
+  records: ManagedFileRow[]
+): Promise<void> {
+  const row = await db.syncTransactions.get(id);
+  if (!row) return;
+  await db.syncTransactions.put({ ...row, ledgerBefore: records });
 }
 
 /**

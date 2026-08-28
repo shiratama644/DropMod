@@ -1,11 +1,11 @@
 /**
  * showDirectoryPicker のラッパー (PHASE11_PLAN.md §10.5)。
  *
- * - Phase 11 は Read-only のため mode: 'read' のみ
- *   (Phase 12 の Sync で 'readwrite' に昇格)
- * - ハンドルの IndexedDB 永続化 (dirHandles) と Profile.linkedSource は
- *   Phase 12 へ延期 (2026-08-26 改定)。Phase 11 では
- *   「選択 → 解析 → Profile 生成」の都度使い捨て。
+ * - **D-7 (2026-08-29 確定)**: 紐付け時も `mode: 'read'` のまま。`readwrite` への
+ *   昇格は Sync 実行時に `FileSystemSink.ensureWritable()` が担う
+ *   (解析だけしたいユーザーに書き込み権限を迫らない)
+ * - ハンドルの IndexedDB 永続化 (dirHandles) と `Profile.linkedSource` への保存は
+ *   Phase 12-B で `lib/env/link.ts` が担当する
  * - ユーザーキャンセル (AbortError) は null を返す (呼び出し側で
  *   エラー扱いしない)。その他の失敗は Error を throw。
  */
@@ -14,7 +14,7 @@ import { supportsDirectoryPicker } from './capabilities';
 import { FileSystemSource } from './source';
 
 export interface PickedDirectory {
-  /** 選択されたディレクトリのハンドル (Phase 11 では使い捨て) */
+  /** 選択されたディレクトリのハンドル (`lib/env/link.ts` が dirHandles に保存する) */
   handle: FileSystemDirectoryHandle;
   /** ハンドルを包んだ EnvironmentSource (Detector / Analyzer に渡す) */
   source: FileSystemSource;

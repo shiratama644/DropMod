@@ -236,6 +236,47 @@ async function executeSync(tx: SyncTransaction, sink: EnvironmentSink) {
 
 ---
 
+### D-7〜D-10. UI 配置と権限タイミング — **2026-08-29 にユーザーと確定**
+
+> P12-B の UI 実装にあたり `ask_user` で確定した 4 件。D-1〜D-6 と同様に
+> **推測で変えない**。変更が必要になったら停止して確認する (§4 / §7)。
+
+#### D-7. `readwrite` 権限の要求タイミング → **Sync 実行時**
+
+- **決定**: フォルダ紐付け時の picker は `mode: 'read'` のまま
+  (既存 `pickMinecraftDirectory()` を変更しない)。`readwrite` への昇格は
+  Sync 実行時に `FileSystemSink.ensureWritable()` で試みる。
+- **理由**: 解析 (Read-only) だけしたいユーザーに書き込み権限を迫らない。
+- **実装メモ**: 昇格が拒否された場合は D-2 の Read-only フォールバックに入る。
+  紐付け直後の `sink.writable` は `false`。
+
+#### D-8. 「ZIP保存」ボタン → 「Sync」ボタンの置き換え範囲
+
+- **決定**: フォルダ紐付け済み Profile では、**primary 4 箇所 + プロファイル一覧の
+  ツールバー**を Sync ボタンに置き換える。
+  - `components/Header.tsx` (モバイルのアイコン / デスクトップのラベル付き、計 2 箇所)
+  - `components/DesktopSidebar.tsx` (サイドバー下端の primary)
+  - `components/MenuBottomSheet.tsx` (モバイルメニューの primary)
+  - `components/ModsPageClient.tsx` (プロファイル一覧ツールバー、`md:hidden`)
+- **置き換えない**: `components/SettingsPageClient.tsx` の「ZIPダウンロード」。
+  これは D-2 で Sync が無効化されたときの **ZIP 代替導線として残す**。
+- **理由**: Profile ごとに独立した状態なので、フォルダ未設定の Profile に切り替えたら
+  ボタンは自動的に ZIP保存へ戻る。
+
+#### D-9. フォルダ紐付け UI の配置 → **設定ページの「環境との同期」セクション**
+
+- **決定**: 設定ページに新セクションを設け、**紐付け / 解除 / Sync 実行 /
+  Sync History / Undo** を 1 箇所に集約する。
+- **理由**: §10.4 が Sync History UI を Settings 指定しているため、同じ場所にまとめる。
+- **実装メモ**: 着手時点の調査で `Profile.linkedSource` は**どこからも書き込まれて
+  いなかった** (`saveDirHandle` / `getDirHandle` は定義のみで呼び出し 0 箇所)。
+  紐付けフロー自体を P12-B で新設する。
+
+#### D-10. D-2 発動時の ZIP 導線 → **両方**
+
+- **決定**: 無効化した Sync ボタンの**隣に「ZIP で書き出す」副ボタン**を出し、
+  あわせて説明文で**設定ページの ZIP セクションにも言及**する。
+
 ## 13. 実績と証拠
 
 | ID | 状態 | テスト | 成果物 |

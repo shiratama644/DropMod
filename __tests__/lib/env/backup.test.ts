@@ -13,7 +13,8 @@ import {
   UNDO_KEEP_COUNT,
   parseBackupId,
   selectEvictableTransactions,
-  type BackupTransactionSummary
+  type BackupTransactionSummary,
+  InMemoryBackupStore
 } from '@/lib/env/backup';
 import {
   asFakeDirectory,
@@ -211,5 +212,103 @@ describe('OpfsBackupStore', () => {
       throw new Error('このブラウザは OPFS (Origin Private File System) に対応していません。');
     });
     await expect(store.save('tx-1', 'mods/a.jar', encode('x'))).rejects.toThrow('OPFS');
+  });
+});
+
+// ============================================================================
+// InMemoryBackupStore (Phase 12-C / §10.1)
+//
+// ZIP 経路の既定 Backup。**OPFS が無い環境でも Sync を止めない**ための実装。
+// テスト用ダブル (`test-utils/memoryEnv.ts` の `MemoryBackupStore`) とは別物。
+// ============================================================================
+
+describe('InMemoryBackupStore', () => {
+  const bytes = (s: string) => new TextEncoder().encode(s);
+
+  it('save → load の往復', async () => {
+    const store = new InMemoryBackupStore();
+    const id = await store.save('tx-1', 'mods/a.jar', bytes('old'));
+    // `sanitizeKey()` は '/' を '__' に置換する
+    expect(id).toBe('tx-1/mods__a.jar');
+    const loaded = await store.load(id);
+    expect(loaded ? new TextDecoder().decode(loaded) : null).toBe('old');
+  });
+
+  it('**存在しない backupId は null** (throw しない)', async () => {
+    const store = new InMemoryBackupStore();
+    expect(await store.load('tx-x/none')).toBeNull();
+  });
+
+  it('removeTransaction はその tx の分だけ消す', async () => {
+    const store = new InMemoryBackupStore();
+    const id1 = await store.save('tx-1', 'mods/a.jar', bytes('a'));
+    const id2 = await store.save('tx-2', 'mods/b.jar', bytes('b'));
+
+    await store.removeTransaction('tx-1');
+
+    expect(await store.load(id1)).toBeNull();
+    expect(await store.load(id2)).not.toBeNull();
+  });
+
+  it('**removeTransaction は冪等** (Rollback の再実行に必要)', async () => {
+    const store = new InMemoryBackupStore();
+    await store.save('tx-1', 'mods/a.jar', bytes('a'));
+    await store.removeTransaction('tx-1');
+    await expect(store.removeTransaction('tx-1')).resolves.toBeUndefined();
+  });
+
+  it('listTransactions は tx 単位でバイト数を合計する', async () => {
+    const store = new InMemoryBackupStore();
+    await store.save('tx-1', 'mods/a.jar', bytes('aaa'));
+    await store.save('tx-1', 'mods/b.jar', bytes('bb'));
+    await store.save('tx-2', 'mods/c.jar', bytes('c'));
+
+    const list = await store.listTransactions();
+    expect(list).toHaveLength(2);
+    expect(list.find((t) => t.txId === 'tx-1')?.bytes).toBe(5);
+    expect(list.find((t) => t.txId === 'tx-2')?.bytes).toBe(1);
+  });
+
+  it('**savedAt は最も古いファイルの時刻** (D-5 の古い順追い出しと同じ基準)', async () => {
+    const store = new InMemoryBackupStore();
+    const now = Date.now();
+    await store.save('tx-1', 'mods/a.jar', bytes('a'));
+    await store.save('tx-1', 'mods/b.jar', bytes('b'));
+
+    const list = await store.listTransactions();
+    const savedAt = list.find((t) => t.txId === 'tx-1')?.savedAt ?? 0;
+    expect(savedAt).toBeGreaterThanOrEqual(now - 1000);
+    expect(savedAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('removeTransaction 後は listTransactions にも出ない', async () => {
+    const store = new InMemoryBackupStore();
+    await store.save('tx-1', 'mods/a.jar', bytes('a'));
+    await store.removeTransaction('tx-1');
+    expect(await store.listTransactions()).toEqual([]);
+  });
+
+  it('estimateUsage は合計バイト数', async () => {
+    const store = new InMemoryBackupStore();
+    await store.save('tx-1', 'mods/a.jar', bytes('aaa'));
+    await store.save('tx-1', 'mods/b.jar', bytes('bb'));
+    expect(await store.estimateUsage()).toBe(5);
+  });
+
+  it('**同じキーを二度 save しても二重計上しない**', async () => {
+    const store = new InMemoryBackupStore();
+    await store.save('tx-1', 'mods/a.jar', bytes('aaa'));
+    await store.save('tx-1', 'mods/a.jar', bytes('bbbbb'));
+    expect(await store.estimateUsage()).toBe(5);
+    const list = await store.listTransactions();
+    expect(list).toHaveLength(1);
+  });
+
+  it('**OPFS が無くても使える** (ZIP 経路の既定である理由)', async () => {
+    // jsdom に OPFS は無い。それでも全操作が通ることを確認する。
+    expect((globalThis as { navigator?: { storage?: unknown } }).navigator?.storage).toBeUndefined();
+    const store = new InMemoryBackupStore();
+    const id = await store.save('tx-1', 'mods/a.jar', bytes('x'));
+    expect(await store.load(id)).not.toBeNull();
   });
 });

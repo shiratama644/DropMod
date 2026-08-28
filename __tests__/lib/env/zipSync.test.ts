@@ -375,3 +375,46 @@ describe('applyZipSync: ZipSink 経由で Sync が動作する (DoD)', () => {
     expect(records.find((r) => r.id === 'p1::mods/a.jar')?.source).toBe('import');
   });
 });
+
+describe('prepareZipSync: .minecraft サブフォルダ付き ZIP', () => {
+  beforeEach(async () => {
+    await _clearAllForTesting();
+  });
+
+  it('**.minecraft/ 直下の Mod も Local として認識する**', async () => {
+    // ユーザーが「.minecraft フォルダを右クリック → 圧縮」で作る ZIP はこの形になる
+    const seed = await seedZip({ '.minecraft/mods/a.jar': 'aaa' });
+    const outcome = await prepareZipSync({
+      profile: profile({ mods: [] }),
+      seedBlob: seed,
+      deps: { getManaged: async () => [managed({ sha1: await sha1Of('aaa') })] }
+    });
+    if (outcome.status !== 'ready') throw new Error('not ready');
+
+    // 台帳にあり fingerprint 一致・Profile から消えた → deletion になるはず
+    expect(outcome.prepared.plan.totals.counts.deletion).toBe(1);
+  });
+
+  it('**出力 ZIP に prefix 付きと無しの両方が混ざらない**', async () => {
+    const seed = await seedZip({
+      '.minecraft/mods/a.jar': 'aaa',
+      '.minecraft/config/modmenu.json': '{}'
+    });
+    const p = profile();
+    const outcome = await prepareZipSync({ profile: p, seedBlob: seed, deps: noLedger });
+    if (outcome.status !== 'ready') throw new Error('not ready');
+
+    const result = await applyZipSync({
+      profile: p,
+      prepared: outcome.prepared,
+      sink: outcome.sink,
+      deps: { fetchImpl: fetchOf('new') }
+    });
+
+    expect(result.result.outcome).toBe('completed');
+    const entries = await zipEntries(result.blob as Blob);
+    // 同じ Mod が 2 パスに存在してはいけない
+    expect(entries.filter((e) => e.endsWith('sodium.jar'))).toHaveLength(1);
+    expect(entries.filter((e) => e.endsWith('modmenu.json'))).toHaveLength(1);
+  });
+});

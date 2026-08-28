@@ -253,7 +253,12 @@ function toArrayBuffer(data: Uint8Array): ArrayBuffer {
  * 「実行 → その場で ZIP を書き出す」1 回の操作で完結するので、
  * Sync をまたいで Undo する用途 (D-5 の直近 3 件保護) には元々使わない。
  */
-export class MemoryBackupStore implements BackupStore {
+/**
+ * 名前について: `__tests__/test-utils/memoryEnv.ts` にも `MemoryBackupStore` がある。
+ * あちらは **テスト用のダブル** (`failOnSave` / 呼び出し履歴 / 決定的クロックを持つ)。
+ * 取り違えると本番コードがテスト用実装を掴むので、こちらは `InMemory` とした。
+ */
+export class InMemoryBackupStore implements BackupStore {
   readonly #entries = new Map<string, Uint8Array>();
   /** backupId → txId (tx 単位の削除・一覧用) */
   readonly #owner = new Map<string, string>();

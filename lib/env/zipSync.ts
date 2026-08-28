@@ -39,7 +39,7 @@ import { analyzeEnvironmentSource } from './analyzer';
 import { checkEnvironmentMatch, type EnvironmentCheckResult } from './environmentCheck';
 import { ZipSource } from './zipSource';
 import { ZipSink } from './sink/zip';
-import { MemoryBackupStore } from './backup';
+import { InMemoryBackupStore } from './backup';
 import { applySync, type ApplySyncDeps, type ApplySyncResult } from './applySync';
 import type { ReadySyncOutcome } from './syncPrep';
 import { getManagedFiles } from '@/lib/db/dexie';
@@ -51,6 +51,33 @@ export const DEFAULT_CONTENT_DIRS: NonNullable<LinkedSource['contentDirs']> = {
   resourcepacks: 'resourcepacks',
   shaderpacks: 'shaderpacks'
 };
+
+/** 「.minecraft フォルダを圧縮した ZIP」のルート名 */
+const ROOT_DIR = '.minecraft';
+
+/**
+ * 読み込み済みの JSZip から ZipSink を作る。
+ *
+ * `ZipSink.fromZipBlob()` と違い、**`prefix` を剥がして**格納する。
+ * Sync の書き込み先は常に prefix 無しの相対パス (`mods/a.jar`) なので、
+ * seed 側も揃えないと出力 ZIP に同じファイルが 2 パス分混ざる。
+ */
+async function zipSinkFromLoaded(
+  loaded: JSZip,
+  rootName: string,
+  prefix: string
+): Promise<ZipSink> {
+  const entries: Array<{ path: string; data: Uint8Array }> = [];
+  const paths = Object.keys(loaded.files).filter((p) => !loaded.files[p]?.dir).sort();
+  for (const path of paths) {
+    const file = loaded.file(path);
+    if (!file) continue;
+    const relative = prefix && path.startsWith(prefix) ? path.slice(prefix.length) : path;
+    if (!relative) continue;
+    entries.push({ path: relative, data: await file.async('uint8array') });
+  }
+  return new ZipSink(rootName, entries);
+}
 
 export interface PrepareZipSyncInput {
   profile: Profile;
@@ -95,11 +122,24 @@ export async function prepareZipSync(
   let check: EnvironmentCheckResult;
 
   if (seedBlob) {
+    // ZipSource は JSZip インスタンスを受け取る (Blob ではない)
+    const loaded = await JSZip.loadAsync(seedBlob);
+
+    // **「.minecraft フォルダを圧縮した ZIP」への対応**。
+    // ユーザーがフォルダを右クリックして圧縮すると中身が `.minecraft/mods/...` になる。
+    // このとき prefix を渡さないとスキャンは `mods/` を見て **1 件も見つからない**。
+    // (同じ判定を `hooks/useZipImport.ts` も行っている)
+    const prefix = Object.keys(loaded.files).some((path) => path.startsWith(`${ROOT_DIR}/`))
+      ? `${ROOT_DIR}/`
+      : '';
+
     // 既存 ZIP を Local とみなす。**中身も sink に seed する**ので
     // unchanged / 3 カテゴリ外のファイルがそのまま残る。
-    sink = await ZipSink.fromZipBlob(seedBlob, `${baseName}.zip`);
-    // ZipSource は JSZip インスタンスを受け取る (Blob ではない)
-    const source = new ZipSource(await JSZip.loadAsync(seedBlob), baseName);
+    // ただし **prefix は剥がして seed する** — 剥がさないと書き込み先 (`mods/a.jar`) と
+    // seed のパス (`.minecraft/mods/a.jar`) が食い違い、出力 ZIP に同じ Mod が
+    // 2 パス分混ざる。
+    sink = await zipSinkFromLoaded(loaded, `${baseName}.zip`, prefix);
+    const source = new ZipSource(loaded, baseName, prefix);
 
     // D-1: 環境が食い違うなら Direct Write と同じくブロックする
     const analysis = await analyzeEnvironmentSource(source);
@@ -177,7 +217,7 @@ export async function applyZipSync(input: ApplyZipSyncInput): Promise<ApplyZipSy
     // **Backup もメモリ**。ZIP 経路は書き込み先がメモリなので退避先もメモリでよく、
     // それ以上に「ZIP 経路を使う環境こそ OPFS が無い可能性がある」。
     // 呼び出し側が deps で上書きしないときだけ既定を差し替える。
-    deps: deps?.backup ? deps : { ...deps, backup: new MemoryBackupStore() }
+    deps: deps?.backup ? deps : { ...deps, backup: new InMemoryBackupStore() }
   });
 
   if (applied.result.outcome !== 'completed') {

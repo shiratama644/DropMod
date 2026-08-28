@@ -13,6 +13,7 @@ import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
 import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
 import { useSync } from '@/hooks/useSync';
+import { useZipSync } from '@/hooks/useZipSync';
 import { useAppActionsStore } from '@/lib/store/appActions';
 import type { SyncPlan } from '@/lib/env/diff';
 import type { EnvironmentSink } from '@/lib/env/sink';
@@ -27,6 +28,12 @@ const mockUseLink = vi.mocked(useEnvironmentLink);
 // useSync も自前のテストを持つため、ここでは接続 (ボタン → Preview) に絞る
 vi.mock('@/hooks/useSync', () => ({ useSync: vi.fn() }));
 const mockUseSync = vi.mocked(useSync);
+
+// useZipSync も自前のテストを持つため、ここでは導線の表示/接続に絞る
+vi.mock('@/hooks/useZipSync', () => ({ useZipSync: vi.fn() }));
+const mockUseZipSync = vi.mocked(useZipSync);
+// 引数型を付けないと mock.calls が空タプルになり calls[0][0] を読めない
+const exportSyncAsZip = vi.fn(async (_seed?: File) => undefined);
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
@@ -89,6 +96,13 @@ function readyOutcome(writable = true) {
 describe('EnvironmentSyncSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseZipSync.mockReturnValue({
+      running: false,
+      error: null,
+      result: null,
+      exportSyncAsZip,
+      dismissError: vi.fn()
+    });
     mockUseLink.mockReturnValue({
       supported: true,
       linking: false,
@@ -407,5 +421,133 @@ describe('EnvironmentSyncSection', () => {
       render(<EnvironmentSyncSection />);
       expect(screen.getByRole('button', { name: '差分を確認して同期' })).toBeDisabled();
     });
+  });
+});
+
+describe('EnvironmentSyncSection: 非対応ブラウザの ZIP 導線 (§10.1 / D-2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseZipSync.mockReturnValue({
+      running: false,
+      error: null,
+      result: null,
+      exportSyncAsZip,
+      dismissError: vi.fn()
+    });
+    mockUseSync.mockReturnValue({
+      state: { status: 'idle', error: null },
+      prepare: prepareMock,
+      apply: applyMock,
+      reset: resetMock
+    } as unknown as ReturnType<typeof useSync>);
+    useConfirmStore.setState({ confirm: vi.fn(async () => true) });
+    useAppActionsStore.setState({
+      actions: { handleDownloadZip: vi.fn(async () => undefined) }
+    } as never);
+  });
+
+  function renderUnsupported(profile: Profile | null = makeProfile()) {
+    useProfilesStore.setState({
+      profiles: profile ? [profile] : [],
+      currentProfileId: profile?.id ?? undefined,
+      hasHydrated: true
+    });
+    mockUseLink.mockReturnValue({
+      supported: false,
+      linking: false,
+      unlinking: false,
+      error: null,
+      link,
+      unlink,
+      dismissError: vi.fn()
+    });
+    return render(<EnvironmentSyncSection />);
+  }
+
+  it('非対応ブラウザでは **ZIP に書き出す (Sync)** が出る', () => {
+    renderUnsupported();
+    expect(screen.getByRole('button', { name: /ZIP に書き出す/ })).toBeInTheDocument();
+  });
+
+  it('**対応ブラウザでは出さない** (D-2: 自動で ZipSink に切り替えない)', () => {
+    useProfilesStore.setState({
+      profiles: [makeProfile()],
+      currentProfileId: 'p1',
+      hasHydrated: true
+    });
+    mockUseLink.mockReturnValue({
+      supported: true,
+      linking: false,
+      unlinking: false,
+      error: null,
+      link,
+      unlink,
+      dismissError: vi.fn()
+    });
+    render(<EnvironmentSyncSection />);
+    expect(screen.queryByRole('button', { name: /ZIP に書き出す/ })).toBeNull();
+  });
+
+  it('ボタンで seed なしの書き出しを呼ぶ', () => {
+    renderUnsupported();
+    fireEvent.click(screen.getByRole('button', { name: /ZIP に書き出す/ }));
+    expect(exportSyncAsZip).toHaveBeenCalledTimes(1);
+    expect(exportSyncAsZip.mock.calls[0]?.[0]).toBeUndefined();
+  });
+
+  it('既存の .minecraft ZIP を選ぶと **そのファイルを seed として渡す**', () => {
+    renderUnsupported();
+    const file = new File(['zip'], 'mc.zip', { type: 'application/zip' });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    expect(exportSyncAsZip).toHaveBeenCalledTimes(1);
+    expect(exportSyncAsZip.mock.calls[0]?.[0]).toBe(file);
+  });
+
+  it('**Profile 未選択ならボタンは無効**', () => {
+    renderUnsupported(null);
+    expect(screen.getByRole('button', { name: /ZIP に書き出す/ })).toBeDisabled();
+  });
+
+  it('実行中はラベルが変わり無効になる', () => {
+    renderUnsupported();
+    mockUseZipSync.mockReturnValue({
+      running: true,
+      error: null,
+      result: null,
+      exportSyncAsZip,
+      dismissError: vi.fn()
+    });
+    render(<EnvironmentSyncSection />);
+    expect(screen.getByRole('button', { name: /書き出し中/ })).toBeDisabled();
+  });
+
+  it('失敗理由を表示する', () => {
+    renderUnsupported();
+    mockUseZipSync.mockReturnValue({
+      running: false,
+      error: '環境が一致しません',
+      result: null,
+      exportSyncAsZip,
+      dismissError: vi.fn()
+    });
+    render(<EnvironmentSyncSection />);
+    expect(screen.getByText('環境が一致しません')).toBeInTheDocument();
+  });
+
+  it('成功時はファイル名と件数を表示する', () => {
+    renderUnsupported();
+    mockUseZipSync.mockReturnValue({
+      running: false,
+      error: null,
+      result: { fileName: 'minecraft-sync.zip', bytes: 2048, applied: 3, skipped: 0 },
+      exportSyncAsZip,
+      dismissError: vi.fn()
+    });
+    render(<EnvironmentSyncSection />);
+    expect(screen.getByText(/minecraft-sync\.zip/)).toBeInTheDocument();
+    expect(screen.getByText(/3 件/)).toBeInTheDocument();
   });
 });

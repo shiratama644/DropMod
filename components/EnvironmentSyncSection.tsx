@@ -24,6 +24,7 @@ import {
   ENVIRONMENT_FIELD_LABEL
 } from '@/lib/env/environmentCheck';
 import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
+import { useZipSync } from '@/hooks/useZipSync';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
 
@@ -38,6 +39,9 @@ export const EnvironmentSyncSection: React.FC = () => {
   );
   const confirm = useConfirmStore((s) => s.confirm);
   const { supported, linking, unlinking, error, link, unlink } = useEnvironmentLink();
+  /** **§10.1**: 非対応ブラウザ向けの ZipSink 経由 Sync */
+  const zipSync = useZipSync();
+  const { exportSyncAsZip } = zipSync;
   const handleDownloadZip = useAppAction('handleDownloadZip');
   /** **D-10**: 直近の prepare で「解析はできたが書き込み権限が無い」結果 */
   const [readOnly, setReadOnly] = useState<ReadySyncOutcome | null>(null);
@@ -83,12 +87,79 @@ export const EnvironmentSyncSection: React.FC = () => {
         {/* 非対応ブラウザ (Firefox / Safari)                            */}
         {/* ---------------------------------------------------------- */}
         {!supported ? (
-          <p className="text-xs theme-text-muted leading-relaxed">
-            <i className="fa-solid fa-circle-info theme-text-brand mr-1.5" aria-hidden />
-            このブラウザはフォルダへの直接書き込み (File System Access API) に
-            対応していません。Chrome / Edge では、選択したフォルダへ直接 Mod を
-            書き込む Sync が使えます。
-          </p>
+          <>
+            <p className="text-xs theme-text-muted leading-relaxed">
+              <i className="fa-solid fa-circle-info theme-text-brand mr-1.5" aria-hidden />
+              このブラウザはフォルダへの直接書き込み (File System Access API) に
+              対応していません。Chrome / Edge では、選択したフォルダへ直接 Mod を
+              書き込む Sync が使えます。
+            </p>
+
+            {/*
+              §10.1: Firefox / Safari / モバイルは **ZipSink 経由の Sync**。
+              Direct Write の代替として、同じ Plan / Journal / Rollback を通した
+              結果を ZIP で書き出す。
+              **D-2: 自動では切り替えない** — 非対応ブラウザのときだけこの導線を出す。
+            */}
+            <div className="theme-sub-box rounded-xl p-3 space-y-2.5">
+              <p className="text-xs theme-text-muted leading-relaxed">
+                <i className="fa-solid fa-file-zipper theme-text-brand mr-1.5" aria-hidden />
+                代わりに、<span className="theme-text-primary font-semibold">
+                同期内容を ZIP として書き出す</span>ことができます。
+                既存の .minecraft を ZIP にしたものを選ぶと、それとの差分だけが
+                反映された ZIP が得られます (選ばなければ Profile の全 Mod を書き出します)。
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void exportSyncAsZip()}
+                  disabled={zipSync.running || !currentProfile}
+                  className="btn-hover-effect px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow disabled:opacity-50 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  <i
+                    className={`fa-solid ${zipSync.running ? 'fa-spinner fa-spin' : 'fa-file-export'}`}
+                    aria-hidden
+                  />
+                  {zipSync.running ? '書き出し中...' : 'ZIP に書き出す (Sync)'}
+                </button>
+
+                <label className="btn-hover-effect px-3.5 py-2 theme-sub-box text-xs font-semibold rounded-xl transition flex items-center gap-1.5 cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500">
+                  <i className="fa-solid fa-folder-open theme-text-brand" aria-hidden />
+                  既存の .minecraft ZIP を選ぶ
+                  <input
+                    type="file"
+                    accept=".zip,application/zip"
+                    className="sr-only"
+                    disabled={zipSync.running}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      // 同じファイルを続けて選べるように value を空に戻す
+                      e.target.value = '';
+                      if (file) void exportSyncAsZip(file);
+                    }}
+                  />
+                </label>
+              </div>
+
+              {zipSync.error ? (
+                <p className="text-xs theme-text-red leading-relaxed">
+                  <i className="fa-solid fa-circle-exclamation mr-1.5" aria-hidden />
+                  {zipSync.error}
+                </p>
+              ) : null}
+
+              {zipSync.result ? (
+                <p className="text-xs theme-text-muted leading-relaxed">
+                  <i className="fa-solid fa-circle-check theme-text-emerald mr-1.5" aria-hidden />
+                  {zipSync.result.fileName} ({zipSync.result.applied} 件 /{' '}
+                  {Math.round(zipSync.result.bytes / 1024)} KB) を書き出しました。
+                  {zipSync.result.skipped > 0
+                    ? ` ${zipSync.result.skipped} 件はスキップされました。`
+                    : ''}
+                </p>
+              ) : null}
+            </div>
+          </>
         ) : !linkedSource ? (
           /* -------------------------------------------------------- */
           /* 未紐付け                                                   */

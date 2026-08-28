@@ -17,19 +17,27 @@ import { deleteDirHandle, getDirHandle, saveDirHandle } from '@/lib/db/dexie';
 import type { LinkedSource } from '@/types';
 import { detectEnvironment, type DetectedEnvironment } from './detector';
 import { pickMinecraftDirectory, type PickedDirectory } from './picker';
+import type { EnvironmentSink } from './sink';
 import { FileSystemSink } from './sink/filesystem';
-import { FileSystemSource } from './source';
+import { FileSystemSource, type EnvironmentSource } from './source';
 
 /** 注入可能な依存 (テストで picker を差し替えるため) */
 export interface FolderLinkDeps {
   pick?: () => Promise<PickedDirectory | null>;
 }
 
-/** 復元した紐付け先 (Source = 読み取り / Sink = 書き込み) */
+/**
+ * 復元した紐付け先 (Source = 読み取り / Sink = 書き込み)。
+ *
+ * `source` は**具体クラスではなく `EnvironmentSource` として公開する**。
+ * 呼び出し側 (`prepareSync` 等) はインターフェースしか使わないため、
+ * 具体型を露出させると差し替え (テストのスタブ等) ができなくなる。
+ * 実体は常に `FileSystemSource`。
+ */
 export interface OpenedLinkedFolder {
   handle: FileSystemDirectoryHandle;
-  source: FileSystemSource;
-  sink: FileSystemSink;
+  source: EnvironmentSource;
+  sink: EnvironmentSink;
   rootName: string;
 }
 

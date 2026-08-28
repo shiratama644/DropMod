@@ -15,7 +15,7 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { ManagedFileRecord, Profile, ProjectItem } from '@/types';
+import type { ContentCategory, ManagedFileRecord, Profile, ProjectItem } from '@/types';
 import { normalizeProfileForV2 } from '@/lib/state/sanitize';
 import { generateId } from '@/lib/utils/id';
 
@@ -97,6 +97,82 @@ export interface DirHandleRow {
   savedAt: number;
 }
 
+/**
+ * Sync 操作のジャーナル 1 エントリ (Phase 12-B / PHASE12_PLAN.md §10.4)。
+ *
+ * **操作ごとに 1 エントリを記録し、失敗時は逆順で巻き戻す。**
+ * `done` フラグにより idempotent な再実行が可能
+ * (クラッシュ後に再開しても完了済み操作を二重適用しない)。
+ */
+export interface SyncOperationJournalEntry {
+  kind: 'add' | 'update' | 'delete';
+  category: ContentCategory;
+  path: string;
+  projectId?: string;
+  /** 書き込んだ (あるいは削除した) 実体の fingerprint */
+  sha1?: string;
+  /**
+   * **Plan 生成時点**の対象ファイル fingerprint (update / delete のみ)。
+   * Executor が実行直前に再検証する (§10.4: Preview → Apply の間の外部変更検知)。
+   * これと現値が食い違ったらその操作はスキップする。
+   */
+  expectedSha1?: string;
+  size: number;
+  /**
+   * Backup の格納キー (`BackupStore.save` の返り値)。
+   * update / delete のみ設定 (add には戻す先が無い)。
+   */
+  backupId?: string;
+  /**
+   * 実際に書き込み/削除したパス。
+   * Plan 時点で `path` が未確定 (空) の追加操作では、ダウンロード後に
+   * 確定したパスをここに記録する (Rollback が正しい対象を消せるようにするため)。
+   */
+  appliedPath?: string;
+  /** スキップした理由 (外部変更検知など)。`done === false` のまま残る */
+  skippedReason?: string;
+  /** 実行済みか。Rollback / 再開時の二重適用防止に使う */
+  done: boolean;
+}
+
+/** `markOperationDone` に渡す差分 */
+export interface SyncOperationPatch {
+  backupId?: string;
+  appliedPath?: string;
+  skippedReason?: string;
+}
+
+/**
+ * Sync トランザクションの状態遷移:
+ * `pending` → `running` → `completed` / `failed` → (`rolled-back`)
+ *
+ * **D-4 (2026-08-27 確定)**: 起動時に `running` のまま残っているレコードは
+ * 「前回の Sync が中断された」とみなし、ユーザーに確認して Rollback する。
+ */
+export type SyncTransactionStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'rolled-back'
+  | 'failed';
+
+/**
+ * syncTransactions テーブル行 (Phase 12-B)。
+ * Transaction Journal そのもの。Sync History UI (§10.4) と Rollback (§10.4) が読む。
+ */
+export interface SyncTransactionRow {
+  id: string;
+  profileId: string;
+  status: SyncTransactionStatus;
+  startedAt: number;
+  finishedAt?: number;
+  operations: SyncOperationJournalEntry[];
+  /** Rollback を完了した時刻 (D-4) */
+  rolledBackAt?: number;
+  /** 失敗理由 (`status === 'failed'` のとき) */
+  error?: string;
+}
+
 // ============================================================================
 // DB クラス
 // ============================================================================
@@ -109,6 +185,8 @@ class DropModDatabase extends Dexie {
   // ---- Phase 12-A で追加 ----
   managedFiles!: Table<ManagedFileRow, string>;
   dirHandles!: Table<DirHandleRow, string>;
+  // ---- Phase 12-B で追加 ----
+  syncTransactions!: Table<SyncTransactionRow, string>;
 
   constructor() {
     super('DropModDB');
@@ -178,6 +256,21 @@ class DropModDatabase extends Dexie {
       meta: 'key',
       managedFiles: 'id, profileId, category, projectId, sha1',
       dirHandles: 'id, profileId'
+    });
+
+    // v4 (Phase 12-B): Transaction Journal のテーブルを追加。
+    //   - syncTransactions: Sync 操作のジャーナル + 状態 (Rollback / History UI が読む)
+    //
+    // v3 と同様に**新規テーブル追加のみ・upgrade 関数なし**。
+    // `status` を index しているのは D-4 の「起動時に running の残存を検出する」
+    // クエリを O(log n) で走らせるため。
+    this.version(4).stores({
+      profiles: 'id, updatedAt',
+      apiCache: 'key, expiresAt',
+      meta: 'key',
+      managedFiles: 'id, profileId, category, projectId, sha1',
+      dirHandles: 'id, profileId',
+      syncTransactions: 'id, profileId, status, startedAt'
     });
   }
 }
@@ -336,6 +429,94 @@ export async function deleteDirHandle(id: string): Promise<void> {
 }
 
 // ============================================================================
+// Phase 12-B: Transaction Journal の操作
+// ============================================================================
+
+/**
+ * Sync トランザクションを作成する。初期状態は `'pending'`。
+ * @returns 生成したトランザクション ID
+ */
+export async function createSyncTransaction(
+  profileId: string,
+  operations: SyncOperationJournalEntry[]
+): Promise<string> {
+  const id = generateId('tx');
+  await db.syncTransactions.put({
+    id,
+    profileId,
+    status: 'pending',
+    startedAt: Date.now(),
+    operations: operations.map((op) => ({ ...op, done: false }))
+  });
+  return id;
+}
+
+/** トランザクションを取得。無ければ null */
+export async function getSyncTransaction(id: string): Promise<SyncTransactionRow | null> {
+  const row = await db.syncTransactions.get(id);
+  return row ?? null;
+}
+
+/** Profile の Sync 履歴を新しい順で取得 (Sync History UI 用) */
+export async function listSyncTransactions(profileId: string): Promise<SyncTransactionRow[]> {
+  const rows = await db.syncTransactions.where('profileId').equals(profileId).toArray();
+  return rows.sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/**
+ * 状態を更新する。`finishedAt` は完了系状態に遷移したときだけ自動で打つ。
+ */
+export async function updateSyncTransactionStatus(
+  id: string,
+  status: SyncTransactionStatus,
+  extra: Partial<Pick<SyncTransactionRow, 'error' | 'rolledBackAt'>> = {}
+): Promise<void> {
+  const row = await db.syncTransactions.get(id);
+  if (!row) return;
+  const isTerminal = status === 'completed' || status === 'failed' || status === 'rolled-back';
+  await db.syncTransactions.put({
+    ...row,
+    status,
+    ...(isTerminal ? { finishedAt: Date.now() } : {}),
+    ...extra
+  });
+}
+
+/**
+ * ジャーナルの指定操作を実行結果で更新する。
+ *
+ * **1 操作ごとに即座に永続化**する (クラッシュ時の復旧精度のため)。
+ * `done: false` のまま `skippedReason` だけを記録することもできる
+ * (外部変更を検知してスキップした場合)。
+ */
+export async function markOperationDone(
+  id: string,
+  index: number,
+  patch: SyncOperationPatch & { done?: boolean } = {}
+): Promise<void> {
+  const row = await db.syncTransactions.get(id);
+  if (!row) return;
+  const operations = row.operations.map((op, i) =>
+    i === index ? { ...op, done: patch.done ?? true, ...patch } : op
+  );
+  await db.syncTransactions.put({ ...row, operations });
+}
+
+/**
+ * **D-4**: 中断された (`status === 'running'` のまま残った) トランザクションを検出する。
+ * アプリ起動時に呼び、ユーザーに「巻き戻しますか？」を確認する。
+ */
+export async function findInterruptedSyncTransactions(): Promise<SyncTransactionRow[]> {
+  const rows = await db.syncTransactions.where('status').equals('running').toArray();
+  return rows.sort((a, b) => a.startedAt - b.startedAt);
+}
+
+/** トランザクションを削除する (履歴の prune 用) */
+export async function deleteSyncTransaction(id: string): Promise<void> {
+  await db.syncTransactions.delete(id);
+}
+
+// ============================================================================
 // テスト用 (fake-indexeddb 環境で DB をリセット)
 // ============================================================================
 
@@ -344,19 +525,18 @@ export async function deleteDirHandle(id: string): Promise<void> {
  * ⚠️ ユーザーデータが消えるので本番機能からは呼ばない。
  */
 export async function _clearAllForTesting(): Promise<void> {
+  // テーブルを配列で渡す (Dexie の可変長オーバーロードは最大 7 引数のため、
+  // テーブル数が増えた v4 以降は配列形式が安全)
   await db.transaction(
     'rw',
-    db.profiles,
-    db.apiCache,
-    db.meta,
-    db.managedFiles,
-    db.dirHandles,
+    [db.profiles, db.apiCache, db.meta, db.managedFiles, db.dirHandles, db.syncTransactions],
     async () => {
       await db.profiles.clear();
       await db.apiCache.clear();
       await db.meta.clear();
       await db.managedFiles.clear();
       await db.dirHandles.clear();
+      await db.syncTransactions.clear();
     }
   );
 }

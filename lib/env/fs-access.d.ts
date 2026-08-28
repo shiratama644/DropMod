@@ -16,3 +16,20 @@ interface FileSystemDirectoryHandle {
   keys(): AsyncIterableIterator<string>;
   entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
 }
+
+/**
+ * File System Access API の権限 API (Phase 12-B)。
+ *
+ * TS 5.9 の lib.dom は `FileSystemHandle.queryPermission` /
+ * `requestPermission` を宣言していない (Chromium 独自拡張のため) ので補完する。
+ * Sync 実行前に 'read' → 'readwrite' への昇格を確認するのに使う。
+ * 昇格に失敗しても throw せず false を返すのが DropMod の方針 (D-2)。
+ */
+interface FileSystemHandlePermissionDescriptor {
+  mode?: 'read' | 'readwrite';
+}
+
+interface FileSystemHandle {
+  queryPermission(descriptor?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>;
+  requestPermission(descriptor?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>;
+}

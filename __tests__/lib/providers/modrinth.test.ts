@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ModrinthProvider } from '@/lib/providers/modrinth';
 import { availableProviders, DEFAULT_PROVIDER_ID, getProvider } from '@/lib/providers';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
-import type { ModrinthProject, ModrinthVersion } from '@/types';
+import type { ModrinthVersion } from '@/types';
 
 vi.mock('@/lib/modrinth/client', () => ({
   fetchModrinth: vi.fn(),
@@ -49,7 +49,7 @@ describe('ModrinthProvider: getProject', () => {
       categories: ['optimization'],
       downloads: 1234,
       icon_url: 'https://cdn/icon.webp'
-    } satisfies ModrinthProject);
+    });
 
     const provider = new ModrinthProvider();
     const project = await provider.getProject('sodium');
@@ -153,9 +153,8 @@ describe('ModrinthProvider: searchProjects', () => {
   it('categories は OR 条件 (同一配列に並べる)', async () => {
     mockFetch.mockResolvedValue({ hits: [], total_hits: 0 });
     await new ModrinthProvider().searchProjects({ categories: ['technology', 'magic'] });
-    const facets = JSON.parse(
-      String((mockFetch.mock.calls[0]?.[1] as Record<string, unknown>).facets)
-    );
+    const call = mockFetch.mock.calls[0];
+    const facets = JSON.parse(String((call?.[1] as Record<string, unknown> | undefined)?.facets));
     expect(facets).toEqual([['categories:technology', 'categories:magic']]);
   });
 

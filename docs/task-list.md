@@ -116,7 +116,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
 | P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | `4886245` ほか 11 commits / unit+component 100 files 995 tests green・**実機確認はユーザー** |
 | P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | 未着手 | 0% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | PHASE12_PLAN §6 で「必須」 |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | 未着手 | 0% | P12-B | Firefox/Safari で ZIP Sync | - |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | `db648c2`〜`b462bfa` の 7 commits / .mrpack overrides・Provider 抽象・Modpack 更新検知・ZipSink・Modpack ハブ・CF 検出・ZIP Sync 導線 / unit+component 108 files 1151 tests green・**実機 Firefox/Safari 確認はユーザー** |
 
 ※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
 

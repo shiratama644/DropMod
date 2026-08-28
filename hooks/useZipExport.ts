@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
+import { downloadFileWithRetry } from '@/lib/utils/downloadFile';
 import type { Profile, ProjectItem } from '@/types';
 // B5 修正: ZipProgressState 型は lib/store/zipExport.ts に一本化。
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
@@ -167,38 +168,15 @@ const triggerBlobDownload = (blob: Blob, fileName: string): void => {
   setTimeout(() => URL.revokeObjectURL(downloadUrl), URL_REVOKE_DELAY_MS);
 };
 
-/** 1つのModファイルをダウンロードする (リトライ機能付き) */
-const downloadModFile = async (
-  fileUrl: string,
-  signal: AbortSignal
-): Promise<Blob | null> => {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    if (signal.aborted) throw new Error('Aborted');
-
-    try {
-      const res = await fetch(fileUrl, { signal });
-      if (res.ok) {
-        return await res.blob();
-      }
-
-      // 403 / 404 等のクライアントエラーはリトライしても解決しないため即失敗
-      if (res.status === 403 || res.status === 404) {
-        return null;
-      }
-    } catch (error) {
-      if (signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
-        throw new Error('Aborted');
-      }
-    }
-
-    // リトライ前の遅延 (最後のリトライ時は待たない)
-    if (attempt < MAX_RETRIES - 1) {
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-    }
-  }
-
-  return null;
-};
+/**
+ * 1つのModファイルをダウンロードする (リトライ機能付き)。
+ * 実体は `lib/utils/downloadFile.ts` に共通化 (Sync 側と挙動を揃えるため)。
+ */
+const downloadModFile = (fileUrl: string, signal: AbortSignal): Promise<Blob | null> =>
+  downloadFileWithRetry(fileUrl, signal, {
+    maxRetries: MAX_RETRIES,
+    retryDelayMs: RETRY_DELAY_MS
+  });
 
 // ==========================================
 // メイン Hook

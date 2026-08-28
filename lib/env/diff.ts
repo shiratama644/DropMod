@@ -127,8 +127,11 @@ export interface ComputeSyncPlanInput {
   now?: number;
 }
 
-/** カテゴリ → `LinkedSource.contentDirs` のキー */
-const CATEGORY_DIR_KEY: Record<ContentCategory, keyof NonNullable<LinkedSource['contentDirs']>> = {
+/** カテゴリ → `LinkedSource.contentDirs` のキー (`lib/env/resolve.ts` と共有) */
+export const CATEGORY_DIR_KEY: Record<
+  ContentCategory,
+  keyof NonNullable<LinkedSource['contentDirs']>
+> = {
   mod: 'mods',
   resourcepack: 'resourcepacks',
   shader: 'shaderpacks'
@@ -137,8 +140,9 @@ const CATEGORY_DIR_KEY: Record<ContentCategory, keyof NonNullable<LinkedSource['
 /**
  * 検出ディレクトリとファイル名から相対パスを組み立てる。
  * どちらかが欠けていれば空文字 (= ダウンロード後に確定)。
+ * `lib/env/resolve.ts` (ダウンロード後のパス確定) と共有する。
  */
-function buildTargetPath(dir: string | undefined, filename: string | undefined): string {
+export function buildTargetPath(dir: string | undefined, filename: string | undefined): string {
   if (!dir || !filename) return '';
   return `${dir}/${filename}`;
 }

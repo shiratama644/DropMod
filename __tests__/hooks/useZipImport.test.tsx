@@ -544,6 +544,16 @@ describe('useZipImport: .mrpack overrides → ManagedFileRecord (Phase 12-C)', (
     expect(await getManagedFiles(profile?.id ?? '')).toEqual([]);
   });
 
+  it('**modpackSource を設定する** (§10.6: Modpack は Profile の Source)', async () => {
+    const { profile } = await importPack(await makeMrpackWithOverrides({}));
+    expect(profile?.modpackSource).toMatchObject({
+      provider: 'modrinth',
+      name: 'Override Pack',
+      versionId: '1.0'
+    });
+    expect(profile?.modpackSource?.importedAt).toEqual(expect.any(Number));
+  });
+
   it('overrides があることをトーストに出す', async () => {
     const file = await makeMrpackWithOverrides({ 'overrides/mods/a.jar': 'a' });
     const { harness } = await importPack(file);

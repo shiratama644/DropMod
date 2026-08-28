@@ -185,7 +185,36 @@ export interface Profile {
    */
   linkedSource?: LinkedSource;
 
-  // modpackSource (.mrpack 由来の Source) は Phase 12-C で追加
+  /**
+   * この Profile の**入手元 Modpack** (Phase 12-C / §10.6)。
+   *
+   * §10.6: 「Modpack は Profile の **Source** (カテゴリではない)」。
+   * `mods` / `resourcepacks` / `shaderpacks` と並ぶ配列ではなく、
+   * Profile 1 件につき高々 1 つの由来情報として持つ。
+   *
+   * 未設定 = Modpack 由来ではない Profile (手動作成 / ZIP Import / フォルダ Import)。
+   */
+  modpackSource?: ModpackSource;
+}
+
+/**
+ * Profile の入手元 Modpack (Phase 12-C / §10.6)。
+ *
+ * `.mrpack` Import 時に設定する。**更新検知** (§10.6「現状より新しい version が
+ * Modrinth に存在するか」) と **D-6** (紐付け解除) がこれを読む。
+ */
+export interface ModpackSource {
+  /** 入手元プロバイダ。Phase 12 は `'modrinth'` のみ (CurseForge は Phase 13) */
+  provider: 'modrinth' | 'curseforge';
+  /** Modpack の project id (更新検知に使う) */
+  projectId?: string;
+  slug?: string;
+  name: string;
+  /** Import した時点の Modpack version id */
+  versionId?: string;
+  versionNumber?: string;
+  /** Import した時刻 (Date.now) */
+  importedAt: number;
 }
 
 export interface ModrinthHit {

@@ -163,7 +163,15 @@ export const useZipImport = (
             loader: loader
           },
           description: 'Modrinth .mrpack からインポート',
-          mods: importedMods
+          mods: importedMods,
+          // **Phase 12-C (§10.6)**: Modpack は Profile の **Source**。
+          // 更新検知と D-6 (紐付け解除) がこれを読む
+          modpackSource: {
+            provider: 'modrinth',
+            name: mrpackData.name || 'Modrinth Pack',
+            ...(mrpackData.versionId ? { versionId: mrpackData.versionId } : {}),
+            importedAt: Date.now()
+          }
         };
 
         setProfiles((prev) => [...prev, newProfile]);

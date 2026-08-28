@@ -25,7 +25,9 @@ export type AnalysisIssueId =
   | 'missing-dependency'
   | 'conflict'
   | 'unknown-files'
-  | 'shader-prerequisite';
+  | 'shader-prerequisite'
+  /** Phase 12-C (§10.6): Modpack / 収録 Mod の更新検知 */
+  | 'modpack-update';
 
 export interface AnalysisIssue {
   id: AnalysisIssueId;

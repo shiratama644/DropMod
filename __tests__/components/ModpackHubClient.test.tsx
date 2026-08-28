@@ -20,9 +20,12 @@ import { getManagedFiles, syncManagedFiles, _clearAllForTesting } from '@/lib/db
 import type { ManagedFileRecord, Profile } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
-vi.mock('@/lib/env/modpackUpdate', () => ({
-  checkModpackUpdates: vi.fn()
-}));
+// `checkModpackUpdates` だけ差し替える。**`updateIssueFromReport` は実物を使う**ので
+// importOriginal で透過させる (モックに含め忘れると描画時に undefined 呼び出しで落ちる)。
+vi.mock('@/lib/env/modpackUpdate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/env/modpackUpdate')>();
+  return { ...actual, checkModpackUpdates: vi.fn() };
+});
 const mockCheck = vi.mocked(checkModpackUpdates);
 
 function managed(overrides: Partial<ManagedFileRecord> = {}): ManagedFileRecord {
@@ -156,6 +159,87 @@ describe('ModpackHubClient: 更新の確認', () => {
       expect(screen.getByTestId('modpack-update-report')).toBeInTheDocument()
     );
     expect(screen.getByText(/0 件を確認/)).toBeInTheDocument();
+  });
+
+  it('**Analysis の概要行を出す** (§10.6「Analysis に追加」)', async () => {
+    mockCheck.mockResolvedValue(
+      report({
+        updatableCount: 1,
+        checkedCount: 1,
+        entries: [
+          {
+            projectId: 'proj-1',
+            name: 'Sodium',
+            category: 'mod',
+            currentVersionNumber: '0.5.0',
+            latestVersionNumber: '0.6.0',
+            hasUpdate: true
+          }
+        ]
+      })
+    );
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: /更新を確認/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('modpack-update-summary')).toHaveTextContent(
+        '1 件の更新があります'
+      )
+    );
+  });
+
+  it('**確認対象が 1 件も無ければ**「更新の対象がありません」', async () => {
+    mockCheck.mockResolvedValue(report());
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: /更新を確認/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('modpack-update-summary')).toHaveTextContent(
+        '更新の対象がありません'
+      )
+    );
+  });
+
+  it('**確認でき全て最新なら**「すべて最新です」+ 確認件数', async () => {
+    mockCheck.mockResolvedValue(
+      report({
+        checkedCount: 2,
+        entries: [
+          { projectId: 'proj-1', name: 'Sodium', category: 'mod', hasUpdate: false },
+          { projectId: 'proj-2', name: 'Lithium', category: 'mod', hasUpdate: false }
+        ]
+      })
+    );
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: /更新を確認/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('modpack-update-summary')).toHaveTextContent('すべて最新です')
+    );
+    expect(screen.getByTestId('modpack-update-summary')).toHaveTextContent('2 件確認');
+  });
+
+  it('**確認できなかった件数も概要に出す**', async () => {
+    mockCheck.mockResolvedValue(
+      report({
+        checkedCount: 1,
+        unresolvedCount: 1,
+        entries: [
+          { projectId: 'proj-1', name: 'Sodium', category: 'mod', hasUpdate: false },
+          { projectId: 'proj-9', name: 'X', category: 'mod', hasUpdate: false, unresolved: '404' }
+        ]
+      })
+    );
+    setup();
+
+    fireEvent.click(screen.getByRole('button', { name: /更新を確認/ }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('modpack-update-summary')).toHaveTextContent('1 件は確認できず')
+    );
   });
 
   it('**更新がある項目は 現在 → 最新 で並べる**', async () => {

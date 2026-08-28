@@ -210,7 +210,8 @@ export const useZipImport = (
       // 中途半端に Import すると `files[]` の projectID/fileID が Modrinth の ID 体系と
       // 別物なので、台帳に無効な projectId が混ざり Update 検知も Sync も壊れる。
       if (!mrpackFile) {
-        const { format } = await detectModpackFormat(file);
+        // すでに loadAsync 済みの zip を渡す (**二度パースしない**)
+        const { format } = await detectModpackFormat(zip);
         if (format === 'curseforge') {
           // importInFlightRef の解除は finally 節で行う
           showToast(CURSEFORGE_UNSUPPORTED_MESSAGE, 'error');

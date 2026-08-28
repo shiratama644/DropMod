@@ -6,11 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
-import {
-  detectModpackFormat,
-  isModrinthModpack,
-  CURSEFORGE_UNSUPPORTED_MESSAGE
-} from '@/lib/env/modpack';
+import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/lib/env/modpack';
 
 async function zipBlob(build: (zip: JSZip) => void): Promise<Blob> {
   const zip = new JSZip();
@@ -104,12 +100,19 @@ describe('detectModpackFormat', () => {
   });
 });
 
-describe('isModrinthModpack', () => {
-  it('Modrinth 形式だけ true', async () => {
-    const mr = await zipBlob((z) => z.file('modrinth.index.json', MODRINTH_INDEX));
-    const cf = await zipBlob((z) => z.file('manifest.json', CURSEFORGE_MANIFEST));
-    expect(await isModrinthModpack(mr)).toBe(true);
-    expect(await isModrinthModpack(cf)).toBe(false);
+
+describe('detectModpackFormat: 読み込み済み JSZip を受け取る', () => {
+  it('**Blob を渡さず JSZip インスタンスを渡しても同じ判定** (二度パース防止)', async () => {
+    const blob = await zipBlob((z) => z.file('manifest.json', CURSEFORGE_MANIFEST));
+    const loaded = await JSZip.loadAsync(blob);
+    const info = await detectModpackFormat(loaded);
+    expect(info.format).toBe('curseforge');
+  });
+
+  it('読み込み済み JSZip でも Modrinth を判定できる', async () => {
+    const blob = await zipBlob((z) => z.file('modrinth.index.json', MODRINTH_INDEX));
+    const info = await detectModpackFormat(await JSZip.loadAsync(blob));
+    expect(info.format).toBe('modrinth');
   });
 });
 

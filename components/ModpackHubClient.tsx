@@ -27,6 +27,7 @@ import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
 import { promoteModpackRecords } from '@/lib/env/mrpack';
 import {
   checkModpackUpdates,
+  updateIssueFromReport,
   type ModpackUpdateReport
 } from '@/lib/env/modpackUpdate';
 import { useConfirmStore } from '@/lib/store/confirm';
@@ -241,6 +242,12 @@ export const ModpackHubClient: React.FC = () => {
 /** 更新チェックの結果表示 */
 const UpdateReport: React.FC<{ report: ModpackUpdateReport }> = ({ report }) => {
   const { updatable, current, unresolved } = splitEntries(report);
+  /**
+   * §10.6「更新検知: ... (**Analysis に追加**)」。
+   * Analysis の 1 件として概要を出し、明細はその下に並べる。
+   * **更新があることはエラーではない**ので status は warning (ok / warning のみ)。
+   */
+  const issue = updateIssueFromReport(report);
 
   return (
     <section className="theme-card rounded-xl p-5" data-testid="modpack-update-report">
@@ -251,6 +258,20 @@ const UpdateReport: React.FC<{ report: ModpackUpdateReport }> = ({ report }) => 
           {report.checkedCount} 件を確認 / {report.updatableCount} 件の更新
         </span>
       </h3>
+
+      <p
+        className={`text-sm mb-3 ${
+          issue.status === 'ok' ? 'theme-text-emerald' : 'theme-text-amber'
+        }`}
+        data-testid="modpack-update-summary"
+      >
+        <i
+          className={`fa-solid ${
+            issue.status === 'ok' ? 'fa-circle-check' : 'fa-triangle-exclamation'
+          } mr-1.5`}
+        />
+        {issue.message}
+      </p>
 
       {report.updatableCount === 0 ? (
         <p className="theme-text-secondary text-sm">

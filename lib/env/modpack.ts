@@ -49,13 +49,21 @@ interface CurseForgeManifest {
  *
  * **ZIP として読めない場合も `unknown` を返す** (throw しない)。
  * 呼び出し側は「Modpack ではない」として扱える。
+ *
+ * @param input Blob または**読み込み済みの JSZip**。
+ *   呼び出し側がすでに `JSZip.loadAsync()` 済みなら、それを渡して
+ *   **二度パースしない**こと (数百 MB の .minecraft ZIP では無視できない)。
  */
-export async function detectModpackFormat(blob: Blob): Promise<ModpackFormatInfo> {
+export async function detectModpackFormat(input: Blob | JSZip): Promise<ModpackFormatInfo> {
   let zip: JSZip;
-  try {
-    zip = await JSZip.loadAsync(blob);
-  } catch {
-    return { format: 'unknown', evidence: '' };
+  if (input instanceof JSZip) {
+    zip = input;
+  } else {
+    try {
+      zip = await JSZip.loadAsync(input);
+    } catch {
+      return { format: 'unknown', evidence: '' };
+    }
   }
 
   // Modrinth の索引
@@ -78,15 +86,4 @@ export async function detectModpackFormat(blob: Blob): Promise<ModpackFormatInfo
   }
 
   return { format: 'unknown', evidence: '' };
-}
-
-/**
- * `.mrpack` 拡張子**または**中身で Modrinth Modpack かどうかを判定する。
- *
- * 拡張子だけを見る `isModrinthMrpack()` より正確。中身を読む分だけコストが
- * かかるので、Import の入口 1 回だけ呼ぶこと。
- */
-export async function isModrinthModpack(blob: Blob): Promise<boolean> {
-  const { format } = await detectModpackFormat(blob);
-  return format === 'modrinth';
 }

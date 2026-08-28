@@ -97,16 +97,45 @@ describe('computeSyncPlan: 🟢 Additions', () => {
       profile: makeProfile({ mods: [makeItem({ filename: 'sodium.jar' })] }),
       managed: [],
       local: [],
+      contentDirs: { mods: 'mods' },
       now: NOW
     });
 
     expect(plan.additions[0]).toMatchObject({
       kind: 'addition',
-      path: 'sodium.jar',
+      // contentDirs から書き込み先を確定する (環境ルート直下に書かない)
+      path: 'mods/sodium.jar',
       source: 'dropmod',
       needsDownload: true,
       size: 0
     });
+  });
+
+  it('contentDirs が無ければ filename があっても path は空 (ダウンロード後に確定)', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({ mods: [makeItem({ filename: 'sodium.jar' })] }),
+      managed: [],
+      local: [],
+      now: NOW
+    });
+    expect(plan.additions[0]?.path).toBe('');
+  });
+
+  it('カテゴリ別の contentDirs を使う (resourcepack は resourcepacks/ へ)', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({
+        mods: [makeItem({ filename: 'a.jar' })],
+        resourcepacks: [makeItem({ filename: 'p.zip' })]
+      }),
+      managed: [],
+      local: [],
+      contentDirs: { mods: 'mods', resourcepacks: '.minecraft/resourcepacks' },
+      now: NOW
+    });
+    expect(plan.additions.map((a) => a.path)).toEqual([
+      'mods/a.jar',
+      '.minecraft/resourcepacks/p.zip'
+    ]);
   });
 
   it('artifact も filename も無ければ path は空 (ダウンロード後に確定)', () => {

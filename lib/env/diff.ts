@@ -30,6 +30,7 @@
 
 import type {
   ContentCategory,
+  LinkedSource,
   ManagedFileRecord,
   ManagedFileSource,
   Profile,
@@ -112,8 +113,34 @@ export interface ComputeSyncPlanInput {
   managed: readonly ManagedFileRecord[];
   /** ローカル環境のスキャン結果 */
   local: readonly LocalFileEntry[];
+  /**
+   * 検出したコンテンツディレクトリ (`LinkedSource.contentDirs`)。
+   *
+   * **artifact を持たない addition の書き込み先を確定するために必要。**
+   * これが無いと path がファイル名だけ (`sodium.jar`) になり、Executor が
+   * 環境ルート直下に書き込んでしまう (2026-08-29 修正)。
+   * 未指定 / 当該カテゴリのディレクトリ未検出の場合は path を空のまま残し、
+   * ダウンロード後に確定させる。
+   */
+  contentDirs?: LinkedSource['contentDirs'];
   /** テスト用の時刻固定 */
   now?: number;
+}
+
+/** カテゴリ → `LinkedSource.contentDirs` のキー */
+const CATEGORY_DIR_KEY: Record<ContentCategory, keyof NonNullable<LinkedSource['contentDirs']>> = {
+  mod: 'mods',
+  resourcepack: 'resourcepacks',
+  shader: 'shaderpacks'
+};
+
+/**
+ * 検出ディレクトリとファイル名から相対パスを組み立てる。
+ * どちらかが欠けていれば空文字 (= ダウンロード後に確定)。
+ */
+function buildTargetPath(dir: string | undefined, filename: string | undefined): string {
+  if (!dir || !filename) return '';
+  return `${dir}/${filename}`;
 }
 
 const EMPTY_COUNTS: SyncPlanTotals['counts'] = {
@@ -129,7 +156,7 @@ const EMPTY_COUNTS: SyncPlanTotals['counts'] = {
  * カテゴリ (mod / resourcepack / shader) ごとに独立して判定する (§10.2)。
  */
 export function computeSyncPlan(input: ComputeSyncPlanInput): SyncPlan {
-  const { profile, managed, local, now = Date.now() } = input;
+  const { profile, managed, local, contentDirs, now = Date.now() } = input;
 
   const additions: SyncPlanEntry[] = [];
   const updates: SyncPlanEntry[] = [];
@@ -156,7 +183,8 @@ export function computeSyncPlan(input: ComputeSyncPlanInput): SyncPlan {
         category,
         localByPath,
         managedByPath,
-        handledPaths
+        handledPaths,
+        contentDir: contentDirs?.[CATEGORY_DIR_KEY[category]]
       });
       if (!entry) continue;
       pushByKind(entry, { additions, updates, unchanged });
@@ -266,6 +294,8 @@ interface ClassifyArgs {
   localByPath: Map<string, LocalFileEntry>;
   managedByPath: Map<string, ManagedFileRecord>;
   handledPaths: Set<string>;
+  /** このカテゴリの検出ディレクトリ (未検出なら undefined) */
+  contentDir?: string;
 }
 
 /**
@@ -273,7 +303,7 @@ interface ClassifyArgs {
  * 何も生成しない場合は null (通常は起こらない)。
  */
 function classifyProfileItem(args: ClassifyArgs): SyncPlanEntry | null {
-  const { item, category, localByPath, managedByPath, handledPaths } = args;
+  const { item, category, localByPath, managedByPath, handledPaths, contentDir } = args;
   const artifact = item.artifact;
 
   // ---- artifact 無し: DropMod から追加しただけでローカル実体が無い ----
@@ -301,8 +331,9 @@ function classifyProfileItem(args: ClassifyArgs): SyncPlanEntry | null {
     return {
       kind: 'addition',
       category,
-      // ダウンロード後に確定するため filename が無ければ空
-      path: item.filename ?? '',
+      // 検出ディレクトリ + filename で書き込み先を確定する。
+      // どちらかが欠ければ空 = ダウンロード後に確定 (Executor が appliedPath に記録)
+      path: buildTargetPath(contentDir, item.filename),
       name: item.name,
       projectId: item.projectId,
       source: 'dropmod',

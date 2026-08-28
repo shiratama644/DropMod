@@ -434,3 +434,120 @@ describe('useZipImport: .minecraft フォルダ全体 ZIP (Phase 11-C フォー�
     expect(pending?.mods).toHaveLength(1);
   });
 });
+
+
+// ============================================================================
+// Phase 12-C (§10.6): .mrpack の overrides を source:'modpack' として台帳化する
+// ============================================================================
+
+import { getManagedFiles, _clearAllForTesting } from '@/lib/db/dexie';
+
+/** overrides を含む .mrpack を作る */
+function makeMrpackWithOverrides(
+  overrides: Record<string, string>,
+  dependencies: Record<string, string> = { minecraft: '1.20.1', 'fabric-loader': '0.15' }
+): Promise<File> {
+  const zip = new JSZip();
+  zip.file(
+    'modrinth.index.json',
+    JSON.stringify({
+      formatVersion: 1,
+      game: 'minecraft',
+      versionId: '1.0',
+      name: 'Override Pack',
+      files: [],
+      dependencies
+    })
+  );
+  for (const [path, content] of Object.entries(overrides)) {
+    zip.file(path, content);
+  }
+  return zip.generateAsync({ type: 'blob' }).then(
+    (blob) => new File([blob], 'pack.mrpack', { type: 'application/zip' })
+  );
+}
+
+describe('useZipImport: .mrpack overrides → ManagedFileRecord (Phase 12-C)', () => {
+  beforeEach(async () => {
+    await _clearAllForTesting();
+    clearApiCache();
+  });
+
+  /** インポートを実行し、作られた Profile を返す */
+  async function importPack(file: File) {
+    const h = makeHarness();
+    const { result } = renderHook(() =>
+      useZipImport(
+        h.setProfiles as unknown as React.Dispatch<React.SetStateAction<Profile[]>>,
+        h.setCurrentProfileId,
+        h.setIsNewProfileModalOpen,
+        h.showToast
+      )
+    );
+    await act(async () => {
+      const fakeEvent = {
+        target: { files: [file], value: '' }
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      await result.current.handleImportZipInput(fakeEvent);
+      // handleImportZipFile は fire-and-forget: マイクロタスク完了を待つ
+      await new Promise((r) => setTimeout(r, 100));
+    });
+    const call = h.setProfiles.mock.calls[0]?.[0];
+    const nextProfiles = typeof call === 'function' ? call([]) : call;
+    return { profile: nextProfiles?.[0], harness: h };
+  }
+
+  it('overrides/mods が **source:modpack** で台帳に入る', async () => {
+    const file = await makeMrpackWithOverrides({
+      'overrides/mods/extra.jar': 'extra-bytes',
+      'overrides/resourcepacks/pack.zip': 'pack-bytes'
+    });
+
+    const { profile } = await importPack(file);
+    expect(profile?.name).toBe('Override Pack (インポート)');
+
+    const records = await getManagedFiles(profile?.id ?? '');
+    expect(records).toHaveLength(2);
+    expect(records.map((r) => [r.path, r.source, r.category]).sort()).toEqual([
+      ['mods/extra.jar', 'modpack', 'mod'],
+      ['resourcepacks/pack.zip', 'modpack', 'resourcepack']
+    ]);
+    // 実体の SHA-1 を持っていること (Sync の fingerprint 検証がこれで成立する)
+    expect(records.every((r) => r.sha1.length === 40)).toBe(true);
+  });
+
+  it('3 カテゴリ以外の overrides は台帳に入れない (config など)', async () => {
+    const file = await makeMrpackWithOverrides({
+      'overrides/mods/a.jar': 'a',
+      'overrides/config/modmenu.json': '{}',
+      'overrides/options.txt': 'fov:90'
+    });
+
+    const { profile } = await importPack(file);
+    const records = await getManagedFiles(profile?.id ?? '');
+    expect(records.map((r) => r.path)).toEqual(['mods/a.jar']);
+  });
+
+  it('**server-overrides は台帳に入れない**', async () => {
+    const file = await makeMrpackWithOverrides({
+      'overrides/mods/client.jar': 'c',
+      'server-overrides/mods/server.jar': 's'
+    });
+
+    const { profile } = await importPack(file);
+    const records = await getManagedFiles(profile?.id ?? '');
+    expect(records.map((r) => r.path)).toEqual(['mods/client.jar']);
+  });
+
+  it('overrides が無ければ台帳を作らない', async () => {
+    const { profile } = await importPack(await makeMrpackWithOverrides({}));
+    expect(await getManagedFiles(profile?.id ?? '')).toEqual([]);
+  });
+
+  it('overrides があることをトーストに出す', async () => {
+    const file = await makeMrpackWithOverrides({ 'overrides/mods/a.jar': 'a' });
+    const { harness } = await importPack(file);
+    const messages = harness.showToast.mock.calls.map((c) => c[0]);
+    expect(messages.join(' ')).toContain('1 ファイルを管理対象に追加');
+  });
+});

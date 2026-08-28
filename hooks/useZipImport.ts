@@ -23,6 +23,12 @@ import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
 import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
 import { analyzeImportHealth } from '@/lib/env/analysis';
 import { generateProfileName } from '@/lib/env/profileName';
+import {
+  environmentFromMrpack,
+  mrpackOverridesToManaged,
+  parseMrpackOverrides
+} from '@/lib/env/mrpack';
+import { syncManagedFiles } from '@/lib/db/dexie';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
@@ -69,13 +75,15 @@ export const useZipImport = (
         // MrpackIndex 型で受ける (any → 明示型)
         const mrpackData = JSON.parse(text) as MrpackIndex;
         const mcVer = mrpackData.dependencies?.minecraft || '1.20.1';
-        // .mrpack の dependencies キー名は Modrinth 仕様に準拠:
-        //   fabric-loader / forge / neoforge / quilt-loader
-        // 明示的に判定して DropMod の loader ラベル (Fabric/Forge/NeoForge/Quilt) に対応付ける
-        let loader: ProfileLoader = 'Fabric';
-        if (mrpackData.dependencies?.forge) loader = 'Forge';
-        if (mrpackData.dependencies?.neoforge) loader = 'NeoForge';
-        if (mrpackData.dependencies?.['quilt-loader']) loader = 'Quilt';
+        // .mrpack の dependencies キー名は Modrinth 仕様に準拠
+        //   (fabric-loader / forge / neoforge / quilt-loader)。
+        // 判定は lib/env/mrpack.ts に集約した (Phase 12-C)
+        const mrpackEnv = environmentFromMrpack(mrpackData);
+        const loader: ProfileLoader = mrpackEnv.loader ?? 'Fabric';
+
+        // **Phase 12-C (§10.6)**: overrides/ を source:'modpack' として台帳化する。
+        // Phase 11 は modrinth.index.json の files[] しか見ていなかった。
+        const { overrides, skipped: skippedOverrides } = await parseMrpackOverrides(zip);
 
         const importedMods: ProjectItem[] = [];
         if (mrpackData.files) {
@@ -160,7 +168,26 @@ export const useZipImport = (
 
         setProfiles((prev) => [...prev, newProfile]);
         setCurrentProfileId(newProfile.id);
-        showToast(`「${newProfile.name}」のインポート完了！`, 'success');
+
+        // overrides を台帳に登録 (source: 'modpack')。
+        // これで **D-6** (紐付け解除時に 'import' へ昇格) と Sync の削除判定が成立する
+        if (overrides.length > 0) {
+          await syncManagedFiles(
+            newProfile.id,
+            mrpackOverridesToManaged(newProfile.id, overrides)
+          );
+        }
+
+        showToast(
+          `「${newProfile.name}」のインポート完了！${
+            overrides.length > 0 ? ` (${overrides.length} ファイルを管理対象に追加)` : ''
+          }${
+            skippedOverrides.length > 0
+              ? ` / 対象外 ${skippedOverrides.length} ファイル`
+              : ''
+          }`,
+          'success'
+        );
         return;
       }
 

@@ -388,7 +388,12 @@ async function applyOperation(
     }
 
     await sink.writeFile(path, data);
-    await markOperationDone(transactionId, index, { appliedPath: path });
+    // 実際に書き込んだ実体の fingerprint を記録する (Sync 後の台帳更新が使う)
+    await markOperationDone(transactionId, index, {
+      appliedPath: path,
+      sha1: await calculateSha1(data.slice().buffer),
+      size: data.byteLength
+    });
     return { applied: true };
   }
 
@@ -414,13 +419,20 @@ async function applyOperation(
   // Backup 先行 (上書き・削除の前に現ファイルを退避)
   const backupId = await backup.save(transactionId, op.path, current);
 
+  let writtenSha1: string | undefined;
+  let writtenSize: number | undefined;
   if (op.kind === 'update') {
     const data = (await resolveContent(entry)).data;
     await sink.writeFile(op.path, data);
+    writtenSha1 = await calculateSha1(data.slice().buffer);
+    writtenSize = data.byteLength;
   } else {
     await sink.removeFile(op.path);
   }
 
-  await markOperationDone(transactionId, index, { backupId });
+  await markOperationDone(transactionId, index, {
+    backupId,
+    ...(writtenSha1 !== undefined ? { sha1: writtenSha1, size: writtenSize } : {})
+  });
   return { applied: true };
 }

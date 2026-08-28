@@ -139,6 +139,15 @@ export interface SyncOperationJournalEntry {
 export interface SyncOperationPatch {
   backupId?: string;
   appliedPath?: string;
+  /**
+   * 実際に書き込んだ実体の fingerprint。
+   * Plan 時点で `sha1` が未確定の追加操作 (artifact を持たない `source:'dropmod'`) では
+   * ダウンロード後に確定した値をここに記録する。**Sync 後の台帳更新がこの値を使う**
+   * (台帳の fingerprint が実体と食い違うと §10.2 の削除判定が壊れるため)。
+   */
+  sha1?: string;
+  /** 実際に書き込んだ実体のサイズ (台帳の `size` を実体と一致させるため) */
+  size?: number;
   skippedReason?: string;
 }
 

@@ -7,10 +7,12 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  applyJournalToLedger,
   buildManagedFileId,
   deriveManagedSource,
   expandProfileToManaged,
   itemsOfCategory,
+  type LedgerJournalOperation,
   MANAGED_CATEGORIES,
   MANAGED_ID_SEPARATOR,
   mergeManagedRecords,
@@ -241,5 +243,148 @@ describe('mergeManagedRecords', () => {
     const existing: ManagedFileRecord = { ...candidate, sha1: 'old-sha' };
     const [merged] = mergeManagedRecords([candidate], [existing]);
     expect(merged && 'syncedAt' in merged).toBe(false);
+  });
+});
+
+// ============================================================================
+// Phase 12-B: Sync 完了後の台帳更新
+// ============================================================================
+
+
+function makeRecord(overrides: Partial<ManagedFileRecord> = {}): ManagedFileRecord {
+  return {
+    id: 'p1::mods/a.jar',
+    profileId: 'p1',
+    category: 'mod',
+    projectId: 'proj-1',
+    path: 'mods/a.jar',
+    sha1: 'sha-old',
+    size: 100,
+    source: 'import',
+    managedAt: NOW - 1000,
+    ...overrides
+  };
+}
+
+function op(overrides: Partial<LedgerJournalOperation> = {}): LedgerJournalOperation {
+  return {
+    kind: 'add',
+    category: 'mod',
+    path: 'mods/new.jar',
+    projectId: 'proj-new',
+    sha1: 'sha-new',
+    size: 200,
+    done: true,
+    ...overrides
+  };
+}
+
+describe('applyJournalToLedger (Sync 後の台帳更新)', () => {
+  it('追加操作で新規レコードを作る (source=dropmod / syncedAt)', () => {
+    const records = applyJournalToLedger('p1', [op()], [], NOW);
+    expect(records).toEqual([
+      {
+        id: 'p1::mods/new.jar',
+        profileId: 'p1',
+        category: 'mod',
+        projectId: 'proj-new',
+        path: 'mods/new.jar',
+        sha1: 'sha-new',
+        size: 200,
+        source: 'dropmod',
+        managedAt: NOW,
+        syncedAt: NOW
+      }
+    ]);
+  });
+
+  it('**artifact を持たない dropmod の追加も台帳に乗る** (expandProfileToManaged では乗らない)', () => {
+    // Profile 側には artifact が無いので expandProfileToManaged は空を返す
+    expect(expandProfileToManaged(makeProfile({ mods: [makeItem()] }), NOW)).toEqual([]);
+
+    // それでも Sync が書いたので Journal から台帳に載る
+    const records = applyJournalToLedger('p1', [op()], [], NOW);
+    expect(records.map((r) => r.path)).toEqual(['mods/new.jar']);
+  });
+
+  it('更新操作は既存の source / managedAt を引き継ぎ、sha1 / size / syncedAt を更新する', () => {
+    const existing = [makeRecord()];
+    const records = applyJournalToLedger(
+      'p1',
+      [op({ kind: 'update', path: 'mods/a.jar', projectId: 'proj-1', sha1: 'sha-written', size: 300 })],
+      existing,
+      NOW
+    );
+    expect(records).toEqual([
+      {
+        ...makeRecord(),
+        sha1: 'sha-written',
+        size: 300,
+        source: 'import', // 引き継ぐ
+        managedAt: NOW - 1000, // 引き継ぐ
+        syncedAt: NOW
+      }
+    ]);
+  });
+
+  it('削除操作でレコードを消す', () => {
+    const records = applyJournalToLedger(
+      'p1',
+      [op({ kind: 'delete', path: 'mods/a.jar' })],
+      [makeRecord()],
+      NOW
+    );
+    expect(records).toEqual([]);
+  });
+
+  it('done: false (スキップ) の操作は無視する', () => {
+    const records = applyJournalToLedger('p1', [op({ done: false })], [makeRecord()], NOW);
+    expect(records).toEqual([makeRecord()]);
+  });
+
+  it('appliedPath を path より優先する (Plan 時点で未確定だった操作)', () => {
+    const records = applyJournalToLedger(
+      'p1',
+      [op({ path: '', appliedPath: 'mods/late.jar' })],
+      [],
+      NOW
+    );
+    expect(records.map((r) => `${r.id} / ${r.path}`)).toEqual([
+      'p1::mods/late.jar / mods/late.jar'
+    ]);
+  });
+
+  it('パスを確定できない操作は無視する', () => {
+    expect(applyJournalToLedger('p1', [op({ path: '', appliedPath: undefined })], [], NOW)).toEqual(
+      []
+    );
+  });
+
+  it('fingerprint が不明な操作は台帳に載せない (実体と食い違う行を作らない)', () => {
+    expect(applyJournalToLedger('p1', [op({ sha1: undefined })], [], NOW)).toEqual([]);
+  });
+
+  it('Journal に sha1 が無くても既存レコードの値にフォールバックする', () => {
+    const records = applyJournalToLedger(
+      'p1',
+      [op({ kind: 'update', path: 'mods/a.jar', projectId: 'proj-1', sha1: undefined, size: undefined as unknown as number })],
+      [makeRecord()],
+      NOW
+    );
+    expect(records[0]).toMatchObject({ sha1: 'sha-old', size: 100, syncedAt: NOW });
+  });
+
+  it('複数操作を順に適用する (追加 → 更新 → 削除)', () => {
+    const records = applyJournalToLedger(
+      'p1',
+      [
+        op({ path: 'mods/add.jar' }),
+        op({ kind: 'update', path: 'mods/a.jar', projectId: 'proj-1', sha1: 'sha-upd', size: 5 }),
+        op({ kind: 'delete', path: 'mods/gone.jar' })
+      ],
+      [makeRecord(), makeRecord({ id: 'p1::mods/gone.jar', path: 'mods/gone.jar' })],
+      NOW
+    );
+    expect(records.map((r) => r.path).sort()).toEqual(['mods/a.jar', 'mods/add.jar']);
   });
 });

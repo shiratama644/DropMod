@@ -347,6 +347,71 @@ describe('executeSync — fingerprint 再検証 (§10.4 / §4)', () => {
   });
 });
 
+describe('executeSync — Journal への実体記録 (Sync 後の台帳更新が依存)', () => {
+  beforeEach(async () => {
+    await _clearAllForTesting();
+  });
+
+  it('追加は書き込んだ実体の sha1 / size / appliedPath を記録する', async () => {
+    const result = await executeSync({
+      profileId: 'p1',
+      plan: makePlan({ additions: [entry({ path: '', name: 'late.jar' })] }),
+      sink: new MemorySink(),
+      backup: new MemoryBackupStore(),
+      resolveContent: resolver({ 'late.jar': { data: NEW_A, path: 'mods/late.jar' } })
+    });
+
+    const row = await getSyncTransaction(result.transactionId as string);
+    // Plan 時点で sha1 / size は未確定。実体から確定させた値が入る
+    expect(row?.operations[0]).toMatchObject({
+      done: true,
+      appliedPath: 'mods/late.jar',
+      sha1: await sha1Of(NEW_A),
+      size: NEW_A.length
+    });
+  });
+
+  it('更新も書き込んだ実体の sha1 / size を記録する', async () => {
+    const result = await executeSync({
+      profileId: 'p1',
+      plan: makePlan({
+        updates: [
+          entry({
+            kind: 'update',
+            path: 'mods/upd.jar',
+            name: 'upd.jar',
+            targetSha1: 'plan-time-sha',
+            localSha1: await sha1Of(OLD_A)
+          })
+        ]
+      }),
+      sink: new MemorySink({ files: { 'mods/upd.jar': OLD_A } }),
+      backup: new MemoryBackupStore(),
+      resolveContent: resolveAny
+    });
+
+    const row = await getSyncTransaction(result.transactionId as string);
+    expect(row?.operations[0]).toMatchObject({
+      sha1: await sha1Of(NEW_A),
+      size: NEW_A.length,
+      backupId: expect.any(String)
+    });
+  });
+
+  it('スキップした操作は sha1 を記録しない (台帳に実体の無い行を作らない)', async () => {
+    const result = await executeSync({
+      profileId: 'p1',
+      plan: makePlan({ additions: [entry({ path: 'mods/add.jar', name: 'add.jar' })] }),
+      sink: new MemorySink({ files: { 'mods/add.jar': 'user-file' } }),
+      backup: new MemoryBackupStore(),
+      resolveContent: resolveAny
+    });
+    expect(result.skipped).toHaveLength(1);
+    const row = await getSyncTransaction(result.transactionId as string);
+    expect(row?.operations[0]).toMatchObject({ done: false, sha1: undefined });
+  });
+});
+
 describe('executeSync — Rollback (§10.4)', () => {
   beforeEach(async () => {
     await _clearAllForTesting();

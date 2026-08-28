@@ -143,3 +143,86 @@ export function mergeManagedRecords(
     };
   });
 }
+
+// ============================================================================
+// Phase 12-B: Sync 完了後の台帳更新
+// ============================================================================
+
+/**
+ * 台帳更新に必要な Journal の最小形状。
+ *
+ * `SyncOperationJournalEntry` (`lib/db/dexie.ts`) と構造的に互換だが、
+ * **この pure モジュールから DB 層を指さない**ために自前で宣言している
+ * (dexie.ts は import 時に DB インスタンスを生成する)。
+ */
+export interface LedgerJournalOperation {
+  kind: 'add' | 'update' | 'delete';
+  category: ContentCategory;
+  path: string;
+  projectId?: string;
+  sha1?: string;
+  size: number;
+  appliedPath?: string;
+  done: boolean;
+}
+
+/**
+ * Transaction Journal を台帳に反映する (**pure function**)。
+ *
+ * ## なぜ `expandProfileToManaged` では足りないのか
+ *
+ * `expandProfileToManaged` は `ProjectItem.artifact` を持つアイテムしか展開しない。
+ * ところが Sync で新規に書き込んだファイルのうち `source: 'dropmod'` のものは
+ * **artifact を持たない** (DropMod から追加しただけで、ローカル実体から
+ * 取り込んだわけではない)。Profile から再導出するとそれらが台帳に乗らず、
+ * 次回 Sync で `unmanaged` 扱いになり **削除対象外**になってしまう。
+ *
+ * 「実際に何を書いたか」を確定情報として持っているのは Journal なので、
+ * 台帳の更新元には Journal を使う。
+ *
+ * @param operations 完了したトランザクションの Journal
+ * @param existing   更新前の台帳 (`source` / `managedAt` を引き継ぐため)
+ */
+export function applyJournalToLedger(
+  profileId: string,
+  operations: readonly LedgerJournalOperation[],
+  existing: readonly ManagedFileRecord[],
+  now: number = Date.now()
+): ManagedFileRecord[] {
+  const byId = new Map(existing.map((record) => [record.id, record]));
+
+  for (const op of operations) {
+    if (!op.done) continue;
+    // Plan 時点でパス未確定だった操作は appliedPath に確定値が入っている
+    const path = op.appliedPath ?? op.path;
+    if (!path) continue;
+    const id = buildManagedFileId(profileId, path);
+
+    if (op.kind === 'delete') {
+      byId.delete(id);
+      continue;
+    }
+
+    const prev = byId.get(id);
+    // Sync が書き込んだ実体の fingerprint / size を優先する。
+    // Journal に記録が無い場合のみ既存値にフォールバックする。
+    const sha1 = op.sha1 ?? prev?.sha1;
+    if (!sha1) continue;
+
+    byId.set(id, {
+      id,
+      profileId,
+      category: op.category,
+      projectId: op.projectId ?? prev?.projectId ?? '',
+      path,
+      sha1,
+      size: op.size ?? prev?.size ?? 0,
+      // 既存レコードの由来 (import / modpack) は引き継ぐ。新規は DropMod が書いた = 'dropmod'
+      source: prev?.source ?? 'dropmod',
+      managedAt: prev?.managedAt ?? now,
+      syncedAt: now
+    });
+  }
+
+  return [...byId.values()];
+}

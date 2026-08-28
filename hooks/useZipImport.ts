@@ -20,6 +20,7 @@ import { useZipImportStore } from '@/lib/store/zipImport';
 import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import { primaryCategoryId } from '@/lib/constants/categories';
 import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
+import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/lib/env/modpack';
 import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
 import { analyzeImportHealth } from '@/lib/env/analysis';
 import { generateProfileName } from '@/lib/env/profileName';
@@ -202,6 +203,21 @@ export const useZipImport = (
       // 1.5. .minecraft フォルダ全体 ZIP (Phase 11-C: Firefox/Safari フォールバック)
       //   mods/ や versions/ 等を含む ZIP を環境として解析し、NewProfileModal で
       //   解析結果 (Analysis View) を確認してから作成する。
+      // **CurseForge 形式の Modpack を検知する** (Phase 12-C / §10.6)
+      //
+      // Modrinth と CurseForge はどちらも ZIP で、拡張子だけでは区別できない。
+      // CurseForge は Phase 13 まで未対応なので、**ここで止めて理由を伝える**。
+      // 中途半端に Import すると `files[]` の projectID/fileID が Modrinth の ID 体系と
+      // 別物なので、台帳に無効な projectId が混ざり Update 検知も Sync も壊れる。
+      if (!mrpackFile) {
+        const { format } = await detectModpackFormat(file);
+        if (format === 'curseforge') {
+          // importInFlightRef の解除は finally 節で行う
+          showToast(CURSEFORGE_UNSUPPORTED_MESSAGE, 'error');
+          return;
+        }
+      }
+
       if (!mrpackFile && isMinecraftFolderZip(zip)) {
         // ZIP が「.minecraft フォルダ自身」を含む場合はサブフォルダを root にする
         const hasDotMinecraftRoot = Object.keys(zip.files).some((path) =>

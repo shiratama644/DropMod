@@ -270,6 +270,47 @@ describe('useZipImport', () => {
     expect(warningCall?.[0]).toContain('破損');
   });
 
+  it('**CurseForge 形式の Modpack は未対応として弾く** (P12-C5 / §10.6)', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(() =>
+      useZipImport(
+        h.setProfiles as unknown as React.Dispatch<React.SetStateAction<Profile[]>>,
+        h.setCurrentProfileId,
+        h.setIsNewProfileModalOpen,
+        h.showToast
+      )
+    );
+
+    const zip = new JSZip();
+    zip.file(
+      'manifest.json',
+      JSON.stringify({
+        minecraft: { version: '1.20.1', modLoaders: [{ id: 'forge-47.2.0', primary: true }] },
+        manifestType: 'minecraftModpack',
+        name: 'CF Pack',
+        version: '1.0',
+        files: [{ projectID: 238222, fileID: 4542349, required: true }]
+      })
+    );
+    zip.file('overrides/mods/some-mod.jar', 'binary');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const file = new File([blob], 'curseforge-pack.zip');
+
+    await act(async () => {
+      const fakeEvent = {
+        target: { files: [file], value: '' }
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      await result.current.handleImportZipInput(fakeEvent);
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Profile は作らず、未対応の理由を伝える
+    expect(h.setProfiles).not.toHaveBeenCalled();
+    const errorCall = h.showToast.mock.calls.find(([, type]) => type === 'error');
+    expect(errorCall?.[0]).toContain('未対応');
+    expect(errorCall?.[0]).toContain('.mrpack');
+  });
+
   it('ファイル未選択 (files[0] なし) の場合は何もしない', async () => {
     const h = makeHarness();
     const { result } = renderHook(() =>

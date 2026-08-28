@@ -236,3 +236,73 @@ function toArrayBuffer(data: Uint8Array): ArrayBuffer {
   }
   return data.slice().buffer as ArrayBuffer;
 }
+
+/**
+ * メモリ上の BackupStore (Phase 12-C / §10.1)。
+ *
+ * ## なぜ OPFS ではなくメモリか
+ *
+ * `ZipSink` 経由の Sync は**書き込み先がメモリ**なので、退避先もメモリでよい。
+ * それ以上に重要なのは、**ZIP 経路を使う環境こそ OPFS が無い可能性がある**こと
+ * (Firefox / Safari / モバイルが ZipSink を使う想定)。そこで
+ * 「OPFS に対応していません」と Sync 全体を止めるのは本末転倒。
+ *
+ * ## トレードオフ
+ *
+ * ページを閉じると退避内容は消える。ただし ZipSink の Sync は
+ * 「実行 → その場で ZIP を書き出す」1 回の操作で完結するので、
+ * Sync をまたいで Undo する用途 (D-5 の直近 3 件保護) には元々使わない。
+ */
+export class MemoryBackupStore implements BackupStore {
+  readonly #entries = new Map<string, Uint8Array>();
+  /** backupId → txId (tx 単位の削除・一覧用) */
+  readonly #owner = new Map<string, string>();
+  /** backupId → 退避した時刻 (`savedAt` の算出用) */
+  readonly #savedAt = new Map<string, number>();
+
+  async save(txId: string, key: string, data: Uint8Array): Promise<string> {
+    const backupId = `${txId}/${sanitizeKey(key)}`;
+    this.#entries.set(backupId, data);
+    this.#owner.set(backupId, txId);
+    this.#savedAt.set(backupId, Date.now());
+    return backupId;
+  }
+
+  async load(backupId: string): Promise<Uint8Array | null> {
+    return this.#entries.get(backupId) ?? null;
+  }
+
+  async removeTransaction(txId: string): Promise<void> {
+    for (const [backupId, owner] of this.#owner) {
+      if (owner === txId) {
+        this.#entries.delete(backupId);
+        this.#owner.delete(backupId);
+        this.#savedAt.delete(backupId);
+      }
+    }
+  }
+
+  async listTransactions(): Promise<BackupTransactionSummary[]> {
+    // `savedAt` は「最も古いファイルの時刻」。D-5 の古い順追い出しと同じ基準。
+    const byTx = new Map<string, { bytes: number; oldest: number }>();
+    for (const [backupId, owner] of this.#owner) {
+      const data = this.#entries.get(backupId);
+      const savedAt = this.#savedAt.get(backupId) ?? 0;
+      const current = byTx.get(owner) ?? { bytes: 0, oldest: Number.POSITIVE_INFINITY };
+      current.bytes += data?.byteLength ?? 0;
+      current.oldest = Math.min(current.oldest, savedAt);
+      byTx.set(owner, current);
+    }
+    return [...byTx.entries()].map(([txId, summary]) => ({
+      txId,
+      bytes: summary.bytes,
+      savedAt: Number.isFinite(summary.oldest) ? summary.oldest : 0
+    }));
+  }
+
+  async estimateUsage(): Promise<number> {
+    let total = 0;
+    for (const data of this.#entries.values()) total += data.byteLength;
+    return total;
+  }
+}

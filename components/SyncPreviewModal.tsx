@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Sync Preview (Phase 12-B / PHASE12_PLAN.md §10.3, D-2, D-3)
+ * Sync Preview (Phase 12-B / PHASE12_PLAN.md §10.3, D-2, D-3 / P12-D3)
  *
  * **Sync 実行前に必ず出す差分確認ダイアログ。** ここを通さずに書き込む経路は
  * 存在させない (§4 禁止事項)。
@@ -12,13 +12,18 @@
  * |---|--------|------|------|
  * | 1 | 追加 | `plan.additions` | そのまま適用 |
  * | 2 | 更新 | `plan.updates` | そのまま適用 |
- * | 3 | 削除 | `plan.deletions` | 3 条件を満たしたもののみ。**Import / Modpack 由来はユーザー選択** |
- * | 4 | 外部変更を検知 | `selectExternallyModified` | **触らない** (データ保護) |
- * | 5 | 保持 | `unchanged` − 外部変更 | 何もしない |
- * | 6 | 管理外 | `plan.unmanaged` | **触らない** |
+ * | 3 | **競合** (**P12-D3**) | `plan.conflicts` | **ユーザー選択** (既定 = ユーザー版を残す) |
+ * | 4 | 削除 | `plan.deletions` | 3 条件を満たしたもののみ。**Import / Modpack 由来はユーザー選択** |
+ * | 5 | 外部変更を検知 | `selectExternallyModified` | **触らない** (データ保護) |
+ * | 6 | 保持 | `unchanged` − 外部変更 | 何もしない |
+ * | 7 | 管理外 | `plan.unmanaged` | **触らない** |
  *
- * D-3 の「競合」セクションは Modpack 更新 (Phase 12-C) で追加する。
- * P12-B 時点で modpack 紐付けは存在しないため常に空になる。
+ * ## 競合 (D-3)
+ *
+ * Modpack 導入時の `lockedVersions` と Profile の現在値がズレている項目。
+ * **既定 = ユーザー版を残す** (keep)。「Modpack 版に置換」(replace) を選んだ
+ * ものだけ、`onApply` に choice として渡す。replace を選んでも削除・追加の
+ * 差分は keep 時と同じく「そのまま適用」なので、競合セクションは選択 UI のみ。
  *
  * ## 削除のユーザー選択 (§10.3)
  *
@@ -31,9 +36,11 @@ import { useMemo, useRef, useState, useId } from 'react';
 import {
   selectDeletionsRequiringConfirm,
   selectExternallyModified,
+  type SyncConflictEntry,
   type SyncPlan,
   type SyncPlanEntry
 } from '@/lib/env/diff';
+import type { ModpackConflictChoice } from '@/lib/env/modpackAdd';
 import type { ApplyProgress } from '@/hooks/useSync';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
@@ -69,8 +76,13 @@ export interface SyncPreviewModalProps {
   /**
    * 適用を実行する。
    * @param excludedDeletionPaths ユーザーが「保持」を選んだ削除予定のパス
+   * @param conflictChoices **P12-D3**: projectId → keep / replace。
+   *   replace を選んだ項目は実行前に Profile をロック版に復元して plan 再計算する
    */
-  onApply: (excludedDeletionPaths: string[]) => void;
+  onApply: (
+    excludedDeletionPaths: string[],
+    conflictChoices: Map<string, ModpackConflictChoice>
+  ) => void;
 }
 
 interface Section {
@@ -82,6 +94,11 @@ interface Section {
   /** 削除セクションのみ true (選択 UI を出す) */
   selectable?: boolean;
   note?: string;
+  /**
+   * **P12-D3**: 競合セクションのみ。entries は空にし、keep / replace の
+   * 選択 UI をここから描画する。
+   */
+  conflicts?: SyncConflictEntry[];
 }
 
 function EntryRow({ entry, children }: { entry: SyncPlanEntry; children?: React.ReactNode }) {
@@ -107,6 +124,42 @@ function EntryRow({ entry, children }: { entry: SyncPlanEntry; children?: React.
   );
 }
 
+/** P12-D3: 競合 1 件の行 (Project 名 + 両バージョン + keep/replace 選択) */
+function ConflictRow({
+  conflict,
+  choice,
+  disabled,
+  onChange
+}: {
+  conflict: SyncConflictEntry;
+  choice: ModpackConflictChoice;
+  disabled: boolean;
+  onChange: (projectId: string, choice: ModpackConflictChoice) => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center gap-2 py-1.5 text-xs border-b border-slate-500/10 last:border-b-0">
+      <span className="font-semibold truncate flex-1 min-w-0" title={conflict.name}>
+        {conflict.name}
+      </span>
+      <span className="text-[10px] theme-text-secondary tabular-nums">
+        {conflict.userVersionNumber ?? 'ユーザー版'} → {conflict.packVersionNumber ?? 'Modpack 版'}
+      </span>
+      <label className="flex items-center gap-1.5 text-[10px] font-bold shrink-0">
+        <select
+          value={choice}
+          onChange={(e) => onChange(conflict.projectId, e.target.value as ModpackConflictChoice)}
+          disabled={disabled}
+          aria-label={`${conflict.name} の競合解決`}
+          className="theme-sub-box rounded-lg px-2 py-1 bg-transparent focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          <option value="keep">ユーザー版を残す</option>
+          <option value="replace">Modpack 版に置換</option>
+        </select>
+      </label>
+    </li>
+  );
+}
+
 export function SyncPreviewModal({
   isOpen,
   plan,
@@ -126,6 +179,12 @@ export function SyncPreviewModal({
 
   /** ユーザーが「削除する」を明示的に選んだパス (§10.3) */
   const [deleteChecked, setDeleteChecked] = useState<Set<string>>(() => new Set());
+
+  /** P12-D3: 競合の選択 (既定 = ユーザー版を残す)。モーダルは開くたびに
+   *  再マウントされるので、plan 差し替え時のリセットは不要 */
+  const [conflictChoices, setConflictChoices] = useState<Map<string, ModpackConflictChoice>>(
+    () => new Map()
+  );
 
   const requiringConfirm = useMemo(
     () => new Set(selectDeletionsRequiringConfirm(plan).map((e) => e.path)),
@@ -153,6 +212,16 @@ export function SyncPreviewModal({
       icon: 'fa-pen',
       iconClass: 'bg-amber-500/15 theme-text-amber',
       entries: plan.updates
+    },
+    {
+      // P12-D3: 「更新」の直下に配置 (追加 → 更新 → 競合 → 削除 → …)
+      key: 'conflicts',
+      title: '競合',
+      icon: 'fa-handshake',
+      iconClass: 'bg-fuchsia-500/15 theme-text-fuchsia',
+      entries: [],
+      conflicts: plan.conflicts,
+      note: 'Modpack 導入時に指定したバージョンと Profile の現在値がズレています。既定ではユーザー版を残します'
     },
     {
       key: 'deletions',
@@ -202,6 +271,16 @@ export function SyncPreviewModal({
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
+      return next;
+    });
+  };
+
+  /** P12-D3: 競合 1 件の選択を切り替える (既定 keep / 未選択 = keep 扱い) */
+  const setConflictChoice = (projectId: string, choice: ModpackConflictChoice) => {
+    setConflictChoices((prev) => {
+      const next = new Map(prev);
+      if (choice === 'keep') next.delete(projectId);
+      else next.set(projectId, choice);
       return next;
     });
   };
@@ -286,51 +365,66 @@ export function SyncPreviewModal({
             **空でも見出しを出す** — §10.3 は「6 分類すべてを見せる」ことを求めているので、
             0 件の分類を隠すとユーザーが「対象外だった」と「見ていない」を区別できない。
           */}
-          {sections.map((section) => (
-            <section key={section.key}>
-              <h4 className="flex items-center gap-2 text-xs font-bold mb-1">
-                <span
-                  className={`w-5 h-5 rounded flex items-center justify-center ${section.iconClass}`}
-                >
-                  <i className={`fa-solid ${section.icon} text-[10px]`} aria-hidden="true" />
-                </span>
-                {section.title}
-                <span className="theme-text-secondary font-semibold tabular-nums">
-                  {section.entries.length}
-                </span>
-              </h4>
-              {section.note ? (
-                <p className="text-[10px] theme-text-secondary mb-1 leading-relaxed">
-                  {section.note}
-                </p>
-              ) : null}
-              {section.entries.length > 0 ? (
-                <ul>
-                  {section.entries.map((entry) => (
-                    <EntryRow
-                      key={`${entry.category}:${entry.path}:${entry.projectId}`}
-                      entry={entry}
-                    >
-                      {section.selectable && requiringConfirm.has(entry.path) ? (
-                        <label className="flex items-center gap-1 text-[10px] font-bold shrink-0 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={deleteChecked.has(entry.path)}
-                            onChange={() => toggle(entry.path)}
-                            disabled={running}
-                            className="accent-red-500"
-                          />
-                          削除する
-                        </label>
-                      ) : null}
-                    </EntryRow>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[11px] theme-text-secondary">なし</p>
-              )}
-            </section>
-          ))}
+          {sections.map((section) => {
+            const visibleEntries = section.conflicts ?? section.entries;
+            return (
+              <section key={section.key}>
+                <h4 className="flex items-center gap-2 text-xs font-bold mb-1">
+                  <span
+                    className={`w-5 h-5 rounded flex items-center justify-center ${section.iconClass}`}
+                  >
+                    <i className={`fa-solid ${section.icon} text-[10px]`} aria-hidden="true" />
+                  </span>
+                  {section.title}
+                  <span className="theme-text-secondary font-semibold tabular-nums">
+                    {visibleEntries.length}
+                  </span>
+                </h4>
+                {section.note ? (
+                  <p className="text-[10px] theme-text-secondary mb-1 leading-relaxed">
+                    {section.note}
+                  </p>
+                ) : null}
+                {visibleEntries.length === 0 ? (
+                  <p className="text-[11px] theme-text-secondary">なし</p>
+                ) : section.conflicts ? (
+                  <ul>
+                    {plan.conflicts.map((conflict) => (
+                      <ConflictRow
+                        key={`${conflict.category}:${conflict.projectId}`}
+                        conflict={conflict}
+                        choice={conflictChoices.get(conflict.projectId) ?? 'keep'}
+                        disabled={running}
+                        onChange={setConflictChoice}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <ul>
+                    {section.entries.map((entry) => (
+                      <EntryRow
+                        key={`${entry.category}:${entry.path}:${entry.projectId}`}
+                        entry={entry}
+                      >
+                        {section.selectable && requiringConfirm.has(entry.path) ? (
+                          <label className="flex items-center gap-1 text-[10px] font-bold shrink-0 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={deleteChecked.has(entry.path)}
+                              onChange={() => toggle(entry.path)}
+                              disabled={running}
+                              className="accent-red-500"
+                            />
+                            削除する
+                          </label>
+                        ) : null}
+                      </EntryRow>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
 
           {/* スキャンで読めなかったファイル */}
           {scanSkipped.length > 0 ? (
@@ -380,7 +474,7 @@ export function SyncPreviewModal({
             </button>
             <button
               type="button"
-              onClick={() => onApply(excludedDeletionPaths)}
+              onClick={() => onApply(excludedDeletionPaths, conflictChoices)}
               disabled={running || !writable}
               title={!writable ? (writableReason ?? '書き込み権限がありません') : undefined}
               className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-emerald-500"

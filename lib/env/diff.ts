@@ -47,7 +47,13 @@ export interface LocalFileEntry {
   size: number;
 }
 
-export type SyncEntryKind = 'addition' | 'update' | 'deletion' | 'unchanged' | 'unmanaged';
+export type SyncEntryKind =
+  | 'addition'
+  | 'update'
+  | 'deletion'
+  | 'unchanged'
+  | 'unmanaged'
+  | 'conflict';
 
 export interface SyncPlanEntry {
   kind: SyncEntryKind;
@@ -81,6 +87,34 @@ export interface SyncPlanEntry {
   externallyModified?: boolean;
 }
 
+/**
+ * **P12-D3 (D-3)**: Modpack 導入時のロック (lockedVersions) と Profile の現在値が
+ * ズレている競合 1 件。
+ *
+ * `SyncPlan.conflicts` は「そのまま適用」でも「削除」でもなく、**ユーザーが
+ * 選択する**専用セクション (§10.3 の 6 分類化 / D-3: 既定 = ユーザー版保持)。
+ */
+export interface SyncConflictEntry {
+  category: ContentCategory;
+  projectId: string;
+  /** 表示名 (Profile 側の現在値) */
+  name: string;
+  /** ユーザー版 = Profile の現在値 */
+  userVersionId?: string;
+  userVersionNumber?: string;
+  /** Modpack 版 = 導入時のロック (ModpackSource.lockedVersions) */
+  packVersionId?: string;
+  packVersionNumber?: string;
+  /** replace 選択時に Profile へ復元する導入時の実体情報 */
+  pack: {
+    fileUrl?: string;
+    filename?: string;
+    sha1?: string;
+    size?: number;
+    path?: string;
+  };
+}
+
 export interface SyncPlanTotals {
   counts: Record<SyncEntryKind, number>;
   /** 追加・更新で書き込むバイト数 */
@@ -103,6 +137,8 @@ export interface SyncPlan {
   deletions: SyncPlanEntry[];
   unchanged: SyncPlanEntry[];
   unmanaged: SyncPlanEntry[];
+  /** P12-D3: Modpack ロックとの競合 (実行前ユーザー選択) */
+  conflicts: SyncConflictEntry[];
   totals: SyncPlanTotals;
 }
 
@@ -152,7 +188,8 @@ const EMPTY_COUNTS: SyncPlanTotals['counts'] = {
   update: 0,
   deletion: 0,
   unchanged: 0,
-  unmanaged: 0
+  unmanaged: 0,
+  conflict: 0
 };
 
 /**
@@ -167,6 +204,42 @@ export function computeSyncPlan(input: ComputeSyncPlanInput): SyncPlan {
   const deletions: SyncPlanEntry[] = [];
   const unchanged: SyncPlanEntry[] = [];
   const unmanaged: SyncPlanEntry[] = [];
+  const conflicts: SyncConflictEntry[] = [];
+
+  // ------------------------------------------------------------------
+  // 0) P12-D3: Modpack ロックとの競合検出 (projectId 一致 + versionId 相違)
+  // ------------------------------------------------------------------
+  // D-3: 「ProjectId 一致 + versionId 相違」を競合とする。判定基準は
+  // `modpackSource.lockedVersions` (導入時の指定)。
+  // 既定は「ユーザー版を残す」(Preview で選択) — ここでは検出のみ。
+  const locks = profile.modpackSource?.lockedVersions;
+  if (locks) {
+    for (const category of MANAGED_CATEGORIES) {
+      for (const item of itemsOfCategory(profile, category)) {
+        const lock = locks[item.projectId];
+        // ロック情報 (導入時の指定) が無い・versionId 不明 → 検出しない (誤検出防止)
+        if (!lock?.versionId) continue;
+        // 一致していればロックどおり = 競合ではない
+        if (item.versionId === lock.versionId) continue;
+        conflicts.push({
+          category,
+          projectId: item.projectId,
+          name: item.name,
+          ...(item.versionId ? { userVersionId: item.versionId } : {}),
+          ...(item.versionNumber ? { userVersionNumber: item.versionNumber } : {}),
+          packVersionId: lock.versionId,
+          ...(lock.versionNumber ? { packVersionNumber: lock.versionNumber } : {}),
+          pack: {
+            ...(lock.fileUrl ? { fileUrl: lock.fileUrl } : {}),
+            ...(lock.filename ? { filename: lock.filename } : {}),
+            ...(lock.sha1 ? { sha1: lock.sha1 } : {}),
+            ...(lock.size ? { size: lock.size } : {}),
+            ...(lock.path ? { path: lock.path } : {})
+          }
+        });
+      }
+    }
+  }
 
   for (const category of MANAGED_CATEGORIES) {
     const items = itemsOfCategory(profile, category);
@@ -259,6 +332,7 @@ export function computeSyncPlan(input: ComputeSyncPlanInput): SyncPlan {
     deletions,
     unchanged,
     unmanaged,
+    conflicts,
     totals: {
       counts: { ...EMPTY_COUNTS },
       writeBytes: 0,
@@ -272,6 +346,7 @@ export function computeSyncPlan(input: ComputeSyncPlanInput): SyncPlan {
   plan.totals.counts.deletion = deletions.length;
   plan.totals.counts.unchanged = unchanged.length;
   plan.totals.counts.unmanaged = unmanaged.length;
+  plan.totals.counts.conflict = conflicts.length;
 
   for (const e of additions) plan.totals.writeBytes += e.size;
   for (const e of updates) {

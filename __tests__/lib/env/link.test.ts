@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   buildLinkedSource,
   createFolderLink,
+  linkPickedDirectory,
   openLinkedFolder,
   releaseFolderLink
 } from '@/lib/env/link';
@@ -110,6 +111,40 @@ describe('createFolderLink', () => {
     // handleId が dirHandles を指している
     const row = await getDirHandle(result?.handleId as string);
     expect(row).toMatchObject({ profileId: 'p1', name: 'MyInstance' });
+    expect(asFakeDirectory(row?.handle as FileSystemDirectoryHandle).name).toBe('MyInstance');
+  });
+});
+
+describe('linkPickedDirectory (P12-D1)', () => {
+  beforeEach(async () => {
+    await _clearAllForTesting();
+  });
+
+  it('選択済みフォルダと解析済み環境から LinkedSource を作り、ハンドルを保存する (read mode)', async () => {
+    const picked = pickedDirectory('MyInstance');
+    // NewProfileModal が解析済みの環境をそのまま渡す (detectEnvironment を再実行しない)
+    const detected: DetectedEnvironment = {
+      rootType: 'official',
+      mcVersion: '1.20.1',
+      loader: 'Fabric',
+      loaderVersion: '0.14.21',
+      contentDirs: { mods: 'mods', resourcepacks: 'resourcepacks', shaderpacks: undefined }
+    };
+    const result = await linkPickedDirectory('p-new', picked, detected, 1_700_000_000_000);
+
+    expect(result).toEqual({
+      kind: 'filesystem',
+      rootName: 'MyInstance',
+      handleId: result.handleId,
+      environment: { mcVersion: '1.20.1', loader: 'Fabric', loaderVersion: '0.14.21' },
+      contentDirs: { mods: 'mods', resourcepacks: 'resourcepacks', shaderpacks: undefined },
+      linkedAt: 1_700_000_000_000
+    });
+
+    const row = await getDirHandle(result.handleId as string);
+    expect(row).toMatchObject({ profileId: 'p-new', name: 'MyInstance' });
+    // D-7: 紐付け時は read モードのまま (昇格は Sync 実行時)。保存されたハンドルを復元できる
+    // (fake-indexeddb は構造化クローンで prototype を落とすため name で検証)
     expect(asFakeDirectory(row?.handle as FileSystemDirectoryHandle).name).toBe('MyInstance');
   });
 });

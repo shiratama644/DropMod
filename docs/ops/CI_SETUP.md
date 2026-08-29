@@ -114,6 +114,43 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
   ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
 
+### トリガー変更: 二重実行防止 + ドキュメント変更で CI スキップ (2026-08-29)
+
+- **問題**: PR ブランチでは `push` (arena/**) と `pull_request` の両方が発火し、
+  1 commit につき CI が 2 本実行されていた (PR #4 で実測)。
+- **対応 (ユーザー採用: 案 B + 案 C 拡張)**:
+  - `push` の `branches` を `[main]` のみに変更 (PR ブランチは
+    `pull_request` イベントが担う。PR の無いブランチは Actions タブから
+    `workflow_dispatch` で手動実行)
+  - `paths-ignore` を push / pull_request の両方に追加:
+    `README.md` / `AGENT.md` / `.agent/**` / `docs/**`
+    → ドキュメント系のみのコミットでは CI は走らない
+- **反映手順**: 正本を反映して push
+  ```bash
+  cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
+  git add .github/workflows/ci.yml
+  git commit -m "ci: トリガー調整 (push=main のみ / docs 変更でスキップ)"
+  git push origin "$(git branch --show-current)"
+  ```
+- **注意**: このコミット自体は `docs/**` 変更なので push しても CI は走らない
+  (意図どおり)。動作確認は次回のコード変更コミットで行う。
+
+### E2E の手動実行 (workflow_dispatch) (2026-08-29 追記)
+
+- **経緯**: `push` を main のみにしたため、PR の無いブランチ (arena/**) では
+  自動 CI が走らない。そこで Actions タブからの手動実行で E2E も動かせるようにした。
+- **変更**: `e2e` ジョブの `if` を
+  `github.event_name == 'push' || github.event_name == 'workflow_dispatch'` に変更。
+  (push = main マージ時 / workflow_dispatch = 手動実行時)
+- **手動実行手順**:
+  1. GitHub リポジトリ → **Actions** タブ → 左の **CI** を開く
+  2. 右上 **Run workflow** を押す
+  3. `Use workflow from` で実行したいブランチを選ぶ (例: `arena/...`)
+  4. **Run workflow** を実行
+- **挙動**: 手動実行は `paths-ignore` の対象外なので、**docs のみの変更でも
+  全ジョブ (static-checks → build → e2e) が実行される**。E2E は
+  PR イベント (pull_request) では従来どおりスキップ。
+
 ### upload-artifact が「No files were found」で .next を転送できない (2026-08-27 実証)
 
 - 原因: **upload-artifact v4 は隠し (ドット) ディレクトリ配下のファイルを対象外**

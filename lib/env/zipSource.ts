@@ -100,7 +100,7 @@ export class ZipSource implements EnvironmentSource {
  */
 export function isMinecraftFolderZip(zip: JSZip): boolean {
   const paths = Object.keys(zip.files);
-  const rootMarkers = ['mmc-pack.json'];
+  const rootMarkers = ['mmc-pack.json', 'mojo_instance.json'];
   const dirMarkers = ['mods', 'versions', 'resourcepacks', 'shaderpacks'];
   return paths.some((path) => {
     if (rootMarkers.includes(path)) return true;

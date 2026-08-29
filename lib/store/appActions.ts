@@ -26,6 +26,8 @@
 import { create } from 'zustand';
 import type { Profile, ProjectItem, ModrinthVersion, ContentCategory, ProfileContentExtras } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { PickedDirectory } from '@/lib/env/picker';
+import type { DetectedEnvironment } from '@/lib/env/detector';
 
 // ============================================================================
 // Actions 型
@@ -42,8 +44,10 @@ export interface AppActions {
     name: string, mcVersion: string, loader: string, description: string,
     mods?: ProjectItem[],
     loaderVersion?: string,
-    extras?: ProfileContentExtras
-  ) => void;
+    extras?: ProfileContentExtras,
+    // P12-D1: フォルダ選択→自動紐付け (NewProfileModal 経由)
+    link?: { picked: PickedDirectory; detected: DetectedEnvironment }
+  ) => Promise<void>;
   handleDuplicateProfile: () => void;
   handleSaveEditedProfile: (
     name: string, mcVersion: string, loader: string, description: string,

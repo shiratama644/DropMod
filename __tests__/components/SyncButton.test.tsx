@@ -27,8 +27,9 @@ const EMPTY_PLAN: SyncPlan = {
   deletions: [],
   unchanged: [],
   unmanaged: [],
+  conflicts: [],
   totals: {
-    counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+    counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
     writeBytes: 0,
     removeBytes: 0,
     backupBytes: 0
@@ -154,7 +155,7 @@ describe('SyncButton', () => {
     fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
 
     await waitFor(() => {
-      expect(applyMock).toHaveBeenCalledWith([]);
+      expect(applyMock).toHaveBeenCalledWith([], new Map());
       expect(resetMock).toHaveBeenCalled();
       expect(screen.queryByRole('dialog', { name: '同期プレビュー' })).not.toBeInTheDocument();
     });

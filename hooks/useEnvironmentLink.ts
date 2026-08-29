@@ -20,8 +20,10 @@
  */
 
 import { useCallback, useState } from 'react';
+import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { createFolderLink, releaseFolderLink } from '@/lib/env/link';
+import { expandProfileToManaged, mergeManagedRecords } from '@/lib/env/managed';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
 
@@ -73,12 +75,31 @@ export function useEnvironmentLink(): EnvironmentLinkState {
         // ユーザーがキャンセルした。エラー表示しない
         return false;
       }
+      const updatedProfile = { ...profile, linkedSource: linked };
       setProfiles((prev) =>
-        prev.map((p) => (p.id === profile.id ? { ...p, linkedSource: linked } : p))
+        prev.map((p) => (p.id === profile.id ? updatedProfile : p))
       );
       useToastStore
         .getState()
         .showToast(`フォルダ「${linked.rootName}」を紐付けました`, 'success');
+
+      // ------------------------------------------------------------------
+      // **P12-D1B (§10.5)**: 紐付け成功時に台帳を seed する。
+      // 既存 Profile (P12-B 以前から存在する等) で台帳が未作成のケースを
+      // 補完する。失敗しても紐付け自体は成功扱い (台帳なし = 安全側)。
+      // ------------------------------------------------------------------
+      try {
+        const existing = await getManagedFiles(profile.id);
+        const records = mergeManagedRecords(expandProfileToManaged(updatedProfile), existing);
+        if (records.length > 0) {
+          await syncManagedFiles(profile.id, records);
+        }
+      } catch {
+        useToastStore.getState().showToast(
+          '台帳の初期化に失敗しました。次回の同期で差分が正しく表示されない場合があります。',
+          'warning'
+        );
+      }
       return true;
     } catch (e) {
       const message = errorMessage(e);

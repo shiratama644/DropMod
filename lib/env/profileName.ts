@@ -22,7 +22,8 @@ const RESERVED_FOLDER_NAMES = new Set([
   'prism',
   'multimc',
   'polymc',
-  'modrinth-app',
+  'mojo-launcher',
+  'mojolauncher',
   'gdlauncher',
   'atlauncher',
   'minecraft launcher'

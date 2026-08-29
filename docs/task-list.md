@@ -105,6 +105,10 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-B1 | EnvironmentSource 抽象 + picker | 完了 | 100% | P11-A | FileSystemSource + read モード picker | `1c43693` |
 | P11-B2 | Detector chain (Official/Prism/Generic) | 完了 | 100% | P11-B1 | mmc-pack.json 解析を含む 3 検出器 | `b3f8d40` |
 | P11-B3 | Analyzer (SHA-1 Worker + Modrinth 照合) | 完了 | 100% | P11-B2 | 3 カテゴリ照合 + 検証 6 項目 | `a2f44ba` |
+| P11-B4 | MojoLauncher (`mojo_instance.json`) 検出 | 完了 | 100% | P11-B2 | versionId (Fabric/Quilt/Forge/NeoForge) → env 解析 + ZIP 判定 + UI ラベル | `5998a21d` 当初実装 / 名称修正・5 形式対応・単一関数化は P11-B7 / 当時の unit test 10 件追加・1226 tests green |
+| P11-B5 | バージョン対応の事実確認 (NeoForge 旧/新形式 + Forge) | 完了 | 100% | P11-B4 | web 検索で一次情報 (FTB Wiki / files.minecraftforge.net) から確定し、コードコメント・テストへ反映 | `mcVersionFromNeoForge` を新形式 (26.x) 対応に修正・検証ソースをコメント明記 / detector.test 36 件 |
+| P11-B6 | Detector 登録レジストリ + 共通基底 (他ランチャー追加の容易化) | 完了 | 100% | P11-B5 | ランチャー追加 = registry.ts へ 1 エントリ (chain・UI ラベル自動導出 / InstanceFileDetector 基底で JSON 定義形式は parse のみ) | DETECTOR_REGISTRY / createDetectorChain / rootTypeLabel / InstanceFileDetector + 注入テスト / unit 1231 tests green |
+| P11-B7 | Modrinth App → MojoLauncher 名称修正 + versionId 単一関数化 | 完了 | 100% | P11-B6 | ユーザー指摘: 対応対象は Modrinth App ではなく MojoLauncher。MojoLauncher 公式リポジトリ (v3_openjdk) を直接確認し `Instances.java:43` / `ModLoader.java getVersionId()` で裏付け。`mcVersionFromNeoForge` を廃止し宣言テーブル + 単一関数 `parseVersionId` に統合。Legacy Fabric (`legacy-fabric-loader-…`) 追加 (Fabric として扱う) | `modrinthApp.ts` → `mojoLauncher.ts` / rootType `modrinth-app` → `mojo-launcher` (旧はレガシーラベル保持) / `VERSION_ID_FORMATS` 5 形式 / unit 1232 tests green / 4 検証 pass |
 | P11-C1 | Import UI 統合 (NewProfileModal 解析) | 完了 | 100% | P11-B3 | Analysis View + 名前自動生成 | `b6a5a54` |
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
 | P11-E2E | E2E spec 2 種 + ドキュメント | 完了 | 100% | P11-C2 | **CI 上で E2E green** | `c0d13f8` + spec 修正 `1508a6e` / run `33071105483` 全 green |
@@ -115,17 +119,30 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
 | P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | `4886245` ほか 11 commits / unit+component 100 files 995 tests green・**実機確認はユーザー** |
-| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **CI 実行待ち** | 70% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts` 3 scenarios + `folderPickerMock` を書き込み対応に拡張 / typecheck + `playwright --list` は green・**Sandbox は Chromium install 不可のため実実行は CI** |
+| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | run `33245015014` で **DIAG[preview] n=1 / cur=default-pr** を特定 → 原因 = **Profile 作成の永続化競合** / 修正 `ab5fd0b3` (即時永続化・`await onCreate`・`/tag/game_version` モック・DIAG 強化) → **手動 run `33246962952` で成功シナリオ PASS** / 残る失敗シナリオは **E2E 注入パス不一致** (書込先 = 台帳 `mods/e2e-sodium.jar`、注入は `...-0.6.0.jar` を指定) → `926c279f` で修正済み・**要再実行 (workflow_dispatch)** |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | `db648c2`〜`b462bfa` の 7 commits / .mrpack overrides・Provider 抽象・Modpack 更新検知・ZipSink・Modpack ハブ・CF 検出・ZIP Sync 導線 / unit+component 108 files 1151 tests green・**実機 Firefox/Safari 確認はユーザー** |
 
 ※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
 
-### Phase 13: CurseForge 完全対応 — 未着手
+### Phase 12-D: ユーザー報告バグ 3 件修正 (2026-08-29)
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | - |
-| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | - |
+| P12-D1 | 新規プロファイル作成モーダルのフォルダ選択 → **自動紐付け** + 台帳 seed (bug 1/2) | ローカル検証済み | 100% | P12-B | フォルダ選択して作成した Profile に `linkedSource` + `dirHandles` が保存され、ボタンが Sync に置換・ZIP 保存は設定ページのみ。§10.5 の artifact 台帳 seed 含む | `1709704` / typecheck・biome・unit 1176 passed・build pass |
+| P12-D2 | Discover からの Modpack 追加 = 内容展開 + インポート時競合解決 UI (bug 3) | ローカル検証済み | 100% | P12-D1 | Modpack 追加時に `modrinth.index.json` の files[] を ProjectItem 展開。Profile 内の同一 projectId・別 versionId を競合として選択 UI (既定=ユーザー版)。`modpackSource` に projectId/versionId/**lockedVersions** を保存。overrides は source:modpack で台帳化 | `ac26e29` / typecheck・biome・unit 1196 passed・build pass |
+| P12-D3 | Sync Preview の競合 (D-3) 検出・適用 (ロック情報の活用) | ローカル検証済み | 100% | P12-D2 | `lockedVersions` (導入時の指定) と Profile の現在値を突き合わせ (versionId 無→非競合 / 一致→非競合 / 相違→競合)、SyncPreviewModal に競合セクション (既定 = ユーザー版) を表示。replace 選択時は Profile をロック版へ復元して plan 再計算・Sync 適用 (completed 時のみ反映)。`ModpackLockedVersion` を実体情報 (fileUrl/filename/sha1/size/path) に拡張 | `c7f8db8` / docs `cfaa0f1` / typecheck・biome・unit 1216 passed・build pass |
+
+| P12-D1B | 設定ページ「環境との同期」の紐付けでも台帳 seed | ローカル検証済み | 100% | P12-D1 | `useEnvironmentLink.link()` 成功時に §10.5 の artifact 台帳 seed (expandProfileToManaged + merge + syncManagedFiles) を実行。新規作成 (D1) と同じ整合性。失敗は warning のみ (紐付けは成功扱い) | `c7f8db8` / docs `cfaa0f1` / typecheck・biome・unit 1216 passed・build pass |
+
+### Phase 13: CurseForge 完全対応 — 延期 (2026-08-29)
+
+> **延期理由 (ユーザー確定 2026-08-29)**: まだ CurseForge の API キーを取得していないため。
+> API キー取得後に再開する。再開時の依存は従来どおり P12-C 完了。
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---:|---|---|---|
+| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
+| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
 
 ---
 

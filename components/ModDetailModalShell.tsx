@@ -14,6 +14,9 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
+import { useToastStore } from '@/lib/store/toast';
+import { useModpackAdd } from '@/hooks/useModpackAdd';
+import { ModpackImportModal } from './ModpackImportModal';
 import { discoverPathFromProjectType, detailPathFromProject } from '@/lib/constants/search';
 
 // -----------------------------------------------------------------------------
@@ -131,6 +134,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
   // fallback リテラルの参照安定化と 3 コンポーネント間の DRY を実現。
   const currentProfile = useCurrentProfileWithFallback();
   const handleToggleMod = useAppAction('handleToggleMod');
+  // P12-D2 (bug 3): Modpack は中身 (files[]) を展開して競合を検出する
+  const {
+    plan: modpackPlan,
+    preparing: modpackPreparing,
+    addModpack,
+    confirm: confirmModpackAdd,
+    cancel: cancelModpackAdd
+  } = useModpackAdd();
 
   // -------- Hook 群 (早期 return より前に全て) --------
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -236,11 +247,39 @@ export const ModDetailModalShell: React.FC<Props> = ({
     [isJarDownloading]
   );
 
+  // P12-D2: Modpack は mods[] に入らないため、modpackSource でも導入済み判定する
+  const isAddedByMods =
+    !!project &&
+    currentProfile.mods.some(
+      (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
+    );
+  const modpackAdded =
+    !!project && currentProfile.modpackSource?.projectId === project.id;
+
   const handleProfileToggle = useCallback(
     async (projectId: string, e: React.MouseEvent) => {
       if (isTogglePending) return;
       setIsTogglePending(true);
       try {
+        // P12-D2 (bug 3): project_type === 'modpack' は中身を展開して追加する。
+        // 従来は .mrpack を mods[] に 1 アイテムとして追加しており、
+        // 中身 (例: Sodium) との競合を検出する手段がなかった。
+        if (project?.project_type === 'modpack' && !isAddedByMods) {
+          if (modpackAdded) {
+            useToastStore.getState().showToast(
+              'この Modpack は既に導入済みです。Modpack ハブから管理できます。',
+              'info'
+            );
+            return;
+          }
+          const openedConflictModal = await addModpack(project);
+          // 競合モーダルを開いた場合はそのまま残す (適用/キャンセル後に閉じる)
+          if (!openedConflictModal && isModal) {
+            router.back();
+          }
+          return;
+        }
+
         await handleToggleMod(projectId, e);
         // 追加/削除操作後、モーダル表示中はそのまま閉じる (Vite 版と同じ UX)。
         // Phase 9-F: router.replace('/') → router.back() に変更 (handleClose と同理由)。
@@ -251,7 +290,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         setIsTogglePending(false);
       }
     },
-    [handleToggleMod, isModal, isTogglePending, router]
+    [addModpack, handleToggleMod, isModal, isTogglePending, isAddedByMods, modpackAdded, project, router]
   );
   // ----------------------------------------------------
 
@@ -285,9 +324,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const latestVersion = versions[0] ?? null;
   const latestFile = pickPrimaryFile(latestVersion);
 
-  const isAdded = currentProfile.mods.some(
-    (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
-  );
+  const isAdded = isAddedByMods || modpackAdded;
 
   // -------- 内側カード (両バリアント共通) --------
   // Phase 10-P5 (a11y): aria-modal / aria-labelledby は role="dialog" と
@@ -552,7 +589,19 @@ export const ModDetailModalShell: React.FC<Props> = ({
             )}
           </button>
         )}
-        {isAdded ? (
+        {modpackAdded ? (
+          // P12-D2: Modpack は「source 1 件」。削除 (D-6 解除) は Modpack ハブが担う
+          <button
+            type="button"
+            disabled
+            aria-label="導入済み"
+            title="Modpack ハブから管理できます"
+            className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-xs font-bold transition inline-flex items-center justify-center gap-1.5 opacity-70 cursor-default"
+          >
+            <i className="fa-solid fa-circle-check" aria-hidden />
+            導入済み
+          </button>
+        ) : isAdded ? (
           <button
             type="button"
             onClick={(e) => handleProfileToggle(project.id, e)}
@@ -580,10 +629,10 @@ export const ModDetailModalShell: React.FC<Props> = ({
             aria-label="プロファイルに追加"
             className="btn-hover-effect flex-1 min-w-0 max-w-48 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
           >
-            {isTogglePending ? (
+            {isTogglePending || modpackPreparing ? (
               <>
                 <i className="fa-solid fa-spinner fa-spin" aria-hidden />
-                追加中
+                {modpackPreparing ? '解析中' : '追加中'}
               </>
             ) : (
               <>
@@ -619,6 +668,19 @@ export const ModDetailModalShell: React.FC<Props> = ({
           images={project.gallery ?? []}
           onClose={() => setIsGalleryOpen(false)}
         />
+        <ModpackImportModal
+          isOpen={modpackPlan !== null}
+          plan={modpackPlan}
+          onConfirm={(choices) => {
+            void confirmModpackAdd(choices).then(() => {
+              if (isModal) router.back();
+            });
+          }}
+          onClose={() => {
+            cancelModpackAdd();
+            if (isModal) router.back();
+          }}
+        />
       </div>
     );
   }
@@ -642,6 +704,14 @@ export const ModDetailModalShell: React.FC<Props> = ({
         isOpen={isGalleryOpen}
         images={project.gallery ?? []}
         onClose={() => setIsGalleryOpen(false)}
+      />
+      <ModpackImportModal
+        isOpen={modpackPlan !== null}
+        plan={modpackPlan}
+        onConfirm={(choices) => {
+          void confirmModpackAdd(choices);
+        }}
+        onClose={cancelModpackAdd}
       />
     </main>
   );

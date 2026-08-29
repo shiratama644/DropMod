@@ -1,10 +1,25 @@
 name: CI
 
 on:
+  # 2026-08-29: PR ブランチで push + pull_request の二重実行を防ぐため、
+  # push は main のみ (arena/** への push は PR 経由の pull_request が担う)。
+  # PR の無いブランチで実行したい場合は Actions タブから workflow_dispatch。
   push:
-    branches: [main, 'arena/**']
+    branches: [main]
+    # ドキュメント系の変更では CI を走らせない (2026-08-29 ユーザー指示):
+    # README.md / AGENT.md / .agent/** / docs/** のみのコミットはスキップ
+    paths-ignore:
+      - 'README.md'
+      - 'AGENT.md'
+      - '.agent/**'
+      - 'docs/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'AGENT.md'
+      - '.agent/**'
+      - 'docs/**'
   # Actions タブから手動実行も可能 (初回配置後の動作確認に便利)
   workflow_dispatch:
 
@@ -111,7 +126,8 @@ jobs:
           retention-days: 1
 
   # ==========================================================================
-  # E2E (Playwright): push 時のみ実行 (PR プレビューでは静的チェック優先)
+  # E2E (Playwright): push (main マージ) と手動実行 (workflow_dispatch) 時のみ
+  # PR プレビューでは静的チェック優先 (2026-08-29: 手動実行対応を追加)
   # H7-5 修正: build job の .next を復元し、playwright.config.ts の webServer は
   #           `pnpm start` のみ (build を再実行しない、~2 分短縮)
   # ==========================================================================
@@ -120,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: build
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 

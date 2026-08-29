@@ -16,11 +16,7 @@
  */
 
 import type { ProfileLoader } from '@/types';
-import {
-  type DetectedEnvironment,
-  type EnvironmentDetector,
-  detectContentDirs
-} from './types';
+import { InstanceFileDetector } from './instanceFile';
 
 interface MmcPackJson {
   formatVersion?: number;
@@ -68,29 +64,20 @@ export function parseMmcPack(pack: MmcPackJson): ParsedMmcPack {
   return result;
 }
 
-export class PrismDetector implements EnvironmentDetector {
-  readonly name = 'Prism';
-
-  async canDetect(source: Parameters<EnvironmentDetector['canDetect']>[0]): Promise<boolean> {
-    return source.exists('mmc-pack.json');
-  }
-
-  async detect(source: Parameters<EnvironmentDetector['detect']>[0]): Promise<DetectedEnvironment> {
-    let parsed: ParsedMmcPack = {};
-    try {
-      const raw = await source.readFile('mmc-pack.json');
-      parsed = parseMmcPack(JSON.parse(new TextDecoder().decode(raw)) as MmcPackJson);
-    } catch {
-      // mmc-pack.json の読み取り・パース失敗は「検出失敗」扱い (env なし)
-    }
-
-    return {
+/**
+ * Prism / MultiMC / PolyMC 用 Detector (mmc-pack.json)。
+ *
+ * 2026-08-29: 単一インスタンス定義 JSON 方式の共通基底
+ * (InstanceFileDetector) へ移行。canDetect / detect / contentDirs の
+ * 共通処理は基底クラス、形式固有のパースのみ parseMmcPack を担当する。
+ */
+export class PrismDetector extends InstanceFileDetector<MmcPackJson> {
+  constructor() {
+    super({
+      name: 'Prism',
       rootType: 'prism',
-      mcVersion: parsed.mcVersion,
-      loader: parsed.loader,
-      loaderVersion: parsed.loaderVersion,
-      // Prism は .minecraft サブフォルダの有無が分かれるため両方確認
-      contentDirs: await detectContentDirs(source, ['', '.minecraft'])
-    };
+      instanceFile: 'mmc-pack.json',
+      parse: parseMmcPack
+    });
   }
 }

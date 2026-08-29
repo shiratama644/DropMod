@@ -11,7 +11,7 @@
 | `source.ts` | **EnvironmentSource** interface + `FileSystemSource` (handle ラッパ)。`rootName` は Profile 名自動生成に使う (計画書の `root` は公開しない方針変更) |
 | `picker.ts` | `pickMinecraftDirectory()`: `showDirectoryPicker({mode:'read'})`。キャンセル (AbortError) は null。**ハンドル永続化は Phase 12 延期** |
 | `zipSource.ts` | `ZipSource` (JSZip 実装・Firefox/Safari フォールバック) + `isMinecraftFolderZip()` (経路分岐判定) |
-| `detector/` | Strategy: `OfficialLauncherDetector` (versions/*.json) → `PrismDetector` (mmc-pack.json) → `GenericDetector` (fallback)。`detectEnvironment()` が chain entry |
+| `detector/` | Strategy: `OfficialLauncherDetector` (versions/*.json) → `PrismDetector` (mmc-pack.json) → `MojoLauncherDetector` (mojo_instance.json, MojoLauncher = PojavLauncher ベース) → `GenericDetector` (fallback)。chain は `registry.ts` の `DETECTOR_REGISTRY` (priority 順) から構築。`detectEnvironment()` が chain entry |
 | `hashCore.ts` / `hash.worker.ts` / `hashWorker.ts` | SHA-1 一括計算。**Worker→メインスレッド自動 fallback** (jsdom・Worker 失敗時)。コアは hashCore (pure) |
 | `analyzer.ts` | `analyzeEnvironmentSource()`: 検出→列挙 (mods/*.jar, RP/shader/*.zip)→ハッシュ→`/version_files` (100 個 batch)→`/projects`→**ImportAnalysis** (ProjectItem[] ×3 + UnknownFile[] + versionsByProject) |
 | `analysis.ts` | `analyzeImportHealth()`: §5 の検証 (MC/Loader 互換・依存・競合・未識別・Shader 前提)。pure |

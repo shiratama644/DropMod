@@ -1,32 +1,35 @@
 /**
- * EnvironmentDetector の chain (PHASE11_PLAN.md §10.3 + Phase 11-B)。
+ * EnvironmentDetector chain (PHASE11_PLAN.md §10.3 + 2026-08-29 レジストリ化)。
  *
- * 優先順位: OfficialLauncher → Prism → Generic (最終 fallback)。
- * 上位 Detector が担当形式を判定できなければ次へ fallthrough する。
+ * detector の一覧・優先順位・UI ラベルは registry.ts の DETECTOR_REGISTRY が正本。
+ * ランチャー追加時は index.ts / NewProfileModal.tsx を変更せず、registry.ts に
+ * 1 エントリ追記するだけでよい。
  */
 
 import type { EnvironmentSource } from '../source';
+import { createDetectorChain } from './registry';
+import { GenericDetector } from './generic';
+import { MojoLauncherDetector } from './mojoLauncher';
 import { OfficialLauncherDetector } from './official';
 import { PrismDetector } from './prism';
-import { GenericDetector } from './generic';
 import type { DetectedEnvironment, EnvironmentDetector } from './types';
 
-/** chain の順序は計画書 §4.2 のとおり (Phase 13 で ModrinthApp 等を追加予定) */
-export const detectors: readonly EnvironmentDetector[] = [
-  new OfficialLauncherDetector(),
-  new PrismDetector(),
-  new GenericDetector()
-];
+/** chain の順序は DETECTOR_REGISTRY の priority 順 (公式 → Prism → MojoLauncher → Generic) */
+export const detectors: readonly EnvironmentDetector[] = createDetectorChain();
 
 /**
  * ソースを解析して環境情報を検出する。
  * どの Detector も担当を主張しない場合は unknown (GenericDetector が
  * 常に fallback するため、実質到達しない防御コード)。
+ *
+ * @param chain 省略時は DETECTOR_REGISTRY から構築した既定 chain。
+ *   テストや特別な組み合わせで chain を差し替えたい場合に渡す。
  */
 export async function detectEnvironment(
-  source: EnvironmentSource
+  source: EnvironmentSource,
+  chain: readonly EnvironmentDetector[] = detectors
 ): Promise<DetectedEnvironment> {
-  for (const detector of detectors) {
+  for (const detector of chain) {
     if (await detector.canDetect(source)) {
       return detector.detect(source);
     }
@@ -34,5 +37,9 @@ export async function detectEnvironment(
   return { rootType: 'unknown', contentDirs: {} };
 }
 
-export { OfficialLauncherDetector, PrismDetector, GenericDetector };
-export type { DetectedEnvironment, EnvironmentDetector } from './types';
+export { createDetectorChain, DETECTOR_REGISTRY, rootTypeLabel } from './registry';
+export { InstanceFileDetector } from './instanceFile';
+export type { ParsedLauncherEnv, InstanceFileDetectorOptions } from './instanceFile';
+export { OfficialLauncherDetector, PrismDetector, MojoLauncherDetector, GenericDetector };
+export type { DetectorDefinition } from './registry';
+export type { DetectedEnvironment, EnvironmentDetector, RootType } from './types';

@@ -221,6 +221,11 @@ describe('NewProfileModal: フォルダ解析 (Phase 11)', () => {
       path: 'mods/my-custom-thing.jar',
       location: 'mods'
     });
+    // P12-D1: フォルダ選択に成功しているので自動紐付け情報が渡る
+    const link = args[7];
+    expect(link?.picked.handle).toBeDefined();
+    expect(link?.detected.mcVersion).toBe('1.21.1');
+    expect(link?.detected.contentDirs.mods).toBe('mods');
   });
 
   it('initialImportData の解析結果 (ZIP 環境取り込み) も Analysis View に表示', () => {

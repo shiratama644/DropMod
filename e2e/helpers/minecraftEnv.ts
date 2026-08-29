@@ -148,8 +148,26 @@ export async function installModrinthApiMock(page: Page): Promise<void> {
     });
   };
 
+  // **P12-E2E 修正 (2026-08-29)**: /tag/game_version も決定論化する。
+  // モーダルは `mcVersions.includes(initialImportData.mcVersion)` で
+  // 取り込み環境の MC バージョンを採用するため、ここが未解決 (空配列) だと
+  // 初期値 1.21.4 にフォールバックし、Profile 環境が 1.21.1 にならず
+  // Sync が D-1 blocked-environment になる。CI のネットワーク遮断では
+  // フォールバック固定リスト頼み (タイミング依存) なので、モックで確定させる。
+  const gameVersionsHandler = async (route: Route) => {
+    await route.fulfill({
+      json: [
+        { version: '1.21.4', version_type: 'release' },
+        { version: '1.21.3', version_type: 'release' },
+        { version: '1.21.1', version_type: 'release' }
+      ]
+    });
+  };
+
   await page.route('**/api/modrinth/version_files', versionFilesHandler);
   await page.route('**/api.modrinth.com/v2/version_files', versionFilesHandler);
   await page.route('**/api/modrinth/projects*', projectsHandler);
   await page.route('**/api.modrinth.com/v2/projects*', projectsHandler);
+  await page.route('**/api/modrinth/tag/game_version*', gameVersionsHandler);
+  await page.route('**/api.modrinth.com/v2/tag/game_version*', gameVersionsHandler);
 }

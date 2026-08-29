@@ -50,8 +50,9 @@ function readyOutcome(): PrepareZipSyncOutcome {
         deletions: [],
         unchanged: [],
         unmanaged: [],
+        conflicts: [],
         totals: {
-          counts: { addition: 2, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+          counts: { addition: 2, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
           writeBytes: 0,
           removeBytes: 0,
           backupBytes: 0

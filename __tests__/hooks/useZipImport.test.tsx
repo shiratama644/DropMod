@@ -593,6 +593,8 @@ describe('useZipImport: .mrpack overrides → ManagedFileRecord (Phase 12-C)', (
       versionId: '1.0'
     });
     expect(profile?.modpackSource?.importedAt).toEqual(expect.any(Number));
+    // P12-D2: ロック情報は files[] が無ければ空 map でも保持 (構造の先行確保)
+    expect(profile?.modpackSource?.lockedVersions).toEqual({});
   });
 
   it('overrides があることをトーストに出す', async () => {

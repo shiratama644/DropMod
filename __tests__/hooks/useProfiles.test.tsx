@@ -14,7 +14,9 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '../test-utils/queryWrapper';
-import { db } from '@/lib/db/dexie';
+import { db, getDirHandle, getManagedFiles } from '@/lib/db/dexie';
+import { createFakeFileSystem } from '../test-utils/fakeFs';
+import { FileSystemSource } from '@/lib/env/source';
 import type { ProjectItem, ThemeMode } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
@@ -147,6 +149,65 @@ describe('useProfiles', () => {
     expect(created.mods).toHaveLength(2);
     const successCall = h.showToast.mock.calls.find(([, t]) => t === 'success');
     expect(successCall?.[0]).toContain('2 個のMod入り');
+  });
+
+  it('handleCreateProfile: フォルダ選択 (P12-D1) なら linkedSource + dirHandles + 台帳 seed', async () => {
+    const h = makeHarness();
+    const { result } = renderHook(
+      () => useProfiles(h.theme, h.setThemeState, h.showToast, h.confirmDialog),
+      { wrapper: createQueryWrapper() }
+    );
+    await waitFor(() => expect(useProfilesStore.getState().hasHydrated).toBe(true));
+    await db.dirHandles.clear();
+    await db.managedFiles.clear();
+
+    const handle = createFakeFileSystem(
+      { 'mods/sodium.jar': 'sodium', 'versions/fabric-loader-0.16.0-1.21.1/fabric-loader-0.16.0-1.21.1.json': '{}' },
+      'MyInstance'
+    );
+    const mods: ProjectItem[] = [
+      {
+        projectId: 'proj-sodium',
+        name: 'Sodium',
+        type: 'mod',
+        versionId: 'ver-1',
+        filename: 'sodium.jar',
+        artifact: { sha1: 'abc', path: 'mods/sodium.jar', size: 6 }
+      }
+    ];
+    const link = {
+      picked: { handle, source: new FileSystemSource(handle, 'MyInstance') },
+      detected: {
+        rootType: 'official' as const,
+        mcVersion: '1.21.1',
+        loader: 'Fabric' as const,
+        loaderVersion: '0.16.0',
+        contentDirs: { mods: 'mods' }
+      }
+    };
+
+    await act(async () => {
+      await result.current.handleCreateProfile('Linked', '1.21.1', 'Fabric', '', mods, undefined, undefined, link);
+    });
+
+    const created = useProfilesStore.getState().profiles.find((p) => p.name === 'Linked');
+    expect(created?.linkedSource).toMatchObject({
+      kind: 'filesystem',
+      rootName: 'MyInstance',
+      environment: { mcVersion: '1.21.1' }
+    });
+    const row = await getDirHandle(created?.linkedSource?.handleId as string);
+    expect(row?.profileId).toBe(created?.id);
+    // §10.5: artifact を持つ ProjectItem が初期 ManagedFileRecord になる (source: import)
+    const records = await getManagedFiles(created?.id as string);
+    expect(records).toEqual([
+      expect.objectContaining({
+        path: 'mods/sodium.jar',
+        sha1: 'abc',
+        source: 'import',
+        projectId: 'proj-sodium'
+      })
+    ]);
   });
 
   it('handleSwitchProfile: currentProfileId が切り替わる', async () => {

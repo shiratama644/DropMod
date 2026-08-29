@@ -8,21 +8,23 @@ import {
 } from '@/lib/constants/search';
 import { loadDiscoverSearch } from '@/lib/search/loadDiscoverSearch';
 
+// ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため
+// title に ' - DropMod' を含めない (含めるとサイト名が二重になる)
 const TITLES: Record<DiscoverSegment, { title: string; description: string }> = {
   mods: {
-    title: 'Mods を探す - DropMod',
+    title: 'Mods を探す',
     description: 'Modrinth から Mod を検索・追加できます。'
   },
   modpacks: {
-    title: 'Modpacks を探す - DropMod',
+    title: 'Modpacks を探す',
     description: 'Modrinth から Modpack を検索できます。'
   },
   resourcepacks: {
-    title: 'Resource Packs を探す - DropMod',
+    title: 'Resource Packs を探す',
     description: 'Modrinth から Resource Pack を検索できます。'
   },
   shaders: {
-    title: 'Shaders を探す - DropMod',
+    title: 'Shaders を探す',
     description: 'Modrinth から Shader を検索できます。'
   }
 };
@@ -34,7 +36,7 @@ export async function generateMetadata({
 }) {
   const { type } = await params;
   const projectType = parseDiscoverSegment(type);
-  if (!projectType) return { title: '探す - DropMod' };
+  if (!projectType) return { title: '探す' };
   const segment = type as DiscoverSegment;
   return TITLES[segment];
 }

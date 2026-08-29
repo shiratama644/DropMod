@@ -2,7 +2,8 @@
 
 > 対応 task-list ID: `P13-A` / `P13-B` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 保留** (Phase 12 完了後に詳細計画を策定する — 本書は暫定版)
+> **状態: 保留・延期** (2026-08-29 ユーザー確定: **CurseForge API キー未取得のため延期**。
+> API キー取得後に再開。再開時は Phase 12 完了後に詳細計画を策定する — 本書は暫定版)
 
 ## 1. 開始前確認
 

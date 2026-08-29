@@ -130,12 +130,15 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | P12-D1B | 設定ページ「環境との同期」の紐付けでも台帳 seed | ローカル検証済み | 100% | P12-D1 | `useEnvironmentLink.link()` 成功時に §10.5 の artifact 台帳 seed (expandProfileToManaged + merge + syncManagedFiles) を実行。新規作成 (D1) と同じ整合性。失敗は warning のみ (紐付けは成功扱い) | `c7f8db8` / docs `cfaa0f1` / typecheck・biome・unit 1216 passed・build pass |
 
-### Phase 13: CurseForge 完全対応 — 未着手
+### Phase 13: CurseForge 完全対応 — 延期 (2026-08-29)
+
+> **延期理由 (ユーザー確定 2026-08-29)**: まだ CurseForge の API キーを取得していないため。
+> API キー取得後に再開する。再開時の依存は従来どおり P12-C 完了。
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | - |
-| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | - |
+| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
+| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
 
 ---
 

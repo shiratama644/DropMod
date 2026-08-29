@@ -16,7 +16,10 @@ import type { Metadata } from 'next';
 import { ModpackHubClient } from '@/components/ModpackHubClient';
 
 export const metadata: Metadata = {
-  title: 'Modpacks - DropMod',
+  // ルートレイアウトの template が '%s | DropMod' なので、
+  // ここで ' - DropMod' を付けると「Modpacks - DropMod | DropMod」と二重になる。
+  // (`app/resourcepack/page.tsx` と同じ書き方)
+  title: 'Modpacks',
   description:
     '導入済み Modpack の確認・更新チェック・紐付け解除。Modrinth .mrpack からインポートしたプロファイルを管理します。'
 };

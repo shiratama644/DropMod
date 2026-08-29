@@ -239,5 +239,5 @@ export interface ModpackSource {
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
-| P12-D1 | | | |
-| P12-D2 | | | |
+| P12-D1 | `1709704` | 1176 passed (4 検証 pass) | linkPickedDirectory + handleCreateProfile 拡張 + NewProfileModal 連携 + §10.5 台帳 seed |
+| P12-D2 | `ac26e29` | 1196 passed (4 検証 pass) | expandMrpackFiles 抽出 (useZipImport 既存 16 tests 回帰なし) / 競合検出・適用 / モーダル / D-3 ロック情報 (lockedVersions) 先行 |

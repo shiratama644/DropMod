@@ -18,6 +18,14 @@
  *   Modrinth API は `installModrinthApiMock()` で決定論的にする。
  * - **実体のダウンロード**: `cdn.modrinth.com` を `page.route` で差し替える。
  *
+ * ## 診断性
+ *
+ * `SyncButton` は **`prepare()` が `'ready'` のときだけ Preview を出す**
+ * (`blocked-environment` / `not-linked` / `folder-unavailable` では理由が
+ * セクション側に出てモーダルは出ない)。単にモーダルを待つだけだと
+ * **「なぜ出なかったか」が CI ログから分からない**ため、
+ * タイムアウト時はセクションの表示文言をエラーメッセージに含める。
+ *
  * ※ File System Access API は Desktop Chromium のみなので、モバイル viewport では
  *   skip する (既存の folder-import.spec.ts と同じ方針)。
  */
@@ -52,6 +60,11 @@ const SYNC_TARGET_FILES: Record<string, string> = {
 const CDN_URL = 'https://cdn.modrinth.com/data/e2e/versions/sodium.jar';
 const DOWNLOADED_JAR = 'e2e-downloaded-jar-bytes';
 
+/** 「環境との同期」セクション (D-9 で設定ページに集約されている) */
+function syncSection(page: Page) {
+  return page.locator('section[aria-labelledby="env-sync-heading"]');
+}
+
 /**
  * `.minecraft` ZIP を Import して、既知 Mod を 1 件持つ Profile を作る。
  *
@@ -75,7 +88,7 @@ async function importProfileWithKnownMod(page: Page): Promise<void> {
 
   const dialog = page
     .getByRole('dialog')
-    .filter({ hasText: /新規プロファイル|ZIPからプロファイル作成/ })
+    .filter({ hasText: /新規プロファイル/ })
     .first();
   await dialog.waitFor({ state: 'visible', timeout: 10_000 });
 
@@ -84,37 +97,65 @@ async function importProfileWithKnownMod(page: Page): Promise<void> {
   await analysis.waitFor({ state: 'visible', timeout: 20_000 });
 
   await dialog.getByRole('button', { name: /作成する/ }).click();
-  await dialog.waitFor({ state: 'hidden', timeout: 15_000 });
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
 }
 
-/** 設定ページでフォルダを紐付け、Sync Preview を開いて承認する */
-async function linkAndRunSync(
-  page: Page,
-  options: { approve: boolean }
-): Promise<void> {
+/** 設定ページでフォルダを紐付ける */
+async function linkFolder(page: Page): Promise<void> {
   await page.goto('/settings');
   await waitForAppReady(page);
 
-  const section = page.locator('section, div').filter({ hasText: '環境との同期' }).first();
+  const section = syncSection(page);
   await section.waitFor({ state: 'visible', timeout: 10_000 });
 
-  await page.getByRole('button', { name: /フォルダを選択して紐付ける/ }).click();
+  await section.getByRole('button', { name: /フォルダを選択して紐付ける/ }).click();
 
-  // Sync ボタンが出るまで待つ (紐付け完了の合図)
-  const syncButton = page.getByRole('button', { name: /差分を確認して同期/ });
+  // Sync ボタンが出る = 紐付け完了 (SyncButton は linkedSource があるときだけ描画される)
+  const syncButton = section.getByRole('button', { name: /差分を確認して同期/ });
   await syncButton.waitFor({ state: 'visible', timeout: 15_000 });
   await expect(syncButton).toBeEnabled({ timeout: 15_000 });
+}
 
-  await syncButton.click();
+/**
+ * Sync Preview を開く。
+ *
+ * **タイムアウトしたらセクションの表示文言を添えて失敗する。**
+ * `prepare()` が `'ready'` 以外 (D-1 の環境不一致 / 未紐付け / フォルダ消失) を
+ * 返した場合、モーダルは出ず理由だけがセクションに出るため。
+ */
+async function openSyncPreview(page: Page) {
+  const section = syncSection(page);
+  await section.getByRole('button', { name: /差分を確認して同期/ }).click();
 
-  // Preview モーダル (§10.3: 実行前の必須ゲート)
-  const preview = page.getByRole('dialog').filter({ hasText: /同期|プレビュー/ }).first();
-  await preview.waitFor({ state: 'visible', timeout: 15_000 });
+  const preview = page
+    .getByRole('dialog')
+    .filter({ hasText: /同期プレビュー/ })
+    .first();
 
-  if (!options.approve) return;
+  try {
+    await preview.waitFor({ state: 'visible', timeout: 15_000 });
+  } catch (e) {
+    // 診断情報: なぜ Preview が出なかったかを CI ログに残す
+    const sectionText = (await section.innerText().catch(() => '(取得失敗)'))
+      .replace(/\s+/g, ' ')
+      .slice(0, 600);
+    const toasts = (
+      await page
+        .locator('[role="status"], [role="alert"]')
+        .allInnerTexts()
+        .catch(() => [] as string[])
+    )
+      .join(' / ')
+      .slice(0, 300);
+    throw new Error(
+      `Sync Preview が出ませんでした。\n` +
+        `--- 「環境との同期」セクション ---\n${sectionText}\n` +
+        `--- toast ---\n${toasts || '(なし)'}\n` +
+        `--- 元のエラー ---\n${e instanceof Error ? e.message : String(e)}`
+    );
+  }
 
-  await preview.getByRole('button', { name: /^同期する/ }).click();
-  await preview.waitFor({ state: 'hidden', timeout: 20_000 });
+  return preview;
 }
 
 test.describe('環境との Sync (Phase 12-E2E)', () => {
@@ -139,7 +180,11 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES);
 
     await importProfileWithKnownMod(page);
-    await linkAndRunSync(page, { approve: true });
+    await linkFolder(page);
+
+    const preview = await openSyncPreview(page);
+    await preview.getByRole('button', { name: /^同期する/ }).click();
+    await expect(preview).toBeHidden({ timeout: 20_000 });
 
     // **書き込み先に実体が現れている**
     const files = await listMockFiles(page);
@@ -159,7 +204,11 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES, opts);
 
     await importProfileWithKnownMod(page);
-    await linkAndRunSync(page, { approve: true });
+    await linkFolder(page);
+
+    const preview = await openSyncPreview(page);
+    await preview.getByRole('button', { name: /^同期する/ }).click();
+    await expect(preview).toBeHidden({ timeout: 20_000 });
 
     // Rollback 済み = **中途半端なファイルが残っていない**
     const files = await listMockFiles(page);
@@ -172,32 +221,53 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
   test('復帰: 中断された Sync を検出して確認ダイアログを出す (D-4)', async ({ page }) => {
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES);
 
-    // **中断された Sync を Dexie に仕込む**。
-    // 実ブラウザでは「Sync 中にタブを閉じた」状態に相当する。
-    await page.addInitScript(() => {
-      const openRequest = indexedDB.open('DropModDB');
-      openRequest.onsuccess = () => {
-        const idb = openRequest.result;
-        if (!idb.objectStoreNames.contains('syncTransactions')) {
-          idb.close();
-          return;
-        }
-        const tx = idb.transaction('syncTransactions', 'readwrite');
-        tx.objectStore('syncTransactions').put({
-          id: 'e2e-interrupted-tx',
-          profileId: 'e2e-interrupted-profile',
-          status: 'running',
-          startedAt: Date.now() - 60_000,
-          operations: []
-        });
-      };
-    });
+    // ① まずアプリを起動して **Dexie (DropModDB) を作らせる**。
+    //    addInitScript で先に indexedDB.open すると v1 で開いてしまい、
+    //    `syncTransactions` が無い & アプリの v4 昇格をブロックする危険がある。
+    await page.goto('/profile');
+    await waitForAppReady(page);
 
+    // ② 中断された Sync を Dexie に仕込む。
+    //    実ブラウザでは「Sync 中にタブを閉じた」状態に相当する。
+    const seeded = await page.evaluate(async () => {
+      const idb = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open('DropModDB');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      try {
+        if (!idb.objectStoreNames.contains('syncTransactions')) return false;
+        await new Promise<void>((resolve, reject) => {
+          const tx = idb.transaction('syncTransactions', 'readwrite');
+          tx.objectStore('syncTransactions').put({
+            id: 'e2e-interrupted-tx',
+            profileId: 'e2e-interrupted-profile',
+            status: 'running',
+            startedAt: Date.now() - 60_000,
+            operations: []
+          });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+        return true;
+      } finally {
+        idb.close();
+      }
+    });
+    expect(seeded).toBe(true);
+
+    // ③ `useInterruptedSync` は**起動時に 1 回だけ**確認するので、リロードして拾わせる
     await page.goto('/profile');
     await waitForAppReady(page);
 
     // **D-4**: 未完成の Journal を検出し、確認を出す (無言の自動 Rollback はしない)
-    const dialog = page.getByRole('dialog').filter({ hasText: /中断|再開|ロールバック|取り消し/ });
-    await expect(dialog.first()).toBeVisible({ timeout: 20_000 });
+    const dialog = page
+      .getByRole('dialog')
+      .filter({ hasText: /前回の同期が完了していません/ })
+      .first();
+    await expect(dialog).toBeVisible({ timeout: 20_000 });
+
+    // 「勝手に Rollback しない」= ユーザーが選ぶ操作が残っている
+    await expect(dialog.getByRole('button', { name: /ロールバック|取り消|戻す/ }).first()).toBeVisible();
   });
 });

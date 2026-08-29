@@ -233,6 +233,70 @@ export async function installFolderPickerMock(
 
   window.showDirectoryPicker = async () => root;
 
+  // ==========================================================================
+  // IndexedDB 往復でモック handle が壊れる問題への対処
+  //
+  // アプリは紐付け時に handle を Dexie (dirHandles) に保存し、Sync 時に
+  // openLinkedFolder() が**それを読み戻して**使う。
+  //
+  // ところが構造化クローンは **プロトタイプを複製しない**ため、
+  // クラスインスタンスのモック handle は「メソッドを持たないただのオブジェクト」に
+  // なって返ってくる → queryPermission is not a function で Sync が失敗する。
+  // (実ブラウザの本物の FileSystemDirectoryHandle はプラットフォームオブジェクトなので
+  //  メソッドを保ったまま往復する。つまりこれは**モック固有**の問題)
+  //
+  // そこで IDB の put / 読み出しをフックし、handle 本体は JS 側のレジストリに
+  // 参照で保持して、マーカーだけを行に格納する。
+  // ==========================================================================
+  const handleRegistry = new Map();
+  let refSeq = 0;
+  const REF_KEY = '__e2e_handle_ref__';
+  const isMockHandle = (v) => v instanceof MockDirHandle;
+
+  function toStorable(row) {
+    if (row && typeof row === 'object' && isMockHandle(row.handle)) {
+      const ref = 'e2e-ref-' + ++refSeq;
+      handleRegistry.set(ref, row.handle);
+      return {
+        ...row,
+        handle: { [REF_KEY]: ref, name: row.handle.name, kind: 'directory' }
+      };
+    }
+    return row;
+  }
+
+  function fromStorable(row) {
+    if (row && typeof row === 'object' && row.handle && typeof row.handle === 'object') {
+      const ref = row.handle[REF_KEY];
+      if (ref && handleRegistry.has(ref)) {
+        return { ...row, handle: handleRegistry.get(ref) };
+      }
+    }
+    return row;
+  }
+
+  const origPut = IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put = function (value, key) {
+    return origPut.call(this, toStorable(value), key);
+  };
+  const origAdd = IDBObjectStore.prototype.add;
+  IDBObjectStore.prototype.add = function (value, key) {
+    return origAdd.call(this, toStorable(value), key);
+  };
+
+  // Dexie は IDBRequest.result 経由で値を受け取るので、そこで行を復元する
+  const resultDesc = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'result');
+  if (resultDesc && resultDesc.get) {
+    Object.defineProperty(IDBRequest.prototype, 'result', {
+      configurable: true,
+      get() {
+        const value = resultDesc.get.call(this);
+        if (Array.isArray(value)) return value.map(fromStorable);
+        return fromStorable(value);
+      }
+    });
+  }
+
   // ---- OPFS (Backup 用) ----
   if (WITH_OPFS && typeof navigator !== 'undefined') {
     const opfsRoot = new MockDirHandle('opfs', '');

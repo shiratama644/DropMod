@@ -188,6 +188,8 @@ async function openSyncPreview(page: Page, errs: string[]) {
     // Profile「1.20.1」/ 検出「1.21.1」」= **D-1 blocked-environment** と判明済み。
     // 次に知りたいのは「Sync 対象の Profile はどれか」なので、
     // Dexie の profiles と現在 ID を直接読む。
+    // (P12-E2E: さらに role=alert と pageerror (先頭 70 字) も残す —
+    //  Minified React error の番号まで判別できるようにする)
     const prof = await page
       .evaluate(async () => {
         const db = await new Promise<IDBDatabase>((res, rej) => {
@@ -222,7 +224,20 @@ async function openSyncPreview(page: Page, errs: string[]) {
         }
       })
       .catch((e) => `n/a:${String(e).slice(0, 40)}`);
-    throw new Error(`DIAG[preview] ${prof} js=${errs[0]?.slice(0, 20) ?? 'none'}`);
+    // annotation は先頭 200 字まで / 改行はスペース化されるため、
+    // 予算内 (約 180 字) に収まるよう各要素を短く切り詰める。
+    const alert = (
+      await page
+        .locator('[role="alert"]')
+        .allInnerTexts()
+        .catch(() => [] as string[])
+    )
+      .join('|')
+      .replace(/\s+/g, ' ')
+      .slice(0, 55);
+    throw new Error(
+      `DIAG[preview] ${prof} alert=${alert || '(none)'} js=${errs[0]?.slice(0, 70) ?? 'none'}`
+    );
   }
 
   return preview;

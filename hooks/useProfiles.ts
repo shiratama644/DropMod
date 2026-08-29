@@ -517,12 +517,27 @@ export const useProfiles = (
         }
       }
 
-      setProfiles((prev) => [...prev, newProfile]);
+      // **P12-E2E 修正 (2026-08-29)**: 作成直後の即時永続化。
+      // 通常の保存は 500ms debounce (B11) だが、作成モーダルを閉じてすぐ
+      // ページ遷移 (E2E や実ユーザーのリロード) が起きるとタイマーが
+      // クリアされ、Dexie に書き込まれない。E2E で「Sync が既定
+      // プロファイル (1.20.1) を見て環境不一致」になる競合の原因だったため、
+      // 作成時だけ同期書込して Promise 完了時点で永続化を保証する。
+      const nextProfiles = [...profilesRef.current, newProfile];
+      setProfiles(nextProfiles);
       setCurrentProfileId(newId);
+      // toast は従来どおり同期的に出す (UI フィードバックを待たせない)
       showToast(
         `プロファイル「${name}」を作成しました${mods.length > 0 ? ` (${mods.length} 個のMod入り)` : ''}`,
         'success'
       );
+      try {
+        await dexieSyncProfiles(nextProfiles);
+        await dexieSetMeta(META_KEYS.CURRENT_PROFILE_ID, newId);
+      } catch (e) {
+        // 保存失敗でも作成自体は継続 (debounce 側の保存が再試行する)
+        console.warn('[DropMod] プロファイル作成の即時保存に失敗:', e);
+      }
     },
     [showToast, setProfiles, setCurrentProfileId]
   );

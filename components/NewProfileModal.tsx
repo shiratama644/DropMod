@@ -211,6 +211,8 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   // P12-D1: 解析に成功したフォルダ (作成時に自動紐付けする)
   const [pickedFolder, setPickedFolder] = useState<PickedDirectory | null>(null);
 
+  const [submitting, setSubmitting] = useState(false);
+
   const wasOpenRef = useRef<boolean>(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード
   useEffect(() => {
@@ -358,10 +360,10 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName || analyzing) {
+    if (!trimmedName || analyzing || submitting) {
       return;
     }
     // フォルダ解析結果 > ZIP/.mrpack 取り込みデータ > 空
@@ -377,22 +379,36 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       folderAnalysis && pickedFolder
         ? { picked: pickedFolder, detected: folderAnalysis.environment }
         : undefined;
-    void onCreate(
-      trimmedName,
-      version,
-      loader,
-      desc.trim(),
-      mods,
-      loaderVersion || undefined,
-      extras,
-      link
-    );
-    setName('');
-    setDesc('');
-    setFolderAnalysis(null);
-    setFolderName(null);
-    setPickedFolder(null);
-    onClose();
+    // **P12-E2E 修正 (2026-08-29)**: onCreate を await してから閉じる。
+    // 従来は `void onCreate(...)` で即 onClose() していたため、
+    // (1) 作成 (即時永続化) が完了する前にモーダルが閉じ、
+    // (2) onCreate が reject すると unhandled rejection になる。
+    // Promise が解決 = 永続化完了 (useProfiles 側で Dexie 書込を await) を
+    // 保証してから閉じることで、直後のページ遷移でも Profile が失われない。
+    setSubmitting(true);
+    try {
+      await onCreate(
+        trimmedName,
+        version,
+        loader,
+        desc.trim(),
+        mods,
+        loaderVersion || undefined,
+        extras,
+        link
+      );
+      setName('');
+      setDesc('');
+      setFolderAnalysis(null);
+      setFolderName(null);
+      setPickedFolder(null);
+      onClose();
+    } catch (err) {
+      // 失敗時はモーダルを閉じない (入力値を保持して再試行できるようにする)
+      console.error('[DropMod] プロファイル作成に失敗:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -610,10 +626,16 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={analyzing}
+              disabled={analyzing || submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
             >
-              {analyzing ? '解析中...' : initialImportData?.source === 'duplicate' ? '複製する' : '作成する'}
+              {analyzing
+                ? '解析中...'
+                : submitting
+                  ? '作成中...'
+                  : initialImportData?.source === 'duplicate'
+                    ? '複製する'
+                    : '作成する'}
             </button>
           </div>
         </form>

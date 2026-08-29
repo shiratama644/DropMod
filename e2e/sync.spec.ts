@@ -283,9 +283,14 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
   });
 
   test('失敗: 書き込みが失敗したら Rollback され、ファイルが残らない', async ({ page }) => {
-    // **障害注入**: mods/ 配下への書き込みを失敗させる
+    // **障害注入**: mods/ 配下への書き込みを失敗させる。
+    // 書き込み先は Sync 台帳の `path` (拡張 artifact.path = 取り込み元の
+    // レイアウト 'mods/e2e-sodium.jar') であり、Modrinth の version
+    // ファイル名 'e2e-sodium-0.6.0.jar' ではない点に注意
+    // (run 33246962952 で注入パス不一致により書込が成功し、
+    //  Rollback 検証が失敗した履歴あり)。
     const opts: FolderPickerMockOptions = {
-      failWritesFor: ['mods/e2e-sodium-0.6.0.jar']
+      failWritesFor: ['mods/e2e-sodium.jar']
     };
     const errs = collectPageErrors(page);
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES, opts);

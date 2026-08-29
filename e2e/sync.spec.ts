@@ -182,14 +182,24 @@ async function openSyncPreview(page: Page, errs: string[]) {
   try {
     await preview.waitFor({ state: 'visible', timeout: 15_000 });
   } catch {
-    // なぜ Preview が出なかったかを annotation の先頭 200 字に収めて残す
-    const sectionText = (await section.innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 90);
-    const idb = await page
-      .evaluate(
-        () => (window as { __e2e_idb_patch_error__?: string }).__e2e_idb_patch_error__ ?? 'ok'
-      )
-      .catch(() => 'n/a');
-    throw new Error(`DIAG[preview] idb=${idb} sec=${sectionText} js=${errs[0] ?? 'none'}`);
+    // なぜ Preview が出なかったかを annotation の先頭 200 字に収めて残す。
+    //
+    // EnvironmentSyncSection は prepare() の失敗理由を **<p role="alert">** に出す
+    // (components/EnvironmentSyncSection.tsx:309-)。そこが一次情報。
+    // 静的なラベル (「環境との同期」「検出した環境」…) は毎回同じで枠を食うだけなので出さない。
+    const alert = (
+      await section
+        .locator('[role="alert"]')
+        .allInnerTexts()
+        .catch(() => [] as string[])
+    )
+      .join('|')
+      .replace(/\s+/g, ' ')
+      .slice(0, 150);
+    const btn = (await section.getByRole('button', { name: /差分を確認/ }).innerText().catch(() => '?'))
+      .replace(/\s+/g, ' ')
+      .slice(0, 20);
+    throw new Error(`DIAG[preview] alert=${alert || '(none)'} btn=${btn} js=${errs[0]?.slice(0, 28) ?? 'none'}`);
   }
 
   return preview;

@@ -73,12 +73,23 @@ function collectPageErrors(page: Page): string[] {
   return errs;
 }
 
-/** 診断を**先頭に**置いたエラーを投げる (annotation の 200 字予算に収める) */
+/**
+ * 診断を**先頭に**置いたエラーを投げる (annotation の 200 字予算に収める)。
+ *
+ * `useZipImport` は分岐ごとに toast を出すので、**toast の文言がそのまま
+ * 「なぜモーダルが出なかったか」の答えになる**。js/pageerror より先に置く。
+ */
 async function failWithDiag(page: Page, errs: string[], what: string): Promise<never> {
-  const idb = await page
-    .evaluate(() => (window as { __e2e_idb_patch_error__?: string }).__e2e_idb_patch_error__ ?? 'ok')
-    .catch(() => 'n/a');
-  throw new Error(`DIAG[${what}] idb=${idb} js=${errs[0] ?? 'none'}`);
+  const toast = (
+    await page
+      .locator('[role="status"], [role="alert"]')
+      .allInnerTexts()
+      .catch(() => [] as string[])
+  )
+    .join('|')
+    .replace(/\s+/g, ' ')
+    .slice(0, 110);
+  throw new Error(`DIAG[${what}] toast=${toast || '(none)'} js=${errs[0] ?? 'none'}`);
 }
 
 /** 「環境との同期」セクション (D-9 で設定ページに集約されている) */

@@ -184,22 +184,45 @@ async function openSyncPreview(page: Page, errs: string[]) {
   } catch {
     // なぜ Preview が出なかったかを annotation の先頭 200 字に収めて残す。
     //
-    // EnvironmentSyncSection は prepare() の失敗理由を **<p role="alert">** に出す
-    // (components/EnvironmentSyncSection.tsx:309-)。そこが一次情報。
-    // 静的なラベル (「環境との同期」「検出した環境」…) は毎回同じで枠を食うだけなので出さない。
-    const alert = (
-      await section
-        .locator('[role="alert"]')
-        .allInnerTexts()
-        .catch(() => [] as string[])
-    )
-      .join('|')
-      .replace(/\s+/g, ' ')
-      .slice(0, 150);
-    const btn = (await section.getByRole('button', { name: /差分を確認/ }).innerText().catch(() => '?'))
-      .replace(/\s+/g, ' ')
-      .slice(0, 20);
-    throw new Error(`DIAG[preview] alert=${alert || '(none)'} btn=${btn} js=${errs[0]?.slice(0, 28) ?? 'none'}`);
+    // 前 run で alert は「環境が一致しないため Sync できません /
+    // Profile「1.20.1」/ 検出「1.21.1」」= **D-1 blocked-environment** と判明済み。
+    // 次に知りたいのは「Sync 対象の Profile はどれか」なので、
+    // Dexie の profiles と現在 ID を直接読む。
+    const prof = await page
+      .evaluate(async () => {
+        const db = await new Promise<IDBDatabase>((res, rej) => {
+          const r = indexedDB.open('DropModDB');
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        try {
+          const all = (store: string) =>
+            new Promise<unknown[]>((res) => {
+              if (!db.objectStoreNames.contains(store)) return res([]);
+              const q = db.transaction(store).objectStore(store).getAll();
+              q.onsuccess = () => res(q.result as unknown[]);
+              q.onerror = () => res([]);
+            });
+          const rows = (await all('profiles')) as Array<{
+            id: string;
+            name: string;
+            environment?: { mcVersion?: string };
+          }>;
+          const meta = (await all('meta')) as Array<{ key: string; value?: unknown }>;
+          const cur = meta.find((m) => /current/i.test(m.key))?.value ?? '?';
+          db.close();
+          return (
+            `n=${rows.length} cur=${String(cur).slice(0, 10)} ` +
+            rows
+              .map((r) => `${r.id.slice(0, 8)}:${(r.environment?.mcVersion ?? '?')}`)
+              .join(',')
+          ).slice(0, 120);
+        } catch (e) {
+          return `err:${String(e).slice(0, 60)}`;
+        }
+      })
+      .catch((e) => `n/a:${String(e).slice(0, 40)}`);
+    throw new Error(`DIAG[preview] ${prof} js=${errs[0]?.slice(0, 20) ?? 'none'}`);
   }
 
   return preview;

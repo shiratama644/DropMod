@@ -17,7 +17,7 @@ import {
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
-import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import { primaryCategoryId } from '@/lib/constants/categories';
 import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
 import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/lib/env/modpack';
@@ -26,6 +26,8 @@ import { analyzeImportHealth } from '@/lib/env/analysis';
 import { generateProfileName } from '@/lib/env/profileName';
 import {
   environmentFromMrpack,
+  expandMrpackFiles,
+  modpackLocksFromItems,
   mrpackOverridesToManaged,
   parseMrpackOverrides
 } from '@/lib/env/mrpack';
@@ -86,75 +88,10 @@ export const useZipImport = (
         // Phase 11 は modrinth.index.json の files[] しか見ていなかった。
         const { overrides, skipped: skippedOverrides } = await parseMrpackOverrides(zip);
 
-        const importedMods: ProjectItem[] = [];
-        if (mrpackData.files) {
-          const hashes = mrpackData.files
-            .map((f) => f.hashes?.sha1)
-            .filter((h): h is string => typeof h === 'string' && h.length > 0);
-          let versionByHash: Record<string, ModrinthVersion> = {};
-          if (hashes.length > 0) {
-            try {
-              versionByHash = await fetchModrinthVersionFilesBatch<ModrinthVersion>(
-                hashes,
-                'sha1'
-              );
-            } catch {
-              versionByHash = {};
-            }
-          }
-
-          const resolvedProjectIds = Array.from(
-            new Set(
-              Object.values(versionByHash)
-                .map((v) => v.project_id)
-                .filter((id): id is string => Boolean(id))
-            )
-          );
-          const projectMap = new Map<string, ModrinthProject>();
-          if (resolvedProjectIds.length > 0) {
-            try {
-              const projects = await fetchModrinthBatch<ModrinthProject>(
-                '/projects',
-                resolvedProjectIds
-              );
-              for (const p of projects) {
-                projectMap.set(p.id, p);
-              }
-            } catch {
-              // メタ取得失敗でも fileUrl があれば ZIP エクスポートは可能
-            }
-          }
-
-          for (const f of mrpackData.files) {
-            const downloadUrl = f.downloads?.[0] ? f.downloads[0] : '';
-            const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
-            const filename = pathParts[pathParts.length - 1] || 'mod.jar';
-            const matched = f.hashes?.sha1 ? versionByHash[f.hashes.sha1] : undefined;
-            const proj = matched?.project_id ? projectMap.get(matched.project_id) : undefined;
-            const primaryFile =
-              matched?.files?.find((file) => file.primary) || matched?.files?.[0];
-
-            importedMods.push({
-              projectId: matched?.project_id || generateId('mrpack'),
-              slug: proj?.slug,
-              name: proj?.title || filename.replace('.jar', ''),
-              description: proj?.description || 'Imported from .mrpack',
-              icon_url: proj?.icon_url,
-              author: proj?.author,
-              type: proj
-                ? contentCategoryFromProject(proj)
-                : contentCategoryFromPath(f.path),
-              category: proj
-                ? primaryCategoryId(proj.display_categories, proj.categories)
-                : undefined,
-              versionId: matched?.id,
-              versionNumber: matched?.version_number || 'mrpack',
-              versionType: matched?.version_type || 'release',
-              fileUrl: downloadUrl || primaryFile?.url || '',
-              filename
-            });
-          }
-        }
+        // **P12-D2**: files[] → ProjectItem[] 展開は mrpack.ts に集約
+        // (ZIP Import と Discover からの Modpack 追加で共有)。
+        // 挙動は useZipImport 従来実装と同一 (API 失敗時は内部 id + fileUrl で継続)。
+        const importedMods = await expandMrpackFiles(mrpackData);
 
         const newProfile: Profile = {
           id: generateId('mrpack'),
@@ -171,7 +108,9 @@ export const useZipImport = (
             provider: 'modrinth',
             name: mrpackData.name || 'Modrinth Pack',
             ...(mrpackData.versionId ? { versionId: mrpackData.versionId } : {}),
-            importedAt: Date.now()
+            importedAt: Date.now(),
+            // P12-D2: 導入時の指定バージョン (D-3 のロック情報) を先行保持
+            lockedVersions: modpackLocksFromItems(importedMods)
           }
         };
 

@@ -22,8 +22,23 @@
  */
 
 import type JSZip from 'jszip';
-import type { ContentCategory, ManagedFileRecord, MrpackIndex } from '@/types';
+import type {
+  ContentCategory,
+  ManagedFileRecord,
+  ModrinthProject,
+  ModrinthVersion,
+  ModpackSource,
+  MrpackIndex,
+  ProjectItem
+} from '@/types';
+import {
+  fetchModrinthBatch,
+  fetchModrinthVersionFilesBatch
+} from '@/lib/modrinth/client';
+import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { primaryCategoryId } from '@/lib/constants/categories';
 import { calculateSha1 } from '@/lib/utils/hash';
+import { generateId } from '@/lib/utils/id';
 import { buildManagedFileId } from './managed';
 
 /** 環境ルートへコピーされる overrides ディレクトリ (DropMod はクライアントアプリ) */
@@ -179,6 +194,122 @@ export function promoteModpackRecords(
   return records.map((record) =>
     record.source === 'modpack' ? { ...record, source: 'import' } : record
   );
+}
+
+/**
+ * **P12-D2 (bug 3)**: `modrinth.index.json` の `files[]` を `ProjectItem[]` に展開する。
+ *
+ * 元々 `hooks/useZipImport.ts` に埋め込まれていたロジックを集約し、
+ * **ZIP Import (.mrpack) と Discover からの Modpack 追加で共有**する
+ * (`useZipImport` は新規 Profile、Discover は既存 Profile への追加)。
+ *
+ * - sha1 → `/version_files` (batch) → projectId → `/projects` (batch) でメタ解決
+ * - 照合できなかった file は DropMod 内部 id (`mrpack-…`) + ダウンロード URL で
+ *   継続する (**API 失敗でもファイル同期を止めない** — useZipImport と同一方針)
+ * - `deps` を注入することでテストはモック HTTP を必要としない
+ */
+export interface ExpandMrpackFilesDeps {
+  fetchVersions?: typeof fetchModrinthVersionFilesBatch;
+  fetchProjects?: typeof fetchModrinthBatch;
+}
+
+export async function expandMrpackFiles(
+  index: MrpackIndex,
+  deps: ExpandMrpackFilesDeps = {}
+): Promise<ProjectItem[]> {
+  const fetchVersions = deps.fetchVersions ?? fetchModrinthVersionFilesBatch;
+  const fetchProjects = deps.fetchProjects ?? fetchModrinthBatch;
+
+  const importedMods: ProjectItem[] = [];
+  if (!index.files) return importedMods;
+
+  const hashes = index.files
+    .map((f) => f.hashes?.sha1)
+    .filter((h): h is string => typeof h === 'string' && h.length > 0);
+  let versionByHash: Record<string, ModrinthVersion> = {};
+  if (hashes.length > 0) {
+    try {
+      versionByHash = await fetchVersions<ModrinthVersion>(hashes, 'sha1');
+    } catch {
+      versionByHash = {};
+    }
+  }
+
+  const resolvedProjectIds = Array.from(
+    new Set(
+      Object.values(versionByHash)
+        .map((v) => v.project_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const projectMap = new Map<string, ModrinthProject>();
+  if (resolvedProjectIds.length > 0) {
+    try {
+      const projects = await fetchProjects<ModrinthProject>('/projects', resolvedProjectIds);
+      for (const p of projects) {
+        projectMap.set(p.id, p);
+      }
+    } catch {
+      // メタ取得失敗でも fileUrl があれば ZIP エクスポートは可能
+    }
+  }
+
+  for (const f of index.files) {
+    const downloadUrl = f.downloads?.[0] ? f.downloads[0] : '';
+    const pathParts = f.path ? f.path.split('/') : ['mod.jar'];
+    const filename = pathParts[pathParts.length - 1] || 'mod.jar';
+    const matched = f.hashes?.sha1 ? versionByHash[f.hashes.sha1] : undefined;
+    const proj = matched?.project_id ? projectMap.get(matched.project_id) : undefined;
+    const primaryFile =
+      matched?.files?.find((file) => file.primary) || matched?.files?.[0];
+
+    importedMods.push({
+      projectId: matched?.project_id || generateId('mrpack'),
+      slug: proj?.slug,
+      name: proj?.title || filename.replace('.jar', ''),
+      description: proj?.description || 'Imported from .mrpack',
+      icon_url: proj?.icon_url,
+      author: proj?.author,
+      type: proj
+        ? contentCategoryFromProject(proj)
+        : contentCategoryFromPath(f.path),
+      category: proj
+        ? primaryCategoryId(proj.display_categories, proj.categories)
+        : undefined,
+      versionId: matched?.id,
+      versionNumber: matched?.version_number || 'mrpack',
+      versionType: matched?.version_type || 'release',
+      fileUrl: downloadUrl || primaryFile?.url || '',
+      filename
+    });
+  }
+
+  return importedMods;
+}
+
+/**
+ * **P12-D2 / D-3 の先行構造**: 展開した収録物からロック情報を作る。
+ *
+ * `lockedVersions` (ModpackSource) は「導入時点で Modpack が指定していた
+ * version」を保持する。P12-D3 の Sync 側競合検出が「導入時の指定」と
+ * 「Profile の現在値」を突き合わせるための基準。
+ *
+ * Modrinth 照合できなかったファイル (`mrpack-…` 内部 id) は問い合わせ対象に
+ * ならないためロックにも含めない。
+ * @returns versionId が判明している項目のみの map。無ければ空オブジェクト
+ */
+export function modpackLocksFromItems(
+  items: readonly ProjectItem[]
+): NonNullable<ModpackSource['lockedVersions']> {
+  const locks: NonNullable<ModpackSource['lockedVersions']> = {};
+  for (const item of items) {
+    if (!item.versionId || item.projectId.startsWith('mrpack-')) continue;
+    locks[item.projectId] = {
+      versionId: item.versionId,
+      ...(item.versionNumber ? { versionNumber: item.versionNumber } : {})
+    };
+  }
+  return locks;
 }
 
 /**

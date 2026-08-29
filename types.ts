@@ -215,6 +215,15 @@ export interface ModpackSource {
   versionNumber?: string;
   /** Import した時刻 (Date.now) */
   importedAt: number;
+  /**
+   * **P12-D2 / D-3 の先行構造 (2026-08-29 ユーザー確定)**:
+   * 「導入時点で Modpack が指定していた収録物のバージョン」(projectId → version)。
+   *
+   * P12-D3 (Sync Preview の競合検出・適用) が「Profile の現在値」と
+   * 「導入時の指定」を突き合わせて競合を判定するための基準。
+   * Discover 追加 / .mrpack Import の両方で記録する。
+   */
+  lockedVersions?: Record<string, { versionId?: string; versionNumber?: string }>;
 }
 
 export interface ModrinthHit {

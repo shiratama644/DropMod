@@ -8,13 +8,15 @@ import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import {
   environmentFromMrpack,
+  expandMrpackFiles,
   MANAGED_OVERRIDE_DIRS,
+  modpackLocksFromItems,
   mrpackOverridesToManaged,
   OVERRIDES_DIRS,
   parseMrpackOverrides,
   promoteModpackRecords
 } from '@/lib/env/mrpack';
-import type { ManagedFileRecord, MrpackIndex } from '@/types';
+import type { ManagedFileRecord, ModrinthProject, ModrinthVersion, MrpackIndex, ProjectItem } from '@/types';
 import { calculateSha1 } from '@/lib/utils/hash';
 
 const NOW = 1_700_000_000_000;
@@ -287,5 +289,137 @@ describe('定数の整合性', () => {
 
   it('client-overrides を対象に含める', () => {
     expect([...OVERRIDES_DIRS]).toContain('client-overrides');
+  });
+});
+
+// ============================================================================
+// P12-D2: expandMrpackFiles (files[] → ProjectItem[]) / modpackLocksFromItems
+// ============================================================================
+
+function makeVersion(id: string, projectId: string, filename: string): ModrinthVersion {
+  return {
+    id,
+    project_id: projectId,
+    author_id: 'author',
+    featured: true,
+    name: `${projectId}-${id}`,
+    version_number: `1.0.0-${id}`,
+    date_published: '2026-01-01T00:00:00Z',
+    downloads: 1,
+    version_type: 'release',
+    files: [
+      { url: `https://cdn.example/${projectId}/${filename}`, filename, primary: true, size: 10 }
+    ],
+    game_versions: ['1.21.1'],
+    loaders: ['fabric'],
+    dependencies: []
+  };
+}
+
+function makeProject(id: string): ModrinthProject {
+  return {
+    id,
+    slug: `slug-${id}`,
+    title: `Title ${id}`,
+    description: 'desc',
+    project_type: 'mod',
+    display_categories: ['performance']
+  } as ModrinthProject;
+}
+
+function indexWithFiles(
+  files: Array<{ path: string; sha1: string }>
+): MrpackIndex {
+  return {
+    formatVersion: 1,
+    game: 'minecraft',
+    name: 'Test Pack',
+    versionId: '1.0.0',
+    dependencies: { minecraft: '1.21.1', 'fabric-loader': '0.16.0' },
+    files: files.map((f) => ({
+      path: f.path,
+      hashes: { sha1: f.sha1 },
+      env: { client: 'required', server: 'required' },
+      downloads: [`https://cdn.example/dl/${f.sha1}`],
+      fileSize: 10
+    }))
+  };
+}
+
+describe('expandMrpackFiles (P12-D2)', () => {
+  it('sha1 照合 → ProjectItem 展開 (projectId / versionId / カテゴリ)', async () => {
+    const items = await expandMrpackFiles(
+      indexWithFiles([{ path: 'mods/sodium.jar', sha1: 'sha-sodium' }]),
+      {
+        fetchVersions: (async () => ({
+          'sha-sodium': makeVersion('ver-sodium', 'proj-sodium', 'sodium.jar')
+        })) as never,
+        fetchProjects: (async (endpoint: string, ids: string[]) => {
+          expect(endpoint).toBe('/projects');
+          expect(ids).toEqual(['proj-sodium']);
+          return [makeProject('proj-sodium')];
+        }) as never
+      }
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      projectId: 'proj-sodium',
+      versionId: 'ver-sodium',
+      type: 'mod',
+      filename: 'sodium.jar',
+      fileUrl: 'https://cdn.example/dl/sha-sodium'
+    });
+  });
+
+  it('照合できないファイルは内部 id (mrpack-) + ダウンロード URL で継続する (API 失敗を止めない)', async () => {
+    const items = await expandMrpackFiles(
+      indexWithFiles([{ path: 'mods/unknown.jar', sha1: 'sha-x' }]),
+      {
+        fetchVersions: (async () => ({})) as never,
+        fetchProjects: (async () => []) as never
+      }
+    );
+    expect(items[0]?.projectId).toMatch(/^mrpack-/);
+    expect(items[0]?.fileUrl).toBe('https://cdn.example/dl/sha-x');
+  });
+
+  it('files が無ければ空配列', async () => {
+    const items = await expandMrpackFiles({ formatVersion: 1, game: 'minecraft' }, {
+      fetchVersions: (async () => ({})) as never,
+      fetchProjects: (async () => []) as never
+    });
+    expect(items).toEqual([]);
+  });
+});
+
+describe('modpackLocksFromItems (P12-D2 / D-3 先行構造)', () => {
+  const items: ProjectItem[] = [
+    {
+      projectId: 'proj-a',
+      versionId: 'ver-a',
+      versionNumber: '1.0.0',
+      name: 'A',
+      type: 'mod'
+    },
+    {
+      // versionId が無ければロック対象外 (最新安定版追従扱い)
+      projectId: 'proj-b',
+      name: 'B',
+      type: 'mod'
+    },
+    {
+      // Modrinth 照合できなかった内部 id もロック外
+      projectId: 'mrpack-abc',
+      versionId: 'ver-x',
+      name: 'C',
+      type: 'mod'
+    }
+  ];
+
+  it('versionId 判明分だけ projectId → version の map を作る', () => {
+    expect(modpackLocksFromItems(items)).toEqual({
+      'proj-a': { versionId: 'ver-a', versionNumber: '1.0.0' }
+    });
   });
 });

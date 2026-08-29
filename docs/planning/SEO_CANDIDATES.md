@@ -1,10 +1,9 @@
 # SEO 改善候補リスト (候補レジストリ)
 
-> 対応 task-list ID: `SEO-1` (2-2 / 2-3 / 2-6〜。Phase 12 完了後に再開) ・
-> `SEO-2` (2-1 重複コンテンツ対策のみ。**依存なし・早期実施推奨**)
-> — 2026-08-27 に 2-1 を `SEO-2` として依存切り離し ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 保留** (2026-08-24 選定 / Phase 12 完了後に再開。ただし **2-1 (重複対策) のみ早期実施推奨**)
+> 対応 task-list ID: `SEO-1` (2-2 / 2-3 / 2-6〜) ・ `SEO-2` (2-1)
+> **Phase 13 の実施計画書は [PHASE13_PLAN.md](./PHASE13_PLAN.md)** (2026-08-30:
+> 旧 CurseForge Phase 13 は `.archive/docs/planning/PHASE13_PLAN.md` へ退避)。
+> 本書は候補レジストリ。着手用 DoD は PHASE13_PLAN.md。
 
 本書は SEO 改善の**候補と優先度の記録**。着手時は task-list.md に個別 ID を採番し、
 _TEMPLATE.md 形式の計画書を起こす。

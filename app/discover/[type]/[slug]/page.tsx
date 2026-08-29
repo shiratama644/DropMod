@@ -2,10 +2,18 @@
 // soft nav 時は @modal/(.)[slug] が Intercept するのでこちらは直接 URL/共有/リロード時のみ。
 
 import { ModDetailModalShell } from '@/components/ModDetailModalShell';
-import { fetchProjectDetailData } from '@/lib/server/project-detail';
+import {
+  buildDiscoverModalMetadata,
+  fetchProjectDetailData
+} from '@/lib/server/project-detail';
 
 interface Params {
   params: Promise<{ type: string; slug: string }>;
+}
+
+export async function generateMetadata({ params }: Params) {
+  const { type, slug } = await params;
+  return buildDiscoverModalMetadata(type, slug);
 }
 
 export default async function DiscoverModalDirectPage({ params }: Params) {

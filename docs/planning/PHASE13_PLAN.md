@@ -1,97 +1,102 @@
-# Phase 13: CurseForge 完全対応
+# Phase 13: SEO 改善（候補レジストリの実施）
 
-> 対応 task-list ID: `P13-A` / `P13-B` ([docs/task-list.md](../task-list.md))
+> 対応 task-list ID: `SEO-2` / `SEO-1` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 保留・延期** (2026-08-29 ユーザー確定: **CurseForge API キー未取得のため延期**。
-> API キー取得後に再開。再開時は Phase 12 完了後に詳細計画を策定する — 本書は暫定版)
+> **状態: 着手** (2026-08-30 ユーザー確定: 旧 Phase 13 CurseForge 計画は
+> `.archive/docs/planning/PHASE13_PLAN.md` へ退避。Phase 13 の正本は
+> [SEO_CANDIDATES.md](./SEO_CANDIDATES.md) の実施計画である本書)
+>
+> 候補の詳細・優先度表は SEO_CANDIDATES.md を継承する。本書は着手用 DoD。
 
 ## 1. 開始前確認
 
-- Phase 12 完了 (Provider 抽象化 + `ModrinthProvider` 実装済み) を確認
-- **Phase 12 の実装経験を踏まえて本書を改訂してから着手する**
-- CurseForge API 利用規約 / API key 運用を確認
+- CurseForge 計画が `.archive/docs/planning/PHASE13_PLAN.md` にあること
+- `SEO-2` は依存なし。`SEO-1` は 2-2 以降で Phase 12 完了後でも可
+- AGENT.md §6 / `.agent/skills/routing-and-pages.md`
 
 ## 2. 目的 (Why)
 
-Phase 12 で Provider 抽象化 (`CurseForgeProvider` stub) を準備済み。Phase 13 では
-**`CurseForgeProvider` を完全実装**し、以下を提供する:
-
-1. CurseForge Mod / RP / Shader の Import (fingerprint 照合)
-2. CurseForge Modpack (.zip) の完全 Import
-3. CurseForge Modpack の更新検知 + Sync
-
-**Phase 12 の原則を継承**: 不正確な推測による誤マッチングは絶対に行わない。
-危険パターン (ユーザー方針 2026-08-24: 「不正確な推測による自動マッチングより、
-未対応として安全に止めることを優先する」):
-- 同名 Mod で違う project (Modrinth "Sodium" vs CurseForge "Sodium Extra")
-- 別 version が入る (0.5.9 のつもりが 0.6.0 になる)
-
-→ CurseForge API + **Murmur2 fingerprint** による正確な照合のみで実装する。
+同一プロジェクトにプレビュー URL と詳細 URL が並立し、検索エンジンが順位を
+分散させる。詳細 `/<型>/<slug>` だけを index 対象にし、プレビュー直接 URL は
+辿れても索引しない。
 
 ## 3. 変更範囲 (Scope)
 
 変更対象:
-- `app/api/curseforge/[...path]/route.ts` (API proxy)
-- `lib/providers/` (CurseForgeProvider) / Murmur2 計算 (Web Worker)
-- Import フロー・Modpack Import・更新検知 (Phase 12 の Provider IF に乗せる)
+
+- `app/discover/[type]/[slug]/page.tsx` — 直接アクセス用プレビュー
+- `lib/server/project-detail.ts` — メタ生成の純関数（テスト可能に）
+- `docs/task-list.md` / 本書 §12 / `docs/README.md`
+- 回帰テスト
 
 変更しない (境界外):
-- Modrinth 側のロジック変更 (Provider IF のみ共有)
+
+- `app/[projectType]/[slug]/page.tsx` の index（詳細は正。noindex しない）
+- `/discover/<複数>` 一覧の index
+- `@modal/(.)[slug]`（Intercept。クローラは直接ページを GET する）
+- JSON-LD / 動的 OGP / sitemap 拡充 → `SEO-1`
+- CurseForge → アーカイブ済み。再開は API キー取得後に別計画
 - `.archive/vite/` 不変
 
 ## 4. 禁止事項
 
-- 名前ベースの推測マッチングをしない (Murmur2 + API 照合のみ)
-- CurseForge 利用規約に反するキャッシュ・API key のクライアント露出をしない
+- 詳細ページ (`/<型>/<slug>`) に noindex を付けない（task-list 旧 DoD は誤記）
+- 一覧を noindex しない
+- Intercept ルートに `revalidate` 等のセグメント設定を置かない
+- SEO-1 を同時に実装しない
 
-## 5. 完了条件 (DoD) — 暫定
+## 5. 完了条件 (DoD)
 
-- [ ] CurseForge 個別 Mod / RP / Shader が fingerprint 照合で Import できる
-- [ ] CurseForge Modpack (.zip) が完全 Import できる
-- [ ] Provider 混在 Profile (Modrinth + CurseForge) の Sync が動作する
-- [ ] Modpack 更新検知 + Sync が動作する
-- [ ] 4 検証全 pass・`.archive/vite/` 無変更
-- [ ] 詳細計画を本形式で改訂済み (Phase 12 完了時)
+- [x] `/discover/<複数>/<slug>` の metadata が `robots: { index: false, follow: true }`
+- [x] 同一ページの canonical が `/<型>/<slug>`（詳細）を指す
+- [x] 詳細ページ・一覧の robots は従来どおり index 可能
+- [x] 純関数の unit test が上記を固定する
+- [x] 4 検証 pass・`.archive/vite/` 無変更・task-list 更新
 
 ## 6. テスト方法
 
 | 層 | 実施 | 確認内容 |
 |---|---|---|
-| Unit | 必須 | Murmur2 計算・Provider 変換 |
-| E2E (CI) | 必須 | Import → Sync 一貫フロー |
-| 実環境 | 必須 | 実 CurseForge ファイルでの照合 |
+| Unit (vitest) | 必須 | noindex + canonical パス |
+| Component | しない | メタは RSC |
+| E2E | しない | Sandbox 不可。HTML の robots は本番後 |
+| 実環境 | 本番後 | デプロイ後に meta robots を目視 |
 
 ## 7. 停止条件
 
-- CurseForge API の利用規約・認証まわりで判断が必要な場合
-- Murmur2 照合の精度に問題が発覚した場合 (推測マッチへの fallback は禁止)
+- 詳細まで noindex したくなる判断（ユーザー確認）
+- Intercept 側にも metadata が必要と分かった場合（通常不要）
 
 ## 8. 完了時に行うこと
 
-4 検証 → コミット (`feat(P13-A): …`) → task-list 更新 → DEPLOY-1 (Vercel 本番
-デプロイ) の着手判断。
+4 検証 → `feat(SEO-2): …` → task-list 更新。SEO-1 は勝手に始めない。
 
-## 9. サブタスク分割 (暫定)
+## 9. サブタスク分割
 
 | ID | テーマ | 主要成果物 | 依存 |
 |---|---|---|---|
-| P13-A | 基盤 + Provider 完成 | CF API proxy / Murmur2 Worker / 個別 Import | P12-C |
-| P13-B | Modpack + 更新検知 | .zip Import / 混在 Profile Sync | P13-A |
+| SEO-2 | 重複対策 (候補 2-1) | モーダル直接ページ noindex + canonical | なし |
+| SEO-1 | JSON-LD / 動的 OGP / 低優先 | 候補 2-2 以降 | SEO-2 完了後に判断 |
 
-## 10. 設計詳細・仕様 (継承)
+## 10. 設計詳細・仕様
 
-- **CurseForge API**: proxy Route Handler 経由 (API key はサーバ側のみ。
-  Modrinth プロキシと同じ CORS / レート制限方針を適用)
-- **Murmur2**: CurseForge の fingerprint アルゴリズム。Web Worker で並列計算
-  (Phase 11 の SHA-1 Worker と同じ設計)
-- **Modpack (.zip)**: `manifest.json` + overrides 構造のパーサ
-- **Provider 混在 Profile**: `ProjectItem.source` で Modrinth / CurseForge を区別
+クローラは `/discover/mods/sodium` を GET すると
+`app/discover/[type]/[slug]/page.tsx` が返る（Intercept ではない）。
+
+```ts
+robots: { index: false, follow: true }
+alternates: { canonical: '/mod/sodium' }
+```
+
+`follow: true` で詳細・一覧へのリンクは辿れる。sitemap は既に詳細 URL のみ。
 
 ## 11. リスク・Gotchas
 
-- API key の入手とレート制限 (CurseForge 側) — 着手前にユーザー確認
-- 詳細は Phase 12 実装後の改訂時に充実させる
+- Next.js のセグメント設定はリテラル必須。本タスクでは置かない
+- 未知の discover segment では canonical を付けず noindex のみ
 
-## 12. 実績と証拠
+## 12. 実績と証拠 (実装後に記入)
 
-未着手 (保留)。Phase 12 完了後に本書を改訂してから task-list を `未着手` に戻す。
+| ID | コミット | テスト | 実測値・備考 |
+|---|---|---|---|
+| SEO-2 | (本コミット) | typecheck / biome / 1235 tests / build | noindex+follow + canonical。ISR は ECONNRESET フォールバック |

@@ -32,12 +32,12 @@
 | P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
 | P12-E2E | 再検証待ち (90%) | CI `workflow_dispatch` で成功/失敗/復帰の再実行 |
 | P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
-| P13-A / P13-B | 保留 | CurseForge API キー取得後 |
+| P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
 | UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
 | SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
-| SEO-2 | 未着手 | モーダル直接 URL の noindex (`app/` に noindex 無しを確認) |
+| SEO-2 | ローカル検証済み | noindex+canonical をプレビュー直接 URL に付与 |
 | SEO-1 | 保留 | Phase 12 完了後に実施判断 |
-| DEPLOY-1 | 未着手 | P12-C + P13-B 完了後の Vercel 本番 |
+| DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
 
 進行中の AI 実装タスクは **なし** (次のコード作業候補は SEO-2 または P12-E2E の CI 再実行依頼)。
 
@@ -159,15 +159,16 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | P12-D1B | 設定ページ「環境との同期」の紐付けでも台帳 seed | ローカル検証済み | 100% | P12-D1 | `useEnvironmentLink.link()` 成功時に §10.5 の artifact 台帳 seed (expandProfileToManaged + merge + syncManagedFiles) を実行。新規作成 (D1) と同じ整合性。失敗は warning のみ (紐付けは成功扱い) | `c7f8db8` / docs `cfaa0f1` / typecheck・biome・unit 1216 passed・build pass |
 
-### Phase 13: CurseForge 完全対応 — 延期 (2026-08-29)
+### Phase 13: SEO 改善 (2026-08-30 再定義)
 
-> **延期理由 (ユーザー確定 2026-08-29)**: まだ CurseForge の API キーを取得していないため。
-> API キー取得後に再開する。再開時の依存は従来どおり P12-C 完了。
+> 旧 Phase 13 (CurseForge) はユーザー指示で
+> `.archive/docs/planning/PHASE13_PLAN.md` へ退避。ID `P13-A` / `P13-B` は再利用せず対象外。
+> 実施計画の正本: `docs/planning/PHASE13_PLAN.md`（候補表は `SEO_CANDIDATES.md`）。
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
-| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
+| P13-A | CurseForge Provider (API proxy + Murmur2) | 対象外 | - | - | 計画アーカイブ。API キー取得後に新 ID で再開 | `.archive/docs/planning/PHASE13_PLAN.md` |
+| P13-B | CurseForge Modpack + 混在 Profile | 対象外 | - | P13-A | 同上 | 同上 |
 
 ---
 
@@ -220,7 +221,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
 | DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
 | SEO-1 | SEO 改善候補 (JSON-LD 2-2 / 動的 OGP 2-3 / 低優先 2-6〜) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
-| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | 未着手 | 0% | - | `/{type}/[slug]` 直接 URL に noindex・一覧とモーダルは index 維持 | SEO_CANDIDATES.md 2-1 (🥇高 / Effort 極小 / 早期実施推奨) |
+| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | ローカル検証済み | 100% | - | **`/discover/<複数>/<slug>`** に noindex+follow。canonical は `/<型>/<slug>`。一覧と詳細は index 維持 | 2026-08-30 typecheck + biome + 1235 tests + build |
 
 ---
 
@@ -240,5 +241,5 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | VER-1 | E2E 全 spec の CI green 確認 | 完了 | 100% | P11-E2E | GitHub Actions で全 spec green | run `33071105483` (2026-08-27, 74 tests pass) |
 | VER-2 | CSP Enforce の実環境表示確認 | 実環境検証待ち | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | ユーザー実施 |
-| DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C, P13-B | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針 (最終ステップ) |
+| DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針。旧 P13-B (CF) 依存は解除 |
 | EXP-1 | Vite 版資産の .archive 保管維持 | 完了 (継続) | 100% | - | 全タスクで .archive/vite 無変更 | 各コミットの検証チェックリスト |

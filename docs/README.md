@@ -21,7 +21,7 @@ docs/
 │   ├── PHASE10_5_PLAN.md               # Phase 10.5 (Emergency: カバレッジ回復 — vitest 4 対応)
 │   ├── PHASE11_PLAN.md                 # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
-│   ├── PHASE13_PLAN.md                # Phase 13 (CurseForge 完全対応)
+│   ├── PHASE13_PLAN.md                # Phase 13 (SEO。旧 CurseForge は .archive/docs/planning/)
 │   ├── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
 │   └── SEO_CANDIDATES.md              # SEO 改善候補リスト (Phase 11/12 後に再開、重複対策は早めに)
 ├── complete/                          # 完了レポート
@@ -61,8 +61,8 @@ docs/
 | 1 | [`task-list.md`](task-list.md) | 次に着手すべきタスクと依存・検証待ち項目の一覧 |
 | 2 | [`planning/_TEMPLATE.md`](planning/_TEMPLATE.md) | 計画書テンプレート (新規タスクはこの形式で計画) |
 | 3 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | **次フェーズ**: Sync (双方向書き込み) & Modrinth Modpack。§12 の設計論点を確定してから着手 |
-| 4 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | Phase 13: CurseForge 完全対応 (Murmur2 fingerprint + Modpack) |
-| 5 | [`planning/SEO_CANDIDATES.md`](planning/SEO_CANDIDATES.md) | SEO 候補 (2-1 重複コンテンツ対策のみ早期実施推奨) |
+| 4 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | **Phase 13**: SEO（2-1 noindex が SEO-2） |
+| 5 | [`planning/SEO_CANDIDATES.md`](planning/SEO_CANDIDATES.md) | SEO 候補レジストリ（実施 DoD は PHASE13_PLAN） |
 | 2 | [`audit/issues-phase9.md`](audit/issues-phase9.md) | 未修正の Low 優先度バグ (17 件、実害なしで放置中) |
 | 3 | [`audit/diff-phase9.md`](audit/diff-phase9.md) | Phase 9 実装と計画書の意図的な齟齬 (背景理解に有用) |
 

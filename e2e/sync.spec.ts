@@ -118,9 +118,12 @@ async function importProfileWithKnownMod(page: Page, errs: string[]): Promise<vo
     buffer
   });
 
+  // ZIP Import は NewProfileModal を **read-only の解析ビュー**で開く。
+  // このときのタイトルは「ZIPからプロファイル作成」で、「新規プロファイル作成」ではない
+  // (components/NewProfileModal.tsx:397-403 の 3 分岐)。
   const dialog = page
     .getByRole('dialog')
-    .filter({ hasText: /新規プロファイル/ })
+    .filter({ hasText: /ZIPからプロファイル作成/ })
     .first();
   try {
     await dialog.waitFor({ state: 'visible', timeout: 10_000 });

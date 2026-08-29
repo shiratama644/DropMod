@@ -108,14 +108,13 @@ export async function buildDetailMetadata(
         title: fullTitle,
         description,
         type: 'article',
-        url: canonicalPath,
-        images: project.icon_url ? [{ url: project.icon_url }] : undefined
+        url: canonicalPath
+        // og:image は opengraph-image.tsx (1200×630) が担当。96px アイコンは使わない。
       },
       twitter: {
-        card: 'summary',
+        card: 'summary_large_image',
         title: fullTitle,
-        description,
-        images: project.icon_url ? [project.icon_url] : undefined
+        description
       }
     };
   } catch (e) {

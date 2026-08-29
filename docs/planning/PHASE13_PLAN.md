@@ -76,7 +76,7 @@
 | ID | テーマ | 主要成果物 | 依存 |
 |---|---|---|---|
 | SEO-2 | 重複対策 (候補 2-1) | モーダル直接ページ noindex + canonical | なし |
-| SEO-1 | JSON-LD / 動的 OGP / 低優先 | 候補 2-2 以降 | SEO-2 完了後に判断 |
+| SEO-1 | JSON-LD / パンくず / 動的 OGP / sitemap / 見出し | 候補 2-2 以降 | SEO-2 |
 
 ## 10. 設計詳細・仕様
 
@@ -99,4 +99,5 @@ alternates: { canonical: '/mod/sodium' }
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
-| SEO-2 | (本コミット) | typecheck / biome / 1235 tests / build | noindex+follow + canonical。ISR は ECONNRESET フォールバック |
+| SEO-2 | `080ede1` | typecheck / biome / 1235 tests / build | noindex+follow + canonical |
+| SEO-1 | (本コミット) | typecheck / biome / 1244 tests / build | JSON-LD / OG 1200×630 / sitemap 4 型 |

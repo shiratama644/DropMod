@@ -53,7 +53,13 @@ import { useAppAction } from '@/lib/store/appActions';
 import { useToastStore } from '@/lib/store/toast';
 import { useModpackAdd } from '@/hooks/useModpackAdd';
 import { ModpackImportModal } from './ModpackImportModal';
-import { discoverPathFromProjectType, modrinthProjectUrl } from '@/lib/constants/search';
+import {
+  discoverPathForType,
+  discoverPathFromProjectType,
+  modrinthProjectUrl,
+  parseProjectType
+} from '@/lib/constants/search';
+import { projectTypeLabel } from '@/lib/seo/jsonld';
 
 // -----------------------------------------------------------------------------
 // Props
@@ -274,15 +280,32 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
 
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-8 flex-1 w-full">
-      {/* ========== パンくず ========== */}
+      {/* ========== パンくず (SEO-1 / 2-4) ========== */}
       <nav aria-label="パンくず" className="mb-4">
-        <Link
-          href="/discover/mods"
-          className="text-xs theme-text-muted hover:text-emerald-500 inline-flex items-center gap-1.5 transition"
-        >
-          <i className="fa-solid fa-arrow-left" aria-hidden />
-          Mod 一覧に戻る
-        </Link>
+        <ol className="flex flex-wrap items-center gap-1.5 text-xs theme-text-muted">
+          <li>
+            <Link href="/" className="hover:text-emerald-500 transition">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden className="theme-text-muted">
+            /
+          </li>
+          <li>
+            <Link
+              href={discoverPathForType(parseProjectType(project.project_type))}
+              className="hover:text-emerald-500 transition"
+            >
+              {projectTypeLabel(parseProjectType(project.project_type))}
+            </Link>
+          </li>
+          <li aria-hidden className="theme-text-muted">
+            /
+          </li>
+          <li className="theme-text-secondary font-semibold truncate max-w-[12rem] sm:max-w-xs">
+            {project.title}
+          </li>
+        </ol>
       </nav>
 
       {/* ========== ヒーロー ========== */}

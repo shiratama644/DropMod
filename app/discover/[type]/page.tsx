@@ -67,6 +67,7 @@ export default async function DiscoverTypePage({
 
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
+      <h1 className="sr-only">{TITLES[type as DiscoverSegment].title}</h1>
       <Suspense fallback={null}>
         <HomeInteractive
           initialHits={hits}

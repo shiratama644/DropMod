@@ -148,6 +148,15 @@ describe('ModDetailPageView smoke', () => {
     ).not.toThrow();
   });
 
+  it('パンくずが型別一覧へリンクする', () => {
+    const html = renderToString(
+      <ModDetailPageView project={fullProject} versions={[]} slug="sodium" />
+    );
+    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/discover/mods"');
+    expect(html).toContain('パンくず');
+  });
+
   it('project=null なら「読み込めませんでした」フォールバック UI を表示', () => {
     const { container } = render(
       <ModDetailPageView project={null} versions={[]} slug="ghost" />

@@ -263,6 +263,8 @@ export interface ModrinthHit {
   icon_url: string | null;
   /** 検索ヒットのヘッダー画像 (表示形式「最大」で使用) */
   featured_gallery?: string | null;
+  /** Modrinth search の date_modified (ISO)。sitemap lastmod 用 */
+  date_modified?: string;
 }
 
 export interface ModrinthGalleryImage {

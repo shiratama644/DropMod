@@ -248,6 +248,22 @@ const nextConfig = {
         // クロスオリジン参照を許可
         source: '/:path*.(png|jpg|jpeg|gif|webp|avif|svg|ico|webmanifest)',
         headers: imageCorsHeaders
+      },
+      {
+        source: '/:projectType/:slug/opengraph-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/:projectType/:slug/twitter-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/opengraph-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/twitter-image',
+        headers: imageCorsHeaders
       }
     ];
   },

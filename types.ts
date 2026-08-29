@@ -223,7 +223,28 @@ export interface ModpackSource {
    * 「導入時の指定」を突き合わせて競合を判定するための基準。
    * Discover 追加 / .mrpack Import の両方で記録する。
    */
-  lockedVersions?: Record<string, { versionId?: string; versionNumber?: string }>;
+  lockedVersions?: Record<string, ModpackLockedVersion>;
+}
+
+/**
+ * **P12-D3**: 導入時に Modpack が指定していた収録物 1 件のロック情報。
+ *
+ * `versionId` / `versionNumber` は競合判定に、`fileUrl` / `filename` /
+ * `sha1` / `size` / `path` は「Modpack 版に置換」を選んだときに Profile の
+ * `ProjectItem` を**導入時の実体情報込みで**復元するために使う
+ * (Sync のダウンロード元・差分判定が正しく動くようにするため)。
+ */
+export interface ModpackLockedVersion {
+  versionId?: string;
+  versionNumber?: string;
+  /** 導入時のダウンロード URL (Modrinth CDN) */
+  fileUrl?: string;
+  filename?: string;
+  /** 導入時の fingerprint (.mrpack modrinth.index.json の hashes.sha1) */
+  sha1?: string;
+  size?: number;
+  /** 導入時に Modpack が指定した環境ルート相対パス (例: 'mods/sodium.jar') */
+  path?: string;
 }
 
 export interface ModrinthHit {
@@ -319,6 +340,12 @@ export interface ModrinthVersionFile {
   filename: string;
   primary: boolean;
   size: number;
+  /**
+   * **P12-D3**: Modrinth API はファイルごとの hash を返す。
+   * 既存呼び出しでは不要だったが、ロック情報 (lockedVersions) の sha1 として
+   * 導入時に記録するために追加 (optional なので既存データ・テストに影響なし)。
+   */
+  hashes?: { sha1?: string; sha512?: string };
 }
 
 export interface ModrinthDependency {

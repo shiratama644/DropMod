@@ -155,7 +155,9 @@
 |---|---|---|---|
 | P12-D1 | フォルダ自動紐付け + 台帳 seed | linkPickedDirectory / handleCreateProfile 拡張 / NewProfileModal | P12-B |
 | P12-D2 | Modpack 内容展開 + インポート時競合 UI + ロック構造 | expandMrpackFiles / modpackAdd / ModpackImportModal / モーダル分岐 | P12-D1 |
-| P12-D3 | Sync Preview の競合 (D-3) | **別タスク (今回はデータ構造のみ)** | P12-D2 |
+| P12-D3-A | Sync 競合検出のデータ構造・エンジン (D-3 検出側) | lockedVersions 拡張 (fileUrl/sha1 等) / diff.ts conflicts / syncPrep replan 情報 | P12-D2 |
+| P12-D3-B | Sync Preview 競合 UI + 適用 (D-3 選択側) | SyncPreviewModal 競合セクション / useSync.apply 拡張 / applyLockedVersionsToProfile | P12-D3-A |
+| P12-D1B | 設定ページ紐付け時の台帳 seed | useEnvironmentLink.link 拡張 | P12-D1 |
 
 ## 10. 設計詳細・仕様
 
@@ -212,10 +214,63 @@ export interface ModpackSource {
 }
 ```
 
-### 10.4 何もしないこと (今回)
+### 10.4 P12-D3: Sync Preview の競合 (D-3) 検出・適用 — 2026-08-29 追記
 
-- SyncPreviewModal / diff.ts は無変更。競合セクション (D-3) の UI 追加・検出・適用は
-  全て P12-D3。
+> ユーザー再回答 (2026-08-29): 「今回はインポート時まで。Sync 側は別タスク」
+> → データ構造 (lockedVersions) のみ先行。**本節はその別タスク (P12-D3) の仕様**。
+
+**検出 (D-3 の実装メモ「競合判定は projectId 一致 + versionId 相違」を適用)**:
+
+- 判定基準は **`modpackSource.lockedVersions`** (導入時点で Modpack が指定していた
+  収録物のバージョン) と **Profile の現在値** の突き合わせ。
+  - `lock.versionId` が無い → ロック情報不十分 → 競合にしない (誤検出防止)
+  - `item.versionId === lock.versionId` → 一致 → 非競合
+  - それ以外 (Profile 未設定・別バージョン) → **競合**
+- Modpack 本体の新バージョンとの比較 (パック更新自体の取り込み) は本タスクの
+  範囲外。`lockedVersions` が更新されるフロー (将来の Modpack 更新適用) まで
+  「導入時の指定」とのズレを検出する。
+
+**データ構造 (P12-D3-A)**:
+
+- `ModpackSource.lockedVersions` の値を `ModpackLockedVersion` に拡張:
+  `versionId / versionNumber / fileUrl / filename / sha1 / size / path`。
+  replace 選択時に Profile の ProjectItem を**導入時の実体情報込みで**復元するため
+  (Sync は Profile の fileUrl / artifact.sha1 をダウンロード元・差分判定に使う)。
+- `ModrinthVersionFile.hashes` (optional) を追加し、`expandMrpackFiles` が
+  `artifact = { sha1: files[].hashes.sha1, path: files[].path, size: files[].fileSize }`
+  を設定する (Discover 追加分もロック情報が完全になる)。
+- `diff.ts`: `SyncPlan.conflicts: SyncConflictEntry[]` を追加 (6 分類化)。`counts.conflict`。
+- `syncPrep.ts`: ready outcome に `localEntries` / `managed` を追加。
+  replace 選択後に `computeSyncPlan` を**再計算**するため (resolveContent が
+  更新後 Profile から fileUrl を引く + 差分が update/addition に正しく変わる)。
+
+**適用 (P12-D3-B)**:
+
+- `applyLockedVersionsToProfile(profile, choices)` (pure): replace 対象の
+  ProjectItem をロック版 (versionId / versionNumber / fileUrl / filename /
+  artifact.sha1/path/size) に復元。keep は不変。
+- `useSync.apply(excludedDeletionPaths, conflictChoices)`:
+  1. replace があれば更新後 Profile を構築 → `computeSyncPlan` で plan 再計算
+  2. `applySync({ profile: 更新後, prepared: { ...prepared, plan } })`
+  3. Sync が **completed のときだけ** Profile を Zustand へ反映 (rollback 時は
+     元のまま = ファイルと Profile の整合を保つ)
+- `SyncPreviewModal`: 競合セクションを「更新」の下に追加。競合ごとに
+  `[ユーザー版を残す]` (既定) / `[Modpack 版に置換]`。
+  `onApply(excludedDeletionPaths, conflictChoices)`。
+
+### 10.5 P12-D1B: 設定ページ紐付け時の台帳 seed
+
+- `useEnvironmentLink.link()` 成功後、`setProfiles` で更新した Profile に対して
+  `expandProfileToManaged` + `mergeManagedRecords` (既存 source/managedAt/syncedAt 保護)
+  + `syncManagedFiles` を実行 (P12-D1 の新規作成フローと同じ)。
+- 既に Profile 作成済みで台帳が無いケース (P12-B 以前から存在する Profile) を
+  紐付け時に補完する。台帳 seed 失敗は toast warning のみ (紐付け自体は成功扱い。
+  台帳なし = 安全側 = 削除対象外)。
+
+### 10.6 何もしないこと (今回)
+
+- Modpack 本体の新バージョン取得・`lockedVersions` の更新フローは未実装のまま
+  (将来タスク)。D-3 は「導入時のロック」とのズレ検出に限定。
 - Modpack の「削除 (導入済み)」ボタンは D-6 のハブ導線が担当。モーダルでは
   導入済み (modpackSource.projectId 一致) のときは「導入済み」無効表示 +
   Modpack ハブへの案内 (削除操作は実装しない)。

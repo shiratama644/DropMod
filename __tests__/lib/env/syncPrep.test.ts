@@ -141,6 +141,11 @@ describe('prepareSync', () => {
       expect(result.rootName).toBe('.minecraft');
       // artifact の sha1 と実体の sha1 が違う → update
       expect(result.plan.updates.map((u) => u.path)).toEqual(['mods/a.jar']);
+      // **P12-D3**: replace 選択後の plan 再計算用の入力も渡す
+      expect(result.localEntries).toEqual([
+        { category: 'mod', path: 'mods/a.jar', sha1: await sha1Of('a'), size: 1 }
+      ]);
+      expect(result.managed).toEqual([]);
     }
     // D-7: 権限は Sync 準備時に確認する
     expect(d.sink.calls).toContain('ensureWritable');

@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  applyLockedVersionsToProfile,
   applyModpackAddPlan,
   buildModpackAddPlan,
   type ModpackAddPlan
@@ -129,8 +130,18 @@ describe('applyModpackAddPlan', () => {
   it('lockedVersions は追加分・競合分の全収録物を記録する (keep でも残る = D-3 の基準)', () => {
     const next = applyModpackAddPlan(profile([item('sodium', 'v-user')]), plan, new Map(), PACK_META, 1);
     expect(next.modpackSource?.lockedVersions).toEqual({
-      'new-mod': { versionId: 'v1', versionNumber: 'v-v1' },
-      sodium: { versionId: 'v-pack', versionNumber: 'v-v-pack' }
+      'new-mod': {
+        versionId: 'v1',
+        versionNumber: 'v-v1',
+        fileUrl: 'https://cdn.example/new-mod/v1.jar',
+        filename: 'new-mod-v1.jar'
+      },
+      sodium: {
+        versionId: 'v-pack',
+        versionNumber: 'v-v-pack',
+        fileUrl: 'https://cdn.example/sodium/v-pack.jar',
+        filename: 'sodium-v-pack.jar'
+      }
     });
   });
 
@@ -150,5 +161,92 @@ describe('applyModpackAddPlan', () => {
     const next = applyModpackAddPlan(profile([]), plan, new Map(), PACK_META, 1);
     expect(next.resourcepacks).toBeUndefined();
     expect(next.shaderpacks).toBeUndefined();
+  });
+});
+
+describe('applyLockedVersionsToProfile (P12-D3 / §10.4)', () => {
+  const lockedProfile: Profile = {
+    ...profile([
+      {
+        ...item('sodium', 'v-user'),
+        versionNumber: 'v-v-user',
+        fileUrl: 'https://cdn.example/user.jar',
+        filename: 'user.jar',
+        artifact: { sha1: 'sha-user', path: 'mods/user.jar', size: 100 }
+      }
+    ]),
+    resourcepacks: [
+      { ...item('rp-a', 'rp-user'), type: 'resourcepack' }
+    ],
+    modpackSource: {
+      provider: 'modrinth',
+      projectId: 'pack-1',
+      name: 'Pack',
+      importedAt: 1,
+      lockedVersions: {
+        sodium: {
+          versionId: 'v-pack',
+          versionNumber: 'v-v-pack',
+          fileUrl: 'https://cdn.example/pack.jar',
+          filename: 'pack.jar',
+          sha1: 'sha-pack',
+          size: 200,
+          path: 'mods/pack.jar'
+        },
+        'rp-a': {
+          versionId: 'rp-pack',
+          versionNumber: 'rp-v-pack',
+          fileUrl: 'https://cdn.example/rp.zip',
+          filename: 'rp.zip',
+          sha1: 'sha-rp',
+          size: 50,
+          path: 'resourcepacks/rp.zip'
+        }
+      }
+    }
+  };
+
+  it('replace を選んだ projectId だけロック版に復元する (実体情報込み)', () => {
+    const next = applyLockedVersionsToProfile(
+      lockedProfile,
+      new Map([['sodium', 'replace']])
+    );
+    const sodium = next.mods.find((m) => m.projectId === 'sodium');
+    expect(sodium).toMatchObject({
+      versionId: 'v-pack',
+      versionNumber: 'v-v-pack',
+      fileUrl: 'https://cdn.example/pack.jar',
+      filename: 'pack.jar',
+      artifact: { sha1: 'sha-pack', path: 'mods/pack.jar', size: 200 }
+    });
+    // 未選択の resourcepack は不変
+    expect(next.resourcepacks?.[0]).toMatchObject({ versionId: 'rp-user' });
+    // keep は明示的でも不変
+    expect(
+      applyLockedVersionsToProfile(lockedProfile, new Map([['sodium', 'keep']]))
+    ).toBe(lockedProfile);
+  });
+
+  it('replace でもロックが無い projectId は変更しない (安全側)', () => {
+    const input = profile([item('solo', 'v1')]);
+    const next = applyLockedVersionsToProfile(input, new Map([['solo', 'replace']]));
+    expect(next).toBe(input);
+  });
+
+  it('resourcepacks / shaderpacks も横断して置換する', () => {
+    const next = applyLockedVersionsToProfile(
+      lockedProfile,
+      new Map([['rp-a', 'replace']])
+    );
+    expect(next.resourcepacks?.[0]).toMatchObject({
+      versionId: 'rp-pack',
+      fileUrl: 'https://cdn.example/rp.zip',
+      artifact: { sha1: 'sha-rp', path: 'resourcepacks/rp.zip', size: 50 }
+    });
+  });
+
+  it('元の Profile は変更しない (pure)', () => {
+    applyLockedVersionsToProfile(lockedProfile, new Map([['sodium', 'replace']]));
+    expect(lockedProfile.mods[0]).toMatchObject({ versionId: 'v-user' });
   });
 });

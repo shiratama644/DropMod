@@ -8,15 +8,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
+import { db, syncManagedFiles } from '@/lib/db/dexie';
 import { createFolderLink, releaseFolderLink } from '@/lib/env/link';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
-import type { LinkedSource, Profile } from '@/types';
+import type { LinkedSource, Profile, ProjectItem } from '@/types';
 
 vi.mock('@/lib/env/link', () => ({
   createFolderLink: vi.fn(),
   releaseFolderLink: vi.fn()
 }));
+
+// P12-D1B: seed 失敗ケースを再現するため dexie の 2 関数をモックでラップする
+vi.mock('@/lib/db/dexie', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/dexie')>();
+  return {
+    ...actual,
+    getManagedFiles: vi.fn(actual.getManagedFiles),
+    syncManagedFiles: vi.fn(actual.syncManagedFiles)
+  };
+});
 
 const mockCreate = vi.mocked(createFolderLink);
 const mockRelease = vi.mocked(releaseFolderLink);
@@ -40,8 +51,18 @@ const LINKED: LinkedSource = {
   linkedAt: 1_700_000_000_000
 };
 
+function modItem(overrides: Partial<ProjectItem> = {}): ProjectItem {
+  return {
+    projectId: 'sodium',
+    name: 'Sodium',
+    type: 'mod',
+    versionId: 'v1',
+    ...overrides
+  };
+}
+
 describe('useEnvironmentLink', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockRelease.mockResolvedValue(undefined);
     useProfilesStore.setState({
@@ -50,6 +71,11 @@ describe('useEnvironmentLink', () => {
       hasHydrated: true
     });
     useToastStore.setState({ toasts: [], enabled: true });
+    try {
+      await db.managedFiles.clear();
+    } catch {
+      // 空 DB は無視
+    }
   });
 
   it('supported は File System Access API の有無を反映する', () => {
@@ -202,6 +228,75 @@ describe('useEnvironmentLink', () => {
     expect(result.current.error).toBe('IndexedDB が使えません');
     // 失敗したので紐付けは残る
     expect(useProfilesStore.getState().profiles[0]?.linkedSource).toEqual(LINKED);
+  });
+
+  // ====================================================================
+  // P12-D1B (§10.5): 紐付け成功時の台帳 seed
+  // ====================================================================
+  it('**P12-D1B**: link 成功時に artifact を持つ Profile を台帳 seed する', async () => {
+    useProfilesStore.setState({
+      profiles: [
+        makeProfile({
+          mods: [
+            modItem({
+              artifact: { sha1: 'sha-1', path: 'mods/sodium.jar', size: 123 }
+            })
+          ]
+        })
+      ]
+    });
+    mockCreate.mockResolvedValue(LINKED);
+    const { result } = renderHook(() => useEnvironmentLink());
+
+    await act(async () => {
+      await result.current.link();
+    });
+
+    const records = await db.managedFiles.where('profileId').equals('p1').toArray();
+    expect(records).toEqual([
+      expect.objectContaining({
+        profileId: 'p1',
+        projectId: 'sodium',
+        path: 'mods/sodium.jar',
+        sha1: 'sha-1',
+        size: 123,
+        source: expect.any(String),
+        managedAt: expect.any(Number)
+      })
+    ]);
+    // 紐付けは成功のまま (seed 失敗と混同しない)
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'success' });
+  });
+
+  it('**P12-D1B**: artifact 無しの場合は台帳を空のまま (seed しない)', async () => {
+    mockCreate.mockResolvedValue(LINKED);
+    const { result } = renderHook(() => useEnvironmentLink());
+
+    await act(async () => {
+      await result.current.link();
+    });
+
+    expect(await db.managedFiles.where('profileId').equals('p1').count()).toBe(0);
+  });
+
+  it('**P12-D1B**: seed 失敗は warning のみで紐付けは成功扱い', async () => {
+    useProfilesStore.setState({
+      profiles: [makeProfile({ mods: [modItem({ artifact: { sha1: 'sha-1', path: 'mods/sodium.jar', size: 123 } })] })]
+    });
+    mockCreate.mockResolvedValue(LINKED);
+    vi.mocked(syncManagedFiles).mockRejectedValueOnce(new Error('IndexedDB が使えません'));
+    const { result } = renderHook(() => useEnvironmentLink());
+
+    await act(async () => {
+      await result.current.link();
+    });
+
+    expect(useProfilesStore.getState().profiles[0]?.linkedSource).toEqual(LINKED);
+    expect(result.current.error).toBeNull(); // 紐付け自体は成功
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: 'success' }),
+      expect.objectContaining({ type: 'warning' })
+    ]);
   });
 
   it('dismissError で error をクリアできる', async () => {

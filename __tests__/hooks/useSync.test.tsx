@@ -31,8 +31,9 @@ const EMPTY_PLAN: SyncPlan = {
   deletions: [],
   unchanged: [],
   unmanaged: [],
+  conflicts: [],
   totals: {
-    counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+    counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
     writeBytes: 0,
     removeBytes: 0,
     backupBytes: 0
@@ -50,7 +51,9 @@ function readyOutcome(writable = true) {
     sink: SINK,
     writable,
     writableReason: writable ? null : '書き込み権限がありません',
-    scanSkipped: []
+    scanSkipped: [],
+    localEntries: [],
+    managed: []
   };
 }
 
@@ -284,6 +287,168 @@ describe('useSync', () => {
       error: null,
       scanProgress: null,
       applyProgress: null
+    });
+  });
+});
+
+describe('useSync: P12-D3 (競合の replace フロー)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useProfilesStore.setState({
+      profiles: [sodiumProfile],
+      currentProfileId: 'p1',
+      hasHydrated: true
+    });
+    useToastStore.setState({ toasts: [], enabled: true });
+    mockApply.mockResolvedValue({ result: execResult(), ledgerUpdated: true });
+  });
+
+  const conflictPlan: SyncPlan = {
+    ...EMPTY_PLAN,
+    conflicts: [
+      {
+        category: 'mod',
+        projectId: 'sodium',
+        name: 'Sodium',
+        userVersionId: 'v-user',
+        userVersionNumber: 'v-v-user',
+        packVersionId: 'v-pack',
+        packVersionNumber: 'v-v-pack',
+        pack: {
+          fileUrl: 'https://cdn.example/pack.jar',
+          filename: 'pack.jar',
+          sha1: 'sha-pack',
+          size: 200,
+          path: 'mods/pack.jar'
+        }
+      }
+    ],
+    totals: {
+      ...EMPTY_PLAN.totals,
+      counts: { ...EMPTY_PLAN.totals.counts, conflict: 1 }
+    }
+  };
+
+  const sodiumProfile = makeProfile({
+    mods: [
+      {
+        projectId: 'sodium',
+        versionId: 'v-user',
+        versionNumber: 'v-v-user',
+        name: 'Sodium',
+        type: 'mod',
+        filename: 'user.jar',
+        fileUrl: 'https://cdn.example/user.jar',
+        artifact: { sha1: 'sha-user', path: 'mods/user.jar', size: 100 }
+      }
+    ],
+    modpackSource: {
+      provider: 'modrinth',
+      projectId: 'pack-1',
+      name: 'Pack',
+      importedAt: 1,
+      lockedVersions: {
+        sodium: {
+          versionId: 'v-pack',
+          versionNumber: 'v-v-pack',
+          fileUrl: 'https://cdn.example/pack.jar',
+          filename: 'pack.jar',
+          sha1: 'sha-pack',
+          size: 200,
+          path: 'mods/pack.jar'
+        }
+      }
+    }
+  });
+
+  function conflictOutcome() {
+    return {
+      ...readyOutcome(),
+      plan: conflictPlan
+    };
+  }
+
+  it('replace を選ぶと更新後 Profile + 再計算 plan で applySync する', async () => {
+    useProfilesStore.setState({ profiles: [sodiumProfile], currentProfileId: 'p1' });
+    mockPrepare.mockResolvedValue(conflictOutcome());
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+    });
+    await act(async () => {
+      await result.current.apply([], new Map([['sodium', 'replace']]));
+    });
+
+    expect(mockApply).toHaveBeenCalledTimes(1);
+    const { profile, prepared } = mockApply.mock.calls[0]![0];
+    // 更新後 Profile (ロック版) を applySync に渡す
+    expect(profile.mods[0]).toMatchObject({
+      versionId: 'v-pack',
+      fileUrl: 'https://cdn.example/pack.jar',
+      artifact: { sha1: 'sha-pack', path: 'mods/pack.jar', size: 200 }
+    });
+    // plan は再計算済み (pack 実体が追加先になる)
+    expect(prepared.plan.additions).toHaveLength(1);
+    expect(prepared.plan.additions[0]).toMatchObject({
+      projectId: 'sodium',
+      path: 'mods/pack.jar',
+      targetSha1: 'sha-pack'
+    });
+    // replace 後は versionId 一致に戻るので競合は解消される
+    expect(prepared.plan.conflicts).toHaveLength(0);
+  });
+
+  it('completed のときだけ更新後 Profile を Zustand に反映する', async () => {
+    useProfilesStore.setState({ profiles: [sodiumProfile], currentProfileId: 'p1' });
+    mockPrepare.mockResolvedValue(conflictOutcome());
+    mockApply.mockResolvedValue({ result: execResult(), ledgerUpdated: true });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply([], new Map([['sodium', 'replace']]));
+    });
+
+    expect(useProfilesStore.getState().profiles[0]?.mods[0]).toMatchObject({
+      versionId: 'v-pack'
+    });
+  });
+
+  it('rolled-back のときは Profile を反映しない (ファイルと整合を保つ)', async () => {
+    useProfilesStore.setState({ profiles: [sodiumProfile], currentProfileId: 'p1' });
+    mockPrepare.mockResolvedValue(conflictOutcome());
+    mockApply.mockResolvedValue({
+      result: execResult({ outcome: 'rolled-back', applied: 0, error: '書き込み失敗' }),
+      ledgerUpdated: false
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply([], new Map([['sodium', 'replace']]));
+    });
+
+    expect(useProfilesStore.getState().profiles[0]?.mods[0]).toMatchObject({
+      versionId: 'v-user'
+    });
+  });
+
+  it('keep のみなら Profile を変えず plan も再計算しない', async () => {
+    useProfilesStore.setState({ profiles: [sodiumProfile], currentProfileId: 'p1' });
+    mockPrepare.mockResolvedValue(conflictOutcome());
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply([], new Map());
+    });
+
+    const { profile, prepared } = mockApply.mock.calls[0]![0];
+    expect(profile.mods[0]).toMatchObject({ versionId: 'v-user' });
+    expect(prepared.plan).toBe(conflictOutcome().plan);
+    expect(useProfilesStore.getState().profiles[0]?.mods[0]).toMatchObject({
+      versionId: 'v-user'
     });
   });
 });

@@ -178,7 +178,10 @@ export async function prepareZipSync(
       sink,
       writable: true,
       writableReason: null,
-      scanSkipped: []
+      scanSkipped: [],
+      // P12-D3: ZIP 経路でも replace 選択後の plan 再計算を可能にする
+      localEntries: entries,
+      managed
     }
   };
 }

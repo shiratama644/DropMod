@@ -22,6 +22,7 @@
 import { useState } from 'react';
 import { SyncPreviewModal } from '@/components/SyncPreviewModal';
 import { useSync } from '@/hooks/useSync';
+import type { ModpackConflictChoice } from '@/lib/env/modpackAdd';
 import type { PrepareSyncOutcome } from '@/lib/env/syncPrep';
 
 export type SyncButtonVariant = 'primary' | 'primaryLg' | 'ghost' | 'icon';
@@ -87,8 +88,11 @@ export function SyncButton({
     }
   };
 
-  const handleApply = async (excludedDeletionPaths: string[]) => {
-    await apply(excludedDeletionPaths);
+  const handleApply = async (
+    excludedDeletionPaths: string[],
+    conflictChoices?: Map<string, ModpackConflictChoice>
+  ) => {
+    await apply(excludedDeletionPaths, conflictChoices);
     close();
   };
 
@@ -124,7 +128,9 @@ export function SyncButton({
           onClose={() => {
             if (!isRunning) close();
           }}
-          onApply={(excluded) => void handleApply(excluded)}
+          onApply={(excluded, conflictChoices) =>
+            void handleApply(excluded, conflictChoices)
+          }
         />
       ) : null}
     </>

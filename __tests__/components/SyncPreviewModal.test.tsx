@@ -20,8 +20,9 @@ function makePlan(overrides: Partial<SyncPlan> = {}): SyncPlan {
     deletions: [],
     unchanged: [],
     unmanaged: [],
+    conflicts: [],
     totals: {
-      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
       writeBytes: 0,
       removeBytes: 0,
       backupBytes: 0
@@ -82,11 +83,11 @@ describe('SyncPreviewModal', () => {
     const headings = screen
       .getAllByRole('heading', { level: 4 })
       .map((h) => h.textContent ?? '');
-    for (const title of ['追加', '更新', '削除', '外部変更を検知', '保持', '管理外']) {
+    for (const title of ['追加', '更新', '競合', '削除', '外部変更を検知', '保持', '管理外']) {
       // サマリタイルにも「削除」があるので見出しロールで絞る
       expect(headings.some((h) => h.startsWith(title))).toBe(true);
     }
-    expect(headings).toHaveLength(6);
+    expect(headings).toHaveLength(7);
   });
 
   it('各セクションに件数を表示する', () => {
@@ -124,7 +125,7 @@ describe('SyncPreviewModal', () => {
       plan: makePlan({
         deletions: [del('import', 'mods/imported.jar')],
         totals: {
-          counts: { addition: 0, update: 0, deletion: 1, unchanged: 0, unmanaged: 0 },
+          counts: { addition: 0, update: 0, deletion: 1, unchanged: 0, unmanaged: 0, conflict: 0 },
           writeBytes: 0,
           removeBytes: 1024,
           backupBytes: 1024
@@ -139,7 +140,7 @@ describe('SyncPreviewModal', () => {
     expect(screen.getByText(/削除 0 件/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
-    expect(onApply).toHaveBeenCalledWith(['mods/imported.jar']);
+    expect(onApply).toHaveBeenCalledWith(['mods/imported.jar'], new Map());
   });
 
   it('**§10.3**: チェックを入れると削除対象になる', () => {
@@ -151,7 +152,7 @@ describe('SyncPreviewModal', () => {
     expect(screen.getByText(/削除 1 件/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
-    expect(onApply).toHaveBeenCalledWith([]);
+    expect(onApply).toHaveBeenCalledWith([], new Map());
   });
 
   it('source バッジを表示する', () => {
@@ -174,7 +175,7 @@ describe('SyncPreviewModal', () => {
     expect(screen.getByText(/削除 1 件/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
-    expect(onApply).toHaveBeenCalledWith([]);
+    expect(onApply).toHaveBeenCalledWith([], new Map());
   });
 
   it('外部変更を検知したファイルは「触りません」と明記する', () => {
@@ -185,6 +186,97 @@ describe('SyncPreviewModal', () => {
     });
     expect(screen.getByText('mods/touched.jar')).toBeInTheDocument();
     expect(screen.getByText(/触りません/)).toBeInTheDocument();
+  });
+
+  // ====================================================================
+  // P12-D3: 競合セクション (keep 既定 / replace 選択)
+  // ====================================================================
+  const conflict = {
+    category: 'mod' as const,
+    projectId: 'sodium',
+    name: 'Sodium',
+    userVersionId: 'v-user',
+    userVersionNumber: 'v-v-user',
+    packVersionId: 'v-pack',
+    packVersionNumber: 'v-v-pack',
+    pack: {
+      fileUrl: 'https://cdn.example/pack.jar',
+      filename: 'pack.jar',
+      sha1: 'sha-pack',
+      size: 200,
+      path: 'mods/pack.jar'
+    }
+  };
+
+  it('**P12-D3**: 競合セクションを「更新」の下に表示し、既定は keep', () => {
+    const { onApply } = renderModal({
+      plan: makePlan({
+        conflicts: [conflict],
+        totals: {
+          counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 1 },
+          writeBytes: 0,
+          removeBytes: 0,
+          backupBytes: 0
+        }
+      })
+    });
+
+    // 見出しと選択 UI
+    const headings = screen.getAllByRole('heading', { level: 4 }).map((h) => h.textContent ?? '');
+    expect(headings.some((h) => h.startsWith('競合'))).toBe(true);
+    const select = screen.getByLabelText('Sodium の競合解決') as HTMLSelectElement;
+    expect(select.value).toBe('keep');
+    expect(screen.getByText(/v-v-user/)).toBeInTheDocument();
+    expect(screen.getByText(/v-v-pack/)).toBeInTheDocument();
+
+    // 既定のまま実行 → choices は空 Map (keep)
+    fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
+    expect(onApply).toHaveBeenCalledWith([], new Map());
+  });
+
+  it('**P12-D3**: 「Modpack 版に置換」を選ぶと onApply に replace が渡る', () => {
+    const { onApply } = renderModal({
+      plan: makePlan({ conflicts: [conflict] })
+    });
+
+    fireEvent.change(screen.getByLabelText('Sodium の競合解決'), {
+      target: { value: 'replace' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
+    expect(onApply).toHaveBeenCalledWith(
+      [],
+      new Map([['sodium', 'replace']])
+    );
+  });
+
+  it('**P12-D3**: 複数競合は projectId ごとに独立して選択できる', () => {
+    const rpConflict = {
+      ...conflict,
+      category: 'resourcepack' as const,
+      projectId: 'rp-a',
+      name: 'RP',
+      packVersionNumber: 'rp-v-pack'
+    };
+    const { onApply } = renderModal({
+      plan: makePlan({ conflicts: [conflict, rpConflict] })
+    });
+
+    fireEvent.change(screen.getByLabelText('RP の競合解決'), {
+      target: { value: 'replace' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /同期する/ }));
+    expect(onApply).toHaveBeenCalledWith(
+      [],
+      new Map([['rp-a', 'replace']])
+    );
+  });
+
+  it('**P12-D3**: 競合 0 件でも見出しは出す (7 分類固定)', () => {
+    renderModal();
+    expect(screen.getByText('競合')).toBeInTheDocument();
+    // 「競合」セクション内に「なし」が出る (見出し → note → なし)
+    const heading = screen.getByRole('heading', { level: 4, name: /競合/ });
+    expect(heading.parentElement?.textContent).toContain('なし');
   });
 
   it('外部変更のファイルは「保持」セクションに重複表示しない', () => {
@@ -219,7 +311,7 @@ describe('SyncPreviewModal', () => {
     renderModal({
       plan: makePlan({
         totals: {
-          counts: { addition: 1, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+          counts: { addition: 1, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
           writeBytes: 2048,
           removeBytes: 0,
           backupBytes: 1048576

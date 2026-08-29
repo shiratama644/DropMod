@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Sync の UI ロジック (Phase 12-B)。
+ * Sync の UI ロジック (Phase 12-B / P12-D3)。
  *
  * 編成 (`prepareSync`) と実行 (`applySync`) は React 非依存の
  * `lib/env/syncPrep.ts` / `lib/env/applySync.ts` に置いてあり、
@@ -19,6 +19,14 @@
  *
  * `blocked` は D-1 (環境不一致) と D-2 (書き込み権限の拒否) の両方で使う。
  * どちらの場合も **Sync ボタンは無効化**し、理由と ZIP 代替導線を出す。
+ *
+ * ## P12-D3 (D-3): 競合選択の反映
+ *
+ * `apply(excluded, conflictChoices)` は replace が選ばれていれば、
+ * `applyLockedVersionsToProfile` で更新後 Profile を構築し、
+ * `computeSyncPlan` を**再計算**してから実行する。Sync が
+ * **completed のときだけ**更新後 Profile を Zustand へ反映する
+ * (rollback 時は元のまま = ファイルと Profile の整合を保つ)。
  */
 
 import { useCallback, useRef, useState } from 'react';
@@ -26,6 +34,8 @@ import { applySync } from '@/lib/env/applySync';
 import { prepareSync, type PrepareSyncOutcome } from '@/lib/env/syncPrep';
 import type { ScanProgress } from '@/lib/env/scan';
 import type { ExecuteSyncResult } from '@/lib/env/executor';
+import { applyLockedVersionsToProfile, type ModpackConflictChoice } from '@/lib/env/modpackAdd';
+import { computeSyncPlan } from '@/lib/env/diff';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
 
@@ -53,8 +63,13 @@ export interface UseSyncResult {
   /**
    * Preview を承認して実行する。
    * @param excludedDeletionPaths 「保持」を選んだ削除予定のパス (§10.3)
+   * @param conflictChoices **P12-D3**: 競合の選択 (projectId → keep/replace)。
+   *   replace があれば更新後 Profile で plan を再計算してから実行する
    */
-  apply: (excludedDeletionPaths?: readonly string[]) => Promise<void>;
+  apply: (
+    excludedDeletionPaths?: readonly string[],
+    conflictChoices?: ReadonlyMap<string, ModpackConflictChoice>
+  ) => Promise<void>;
   reset: () => void;
 }
 
@@ -123,30 +138,66 @@ export function useSync(): UseSyncResult {
     }
   }, []);
 
-  const apply = useCallback(async (excludedDeletionPaths: readonly string[] = []) => {
-    const prepared = outcomeRef.current;
-    // D-2: 書き込み権限が無いときは実行しない (ボタンも無効化しているが二重で防ぐ)
-    if (prepared?.status !== 'ready' || !prepared.writable) return;
+  const apply = useCallback(
+    async (
+      excludedDeletionPaths: readonly string[] = [],
+      conflictChoices?: ReadonlyMap<string, ModpackConflictChoice>
+    ) => {
+      const prepared = outcomeRef.current;
+      // D-2: 書き込み権限が無いときは実行しない (ボタンも無効化しているが二重で防ぐ)
+      if (prepared?.status !== 'ready' || !prepared.writable) return;
 
-    const { currentProfileId, profiles } = useProfilesStore.getState();
-    const profile = profiles.find((p) => p.id === currentProfileId);
-    if (!profile) {
-      setError('プロファイルが選択されていません。');
-      return;
-    }
+      const { currentProfileId, profiles } = useProfilesStore.getState();
+      const profile = profiles.find((p) => p.id === currentProfileId);
+      if (!profile) {
+        setError('プロファイルが選択されていません。');
+        return;
+      }
 
-    setPhase('running');
-    setError(null);
+      // ------------------------------------------------------------------
+      // P12-D3: 競合で「Modpack 版に置換」が選ばれた場合
+      // ------------------------------------------------------------------
+      // 更新後 Profile を構築し、localEntries / managed を使って plan を
+      // 再計算する (resolveContent が更新後 Profile から fileUrl を引けるように)。
+      const hasReplace = [...(conflictChoices ?? new Map()).values()].some(
+        (c) => c === 'replace'
+      );
+      const profileForSync = hasReplace
+        ? applyLockedVersionsToProfile(profile, conflictChoices ?? new Map())
+        : profile;
+      const plan =
+        hasReplace && profileForSync !== profile
+          ? computeSyncPlan({
+              profile: profileForSync,
+              managed: prepared.managed,
+              local: prepared.localEntries,
+              now: Date.now()
+            })
+          : prepared.plan;
 
-    try {
-      const { result: execResult, ledgerUpdated } = await applySync({
-        profile,
-        prepared,
-        excludedDeletionPaths,
-        onProgress: setApplyProgress
-      });
-      setResult(execResult);
-      setPhase('finished');
+      setPhase('running');
+      setError(null);
+
+      try {
+        const { result: execResult, ledgerUpdated } = await applySync({
+          profile: profileForSync,
+          prepared: { ...prepared, plan },
+          excludedDeletionPaths,
+          onProgress: setApplyProgress
+        });
+        setResult(execResult);
+        setPhase('finished');
+
+        // P12-D3: completed のときだけ更新後 Profile を反映する。
+        // rolled-back / aborted ではファイルが巻き戻っているので、
+        // Profile を変えると実体とズレる (保持: 元のまま = 整合を保つ)。
+        if (profileForSync !== profile && execResult.outcome === 'completed') {
+          useProfilesStore
+            .getState()
+            .setProfiles((prev) =>
+              prev.map((p) => (p.id === profile.id ? profileForSync : p))
+            );
+        }
 
       const toast = useToastStore.getState().showToast;
       switch (execResult.outcome) {

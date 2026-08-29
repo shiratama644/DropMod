@@ -38,8 +38,9 @@ function makePlan(overrides: Partial<SyncPlan> = {}): SyncPlan {
     deletions: [],
     unchanged: [],
     unmanaged: [],
+    conflicts: [],
     totals: {
-      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
       writeBytes: 0,
       removeBytes: 0,
       backupBytes: 0
@@ -141,7 +142,7 @@ describe('executeSync — 正常系', () => {
         })
       ],
       totals: {
-        counts: { addition: 1, update: 1, deletion: 1, unchanged: 0, unmanaged: 0 },
+        counts: { addition: 1, update: 1, deletion: 1, unchanged: 0, unmanaged: 0, conflict: 0 },
         writeBytes: 20,
         removeBytes: 3,
         backupBytes: OLD_A.length + 3
@@ -617,7 +618,7 @@ describe('executeSync — D-5 quota ゲート', () => {
         })
       ],
       totals: {
-        counts: { addition: 0, update: 0, deletion: 1, unchanged: 0, unmanaged: 0 },
+        counts: { addition: 0, update: 0, deletion: 1, unchanged: 0, unmanaged: 0, conflict: 0 },
         writeBytes: 0,
         removeBytes: backupBytes,
         backupBytes

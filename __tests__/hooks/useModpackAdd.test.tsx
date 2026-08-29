@@ -199,7 +199,15 @@ describe('useModpackAdd', () => {
       versionNumber: '1.0.0'
     });
     expect(profile.modpackSource?.lockedVersions).toEqual({
-      'proj-sodium': { versionId: 'ver-sodium', versionNumber: '0.6.0' }
+      'proj-sodium': {
+        versionId: 'ver-sodium',
+        versionNumber: '0.6.0',
+        fileUrl: 'https://cdn.example/dl/test-pack-1.0.0.mrpack',
+        filename: 'sodium.jar',
+        sha1: 'sha-sodium',
+        size: 10,
+        path: 'mods/sodium.jar'
+      }
     });
 
     // overrides は source:'modpack' で台帳化される

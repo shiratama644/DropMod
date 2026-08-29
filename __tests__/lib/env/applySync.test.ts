@@ -25,8 +25,9 @@ function makePlan(overrides: Partial<SyncPlan> = {}): SyncPlan {
     deletions: [],
     unchanged: [],
     unmanaged: [],
+    conflicts: [],
     totals: {
-      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+      counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
       writeBytes: 0,
       removeBytes: 0,
       backupBytes: 0
@@ -94,7 +95,9 @@ function prepared(sink: MemorySink, plan: SyncPlan, writable = true): ReadySyncO
     sink,
     writable,
     writableReason: writable ? null : 'denied',
-    scanSkipped: []
+    scanSkipped: [],
+    localEntries: [],
+    managed: []
   };
 }
 
@@ -212,7 +215,7 @@ describe('applySync', () => {
         makePlan({
           additions: [entry()],
           totals: {
-            counts: { addition: 1, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+            counts: { addition: 1, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
             writeBytes: 10,
             removeBytes: 0,
             backupBytes: 10_000

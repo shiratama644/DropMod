@@ -441,7 +441,8 @@ describe('computeSyncPlan: カテゴリ分離・集計', () => {
       update: 1,
       deletion: 1,
       unchanged: 0,
-      unmanaged: 0
+      unmanaged: 0,
+      conflict: 0
     });
     expect(plan.totals.writeBytes).toBe(400); // 100 (add) + 300 (update の書き込み先)
     expect(plan.totals.removeBytes).toBe(50); // deletion の実体
@@ -476,7 +477,8 @@ describe('computeSyncPlan: カテゴリ分離・集計', () => {
       update: 0,
       deletion: 0,
       unchanged: 0,
-      unmanaged: 0
+      unmanaged: 0,
+      conflict: 0
     });
   });
 });
@@ -496,8 +498,9 @@ describe('excludeDeletions (§10.3 のユーザー選択)', () => {
       deletions: [],
       unchanged: [],
       unmanaged: [],
+      conflicts: [],
       totals: {
-        counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0 },
+        counts: { addition: 0, update: 0, deletion: 0, unchanged: 0, unmanaged: 0, conflict: 0 },
         writeBytes: 0,
         removeBytes: 0,
         backupBytes: 0
@@ -523,7 +526,7 @@ describe('excludeDeletions (§10.3 のユーザー選択)', () => {
       entry({ path: 'mods/im.jar', source: 'import', size: 200 })
     ],
     totals: {
-      counts: { addition: 0, update: 0, deletion: 2, unchanged: 0, unmanaged: 0 },
+      counts: { addition: 0, update: 0, deletion: 2, unchanged: 0, unmanaged: 0, conflict: 0 },
       writeBytes: 0,
       removeBytes: 300,
       backupBytes: 300
@@ -560,5 +563,182 @@ describe('excludeDeletions (§10.3 のユーザー選択)', () => {
       removeBytes: 0,
       backupBytes: 0
     });
+  });
+});
+
+describe('computeSyncPlan: 🟣 Conflicts (P12-D3 / §10.4)', () => {
+  const lockBase = {
+    versionId: 'v-pack',
+    versionNumber: 'v-v-pack',
+    fileUrl: 'https://cdn.example/pack.jar',
+    filename: 'pack.jar',
+    sha1: 'sha-pack',
+    size: 99,
+    path: 'mods/pack.jar'
+  };
+
+  it('lock.versionId と一致していれば conflicts に入らない', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({
+        mods: [
+          makeItem({ projectId: 'sodium', versionId: 'v-pack', artifact: { sha1: 'sha-user', path: 'mods/a.jar', size: 100 } })
+        ],
+        modpackSource: {
+          provider: 'modrinth',
+          projectId: 'pack-1',
+          name: 'Pack',
+          importedAt: NOW,
+          lockedVersions: { sodium: lockBase }
+        }
+      }),
+      managed: [],
+      local: [],
+      now: NOW
+    });
+    expect(plan.conflicts).toEqual([]);
+    expect(plan.totals.counts.conflict).toBe(0);
+  });
+
+  it('lock が無い projectId は検出しない (誤検出防止)', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({
+        mods: [
+          makeItem({ projectId: 'manual', versionId: 'v-user', artifact: { sha1: 'sha-user', path: 'mods/a.jar', size: 100 } })
+        ],
+        modpackSource: {
+          provider: 'modrinth',
+          projectId: 'pack-1',
+          name: 'Pack',
+          importedAt: NOW,
+          lockedVersions: { sodium: lockBase }
+        }
+      }),
+      managed: [],
+      local: [],
+      now: NOW
+    });
+    expect(plan.conflicts).toEqual([]);
+  });
+
+  it('lock.versionId と異なる → conflict (ユーザー版 / Modpack 版の実体込み)', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({
+        mods: [
+          makeItem({
+            projectId: 'sodium',
+            name: 'Sodium (user)',
+            versionId: 'v-user',
+            versionNumber: 'v-v-user',
+            artifact: { sha1: 'sha-user', path: 'mods/a.jar', size: 100 }
+          })
+        ],
+        modpackSource: {
+          provider: 'modrinth',
+          projectId: 'pack-1',
+          name: 'Pack',
+          importedAt: NOW,
+          lockedVersions: { sodium: lockBase }
+        }
+      }),
+      managed: [],
+      local: [],
+      now: NOW
+    });
+    expect(plan.conflicts).toHaveLength(1);
+    expect(plan.conflicts[0]).toEqual({
+      category: 'mod',
+      projectId: 'sodium',
+      name: 'Sodium (user)',
+      userVersionId: 'v-user',
+      userVersionNumber: 'v-v-user',
+      packVersionId: 'v-pack',
+      packVersionNumber: 'v-v-pack',
+      pack: {
+        fileUrl: 'https://cdn.example/pack.jar',
+        filename: 'pack.jar',
+        sha1: 'sha-pack',
+        size: 99,
+        path: 'mods/pack.jar'
+      }
+    });
+    expect(plan.totals.counts.conflict).toBe(1);
+    // 競合は「そのまま適用」分の追加・更新にも含まれる (keep = ユーザー版を
+    // 通常どおり Sync する)。conflicts は UI が選択を促すための独立表示。
+    expect(plan.additions).toHaveLength(1);
+    expect(plan.additions[0]).toMatchObject({
+      projectId: 'sodium',
+      kind: 'addition',
+      path: 'mods/a.jar'
+    });
+    expect(plan.updates).toEqual([]);
+    expect(plan.deletions).toEqual([]);
+  });
+
+  it('resourcepacks / shaderpacks も横断して検出する', () => {
+    const profile = makeProfile({
+      mods: [makeItem({ projectId: 'mod-a', versionId: 'v-user', artifact: { sha1: 'sha-user', path: 'mods/a.jar', size: 100 } })],
+      resourcepacks: [
+        {
+          projectId: 'rp-a',
+          name: 'RP',
+          versionId: 'rp-user',
+          type: 'resourcepack',
+          artifact: { sha1: 'sha-rp', path: 'resourcepacks/rp.zip', size: 50 }
+        }
+      ],
+      shaderpacks: [
+        {
+          projectId: 'sh-a',
+          name: 'Shader',
+          versionId: 'sh-user',
+          type: 'shader',
+          artifact: { sha1: 'sha-sh', path: 'shaderpacks/sh.zip', size: 50 }
+        }
+      ],
+      modpackSource: {
+        provider: 'modrinth',
+        projectId: 'pack-1',
+        name: 'Pack',
+        importedAt: NOW,
+        lockedVersions: {
+          'mod-a': { versionId: 'v-pack' },
+          'rp-a': { versionId: 'rp-pack', versionNumber: 'rp-v-pack' },
+          'sh-a': { versionId: 'sh-pack', versionNumber: 'sh-v-pack' }
+        }
+      }
+    });
+    const plan = computeSyncPlan({ profile, managed: [], local: [], now: NOW });
+    expect(plan.conflicts.map((c) => c.category).sort()).toEqual([
+      'mod',
+      'resourcepack',
+      'shader'
+    ]);
+    expect(plan.conflicts.map((c) => c.projectId).sort()).toEqual([
+      'mod-a',
+      'rp-a',
+      'sh-a'
+    ]);
+    expect(plan.totals.counts.conflict).toBe(3);
+  });
+
+  it('lock に versionId が無い場合は検出しない', () => {
+    const plan = computeSyncPlan({
+      profile: makeProfile({
+        mods: [
+          makeItem({ projectId: 'sodium', versionId: 'v-user', artifact: { sha1: 'sha-user', path: 'mods/a.jar', size: 100 } })
+        ],
+        modpackSource: {
+          provider: 'modrinth',
+          projectId: 'pack-1',
+          name: 'Pack',
+          importedAt: NOW,
+          lockedVersions: { sodium: { versionNumber: 'v-v-pack' } }
+        }
+      }),
+      managed: [],
+      local: [],
+      now: NOW
+    });
+    expect(plan.conflicts).toEqual([]);
   });
 });

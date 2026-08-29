@@ -263,7 +263,12 @@ export async function expandMrpackFiles(
     const primaryFile =
       matched?.files?.find((file) => file.primary) || matched?.files?.[0];
 
-    importedMods.push({
+    const path = f.path || `mods/${filename}`;
+    // P12-D3: 導入時の実体情報を ProjectItem.artifact に持たせる。
+    // Sync の差分判定 (update/addition) と、ロック情報 (lockedVersions) の
+    // sha1/path/size がここから導出される。
+    const sha1 = f.hashes?.sha1 || primaryFile?.hashes?.sha1;
+    const item: ProjectItem = {
       projectId: matched?.project_id || generateId('mrpack'),
       slug: proj?.slug,
       name: proj?.title || filename.replace('.jar', ''),
@@ -281,7 +286,18 @@ export async function expandMrpackFiles(
       versionType: matched?.version_type || 'release',
       fileUrl: downloadUrl || primaryFile?.url || '',
       filename
-    });
+    };
+    if (sha1) {
+      item.artifact = {
+        sha1,
+        path,
+        size:
+          f.fileSize ??
+          primaryFile?.size ??
+          0
+      };
+    }
+    importedMods.push(item);
   }
 
   return importedMods;
@@ -306,7 +322,13 @@ export function modpackLocksFromItems(
     if (!item.versionId || item.projectId.startsWith('mrpack-')) continue;
     locks[item.projectId] = {
       versionId: item.versionId,
-      ...(item.versionNumber ? { versionNumber: item.versionNumber } : {})
+      ...(item.versionNumber ? { versionNumber: item.versionNumber } : {}),
+      ...(item.fileUrl ? { fileUrl: item.fileUrl } : {}),
+      ...(item.filename ? { filename: item.filename } : {}),
+      // P12-D3: replace 時に Profile を導入時の実体情報で復元するため
+      ...(item.artifact?.sha1 ? { sha1: item.artifact.sha1 } : {}),
+      ...(item.artifact?.size ? { size: item.artifact.size } : {}),
+      ...(item.artifact?.path ? { path: item.artifact.path } : {})
     };
   }
   return locks;

@@ -164,3 +164,68 @@ export function applyModpackAddPlan(
   };
   return next;
 }
+
+/**
+ * **P12-D3 (D-3 Sync 側)**: Sync Preview の競合選択を Profile に反映する (**pure**)。
+ *
+ * - `keep` (既定) → その projectId は**不変**
+ * - `replace` → 該当 projectId の ProjectItem を **modpackSource.lockedVersions**
+ *   の実体情報 (versionId / versionNumber / fileUrl / filename /
+ *   artifact.sha1/path/size) で復元する
+ *
+ * 依存しない項目 (name / type / enabled 等) はそのまま維持する。
+ * 呼び出し側 (`useSync`) は、この更新後 Profile で `computeSyncPlan` を
+ * **再計算**してから `applySync` に渡す (§10.4)。
+ */
+export function applyLockedVersionsToProfile(
+  profile: Profile,
+  choices: ReadonlyMap<string, ModpackConflictChoice>
+): Profile {
+  const locks = profile.modpackSource?.lockedVersions;
+  // ロック情報が無い Profile では何もできない → そのまま返す
+  if (!locks) return profile;
+
+  let changed = false;
+
+  const replaceCategory = (
+    items: ProjectItem[] | undefined
+  ): ProjectItem[] | undefined => {
+    if (!items) return undefined;
+    let replaced = false;
+    const next = items.map((item) => {
+      if ((choices.get(item.projectId) ?? 'keep') !== 'replace') return item;
+      const lock = locks[item.projectId];
+      // replace を選んでもロック情報が無い projectId は変更しない (安全側)
+      if (!lock?.versionId) return item;
+      replaced = true;
+      return {
+        ...item,
+        versionId: lock.versionId,
+        ...(lock.versionNumber ? { versionNumber: lock.versionNumber } : {}),
+        ...(lock.fileUrl ? { fileUrl: lock.fileUrl } : {}),
+        ...(lock.filename ? { filename: lock.filename } : {}),
+        // artifact は実体 3 項目が揃っているときだけ完全に復元する。
+        // 揃わない場合は既存を維持 (ダウンロード元が失われないように)。
+        ...(lock.sha1 && lock.path && lock.size
+          ? { artifact: { sha1: lock.sha1, path: lock.path, size: lock.size } }
+          : {})
+      };
+    });
+    if (!replaced) return items;
+    changed = true;
+    return next;
+  };
+
+  const mods = replaceCategory(profile.mods);
+  const resourcepacks = replaceCategory(profile.resourcepacks);
+  const shaderpacks = replaceCategory(profile.shaderpacks);
+
+  if (!changed) return profile;
+
+  return {
+    ...profile,
+    mods: mods ?? [],
+    ...(resourcepacks ? { resourcepacks } : {}),
+    ...(shaderpacks ? { shaderpacks } : {})
+  };
+}

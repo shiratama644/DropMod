@@ -16,8 +16,8 @@
  */
 
 import { getManagedFiles } from '@/lib/db/dexie';
-import type { Profile } from '@/types';
-import { computeSyncPlan, type SyncPlan } from './diff';
+import type { ManagedFileRecord, Profile } from '@/types';
+import { computeSyncPlan, type LocalFileEntry, type SyncPlan } from './diff';
 import { checkEnvironmentMatch, type EnvironmentCheckResult } from './environmentCheck';
 import { openLinkedFolder } from './link';
 import { scanLocalEnvironment, type ScanProgress } from './scan';
@@ -60,6 +60,14 @@ export type PrepareSyncOutcome =
       writableReason: string | null;
       /** スキャンで読み取れず除外したパス */
       scanSkipped: string[];
+      /**
+       * **P12-D3**: 競合で「Modpack 版に置換」を選んだ場合、
+       * 更新後 Profile で plan を再計算するための入力。
+       * (UI が Preview 承認後に Profile を変えるため、ローカルスキャン結果と
+       * 台帳をここで保持しておく。再スキャンはしない。)
+       */
+      localEntries: LocalFileEntry[];
+      managed: ManagedFileRecord[];
     };
 
 /**
@@ -114,7 +122,10 @@ export async function prepareSync(input: PrepareSyncInput): Promise<PrepareSyncO
     sink: opened.sink,
     writable,
     writableReason: writable ? null : WRITE_PERMISSION_DENIED_MESSAGE,
-    scanSkipped: skipped
+    scanSkipped: skipped,
+    // P12-D3: replace 選択後の plan 再計算用 (再スキャンしない)
+    localEntries: entries,
+    managed
   };
 }
 

@@ -97,6 +97,31 @@ export async function createFolderLink(
 }
 
 /**
+ * **P12-D1**: 選択済みフォルダ (picked) + 解析済み環境から `LinkedSource` を生成する。
+ *
+ * `createFolderLink` が「選択 → 再検出」を行うのに対し、こちらは
+ * NewProfileModal が**既に解析済み**の `DetectedEnvironment` を渡す。
+ * 二重解析 (detectEnvironment の再実行) を避け、選択から作成までを 1 回の I/O で済ませる。
+ *
+ * ハンドルは Dexie `dirHandles` に保存する (**D-7**: picker は read モードのまま)。
+ * @returns 生成した `LinkedSource` (保存失敗は throw)
+ */
+export async function linkPickedDirectory(
+  profileId: string,
+  picked: PickedDirectory,
+  detected: DetectedEnvironment,
+  now?: number
+): Promise<LinkedSource> {
+  const handleId = await saveDirHandle(profileId, picked.handle, picked.source.rootName);
+  return buildLinkedSource({
+    handleId,
+    rootName: picked.source.rootName,
+    detected,
+    now
+  });
+}
+
+/**
  * 紐付けを解除する。Dexie に保存したハンドルを削除する。
  *
  * **Profile 内のファイル (mods 等) には一切触れない。** 削除するのは

@@ -21,8 +21,15 @@ import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
   getMeta as dexieGetMeta,
-  setMeta as dexieSetMeta
+  setMeta as dexieSetMeta,
+  getManagedFiles,
+  syncManagedFiles
 } from '@/lib/db/dexie';
+import { linkPickedDirectory } from '@/lib/env/link';
+import { expandProfileToManaged, mergeManagedRecords } from '@/lib/env/managed';
+import type { DetectedEnvironment } from '@/lib/env/detector';
+import type { PickedDirectory } from '@/lib/env/picker';
+import type { LinkedSource } from '@/types';
 import {
   migrateFromLocalStorage,
   cleanupExpiredBackup,
@@ -438,16 +445,38 @@ export const useProfiles = (
   );
 
   const handleCreateProfile = useCallback(
-    (
+    async (
       name: string,
       mcVersion: string,
       loader: string,
       description: string,
       mods: ProjectItem[] = [],
       loaderVersion?: string,
-      extras?: ProfileContentExtras
-    ) => {
+      extras?: ProfileContentExtras,
+      /**
+       * **P12-D1**: 新規プロファイル作成モーダルのフォルダ選択結果。
+       * 指定された場合は作成と同時に自動紐付け (read mode) し、§10.5 の
+       * artifact 台帳 seed も実行する (Sync の削除判定が成立する)。
+       */
+      link?: { picked: PickedDirectory; detected: DetectedEnvironment }
+    ): Promise<void> => {
       const newId = generateId('profile');
+
+      // --- フォルダ紐付け (D-7: picker は read のまま。昇格は Sync 実行時) ---
+      let linkedSource: LinkedSource | undefined;
+      if (link) {
+        try {
+          linkedSource = await linkPickedDirectory(newId, link.picked, link.detected);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          showToast(
+            `フォルダの紐付けに失敗したため、プロファイルは作成しませんでした: ${message}`,
+            'error'
+          );
+          return;
+        }
+      }
+
       const newProfile: Profile = {
         id: newId,
         name,
@@ -458,6 +487,7 @@ export const useProfiles = (
         },
         description,
         mods,
+        ...(linkedSource ? { linkedSource } : {}),
         ...(extras?.resourcepacks && extras.resourcepacks.length > 0
           ? { resourcepacks: extras.resourcepacks }
           : {}),
@@ -468,6 +498,25 @@ export const useProfiles = (
           ? { unknownFiles: extras.unknownFiles }
           : {})
       };
+
+      // §10.5: Import 由来の artifact を初期 ManagedFileRecord として台帳化。
+      // 既存レコード (source / managedAt / syncedAt) は merge で引き継ぐ。
+      if (linkedSource) {
+        try {
+          const existing = await getManagedFiles(newId);
+          const records = mergeManagedRecords(expandProfileToManaged(newProfile), existing);
+          if (records.length > 0) {
+            await syncManagedFiles(newId, records);
+          }
+        } catch {
+          // 台帳 seed 失敗は Profile 作成を止めない (台帳なし = 安全側= 削除対象外)。
+          showToast(
+            '台帳の初期化に失敗しました。次回の同期で差分が正しく表示されない場合があります。',
+            'warning'
+          );
+        }
+      }
+
       setProfiles((prev) => [...prev, newProfile]);
       setCurrentProfileId(newId);
       showToast(

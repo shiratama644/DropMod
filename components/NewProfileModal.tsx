@@ -7,7 +7,8 @@ import type { ProjectItem, ProfileContentExtras, UnknownFile } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { pickMinecraftDirectory } from '@/lib/env/picker';
+import { pickMinecraftDirectory, type PickedDirectory } from '@/lib/env/picker';
+import type { DetectedEnvironment } from '@/lib/env/detector';
 import {
   analyzeEnvironmentSource,
   type AnalyzeProgress,
@@ -31,8 +32,10 @@ interface NewProfileModalProps {
     desc: string,
     mods?: ProjectItem[],
     loaderVersion?: string,
-    extras?: ProfileContentExtras
-  ) => void;
+    extras?: ProfileContentExtras,
+    // P12-D1: フォルダ選択 → 自動紐付け (作成時に linkedSource + dirHandles を保存)
+    link?: { picked: PickedDirectory; detected: DetectedEnvironment }
+  ) => void | Promise<void>;
 }
 
 
@@ -205,6 +208,8 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const [folderAnalysis, setFolderAnalysis] = useState<ImportAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<AnalyzeProgress | null>(null);
+  // P12-D1: 解析に成功したフォルダ (作成時に自動紐付けする)
+  const [pickedFolder, setPickedFolder] = useState<PickedDirectory | null>(null);
 
   const wasOpenRef = useRef<boolean>(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: モーダル open 時のみ snapshot をロード
@@ -222,6 +227,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
     setFolderAnalysis(null);
     setAnalyzing(false);
     setAnalysisProgress(null);
+    setPickedFolder(null);
 
     if (initialImportData) {
       setName(initialImportData.name);
@@ -294,6 +300,7 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   const handlePickFolder = async () => {
     setFolderError(null);
     setFolderAnalysis(null);
+    setPickedFolder(null);
     if (!supportsDirectoryPicker()) {
       setFolderError('このブラウザではフォルダ選択できません。Chrome / Edge をご利用ください。');
       return;
@@ -316,6 +323,9 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
         setAnalysisProgress(progress)
       );
       setFolderAnalysis(analysis);
+      // P12-D1: 解析に成功したときだけ紐付け対象として保持する
+      // (解析失敗時に紐付けだけ残る状態を防ぐ)
+      setPickedFolder(picked);
 
       // §6.1: 自動生成ルール (あくまでデフォルト値。ユーザーが編集可能)
       setName(generateProfileName(picked.source.rootName, analysis.environment));
@@ -362,11 +372,26 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
       shaderpacks: folderAnalysis?.shaderpacks ?? initialImportData?.shaderpacks,
       unknownFiles: folderAnalysis?.unknownFiles ?? initialImportData?.unknownFiles
     };
-    onCreate(trimmedName, version, loader, desc.trim(), mods, loaderVersion || undefined, extras);
+    // P12-D1: フォルダ解析成功時のみ自動紐付け情報を渡す
+    const link =
+      folderAnalysis && pickedFolder
+        ? { picked: pickedFolder, detected: folderAnalysis.environment }
+        : undefined;
+    void onCreate(
+      trimmedName,
+      version,
+      loader,
+      desc.trim(),
+      mods,
+      loaderVersion || undefined,
+      extras,
+      link
+    );
     setName('');
     setDesc('');
     setFolderAnalysis(null);
     setFolderName(null);
+    setPickedFolder(null);
     onClose();
   };
 

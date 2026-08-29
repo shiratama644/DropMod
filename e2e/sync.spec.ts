@@ -60,6 +60,27 @@ const SYNC_TARGET_FILES: Record<string, string> = {
 const CDN_URL = 'https://cdn.modrinth.com/data/e2e/versions/sodium.jar';
 const DOWNLOADED_JAR = 'e2e-downloaded-jar-bytes';
 
+/**
+ * ページ内の JS 例外を収集する。
+ *
+ * `annotation-reporter.ts` はエラーメッセージを**先頭 200 字に切り詰め、改行を
+ * スペース化する**。Playwright の定型文 (`Error: expect(locator)… Call log:`) が
+ * 先頭に来ると肝心の情報が消えるため、失敗時は必ず短い診断を先頭に置いて投げる。
+ */
+function collectPageErrors(page: Page): string[] {
+  const errs: string[] = [];
+  page.on('pageerror', (e) => errs.push(String(e).replace(/\s+/g, ' ').slice(0, 150)));
+  return errs;
+}
+
+/** 診断を**先頭に**置いたエラーを投げる (annotation の 200 字予算に収める) */
+async function failWithDiag(page: Page, errs: string[], what: string): Promise<never> {
+  const idb = await page
+    .evaluate(() => (window as { __e2e_idb_patch_error__?: string }).__e2e_idb_patch_error__ ?? 'ok')
+    .catch(() => 'n/a');
+  throw new Error(`DIAG[${what}] idb=${idb} js=${errs[0] ?? 'none'}`);
+}
+
 /** 「環境との同期」セクション (D-9 で設定ページに集約されている) */
 function syncSection(page: Page) {
   return page.locator('section[aria-labelledby="env-sync-heading"]');
@@ -71,7 +92,7 @@ function syncSection(page: Page) {
  * Sync の前提 (Profile に中身がある) を、**既存の Import 経路を再利用して**作る。
  * 独自に Dexie を直接書き換えると実装と乖離しやすいので避ける。
  */
-async function importProfileWithKnownMod(page: Page): Promise<void> {
+async function importProfileWithKnownMod(page: Page, errs: string[]): Promise<void> {
   await page.goto('/profile');
   const sidebar = page.locator('#desktop-sidebar');
   await sidebar.waitFor({ state: 'visible', timeout: 10_000 });
@@ -90,7 +111,11 @@ async function importProfileWithKnownMod(page: Page): Promise<void> {
     .getByRole('dialog')
     .filter({ hasText: /新規プロファイル/ })
     .first();
-  await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+  try {
+    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+  } catch {
+    await failWithDiag(page, errs, 'import-dialog');
+  }
 
   // 解析完了を待ってから作成する
   const analysis = dialog.getByRole('status', { name: '解析結果' });
@@ -101,18 +126,26 @@ async function importProfileWithKnownMod(page: Page): Promise<void> {
 }
 
 /** 設定ページでフォルダを紐付ける */
-async function linkFolder(page: Page): Promise<void> {
+async function linkFolder(page: Page, errs: string[]): Promise<void> {
   await page.goto('/settings');
   await waitForAppReady(page);
 
   const section = syncSection(page);
-  await section.waitFor({ state: 'visible', timeout: 10_000 });
+  try {
+    await section.waitFor({ state: 'visible', timeout: 10_000 });
+  } catch {
+    await failWithDiag(page, errs, 'sync-section');
+  }
 
   await section.getByRole('button', { name: /フォルダを選択して紐付ける/ }).click();
 
   // Sync ボタンが出る = 紐付け完了 (SyncButton は linkedSource があるときだけ描画される)
   const syncButton = section.getByRole('button', { name: /差分を確認して同期/ });
-  await syncButton.waitFor({ state: 'visible', timeout: 15_000 });
+  try {
+    await syncButton.waitFor({ state: 'visible', timeout: 15_000 });
+  } catch {
+    await failWithDiag(page, errs, 'link');
+  }
   await expect(syncButton).toBeEnabled({ timeout: 15_000 });
 }
 
@@ -123,7 +156,7 @@ async function linkFolder(page: Page): Promise<void> {
  * `prepare()` が `'ready'` 以外 (D-1 の環境不一致 / 未紐付け / フォルダ消失) を
  * 返した場合、モーダルは出ず理由だけがセクションに出るため。
  */
-async function openSyncPreview(page: Page) {
+async function openSyncPreview(page: Page, errs: string[]) {
   const section = syncSection(page);
   await section.getByRole('button', { name: /差分を確認して同期/ }).click();
 
@@ -134,25 +167,15 @@ async function openSyncPreview(page: Page) {
 
   try {
     await preview.waitFor({ state: 'visible', timeout: 15_000 });
-  } catch (e) {
-    // 診断情報: なぜ Preview が出なかったかを CI ログに残す
-    const sectionText = (await section.innerText().catch(() => '(取得失敗)'))
-      .replace(/\s+/g, ' ')
-      .slice(0, 600);
-    const toasts = (
-      await page
-        .locator('[role="status"], [role="alert"]')
-        .allInnerTexts()
-        .catch(() => [] as string[])
-    )
-      .join(' / ')
-      .slice(0, 300);
-    throw new Error(
-      `Sync Preview が出ませんでした。\n` +
-        `--- 「環境との同期」セクション ---\n${sectionText}\n` +
-        `--- toast ---\n${toasts || '(なし)'}\n` +
-        `--- 元のエラー ---\n${e instanceof Error ? e.message : String(e)}`
-    );
+  } catch {
+    // なぜ Preview が出なかったかを annotation の先頭 200 字に収めて残す
+    const sectionText = (await section.innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 90);
+    const idb = await page
+      .evaluate(
+        () => (window as { __e2e_idb_patch_error__?: string }).__e2e_idb_patch_error__ ?? 'ok'
+      )
+      .catch(() => 'n/a');
+    throw new Error(`DIAG[preview] idb=${idb} sec=${sectionText} js=${errs[0] ?? 'none'}`);
   }
 
   return preview;
@@ -177,12 +200,13 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
   });
 
   test('成功: Preview 承認 → Mod がフォルダに書き込まれる', async ({ page }) => {
+    const errs = collectPageErrors(page);
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES);
 
-    await importProfileWithKnownMod(page);
-    await linkFolder(page);
+    await importProfileWithKnownMod(page, errs);
+    await linkFolder(page, errs);
 
-    const preview = await openSyncPreview(page);
+    const preview = await openSyncPreview(page, errs);
     await preview.getByRole('button', { name: /^同期する/ }).click();
     await expect(preview).toBeHidden({ timeout: 20_000 });
 
@@ -201,12 +225,13 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
     const opts: FolderPickerMockOptions = {
       failWritesFor: ['mods/e2e-sodium-0.6.0.jar']
     };
+    const errs = collectPageErrors(page);
     await installFolderPickerMock(page, '.minecraft', SYNC_TARGET_FILES, opts);
 
-    await importProfileWithKnownMod(page);
-    await linkFolder(page);
+    await importProfileWithKnownMod(page, errs);
+    await linkFolder(page, errs);
 
-    const preview = await openSyncPreview(page);
+    const preview = await openSyncPreview(page, errs);
     await preview.getByRole('button', { name: /^同期する/ }).click();
     await expect(preview).toBeHidden({ timeout: 20_000 });
 
@@ -261,13 +286,17 @@ test.describe('環境との Sync (Phase 12-E2E)', () => {
     await waitForAppReady(page);
 
     // **D-4**: 未完成の Journal を検出し、確認を出す (無言の自動 Rollback はしない)
+    //
+    // 注意: InterruptedSyncDialog の role は **alertdialog** (dialog ではない)。
+    // 選択を必須にするモーダルなので、背景クリックで閉じない alertdialog になっている。
     const dialog = page
-      .getByRole('dialog')
+      .getByRole('alertdialog')
       .filter({ hasText: /前回の同期が完了していません/ })
       .first();
     await expect(dialog).toBeVisible({ timeout: 20_000 });
 
     // 「勝手に Rollback しない」= ユーザーが選ぶ操作が残っている
-    await expect(dialog.getByRole('button', { name: /ロールバック|取り消|戻す/ }).first()).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /巻き戻す/ })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /このままにする/ })).toBeVisible();
   });
 });

@@ -237,65 +237,66 @@ export async function installFolderPickerMock(
   // IndexedDB 往復でモック handle が壊れる問題への対処
   //
   // アプリは紐付け時に handle を Dexie (dirHandles) に保存し、Sync 時に
-  // openLinkedFolder() が**それを読み戻して**使う。
+  // openLinkedFolder() が**それを読み戻して**使う (lib/env/link.ts:138)。
   //
-  // ところが構造化クローンは **プロトタイプを複製しない**ため、
-  // クラスインスタンスのモック handle は「メソッドを持たないただのオブジェクト」に
-  // なって返ってくる → queryPermission is not a function で Sync が失敗する。
+  // ところが構造化クローンは**プロトタイプを複製しない**ため、クラスインスタンスの
+  // モック handle は「メソッドを持たないただのオブジェクト」になって返ってくる
+  // → sink.ensureWritable() が queryPermission を呼べず prepare() が失敗する。
   // (実ブラウザの本物の FileSystemDirectoryHandle はプラットフォームオブジェクトなので
   //  メソッドを保ったまま往復する。つまりこれは**モック固有**の問題)
   //
-  // そこで IDB の put / 読み出しをフックし、handle 本体は JS 側のレジストリに
-  // 参照で保持して、マーカーだけを行に格納する。
+  // そこで **dirHandles ストアの get だけ**をフックする。handle 本体は JS 側の
+  // レジストリに参照で保持し、行にはマーカーだけを格納する。
+  //
+  // 注意: 初版は IDBRequest.prototype.result をグローバルに差し替えていたが、
+  // 他のストア (profiles / managedFiles 等 = ZIP Import 経路) まで巻き込んで
+  // 壊したため、対象を dirHandles の get に限定した。
+  // 失敗してもアプリ全体を巻き込まないよう try/catch で保護し、
+  // 理由は window.__e2e_idb_patch_error__ で spec 側から読めるようにする。
   // ==========================================================================
-  const handleRegistry = new Map();
-  let refSeq = 0;
-  const REF_KEY = '__e2e_handle_ref__';
-  const isMockHandle = (v) => v instanceof MockDirHandle;
+  try {
+    const handleRegistry = new Map();
+    let refSeq = 0;
+    const REF_KEY = '__e2e_handle_ref__';
 
-  function toStorable(row) {
-    if (row && typeof row === 'object' && isMockHandle(row.handle)) {
-      const ref = 'e2e-ref-' + ++refSeq;
-      handleRegistry.set(ref, row.handle);
-      return {
-        ...row,
-        handle: { [REF_KEY]: ref, name: row.handle.name, kind: 'directory' }
-      };
-    }
-    return row;
-  }
-
-  function fromStorable(row) {
-    if (row && typeof row === 'object' && row.handle && typeof row.handle === 'object') {
-      const ref = row.handle[REF_KEY];
-      if (ref && handleRegistry.has(ref)) {
-        return { ...row, handle: handleRegistry.get(ref) };
+    function toStorable(row) {
+      if (row && typeof row === 'object' && row.handle instanceof MockDirHandle) {
+        const ref = 'e2e-ref-' + ++refSeq;
+        handleRegistry.set(ref, row.handle);
+        return { ...row, handle: { [REF_KEY]: ref, name: row.handle.name, kind: 'directory' } };
       }
+      return row;
     }
-    return row;
-  }
 
-  const origPut = IDBObjectStore.prototype.put;
-  IDBObjectStore.prototype.put = function (value, key) {
-    return origPut.call(this, toStorable(value), key);
-  };
-  const origAdd = IDBObjectStore.prototype.add;
-  IDBObjectStore.prototype.add = function (value, key) {
-    return origAdd.call(this, toStorable(value), key);
-  };
+    const origPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, key) {
+      if (this.name === 'dirHandles') return origPut.call(this, toStorable(value), key);
+      return origPut.call(this, value, key);
+    };
 
-  // Dexie は IDBRequest.result 経由で値を受け取るので、そこで行を復元する
-  const resultDesc = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'result');
-  if (resultDesc && resultDesc.get) {
-    Object.defineProperty(IDBRequest.prototype, 'result', {
-      configurable: true,
-      get() {
-        const value = resultDesc.get.call(this);
-        if (Array.isArray(value)) return value.map(fromStorable);
-        return fromStorable(value);
+    // 読み戻し: Dexie は IDBRequest.result 経由で値を受け取る。result は読み取り専用なので、
+    // **リクエストオブジェクト自身に own property を定義して**プロトタイプの getter を隠す
+    // (dirHandles の get 限定。他ストアの IDBRequest には一切触れない)。
+    const resultDesc = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'result');
+    const origGet = IDBObjectStore.prototype.get;
+    IDBObjectStore.prototype.get = function (key) {
+      const req = origGet.call(this, key);
+      if (this.name === 'dirHandles' && resultDesc && resultDesc.get) {
+        const getter = resultDesc.get;
+        req.addEventListener('success', () => {
+          const raw = getter.call(req);
+          if (raw && typeof raw === 'object' && raw.handle && raw.handle[REF_KEY]) {
+            const fixed = { ...raw, handle: handleRegistry.get(raw.handle[REF_KEY]) };
+            Object.defineProperty(req, 'result', { configurable: true, get: () => fixed });
+          }
+        });
       }
-    });
+      return req;
+    };
+  } catch (e) {
+    window.__e2e_idb_patch_error__ = String(e);
   }
+
 
   // ---- OPFS (Backup 用) ----
   if (WITH_OPFS && typeof navigator !== 'undefined') {

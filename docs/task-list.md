@@ -126,7 +126,9 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | P12-D1 | 新規プロファイル作成モーダルのフォルダ選択 → **自動紐付け** + 台帳 seed (bug 1/2) | ローカル検証済み | 100% | P12-B | フォルダ選択して作成した Profile に `linkedSource` + `dirHandles` が保存され、ボタンが Sync に置換・ZIP 保存は設定ページのみ。§10.5 の artifact 台帳 seed 含む | `1709704` / typecheck・biome・unit 1176 passed・build pass |
 | P12-D2 | Discover からの Modpack 追加 = 内容展開 + インポート時競合解決 UI (bug 3) | ローカル検証済み | 100% | P12-D1 | Modpack 追加時に `modrinth.index.json` の files[] を ProjectItem 展開。Profile 内の同一 projectId・別 versionId を競合として選択 UI (既定=ユーザー版)。`modpackSource` に projectId/versionId/**lockedVersions** を保存。overrides は source:modpack で台帳化 | `ac26e29` / typecheck・biome・unit 1196 passed・build pass |
-| P12-D3 | Sync Preview の競合 (D-3) 検出・適用 (ロック情報の活用) | **別タスク** | 0% | P12-D2 | P12-D2 でデータ構造 (lockedVersions) のみ先行。Sync 側の検出・適用 UI は本タスクで実装 | PHASE12D_FIX_PLAN.md §2 (ユーザー確定 2026-08-29) |
+| P12-D3 | Sync Preview の競合 (D-3) 検出・適用 (ロック情報の活用) | ローカル検証済み | 100% | P12-D2 | `lockedVersions` (導入時の指定) と Profile の現在値を突き合わせ (versionId 無→非競合 / 一致→非競合 / 相違→競合)、SyncPreviewModal に競合セクション (既定 = ユーザー版) を表示。replace 選択時は Profile をロック版へ復元して plan 再計算・Sync 適用 (completed 時のみ反映)。`ModpackLockedVersion` を実体情報 (fileUrl/filename/sha1/size/path) に拡張 | `df13972` / typecheck・biome・unit 1216 passed・build pass |
+
+| P12-D1B | 設定ページ「環境との同期」の紐付けでも台帳 seed | ローカル検証済み | 100% | P12-D1 | `useEnvironmentLink.link()` 成功時に §10.5 の artifact 台帳 seed (expandProfileToManaged + merge + syncManagedFiles) を実行。新規作成 (D1) と同じ整合性。失敗は warning のみ (紐付けは成功扱い) | `df13972` / typecheck・biome・unit 1216 passed・build pass |
 
 ### Phase 13: CurseForge 完全対応 — 未着手
 

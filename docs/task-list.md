@@ -105,6 +105,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-B1 | EnvironmentSource 抽象 + picker | 完了 | 100% | P11-A | FileSystemSource + read モード picker | `1c43693` |
 | P11-B2 | Detector chain (Official/Prism/Generic) | 完了 | 100% | P11-B1 | mmc-pack.json 解析を含む 3 検出器 | `b3f8d40` |
 | P11-B3 | Analyzer (SHA-1 Worker + Modrinth 照合) | 完了 | 100% | P11-B2 | 3 カテゴリ照合 + 検証 6 項目 | `a2f44ba` |
+| P11-B4 | Modrinth App (`mojo_instance.json`) 検出 | 完了 | 100% | P11-B2 | versionId (Fabric/Quilt/Forge/NeoForge) → env 解析 + ZIP 判定 + UI ラベル | `5998a21d` / ユーザー提示 4 形式の unit test 10 件追加・1226 tests green |
 | P11-C1 | Import UI 統合 (NewProfileModal 解析) | 完了 | 100% | P11-B3 | Analysis View + 名前自動生成 | `b6a5a54` |
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
 | P11-E2E | E2E spec 2 種 + ドキュメント | 完了 | 100% | P11-C2 | **CI 上で E2E green** | `c0d13f8` + spec 修正 `1508a6e` / run `33071105483` 全 green |

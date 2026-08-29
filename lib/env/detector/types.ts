@@ -7,19 +7,33 @@
  *   2. PrismDetector            — Prism / MultiMC / PolyMC (mmc-pack.json)
  *   3. GenericDetector          — mods/ 等が直接あるだけの fallback
  * Phase 12/13 で ModrinthApp / GDLauncher / ATLauncher を追加予定。
+ *
+ * 2026-08-29: ランチャー追加の容易化のため、検出器の登録・優先順位・
+ * UI ラベルは registry.ts の DETECTOR_REGISTRY へ集約した。
+ * rootType の一覧 (型補完用) は本ファイル、追加手順は registry.ts 参照。
  */
 
 import type { ProfileLoader } from '@/types';
 import type { EnvironmentSource } from '../source';
 
+/**
+ * 検出結果のランチャー種別 (registry.ts の登録キーと対応)。
+ *
+ * 既知値は型補完用に列挙しつつ、`string & {}` で開いた union にすることで、
+ * **[レジストリへの 1 エントリ追記だけで新規ランチャーを追加できる]** ようにする
+ * (types.ts の変更は不要。2026-08-29 ユーザー要望: 他ランチャー追加の容易化)。
+ */
+export type RootType =
+  | 'official'
+  | 'prism'
+  | 'multimc'
+  | 'modrinth-app'
+  | 'generic'
+  | 'unknown'
+  | (string & {});
+
 export interface DetectedEnvironment {
-  rootType:
-    | 'official'
-    | 'prism'
-    | 'multimc'
-    | 'modrinth-app'
-    | 'generic'
-    | 'unknown';
+  rootType: RootType;
   /** 検出できなければ undefined (UI 側で手動選択にフォールバック §4.4.3) */
   mcVersion?: string;
   loader?: ProfileLoader;

@@ -12,21 +12,19 @@
  * | Forge    | <mc>-forge-<forge>                | 1.21-forge-51.0.33 |
  * | NeoForge | neoforge-<neoforge>               | neoforge-21.11.45 |
  *
- * NeoForge は versionId に MC バージョンを含まないため、NeoForge の
- * バージョン規約 (先頭 2 セグメント = MC の major.minor) から推定する:
- *   neoforge-21.11.45 → MC 1.21.11 / neoforge-20.4.237 → MC 1.20.4 /
- *   neoforge-21.0.167 → MC 1.21 (21.0.x の「0」パッチは 1.21 に正規化)。
+ * NeoForge / Forge の対応は 2026-08-29 にウェブ上で事実確認済み (推定ではない):
+ *   - NeoForge: FTB Wiki の版対応表
+ *     https://ftb.fandom.com/wiki/NeoForge (例: 1.21.11 = 21.11.45 / 1.21 = 21.0.167)
+ *   - Forge: Minecraft Forge 公式ダウンロードページ
+ *     https://files.minecraftforge.net/net/minecraftforge/forge/index_1.21.html
+ *     → MC 1.21 の Latest = 51.0.33。Forge は versionId に MC が含まれるため変換不要。
  *
  * Modrinth App は mods/ 等を instance root 直下に置くことが多いが、
  * .minecraft/ 配下のケースも確認する (Prism と同様の両対応)。
  */
 
 import type { ProfileLoader } from '@/types';
-import {
-  type DetectedEnvironment,
-  type EnvironmentDetector,
-  detectContentDirs
-} from './types';
+import { InstanceFileDetector } from './instanceFile';
 
 /** mojo_instance.json のユーザー提示スキーマ (その他のフィールドは無視) */
 export interface MojoInstanceJson {
@@ -51,16 +49,33 @@ const LOADER_PREFIXES: ReadonlyArray<{ prefix: string; loader: ProfileLoader }> 
 ];
 
 /**
- * NeoForge バージョン (例: '21.11.45') から MC バージョンを推定。
- * 規約: 先頭 2 セグメントが MC の major.minor (21.11 → 1.21.11)。
- * '21.0.x' のようにパッチが 0 の場合は '1.21' に正規化する。
+ * NeoForge バージョンから MC バージョンを推定する。
+ *
+ * 事実 (2026-08-29 にウェブで確認した公式データ):
+ * - 旧形式 (MC 1.20.2〜1.21.11): 3 セグメントで先頭 2 つが MC の
+ *   「1.」を除いた major.minor。例: 21.11.45 → MC 1.21.11 /
+ *   21.0.167 → MC 1.21 / 20.4.251 → MC 1.20.4 (FTB Wiki の表:
+ *   1.21.11: 21.11.45 / 1.21: 21.0.167 / 1.20.4: 20.4.251)
+ * - 新形式 (MC 26.1〜): 先頭 3 つが MC の major.minor.patch
+ *   (.patch が 0 なら省略)。例: 26.1.0.19 → MC 26.1 /
+ *   26.1.1.15 → MC 26.1.1 / 26.2.0.67 → MC 26.2 (同 Wiki の表:
+ *   26.1: 26.1.0.19-beta / 26.1.1: 26.1.1.15-beta / 26.2: 26.2.0.67)
+ *
+ * 限界: スナップショット (例: 26.1.0.0-alpha.8+snapshot-4) は
+ * 番号から MC の -pre-/-snapshot- タグを復元できないため、
+ * ベース ('26.1') までしか返さない。
  */
 export function mcVersionFromNeoForge(nfVersion: string): string | undefined {
-  const match = /^(\d+)\.(\d+)\.\d+/.exec(nfVersion);
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(nfVersion);
   if (!match) return undefined;
   const major = match[1] ?? '';
   const minor = match[2] ?? '';
-  // NeoForge 20.4.x → 1.20.4 / 21.0.x → 1.21
+  const patch = match[3] ?? '';
+  // 新形式 (MC 26.x から date ベースのバージョンに移行): 先頭 3 セグメントが MC
+  if (Number(major) >= 26) {
+    return patch === '0' ? `${major}.${minor}` : `${major}.${minor}.${patch}`;
+  }
+  // 旧形式 (MC 1.20.2〜1.21.11): 先頭 2 セグメントが MC の「1.」を除いた値
   return minor === '0' ? `1.${major}` : `1.${major}.${minor}`;
 }
 
@@ -111,29 +126,19 @@ export function parseMojoInstance(json: MojoInstanceJson): ParsedMojoInstance {
   return {};
 }
 
-export class ModrinthAppDetector implements EnvironmentDetector {
-  readonly name = 'ModrinthApp';
-
-  async canDetect(source: Parameters<EnvironmentDetector['canDetect']>[0]): Promise<boolean> {
-    return source.exists('mojo_instance.json');
-  }
-
-  async detect(source: Parameters<EnvironmentDetector['detect']>[0]): Promise<DetectedEnvironment> {
-    let parsed: ParsedMojoInstance = {};
-    try {
-      const raw = await source.readFile('mojo_instance.json');
-      parsed = parseMojoInstance(JSON.parse(new TextDecoder().decode(raw)) as MojoInstanceJson);
-    } catch {
-      // mojo_instance.json の読み取り・パース失敗は「検出失敗」扱い (env なし)
-    }
-
-    return {
+/**
+ * Modrinth App 用 Detector (mojo_instance.json)。
+ *
+ * 2026-08-29: 単一インスタンス定義 JSON 方式の共通基底
+ * (InstanceFileDetector) へ移行。形式固有のパースのみ parseMojoInstance を担当。
+ */
+export class ModrinthAppDetector extends InstanceFileDetector<MojoInstanceJson> {
+  constructor() {
+    super({
+      name: 'ModrinthApp',
       rootType: 'modrinth-app',
-      mcVersion: parsed.mcVersion,
-      loader: parsed.loader,
-      loaderVersion: parsed.loaderVersion,
-      // Modrinth App は instance root 直下か .minecraft/ 配下かに分かれるため両方確認
-      contentDirs: await detectContentDirs(source, ['', '.minecraft'])
-    };
+      instanceFile: 'mojo_instance.json',
+      parse: parseMojoInstance
+    });
   }
 }

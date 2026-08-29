@@ -8,7 +8,7 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { pickMinecraftDirectory, type PickedDirectory } from '@/lib/env/picker';
-import type { DetectedEnvironment } from '@/lib/env/detector';
+import { rootTypeLabel, type DetectedEnvironment } from '@/lib/env/detector';
 import {
   analyzeEnvironmentSource,
   type AnalyzeProgress,
@@ -67,15 +67,6 @@ function countImportedContents(data: PendingImportData | null | undefined): {
   };
 }
 
-const ROOT_TYPE_LABELS: Record<string, string> = {
-  official: '公式ランチャー (.minecraft)',
-  prism: 'Prism / MultiMC インスタンス',
-  multimc: 'MultiMC インスタンス',
-  'modrinth-app': 'Modrinth App インスタンス',
-  generic: '汎用構造 (mods/ 等)',
-  unknown: '不明'
-};
-
 const ANALYSIS_PHASE_LABELS: Record<AnalyzeProgress['phase'], string> = {
   detect: '環境検出',
   scan: 'ファイル走査',
@@ -127,7 +118,7 @@ function AnalysisSection({
         {environment.rootType && (
           <div>
             <span className="font-semibold">構造: </span>
-            {ROOT_TYPE_LABELS[environment.rootType] ?? environment.rootType}
+            {rootTypeLabel(environment.rootType)}
           </div>
         )}
         <div>

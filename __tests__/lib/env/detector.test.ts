@@ -8,6 +8,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   detectEnvironment,
+  DETECTOR_REGISTRY,
+  createDetectorChain,
+  rootTypeLabel,
+  InstanceFileDetector,
   OfficialLauncherDetector,
   PrismDetector,
   ModrinthAppDetector,
@@ -213,11 +217,20 @@ describe('parseMojoInstance (Modrinth App mojo_instance.json)', () => {
     ).toEqual({ loader: 'NeoForge', loaderVersion: '21.11.45', mcVersion: '1.21.11' });
   });
 
-  it('NeoForge 21.0.x は 1.21 に正規化、20.4.x は 1.20.4', () => {
+  it('NeoForge 旧形式 (MC 1.20.2〜1.21.11) は FTB Wiki の表どおり', () => {
     expect(mcVersionFromNeoForge('21.0.167')).toBe('1.21');
-    expect(mcVersionFromNeoForge('20.4.237')).toBe('1.20.4');
+    expect(mcVersionFromNeoForge('20.4.251')).toBe('1.20.4');
+    expect(mcVersionFromNeoForge('20.2.93')).toBe('1.20.2');
     expect(mcVersionFromNeoForge('21.11.45')).toBe('1.21.11');
+    expect(mcVersionFromNeoForge('21.10.64')).toBe('1.21.10');
     expect(mcVersionFromNeoForge('not-a-version')).toBeUndefined();
+  });
+
+  it('NeoForge 新形式 (MC 26.1〜) は date ベースの MC に一致', () => {
+    expect(mcVersionFromNeoForge('26.1.0.19-beta')).toBe('26.1');
+    expect(mcVersionFromNeoForge('26.1.1.15-beta')).toBe('26.1.1');
+    expect(mcVersionFromNeoForge('26.2.0.67')).toBe('26.2');
+    expect(mcVersionFromNeoForge('26.1.2.97')).toBe('26.1.2');
   });
 
   it('未知形式・versionId 欠落は env なし', () => {
@@ -472,5 +485,94 @@ describe('GenericDetector + chain (detectEnvironment)', () => {
   it('GenericDetector を単体で直接呼んでも canDetect=true', async () => {
     const detector = new GenericDetector();
     expect(await detector.canDetect()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DETECTOR_REGISTRY (2026-08-29: 他ランチャー追加の容易化)
+// ---------------------------------------------------------------------------
+
+describe('DETECTOR_REGISTRY (ランチャー登録表)', () => {
+  it('組み込み 4 種が registered され、chain は priority 順', () => {
+    expect(DETECTOR_REGISTRY.map((entry) => entry.rootType)).toEqual([
+      'official',
+      'prism',
+      'modrinth-app',
+      'generic'
+    ]);
+
+    const chain = createDetectorChain();
+    expect(chain.map((detector) => detector.name)).toEqual([
+      'OfficialLauncher',
+      'Prism',
+      'ModrinthApp',
+      'Generic'
+    ]);
+  });
+
+  it('rootTypeLabel は登録済みラベル・レガシーラベル・未登録フォールバックを返す', () => {
+    expect(rootTypeLabel('official')).toBe('公式ランチャー (.minecraft)');
+    expect(rootTypeLabel('prism')).toBe('Prism / MultiMC インスタンス');
+    expect(rootTypeLabel('modrinth-app')).toBe('Modrinth App インスタンス');
+    expect(rootTypeLabel('generic')).toBe('汎用構造 (mods/ 等)');
+    // 後方互換 (Detector を持たない rootType)
+    expect(rootTypeLabel('multimc')).toBe('MultiMC インスタンス');
+    expect(rootTypeLabel('unknown')).toBe('不明');
+    // 未登録は raw 文字列
+    expect(rootTypeLabel('gdlauncher')).toBe('gdlauncher');
+  });
+
+  it('InstanceFileDetector 基底で新ランチャーを追加できる (登録 1 エントリに相当)', async () => {
+    // 例: 仮想的な "gdlauncher" (instance.json) を基底クラスだけで実装
+    const gdLauncher = new InstanceFileDetector({
+      name: 'GDLauncher',
+      rootType: 'gdlauncher',
+      instanceFile: 'instance.json',
+      parse: (json) => {
+        const instance = json as { minecraft?: { version?: string } };
+        return {
+          mcVersion: instance?.minecraft?.version,
+          loader: 'Vanilla'
+        };
+      },
+      contentRoots: ['', '.minecraft']
+    });
+
+    // canDetect / detect の共通動作
+    expect(await gdLauncher.canDetect(sourceOf({ 'instance.json': '{}' }))).toBe(true);
+    expect(await gdLauncher.canDetect(sourceOf({ 'mods/a.jar': 'x' }))).toBe(false);
+
+    const detected = await gdLauncher.detect(
+      sourceOf({
+        'instance.json': JSON.stringify({ minecraft: { version: '1.20.1' } }),
+        'mods/a.jar': 'x'
+      })
+    );
+    expect(detected.rootType).toBe('gdlauncher');
+    expect(detected.mcVersion).toBe('1.20.1');
+    expect(detected.loader).toBe('Vanilla');
+    expect(detected.contentDirs).toEqual({ mods: 'mods' });
+  });
+
+  it('chain に新規 Detector を追加しても detectEnvironment が動作する (注入テスト)', async () => {
+    // registry は直接変更せず、chain を差し替えて「追加が容易」であることを検証
+    const customChain = [
+      ...createDetectorChain().filter((d) => d.name !== 'Generic'),
+      new InstanceFileDetector({
+        name: 'Extra',
+        rootType: 'generic', // RootType 補完用の既存値 (テスト上の簡略化)
+        instanceFile: 'extra.json',
+        parse: () => ({ mcVersion: '1.20.4', loader: 'Vanilla' })
+      }),
+      new GenericDetector()
+    ];
+
+    const detected = await detectEnvironment(
+      sourceOf({ 'extra.json': '{}', 'mods/a.jar': 'x' }),
+      customChain
+    );
+    expect(detected.rootType).toBe('generic');
+    expect(detected.mcVersion).toBe('1.20.4');
+    expect(detected.contentDirs).toEqual({ mods: 'mods' });
   });
 });

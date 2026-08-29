@@ -24,7 +24,7 @@
 
 | 層 | 技术 |
 | :--- | :--- |
-| FW | Next.js **16.3.2** App Router (Turbopack) / React **19.2.8** / TS 5 (`strict` + `noUncheckedIndexedAccess`) |
+| FW | Next.js **16.3.3** App Router (Turbopack) / React **19.2.8** / TS 7 (`strict` + `noUncheckedIndexedAccess`) |
 | Style | Tailwind **v4** (CSS-in-CSS, PostCSS) + CSS 変数テーマ |
 | State | **Zustand 5**（7 store, `subscribeWithSelector` + `devtools`） |
 | Server state | **TanStack Query 5** + Dexie persister |

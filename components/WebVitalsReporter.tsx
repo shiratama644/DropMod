@@ -3,7 +3,7 @@
 /**
  * Web Vitals 計測 (Sub-Phase 8-E: E-7)
  *
- * LCP / INP / CLS / FCP / TTFB / FID (deprecated) を計測し、コンソールと
+ * LCP / INP / CLS / FCP / TTFB を計測し、コンソールと
  * (将来的に) Analytics に送信する。
  *
  * 現状の実装:

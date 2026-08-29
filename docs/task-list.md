@@ -180,6 +180,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | AGT-1 | .agent/ 自己知識管理システム初期構築 | 完了 | 100% | - | AGENT.md §8 + skills 10 種 | `ecdbb69` |
 | AGT-2 | §7 コミュニケーション規約 | 完了 | 100% | - | AGENT.md §7 | `7f579df` |
 | TOOL-1 | Node LTS 24 / pnpm 11 / vitest 4 統一 | 完了 | 100% | - | .nvmrc=24 + typecheck green | `49c74b6`〜`ccd5f98` |
+| DEP-1 | 依存関係を latest へ（パッチ + メジャー） | 完了 | 100% | - | 4 検証 pass。next 16.3.3 / TS 7 / vite 8 / jsdom 30 / web-vitals 6 / jest-dom 7 | 2026-08-30 本コミット |
 | PERF-1 | 画像表示の高速化・高画質化 (unoptimized 方針) | 完了 | 100% | - | LCP 改善 + 詳細レイアウト修正 | `d41cee5` |
 | BUG-1 | 全ファイル包括バグハント (8 件) | 完了 | 100% | - | 8 件修正 + 回帰テスト | `3f05032` |
 

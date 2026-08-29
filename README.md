@@ -23,18 +23,18 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 
 | 層 | 使用技術 |
 | --- | --- |
-| フレームワーク | Next.js 16.3.2 (App Router, Turbopack / Webpack 切替, Server Components + Route Handlers) |
+| フレームワーク | Next.js 16.3.3 (App Router, Turbopack / Webpack 切替, Server Components + Route Handlers) |
 | UI | React 19.2.8, Tailwind CSS 4.3, FontAwesome, `@fontsource/inter` + `@fontsource/jetbrains-mono` |
-| 型 | TypeScript 5 (strict) |
+| 型 | TypeScript 7 (strict) |
 | データ取得 | Modrinth API v2 (Server 側 fetch cache + ISR + Client 側 LRU/TTL キャッシュ) |
 | データ同期 | TanStack Query 5 (`useQuery` / `useInfiniteQuery` / `PersistQueryClient` with Dexie persister) |
 | 状態管理 | Zustand 5 (`profiles` / `toast` / `confirm` / `zipExport` / `zipImport` / `depCheck` / `appActions` / `uiState` の 8 slice、`subscribeWithSelector` middleware) |
 | 永続化 | **IndexedDB (Dexie 4)** — `dropmod_state_v2` LocalStorage → Dexie 自動移行、7 日間 LocalStorage バックアップ |
 | キャッシュ | `apiCache` テーブル (TanStack Query persister、24h TTL) + Cookie (`dropmod_active_profile`, SSR プロファイル反映用) |
-| テスト | Vitest 4 + `@testing-library/react` 16 + `@testing-library/user-event` 14 + `fake-indexeddb` 6 + **msw 2.15** (Modrinth API mock) + Playwright (E2E) |
+| テスト | Vitest 4 + `@testing-library/react` 16 + `@testing-library/user-event` 14 + `fake-indexeddb` 6 + **msw 2.15** (Modrinth API mock) + jsdom 30 + Playwright (E2E) |
 | メトリクス | web-vitals 4 (LCP / INP / CLS を Server Analytics endpoint に送信) |
 | デプロイ | Vercel (`next start` / Edge/Node ランタイム両対応) |
-| パッケージマネージャ | pnpm 11.24.0 (Node 20 以上、`.nvmrc` は 24) |
+| パッケージマネージャ | pnpm 11.24.0 (Node 22.22.2 以上、`.nvmrc` は 24) |
 
 ## セットアップ
 

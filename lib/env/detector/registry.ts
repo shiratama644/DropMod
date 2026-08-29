@@ -7,7 +7,7 @@
  *
  * ## 新規ランチャー追加手順
  * 1. lib/env/detector/ に Detector を実装する。
- *    - 単一インスタンス定義 JSON 方式 (Prism / Modrinth App と同型):
+ *    - 単一インスタンス定義 JSON 方式 (Prism / MojoLauncher と同型):
  *      `InstanceFileDetector` を継承し、定義ファイル名 + パーサを渡す。
  *    - それ以外 (公式ランチャーの versions/*.json 等): `EnvironmentDetector` を直接実装。
  * 2. このファイルの `DETECTOR_REGISTRY` に 1 エントリ追記する:
@@ -21,7 +21,7 @@
 
 import type { DetectedEnvironment, EnvironmentDetector } from './types';
 import { GenericDetector } from './generic';
-import { ModrinthAppDetector } from './modrinthApp';
+import { MojoLauncherDetector } from './mojoLauncher';
 import { OfficialLauncherDetector } from './official';
 import { PrismDetector } from './prism';
 
@@ -59,10 +59,10 @@ export const DETECTOR_REGISTRY: readonly DetectorDefinition[] = [
     create: () => new PrismDetector()
   },
   {
-    rootType: 'modrinth-app',
-    label: 'Modrinth App インスタンス',
+    rootType: 'mojo-launcher',
+    label: 'MojoLauncher インスタンス',
     priority: 30,
-    create: () => new ModrinthAppDetector()
+    create: () => new MojoLauncherDetector()
   },
   {
     rootType: 'generic',
@@ -79,6 +79,8 @@ export const DETECTOR_REGISTRY: readonly DetectorDefinition[] = [
  */
 const LEGACY_ROOT_TYPE_LABELS: Readonly<Record<string, string>> = {
   multimc: 'MultiMC インスタンス',
+  // 2026-08-29: Modrinth App → MojoLauncher に名称修正した際の後方互換ラベル
+  'modrinth-app': 'Modrinth App インスタンス',
   unknown: '不明'
 };
 

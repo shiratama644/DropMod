@@ -9,12 +9,12 @@
 import type { EnvironmentSource } from '../source';
 import { createDetectorChain } from './registry';
 import { GenericDetector } from './generic';
-import { ModrinthAppDetector } from './modrinthApp';
+import { MojoLauncherDetector } from './mojoLauncher';
 import { OfficialLauncherDetector } from './official';
 import { PrismDetector } from './prism';
 import type { DetectedEnvironment, EnvironmentDetector } from './types';
 
-/** chain の順序は DETECTOR_REGISTRY の priority 順 (公式 → Prism → ModrinthApp → Generic) */
+/** chain の順序は DETECTOR_REGISTRY の priority 順 (公式 → Prism → MojoLauncher → Generic) */
 export const detectors: readonly EnvironmentDetector[] = createDetectorChain();
 
 /**
@@ -40,6 +40,6 @@ export async function detectEnvironment(
 export { createDetectorChain, DETECTOR_REGISTRY, rootTypeLabel } from './registry';
 export { InstanceFileDetector } from './instanceFile';
 export type { ParsedLauncherEnv, InstanceFileDetectorOptions } from './instanceFile';
-export { OfficialLauncherDetector, PrismDetector, ModrinthAppDetector, GenericDetector };
+export { OfficialLauncherDetector, PrismDetector, MojoLauncherDetector, GenericDetector };
 export type { DetectorDefinition } from './registry';
 export type { DetectedEnvironment, EnvironmentDetector, RootType } from './types';

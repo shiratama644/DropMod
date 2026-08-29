@@ -6,7 +6,7 @@
  *   1. OfficialLauncherDetector — 公式 Minecraft Launcher (versions/*.json)
  *   2. PrismDetector            — Prism / MultiMC / PolyMC (mmc-pack.json)
  *   3. GenericDetector          — mods/ 等が直接あるだけの fallback
- * Phase 12/13 で ModrinthApp / GDLauncher / ATLauncher を追加予定。
+ * Phase 12/13 で MojoLauncher / GDLauncher / ATLauncher を追加予定。
  *
  * 2026-08-29: ランチャー追加の容易化のため、検出器の登録・優先順位・
  * UI ラベルは registry.ts の DETECTOR_REGISTRY へ集約した。
@@ -27,6 +27,7 @@ export type RootType =
   | 'official'
   | 'prism'
   | 'multimc'
+  | 'mojo-launcher'
   | 'modrinth-app'
   | 'generic'
   | 'unknown'

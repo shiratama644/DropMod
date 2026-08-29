@@ -92,7 +92,7 @@ describe('isMinecraftFolderZip', () => {
     expect(isMinecraftFolderZip(buildZip({ 'mods/a.jar': 'x' }))).toBe(true);
     expect(isMinecraftFolderZip(buildZip({ 'versions/1.21/1.21.json': '{}' }))).toBe(true);
     expect(isMinecraftFolderZip(buildZip({ 'mmc-pack.json': '{}' }))).toBe(true);
-    // Modrinth App (mojo_instance.json) も環境 ZIP として扱う (2026-08-29)
+    // MojoLauncher (mojo_instance.json) も環境 ZIP として扱う (2026-08-29)
     expect(
       isMinecraftFolderZip(
         buildZip({ 'mojo_instance.json': '{"versionId":"fabric-loader-0.19.3-1.21.11"}' })

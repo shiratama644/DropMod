@@ -105,9 +105,10 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-B1 | EnvironmentSource 抽象 + picker | 完了 | 100% | P11-A | FileSystemSource + read モード picker | `1c43693` |
 | P11-B2 | Detector chain (Official/Prism/Generic) | 完了 | 100% | P11-B1 | mmc-pack.json 解析を含む 3 検出器 | `b3f8d40` |
 | P11-B3 | Analyzer (SHA-1 Worker + Modrinth 照合) | 完了 | 100% | P11-B2 | 3 カテゴリ照合 + 検証 6 項目 | `a2f44ba` |
-| P11-B4 | Modrinth App (`mojo_instance.json`) 検出 | 完了 | 100% | P11-B2 | versionId (Fabric/Quilt/Forge/NeoForge) → env 解析 + ZIP 判定 + UI ラベル | `5998a21d` / ユーザー提示 4 形式の unit test 10 件追加・1226 tests green |
-| P11-B5 | バージョン対応の事実確認 (NeoForge 旧/新形式 + Forge) | 完了 | 100% | P11-B4 | web 検索で一次情報 (FTB Wiki / files.minecraftforge.net) から確定し、コードコメント・テストへ反映 | `mcVersionFromNeoForge` を新形式 (26.x) 対応に修正・検証ソースをコメント明記 / detector.test 36 件 | 
-| P11-B6 | Detector 登録レジストリ + 共通基底 (他ランチャー追加の容易化) | 完了 | 100% | P11-B5 | ランチャー追加 = registry.ts へ 1 エントリ (chain・UI ラベル自動導出 / InstanceFileDetector 基底で JSON 定義形式は parse のみ) | DETECTOR_REGISTRY / createDetectorChain / rootTypeLabel / InstanceFileDetector + 注入テスト / unit 1231 tests green | 
+| P11-B4 | MojoLauncher (`mojo_instance.json`) 検出 | 完了 | 100% | P11-B2 | versionId (Fabric/Quilt/Forge/NeoForge) → env 解析 + ZIP 判定 + UI ラベル | `5998a21d` 当初実装 / 名称修正・5 形式対応・単一関数化は P11-B7 / 当時の unit test 10 件追加・1226 tests green |
+| P11-B5 | バージョン対応の事実確認 (NeoForge 旧/新形式 + Forge) | 完了 | 100% | P11-B4 | web 検索で一次情報 (FTB Wiki / files.minecraftforge.net) から確定し、コードコメント・テストへ反映 | `mcVersionFromNeoForge` を新形式 (26.x) 対応に修正・検証ソースをコメント明記 / detector.test 36 件 |
+| P11-B6 | Detector 登録レジストリ + 共通基底 (他ランチャー追加の容易化) | 完了 | 100% | P11-B5 | ランチャー追加 = registry.ts へ 1 エントリ (chain・UI ラベル自動導出 / InstanceFileDetector 基底で JSON 定義形式は parse のみ) | DETECTOR_REGISTRY / createDetectorChain / rootTypeLabel / InstanceFileDetector + 注入テスト / unit 1231 tests green |
+| P11-B7 | Modrinth App → MojoLauncher 名称修正 + versionId 単一関数化 | 完了 | 100% | P11-B6 | ユーザー指摘: 対応対象は Modrinth App ではなく MojoLauncher。MojoLauncher 公式リポジトリ (v3_openjdk) を直接確認し `Instances.java:43` / `ModLoader.java getVersionId()` で裏付け。`mcVersionFromNeoForge` を廃止し宣言テーブル + 単一関数 `parseVersionId` に統合。Legacy Fabric (`legacy-fabric-loader-…`) 追加 (Fabric として扱う) | `modrinthApp.ts` → `mojoLauncher.ts` / rootType `modrinth-app` → `mojo-launcher` (旧はレガシーラベル保持) / `VERSION_ID_FORMATS` 5 形式 / unit 1232 tests green / 4 検証 pass |
 | P11-C1 | Import UI 統合 (NewProfileModal 解析) | 完了 | 100% | P11-B3 | Analysis View + 名前自動生成 | `b6a5a54` |
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
 | P11-E2E | E2E spec 2 種 + ドキュメント | 完了 | 100% | P11-C2 | **CI 上で E2E green** | `c0d13f8` + spec 修正 `1508a6e` / run `33071105483` 全 green |

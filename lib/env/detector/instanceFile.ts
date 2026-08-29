@@ -2,7 +2,7 @@
  * 単一インスタンス定義 JSON 方式ランチャー向け Detector 基底クラス
  * (2026-08-29 ユーザー要望: 他ランチャー追加の容易化)。
  *
- * Prism (mmc-pack.json) / Modrinth App (mojo_instance.json) のように
+ * Prism (mmc-pack.json) / MojoLauncher (mojo_instance.json) のように
  * 「instance root 直下に JSON 定義ファイルが 1 つあれば判定できる」形式は、
  * この基底クラスを継承して `parse` を渡すだけですむ。canDetect / detect /
  * パース失敗時の env なしフォールバック / contentDirs 探索は共通処理する。

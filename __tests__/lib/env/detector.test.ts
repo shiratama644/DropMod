@@ -14,7 +14,7 @@ import {
   InstanceFileDetector,
   OfficialLauncherDetector,
   PrismDetector,
-  ModrinthAppDetector,
+  MojoLauncherDetector,
   GenericDetector
 } from '@/lib/env/detector';
 import {
@@ -22,7 +22,7 @@ import {
   extractMcVersionFromId
 } from '@/lib/env/detector/official';
 import { parseMmcPack } from '@/lib/env/detector/prism';
-import { parseMojoInstance, mcVersionFromNeoForge } from '@/lib/env/detector/modrinthApp';
+import { parseMojoInstance } from '@/lib/env/detector/mojoLauncher';
 import { FileSystemSource } from '@/lib/env/source';
 import { createFakeFileSystem } from '../../test-utils/fakeFs';
 
@@ -164,10 +164,10 @@ describe('parseMmcPack (Prism/MultiMC mmc-pack.json)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// mojo_instance.json パーサ (Modrinth App / 2026-08-29 ユーザー要望)
+// mojo_instance.json パーサ (MojoLauncher / 2026-08-29 ユーザー要望)
 // ---------------------------------------------------------------------------
 
-describe('parseMojoInstance (Modrinth App mojo_instance.json)', () => {
+describe('parseMojoInstance (MojoLauncher mojo_instance.json)', () => {
   it('Fabric: fabric-loader-<loaderVer>-<mc>', () => {
     expect(
       parseMojoInstance({
@@ -205,7 +205,7 @@ describe('parseMojoInstance (Modrinth App mojo_instance.json)', () => {
     ).toEqual({ loader: 'Forge', loaderVersion: '51.0.33', mcVersion: '1.21' });
   });
 
-  it('NeoForge: neoforge-<ver> から MC を推定 (21.11.45 → 1.21.11)', () => {
+  it('NeoForge: neoforge-<ver> から MC を導出 (21.11.45 → 1.21.11)', () => {
     expect(
       parseMojoInstance({
         argsMode: 0,
@@ -217,20 +217,58 @@ describe('parseMojoInstance (Modrinth App mojo_instance.json)', () => {
     ).toEqual({ loader: 'NeoForge', loaderVersion: '21.11.45', mcVersion: '1.21.11' });
   });
 
-  it('NeoForge 旧形式 (MC 1.20.2〜1.21.11) は FTB Wiki の表どおり', () => {
-    expect(mcVersionFromNeoForge('21.0.167')).toBe('1.21');
-    expect(mcVersionFromNeoForge('20.4.251')).toBe('1.20.4');
-    expect(mcVersionFromNeoForge('20.2.93')).toBe('1.20.2');
-    expect(mcVersionFromNeoForge('21.11.45')).toBe('1.21.11');
-    expect(mcVersionFromNeoForge('21.10.64')).toBe('1.21.10');
-    expect(mcVersionFromNeoForge('not-a-version')).toBeUndefined();
+  it('NeoForge 旧形式 (MC 1.20.2〜1.21.11) の MC 導出', () => {
+    expect(parseMojoInstance({ versionId: 'neoforge-21.0.167' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '21.0.167',
+      mcVersion: '1.21'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-20.4.251' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '20.4.251',
+      mcVersion: '1.20.4'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-20.2.93' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '20.2.93',
+      mcVersion: '1.20.2'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-21.10.64' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '21.10.64',
+      mcVersion: '1.21.10'
+    });
   });
 
   it('NeoForge 新形式 (MC 26.1〜) は date ベースの MC に一致', () => {
-    expect(mcVersionFromNeoForge('26.1.0.19-beta')).toBe('26.1');
-    expect(mcVersionFromNeoForge('26.1.1.15-beta')).toBe('26.1.1');
-    expect(mcVersionFromNeoForge('26.2.0.67')).toBe('26.2');
-    expect(mcVersionFromNeoForge('26.1.2.97')).toBe('26.1.2');
+    expect(parseMojoInstance({ versionId: 'neoforge-26.1.0.19-beta' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '26.1.0.19-beta',
+      mcVersion: '26.1'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-26.1.1.15-beta' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '26.1.1.15-beta',
+      mcVersion: '26.1.1'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-26.2.0.67' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '26.2.0.67',
+      mcVersion: '26.2'
+    });
+    expect(parseMojoInstance({ versionId: 'neoforge-26.1.2.97' })).toEqual({
+      loader: 'NeoForge',
+      loaderVersion: '26.1.2.97',
+      mcVersion: '26.1.2'
+    });
+  });
+
+  it('Legacy Fabric: legacy-fabric-loader-<loaderVer>-<mc> (Fabric として扱う)', () => {
+    expect(parseMojoInstance({ versionId: 'legacy-fabric-loader-0.6.3-1.21' })).toEqual({
+      loader: 'Fabric',
+      loaderVersion: '0.6.3',
+      mcVersion: '1.21'
+    });
   });
 
   it('未知形式・versionId 欠落は env なし', () => {
@@ -361,18 +399,18 @@ describe('PrismDetector', () => {
   });
 });
 
-describe('ModrinthAppDetector', () => {
+describe('MojoLauncherDetector', () => {
   const mojo = (versionId: string) =>
     JSON.stringify({ argsMode: 0, sharedData: false, icon: 'fabric', name: 'てすと', versionId });
 
   it('mojo_instance.json があるとき canDetect', async () => {
-    const detector = new ModrinthAppDetector();
+    const detector = new MojoLauncherDetector();
     expect(await detector.canDetect(sourceOf({ 'mojo_instance.json': mojo('fabric-loader-0.19.3-1.21.11') }))).toBe(true);
     expect(await detector.canDetect(sourceOf({ 'mods/a.jar': 'x' }))).toBe(false);
   });
 
   it('instance root 直下 / .minecraft 配下の両方の contentDirs を解決', async () => {
-    const detector = new ModrinthAppDetector();
+    const detector = new MojoLauncherDetector();
 
     // root 直下に mods/
     const a = await detector.detect(
@@ -382,7 +420,7 @@ describe('ModrinthAppDetector', () => {
         'shaderpacks/s.zip': 'zip'
       })
     );
-    expect(a.rootType).toBe('modrinth-app');
+    expect(a.rootType).toBe('mojo-launcher');
     expect(a.mcVersion).toBe('1.21.11');
     expect(a.loader).toBe('Fabric');
     expect(a.loaderVersion).toBe('0.19.3');
@@ -396,7 +434,7 @@ describe('ModrinthAppDetector', () => {
         '.minecraft/resourcepacks/rp.zip': 'zip'
       })
     );
-    expect(b.rootType).toBe('modrinth-app');
+    expect(b.rootType).toBe('mojo-launcher');
     expect(b.loader).toBe('Forge');
     expect(b.mcVersion).toBe('1.20.1');
     expect(b.contentDirs).toEqual({
@@ -406,11 +444,11 @@ describe('ModrinthAppDetector', () => {
   });
 
   it('mojo_instance.json のパース失敗は env なしで contentDirs のみ', async () => {
-    const detector = new ModrinthAppDetector();
+    const detector = new MojoLauncherDetector();
     const detected = await detector.detect(
       sourceOf({ 'mojo_instance.json': 'not-json', 'mods/a.jar': 'x' })
     );
-    expect(detected.rootType).toBe('modrinth-app');
+    expect(detected.rootType).toBe('mojo-launcher');
     expect(detected.mcVersion).toBeUndefined();
     expect(detected.loader).toBeUndefined();
     expect(detected.contentDirs).toEqual({ mods: 'mods' });
@@ -463,7 +501,7 @@ describe('GenericDetector + chain (detectEnvironment)', () => {
     expect(detected.contentDirs.mods).toBe('.minecraft/mods');
   });
 
-  it('chain: versions / mmc-pack が無く mojo_instance.json があれば ModrinthApp', async () => {
+  it('chain: versions / mmc-pack が無く mojo_instance.json があれば MojoLauncher', async () => {
     const detected = await detectEnvironment(
       sourceOf({
         'mojo_instance.json': JSON.stringify({
@@ -476,7 +514,7 @@ describe('GenericDetector + chain (detectEnvironment)', () => {
         'mods/a.jar': 'x'
       })
     );
-    expect(detected.rootType).toBe('modrinth-app');
+    expect(detected.rootType).toBe('mojo-launcher');
     expect(detected.mcVersion).toBe('1.21.11');
     expect(detected.loader).toBe('Fabric');
     expect(detected.contentDirs).toEqual({ mods: 'mods' });
@@ -497,7 +535,7 @@ describe('DETECTOR_REGISTRY (ランチャー登録表)', () => {
     expect(DETECTOR_REGISTRY.map((entry) => entry.rootType)).toEqual([
       'official',
       'prism',
-      'modrinth-app',
+      'mojo-launcher',
       'generic'
     ]);
 
@@ -505,7 +543,7 @@ describe('DETECTOR_REGISTRY (ランチャー登録表)', () => {
     expect(chain.map((detector) => detector.name)).toEqual([
       'OfficialLauncher',
       'Prism',
-      'ModrinthApp',
+      'MojoLauncher',
       'Generic'
     ]);
   });
@@ -513,10 +551,11 @@ describe('DETECTOR_REGISTRY (ランチャー登録表)', () => {
   it('rootTypeLabel は登録済みラベル・レガシーラベル・未登録フォールバックを返す', () => {
     expect(rootTypeLabel('official')).toBe('公式ランチャー (.minecraft)');
     expect(rootTypeLabel('prism')).toBe('Prism / MultiMC インスタンス');
-    expect(rootTypeLabel('modrinth-app')).toBe('Modrinth App インスタンス');
+    expect(rootTypeLabel('mojo-launcher')).toBe('MojoLauncher インスタンス');
     expect(rootTypeLabel('generic')).toBe('汎用構造 (mods/ 等)');
     // 後方互換 (Detector を持たない rootType)
     expect(rootTypeLabel('multimc')).toBe('MultiMC インスタンス');
+    expect(rootTypeLabel('modrinth-app')).toBe('Modrinth App インスタンス');
     expect(rootTypeLabel('unknown')).toBe('不明');
     // 未登録は raw 文字列
     expect(rootTypeLabel('gdlauncher')).toBe('gdlauncher');

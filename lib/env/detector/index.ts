@@ -1,20 +1,22 @@
 /**
  * EnvironmentDetector の chain (PHASE11_PLAN.md §10.3 + Phase 11-B)。
  *
- * 優先順位: OfficialLauncher → Prism → Generic (最終 fallback)。
+ * 優先順位: OfficialLauncher → Prism → ModrinthApp → Generic (最終 fallback)。
  * 上位 Detector が担当形式を判定できなければ次へ fallthrough する。
  */
 
 import type { EnvironmentSource } from '../source';
 import { OfficialLauncherDetector } from './official';
 import { PrismDetector } from './prism';
+import { ModrinthAppDetector } from './modrinthApp';
 import { GenericDetector } from './generic';
 import type { DetectedEnvironment, EnvironmentDetector } from './types';
 
-/** chain の順序は計画書 §4.2 のとおり (Phase 13 で ModrinthApp 等を追加予定) */
+/** chain の順序は計画書 §4.2 のとおり (ModrinthApp は 2026-08-29 追加) */
 export const detectors: readonly EnvironmentDetector[] = [
   new OfficialLauncherDetector(),
   new PrismDetector(),
+  new ModrinthAppDetector(),
   new GenericDetector()
 ];
 
@@ -34,5 +36,5 @@ export async function detectEnvironment(
   return { rootType: 'unknown', contentDirs: {} };
 }
 
-export { OfficialLauncherDetector, PrismDetector, GenericDetector };
+export { OfficialLauncherDetector, PrismDetector, ModrinthAppDetector, GenericDetector };
 export type { DetectedEnvironment, EnvironmentDetector } from './types';

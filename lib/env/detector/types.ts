@@ -13,7 +13,13 @@ import type { ProfileLoader } from '@/types';
 import type { EnvironmentSource } from '../source';
 
 export interface DetectedEnvironment {
-  rootType: 'official' | 'prism' | 'multimc' | 'generic' | 'unknown';
+  rootType:
+    | 'official'
+    | 'prism'
+    | 'multimc'
+    | 'modrinth-app'
+    | 'generic'
+    | 'unknown';
   /** 検出できなければ undefined (UI 側で手動選択にフォールバック §4.4.3) */
   mcVersion?: string;
   loader?: ProfileLoader;

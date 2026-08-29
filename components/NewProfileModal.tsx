@@ -71,6 +71,7 @@ const ROOT_TYPE_LABELS: Record<string, string> = {
   official: '公式ランチャー (.minecraft)',
   prism: 'Prism / MultiMC インスタンス',
   multimc: 'MultiMC インスタンス',
+  'modrinth-app': 'Modrinth App インスタンス',
   generic: '汎用構造 (mods/ 等)',
   unknown: '不明'
 };

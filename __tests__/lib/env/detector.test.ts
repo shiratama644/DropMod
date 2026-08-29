@@ -10,6 +10,7 @@ import {
   detectEnvironment,
   OfficialLauncherDetector,
   PrismDetector,
+  ModrinthAppDetector,
   GenericDetector
 } from '@/lib/env/detector';
 import {
@@ -17,6 +18,7 @@ import {
   extractMcVersionFromId
 } from '@/lib/env/detector/official';
 import { parseMmcPack } from '@/lib/env/detector/prism';
+import { parseMojoInstance, mcVersionFromNeoForge } from '@/lib/env/detector/modrinthApp';
 import { FileSystemSource } from '@/lib/env/source';
 import { createFakeFileSystem } from '../../test-utils/fakeFs';
 
@@ -158,6 +160,75 @@ describe('parseMmcPack (Prism/MultiMC mmc-pack.json)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// mojo_instance.json パーサ (Modrinth App / 2026-08-29 ユーザー要望)
+// ---------------------------------------------------------------------------
+
+describe('parseMojoInstance (Modrinth App mojo_instance.json)', () => {
+  it('Fabric: fabric-loader-<loaderVer>-<mc>', () => {
+    expect(
+      parseMojoInstance({
+        argsMode: 0,
+        renderer: 'opengles3_ltw',
+        sharedData: false,
+        icon: 'fabric',
+        name: 'てすと',
+        versionId: 'fabric-loader-0.19.3-1.21.11'
+      })
+    ).toEqual({ loader: 'Fabric', loaderVersion: '0.19.3', mcVersion: '1.21.11' });
+  });
+
+  it('Quilt: quilt-loader-<loaderVer>-<mc> (26.2 形式も取得)', () => {
+    expect(
+      parseMojoInstance({
+        argsMode: 0,
+        sharedData: false,
+        icon: 'quilt',
+        name: 'Quilt',
+        versionId: 'quilt-loader-0.24.0-26.2'
+      })
+    ).toEqual({ loader: 'Quilt', loaderVersion: '0.24.0', mcVersion: '26.2' });
+  });
+
+  it('Forge: <mc>-forge-<forgeVer>', () => {
+    expect(
+      parseMojoInstance({
+        argsMode: 0,
+        sharedData: false,
+        icon: 'forge',
+        name: 'Forge',
+        versionId: '1.21-forge-51.0.33'
+      })
+    ).toEqual({ loader: 'Forge', loaderVersion: '51.0.33', mcVersion: '1.21' });
+  });
+
+  it('NeoForge: neoforge-<ver> から MC を推定 (21.11.45 → 1.21.11)', () => {
+    expect(
+      parseMojoInstance({
+        argsMode: 0,
+        sharedData: false,
+        icon: 'neoforge',
+        name: 'NeoForge',
+        versionId: 'neoforge-21.11.45'
+      })
+    ).toEqual({ loader: 'NeoForge', loaderVersion: '21.11.45', mcVersion: '1.21.11' });
+  });
+
+  it('NeoForge 21.0.x は 1.21 に正規化、20.4.x は 1.20.4', () => {
+    expect(mcVersionFromNeoForge('21.0.167')).toBe('1.21');
+    expect(mcVersionFromNeoForge('20.4.237')).toBe('1.20.4');
+    expect(mcVersionFromNeoForge('21.11.45')).toBe('1.21.11');
+    expect(mcVersionFromNeoForge('not-a-version')).toBeUndefined();
+  });
+
+  it('未知形式・versionId 欠落は env なし', () => {
+    expect(parseMojoInstance({ versionId: 'custom-unknown' })).toEqual({});
+    expect(parseMojoInstance({ name: 'No Version' })).toEqual({});
+    expect(parseMojoInstance({ versionId: '' })).toEqual({});
+    expect(parseMojoInstance({ versionId: 'fabric-loader-0.16.0' })).toEqual({});
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Detector 実装 + chain
 // ---------------------------------------------------------------------------
 
@@ -277,6 +348,62 @@ describe('PrismDetector', () => {
   });
 });
 
+describe('ModrinthAppDetector', () => {
+  const mojo = (versionId: string) =>
+    JSON.stringify({ argsMode: 0, sharedData: false, icon: 'fabric', name: 'てすと', versionId });
+
+  it('mojo_instance.json があるとき canDetect', async () => {
+    const detector = new ModrinthAppDetector();
+    expect(await detector.canDetect(sourceOf({ 'mojo_instance.json': mojo('fabric-loader-0.19.3-1.21.11') }))).toBe(true);
+    expect(await detector.canDetect(sourceOf({ 'mods/a.jar': 'x' }))).toBe(false);
+  });
+
+  it('instance root 直下 / .minecraft 配下の両方の contentDirs を解決', async () => {
+    const detector = new ModrinthAppDetector();
+
+    // root 直下に mods/
+    const a = await detector.detect(
+      sourceOf({
+        'mojo_instance.json': mojo('fabric-loader-0.19.3-1.21.11'),
+        'mods/sodium.jar': 'jar',
+        'shaderpacks/s.zip': 'zip'
+      })
+    );
+    expect(a.rootType).toBe('modrinth-app');
+    expect(a.mcVersion).toBe('1.21.11');
+    expect(a.loader).toBe('Fabric');
+    expect(a.loaderVersion).toBe('0.19.3');
+    expect(a.contentDirs).toEqual({ mods: 'mods', shaderpacks: 'shaderpacks' });
+
+    // .minecraft/ 配下に mods/
+    const b = await detector.detect(
+      sourceOf({
+        'mojo_instance.json': mojo('1.20.1-forge-47.2.0'),
+        '.minecraft/mods/a.jar': 'x',
+        '.minecraft/resourcepacks/rp.zip': 'zip'
+      })
+    );
+    expect(b.rootType).toBe('modrinth-app');
+    expect(b.loader).toBe('Forge');
+    expect(b.mcVersion).toBe('1.20.1');
+    expect(b.contentDirs).toEqual({
+      mods: '.minecraft/mods',
+      resourcepacks: '.minecraft/resourcepacks'
+    });
+  });
+
+  it('mojo_instance.json のパース失敗は env なしで contentDirs のみ', async () => {
+    const detector = new ModrinthAppDetector();
+    const detected = await detector.detect(
+      sourceOf({ 'mojo_instance.json': 'not-json', 'mods/a.jar': 'x' })
+    );
+    expect(detected.rootType).toBe('modrinth-app');
+    expect(detected.mcVersion).toBeUndefined();
+    expect(detected.loader).toBeUndefined();
+    expect(detected.contentDirs).toEqual({ mods: 'mods' });
+  });
+});
+
 describe('GenericDetector + chain (detectEnvironment)', () => {
   it('mods/ だけの構造は GenericDetector が担当 (env は undefined)', async () => {
     const detected = await detectEnvironment(sourceOf({ 'mods/a.jar': 'x' }));
@@ -321,6 +448,25 @@ describe('GenericDetector + chain (detectEnvironment)', () => {
     expect(detected.rootType).toBe('prism');
     expect(detected.mcVersion).toBe('1.20.1');
     expect(detected.contentDirs.mods).toBe('.minecraft/mods');
+  });
+
+  it('chain: versions / mmc-pack が無く mojo_instance.json があれば ModrinthApp', async () => {
+    const detected = await detectEnvironment(
+      sourceOf({
+        'mojo_instance.json': JSON.stringify({
+          argsMode: 0,
+          sharedData: false,
+          icon: 'fabric',
+          name: 'てすと',
+          versionId: 'fabric-loader-0.19.3-1.21.11'
+        }),
+        'mods/a.jar': 'x'
+      })
+    );
+    expect(detected.rootType).toBe('modrinth-app');
+    expect(detected.mcVersion).toBe('1.21.11');
+    expect(detected.loader).toBe('Fabric');
+    expect(detected.contentDirs).toEqual({ mods: 'mods' });
   });
 
   it('GenericDetector を単体で直接呼んでも canDetect=true', async () => {

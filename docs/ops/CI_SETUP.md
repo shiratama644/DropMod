@@ -114,6 +114,27 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
   ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
 
+### トリガー変更: 二重実行防止 + ドキュメント変更で CI スキップ (2026-08-29)
+
+- **問題**: PR ブランチでは `push` (arena/**) と `pull_request` の両方が発火し、
+  1 commit につき CI が 2 本実行されていた (PR #4 で実測)。
+- **対応 (ユーザー採用: 案 B + 案 C 拡張)**:
+  - `push` の `branches` を `[main]` のみに変更 (PR ブランチは
+    `pull_request` イベントが担う。PR の無いブランチは Actions タブから
+    `workflow_dispatch` で手動実行)
+  - `paths-ignore` を push / pull_request の両方に追加:
+    `README.md` / `AGENT.md` / `.agent/**` / `docs/**`
+    → ドキュメント系のみのコミットでは CI は走らない
+- **反映手順**: 正本を反映して push
+  ```bash
+  cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
+  git add .github/workflows/ci.yml
+  git commit -m "ci: トリガー調整 (push=main のみ / docs 変更でスキップ)"
+  git push origin "$(git branch --show-current)"
+  ```
+- **注意**: このコミット自体は `docs/**` 変更なので push しても CI は走らない
+  (意図どおり)。動作確認は次回のコード変更コミットで行う。
+
 ### upload-artifact が「No files were found」で .next を転送できない (2026-08-27 実証)
 
 - 原因: **upload-artifact v4 は隠し (ドット) ディレクトリ配下のファイルを対象外**

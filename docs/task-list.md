@@ -19,6 +19,30 @@
 
 ---
 
+## 未完了サマリー (2026-08-30 ソース + 計画書突合)
+
+> 計画書と task-list の食い違い: `PHASE12_PLAN.md` §13 は P12-B / P12-C を「未着手」と
+> 残しているが、**ソースでは実装済み**。正本は本ファイル。`PHASE12D_FIX_PLAN.md` §12
+> の実績表は D1/D2 までで、D3/D1B は未記入だがソース・本表ではローカル検証済み。
+> 「完了」誤記は見つからず。実装済みなのに「未着手」だったのは計画書側のみ。
+
+| ID | 状態 | 残作業 |
+|---|---|---|
+| P12-B | 実環境検証待ち (実装 90%) | 実機 Chromium で Direct Write + Transaction/Backup/Rollback |
+| P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
+| P12-E2E | 再検証待ち (90%) | CI `workflow_dispatch` で成功/失敗/復帰の再実行 |
+| P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
+| P13-A / P13-B | 保留 | CurseForge API キー取得後 |
+| UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
+| SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
+| SEO-2 | 未着手 | モーダル直接 URL の noindex (`app/` に noindex 無しを確認) |
+| SEO-1 | 保留 | Phase 12 完了後に実施判断 |
+| DEPLOY-1 | 未着手 | P12-C + P13-B 完了後の Vercel 本番 |
+
+進行中の AI 実装タスクは **なし** (次のコード作業候補は SEO-2 または P12-E2E の CI 再実行依頼)。
+
+---
+
 ## フェーズタスク
 
 ### Next.js 移行 (Vite + Hono → Next.js 16)
@@ -117,12 +141,13 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
-| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | `4886245` ほか 11 commits / unit+component 100 files 995 tests green・**実機確認はユーザー** |
-| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | run `33245015014` で **DIAG[preview] n=1 / cur=default-pr** を特定 → 原因 = **Profile 作成の永続化競合** / 修正 `ab5fd0b3` (即時永続化・`await onCreate`・`/tag/game_version` モック・DIAG 強化) → **手動 run `33246962952` で成功シナリオ PASS** / 残る失敗シナリオは **E2E 注入パス不一致** (書込先 = 台帳 `mods/e2e-sodium.jar`、注入は `...-0.6.0.jar` を指定) → `926c279f` で修正済み・**要再実行 (workflow_dispatch)** |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | `db648c2`〜`b462bfa` の 7 commits / .mrpack overrides・Provider 抽象・Modpack 更新検知・ZipSink・Modpack ハブ・CF 検出・ZIP Sync 導線 / unit+component 108 files 1151 tests green・**実機 Firefox/Safari 確認はユーザー** |
+| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | `lib/env/diff.ts` / `managed.ts` / Dexie v3 (`managedFiles`/`dirHandles`)。5 分類 + fingerprint unchanged。**2026-08-30 ソース確認済** |
+| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | **実装はソース上完了** (2026-08-30): Dexie v4 `syncTransactions` / `executeSync` / `backup.ts` (UNDO_KEEP_COUNT=3) / `applySync` / `recovery` / `undo` / `SyncPreviewModal` / `InterruptedSyncDialog` (D-4) / `SyncHistorySection` / `environmentCheck` (D-1) / `FileSystemSink`。`4886245` ほか。**未完了は実機確認のみ** |
+| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts` 存在確認 (2026-08-30)。run `33245015014` DIAG → 修正 `ab5fd0b3` → 手動 `33246962952` 成功系 PASS / 失敗系パス修正 `926c279f`・**要 CI 再実行 (workflow_dispatch)** |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30): `lib/env/sink/zip.ts` / `mrpack.ts` / `modpack.ts` (CF 検出のみ) / `modpackUpdate.ts` / `lib/providers/modrinth.ts` / `ModpackHubClient` (`promoteModpackRecords` = D-6) / `useZipSync`。`db648c2`〜`b462bfa`。**未完了は実機 Firefox/Safari 確認のみ** |
 
-※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
+※ **Phase 12 の設計論点は 2026-08-27 / 08-29 に確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-10）。着手を妨げる未確定事項は無い。
+※ `PHASE12_PLAN.md` §13 の「P12-B/C 未着手」は **陳腐化**。実装有無は本表とソースを正とする。
 
 ### Phase 12-D: ユーザー報告バグ 3 件修正 (2026-08-29)
 

@@ -81,8 +81,13 @@
 
 ## 5. コミット
 
-- `df13972` — P12-D3 + P12-D1B 実装 (25 files)
-- `560244f` — docs/task-list に完了記録 (df13972)
+- `df13972` — P12-D3 + P12-D1B 実装 (25 files) … **(sandbox 再構築で消失)**
+- `560244f` — docs/task-list に完了記録 (df13972) … **(sandbox 再構築で消失)**
+- ※ 2026-08-29 に sandbox 再構築 (git 再 clone) を検知。リモート正本 `04a5b09` へ
+  `git reset --soft FETCH_HEAD` で復旧し、同一内容を再コミット:
+  - `c7f8db8` — P12-D3 + P12-D1B 実装 (25 files / 1215 insertions)
+  - `cfaa0f1` — docs/task-list + 実行ログの完了記録
+  - push: `04a5b09..cfaa0f1`
 
 ## 6. 次のアクション
 

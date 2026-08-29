@@ -2,12 +2,13 @@
 
 > 対応 task-list ID: `P12-A` 〜 `P12-C` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 未着手** (2026-08-26 改定・着手前。§9 の設計論点を確定してから開始する)
+> **状態: 実装中** (2026-08-26 改定 / 2026-08-27 に §12 の設計論点 6 件を確定 /
+> **2026-08-27 P12-A 完了**。残: P12-B / P12-C)
 
 ## 1. 開始前確認
 
 - Phase 11 完了 (P11-E2E の CI green = VER-1) を確認
-- 本書 §9 (未解決の設計論点) をユーザーと確定する
+- 本書 §12 の設計論点は **2026-08-27 に確定済み**（実装時は §12 の決定に従う。新論点が出たら停止して質問）
 - `git status` clean・skills/env-import.md を読む
 
 ## 2. 目的 (Why)
@@ -46,7 +47,7 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 - **管理下にないファイル (Unmanaged) を削除しない**。管理下でも fingerprint が
   変わっていたら「外部変更あり」として保持する
 - Sync 実行は fingerprint の再検証 (実行直前) を省略しない
-- 論点 (§9) を推測で決めて実装しない — 停止して質問する
+- 論点 (§12) を推測で決めて実装しない — 停止して質問する
 
 ## 5. 完了条件 (DoD)
 
@@ -69,7 +70,7 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 
 ## 7. 停止条件
 
-- §9 の設計論点に到達した場合 (実装前に確定済みのはず。新論点も停止して協議)
+- §12 の設計論点に到達した場合 (実装前に確定済みのはず。新論点も停止して協議)
 - ユーザーデータ (ローカル環境) の破壊が予期せず発生するリスクを検知した場合
 - OPFS quota / パーミッション昇格が仕様どおり動作しない場合
 
@@ -82,7 +83,7 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 
 | ID | テーマ | 主要成果物 | 依存 |
 |---|---|---|---|
-| P12-A | 基盤 + Managed File + Diff Engine | linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan | P11 完了 |
+| P12-A | 基盤 + Managed File + Diff Engine | linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan | P11 完了 (**完了**) |
 | P12-B | Preview UI + Transaction + Executor + Rollback | SyncTransaction / executeSync / OPFS Backup / History UI | P12-A |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | ZipSink / .mrpack パーサ / Modpack UI / CF 検出表示 | P12-B |
 
@@ -173,12 +174,132 @@ async function executeSync(tx: SyncTransaction, sink: EnvironmentSink) {
 - OPFS quota 逼迫時の LRU 削除順序
 - `dirHandles` の再許可フロー (Phase 11 から延期された課題)
 
-## 12. 未解決の設計論点 (実装前にユーザーと確定する)
+## 12. 設計論点 — **2026-08-27 にユーザーと確定済み**
 
-- [ ] Sync 実行時に `Profile.environment` とローカル検出環境が不一致の場合の扱い
-      (警告 / ブロック / Profile 側を更新のいずれか)
-- [ ] readwrite 昇格失敗時の UX (Read-only fallback でよいか)
-- [ ] Modpack 更新時、ユーザー追加 Mod (source: 'dropmod') と同名 Mod が競合した場合
-- [ ] Sync 中のタブ close → resume UX
-- [ ] OPFS quota 逼迫時の削除順序 (古い順 or 大きい順)
-- [ ] Modpack 解除時の `source: 'modpack'` 扱い (全て 'import' 昇格? そのまま?)
+> 以下は `ask_user` でユーザーが選択した**確定事項**。実装時はこの決定に従うこと。
+> 推測で変えない。変更が必要になったら停止してユーザーに確認する (§4 / §7)。
+
+### D-1. `Profile.environment` とローカル検出環境の不一致 → **ブロック**
+
+- **決定**: Sync 実行を**禁止**する。Preview にも到達させず、
+  「Profile の環境（mcVersion / loader / loaderVersion）を実際の環境に合わせるか、
+  別の Profile を選択してください」と促す。
+- **理由**: 互換性のない Mod をインスタンスへ書き込むと起動不能になる。
+  ユーザーデータの破壊リスクを最優先で防ぐ。
+- **実装メモ**: 不一致の判定は mcVersion・loader・loaderVersion の 3 点。
+  loaderVersion だけ異なる場合は「警告付きで許可」等の緩和は**しない**（一律ブロック）。
+
+### D-2. readwrite 昇格失敗 → **Read-only に fallback**
+
+- **決定**: 解析（Read-only）はそのまま利用可能。Sync ボタンは**無効化**し、
+  理由（昇格が拒否された旨）を表示する。あわせて「**ZIP で書き出す**」を代替手段として提示する。
+- **理由**: できることまで塞がない。ただし「書き込んだ」と誤解させないため
+  自動で ZipSink へ切り替えることは**しない**（必ずユーザー操作で ZIP 出力を選ぶ）。
+
+### D-3. Modpack 更新時の同名 Mod 競合（`source: 'dropmod'`） → **都度ユーザーに選択させる**
+
+- **決定**: Preview に**競合一覧セクション**を設け、Mod ごとに
+  `[ユーザー版を残す]` / `[Modpack 版に置換]` を選ばせる。既定値は「ユーザー版を残す」。
+- **理由**: ユーザーが選んだ版が黙って消える事故を防ぐ。データ消失が起きない選択肢。
+- **実装メモ**: 競合判定は projectId 一致 + versionId 相違。
+
+### D-4. Sync 中のタブ close / クラッシュ → **検出して確認 → Rollback**
+
+- **決定**: 起動時に**未完了の Journal** を検出し、
+  「前回の Sync が中断されました。巻き戻しますか？」を表示する。**既定は Rollback**。
+- **理由**: 自動 Rollback は何が起きたか把握しづらく、resume は中断中に環境が
+  変わっているため危険。ユーザー判断を挟む。
+- **実装メモ**: 検出は `SyncTransaction.status === 'running'` の残存レコード。
+
+### D-5. OPFS quota 逼迫時の削除順序 → **古い順（ただし直近 3 回は絶対に残す）**
+
+- **決定**: 最も古い Sync の Backup から削除する。ただし **§10.4 が約束する
+  「直近 3 回の Sync を Undo 可能」は絶対に破らない**。
+  それでも容量が足りない場合は **Sync 自体を中断**してユーザーに知らせる。
+- **理由**: Undo 保証を優先。容量不足は「黙って保護を外す」のではなく显在化させる。
+
+### D-6. Modpack 解除（unbind）時の `source: 'modpack'` → **全て `'import'` へ昇格**
+
+- **決定**: Modpack の紐付けを外してもファイルは Profile に残り、
+  `source` を `'modpack'` → `'import'` に書き換える。以後は通常の Import 由来ファイルとして
+  扱い、**削除時には確認を要求**する（§10.5 のルールを継承）。
+- **理由**: 解除＝即削除だとユーザーの環境から大量のファイルが消える。
+  「紐付けだけ外して中身は残す」が安全側。
+
+### 確定に伴う実装への影響（着手前に反映すべき点）
+
+- Preview UI に**競合セクション（D-3）**と**環境不一致ブロック表示（D-1）**が増える。
+  §10.3 の 5 分類表示に「競合」を加えた 6 セクション構成になる。
+- `executeSync` は起動時の Journal 検査（D-4）を含む必要がある。
+- Backup の LRU 実装は「直近 3 回保護」（D-5）を必須条件としてテストする。
+- `.mrpack` unbind フロー（D-6）は P12-C の Modpack UI に含める。
+
+---
+
+### D-7〜D-10. UI 配置と権限タイミング — **2026-08-29 にユーザーと確定**
+
+> P12-B の UI 実装にあたり `ask_user` で確定した 4 件。D-1〜D-6 と同様に
+> **推測で変えない**。変更が必要になったら停止して確認する (§4 / §7)。
+
+#### D-7. `readwrite` 権限の要求タイミング → **Sync 実行時**
+
+- **決定**: フォルダ紐付け時の picker は `mode: 'read'` のまま
+  (既存 `pickMinecraftDirectory()` を変更しない)。`readwrite` への昇格は
+  Sync 実行時に `FileSystemSink.ensureWritable()` で試みる。
+- **理由**: 解析 (Read-only) だけしたいユーザーに書き込み権限を迫らない。
+- **実装メモ**: 昇格が拒否された場合は D-2 の Read-only フォールバックに入る。
+  紐付け直後の `sink.writable` は `false`。
+
+#### D-8. 「ZIP保存」ボタン → 「Sync」ボタンの置き換え範囲
+
+- **決定**: フォルダ紐付け済み Profile では、**primary 4 箇所 + プロファイル一覧の
+  ツールバー**を Sync ボタンに置き換える。
+  - `components/Header.tsx` (モバイルのアイコン / デスクトップのラベル付き、計 2 箇所)
+  - `components/DesktopSidebar.tsx` (サイドバー下端の primary)
+  - `components/MenuBottomSheet.tsx` (モバイルメニューの primary)
+  - `components/ModsPageClient.tsx` (プロファイル一覧ツールバー、`md:hidden`)
+- **置き換えない**: `components/SettingsPageClient.tsx` の「ZIPダウンロード」。
+  これは D-2 で Sync が無効化されたときの **ZIP 代替導線として残す**。
+- **理由**: Profile ごとに独立した状態なので、フォルダ未設定の Profile に切り替えたら
+  ボタンは自動的に ZIP保存へ戻る。
+
+#### D-9. フォルダ紐付け UI の配置 → **設定ページの「環境との同期」セクション**
+
+- **決定**: 設定ページに新セクションを設け、**紐付け / 解除 / Sync 実行 /
+  Sync History / Undo** を 1 箇所に集約する。
+- **理由**: §10.4 が Sync History UI を Settings 指定しているため、同じ場所にまとめる。
+- **実装メモ**: 着手時点の調査で `Profile.linkedSource` は**どこからも書き込まれて
+  いなかった** (`saveDirHandle` / `getDirHandle` は定義のみで呼び出し 0 箇所)。
+  紐付けフロー自体を P12-B で新設する。
+
+#### D-10. D-2 発動時の ZIP 導線 → **両方**
+
+- **決定**: 無効化した Sync ボタンの**隣に「ZIP で書き出す」副ボタン**を出し、
+  あわせて説明文で**設定ページの ZIP セクションにも言及**する。
+
+## 13. 実績と証拠
+
+| ID | 状態 | テスト | 成果物 |
+|---|---|---|---|
+| P12-A | **完了** (2026-08-27) | 47 tests / 3 ファイル新規<br>(`diff` 18・`managed` 19・`dexie.managed` 10)<br>全体 **76 files / 684 tests** pass・coverage 全 threshold green | `types.ts` (`LinkedSource` / `ManagedFileRecord` / `ManagedFileSource` / `Profile.linkedSource`)、`lib/db/dexie.ts` (**schema v3**: `managedFiles` / `dirHandles` + ヘルパ 6 種)、`lib/env/managed.ts`、`lib/env/diff.ts` (`computeSyncPlan` / `selectExternallyModified` / `selectDeletionsRequiringConfirm`) |
+| P12-B | 未着手 | - | Preview UI / `SyncTransaction` (Dexie **v4**) / `executeSync` / OPFS Backup / Rollback / History UI |
+| P12-C | 未着手 | - | `ZipSink` / `.mrpack` パーサ / `ModrinthProvider` / Modpack UI / CurseForge 検出表示 |
+
+### P12-A の実装上の決定 (実装時に確定した細目)
+
+- **`SyncTransaction` テーブルは v3 に含めず、P12-B で v4 として追加する**。
+  §9 の P12-A スコープ (`linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan`) に
+  絞り、先回りしない方針。
+- **`expandProfileToManaged` は `artifact` を持つ ProjectItem のみ台帳化する**。
+  `artifact` 無し (= DropMod から追加しただけでローカル実体が無い) アイテムは
+  台帳に載せず、Diff Engine 側で `addition` + `needsDownload: true` として扱う。
+- **`mergeManagedRecords` で既存台帳の `source` / `managedAt` / `syncedAt` を保護する**。
+  Profile から再導出すると `source` が `'import'` に戻ってしまうため、
+  D-6 (modpack 解除で `'import'` へ昇格) の結果を守るには既存値の引き継ぎが必須。
+- **パス移動の扱い**: Profile が同じ project を**別パス**で要求している場合、
+  旧パスのファイルは削除候補にする (fingerprint 検証は同じルールを適用)。
+- **`unmanaged` のエントリーに `source` バッジは付けない** (§10.3 のバッジは
+  管理下ファイルの由来表示であり、管理外ファイルには由来が無い)。
+- **到達不能な防御コードは削除した**: 「Profile が同じ project を同じパスで要求しているのに
+  local ループに到達する」分岐は `handledPaths` により構造的に到達不能なため実装から除去
+  (未テストの死んだコードを残さない)。

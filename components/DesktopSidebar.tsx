@@ -24,6 +24,8 @@
 //   代わりに /mods ページ上部で type filter があれば十分)
 // -----------------------------------------------------------------------------
 
+import { SyncButton } from '@/components/SyncButton';
+import { useFolderLinked } from '@/hooks/useFolderLinked';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -83,6 +85,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onDownloadZip,
   onImportZip,
 }) => {
+  const folderLinked = useFolderLinked();
   const pathname = usePathname();
 
   const safeModCount = Number.isFinite(modCount) ? Math.max(0, Math.floor(modCount)) : 0;
@@ -225,15 +228,19 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
       {/* アクション群 (spacer で下寄せ) */}
       <div className="mt-auto px-3 pb-4 flex flex-col gap-1.5 border-t border-slate-500/10 pt-3">
-        {/* ZIP 保存 primary */}
-        <button
-          type="button"
-          onClick={onDownloadZip}
-          className="btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.98] transition font-semibold text-sm shadow-md shadow-emerald-600/20 focus-visible:ring-2 focus-visible:ring-emerald-500"
-        >
-          <i className="fa-solid fa-file-zipper text-sm w-5 text-center" aria-hidden="true" />
-          <span>ZIP 保存 (全.jar)</span>
-        </button>
+        {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
+        {folderLinked ? (
+          <SyncButton variant="primaryLg" label="フォルダへ同期 (全.jar)" />
+        ) : (
+          <button
+            type="button"
+            onClick={onDownloadZip}
+            className="btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white active:scale-[0.98] transition font-semibold text-sm shadow-md shadow-emerald-600/20 focus-visible:ring-2 focus-visible:ring-emerald-500"
+          >
+            <i className="fa-solid fa-file-zipper text-sm w-5 text-center" aria-hidden="true" />
+            <span>ZIP 保存 (全.jar)</span>
+          </button>
+        )}
 
         {/* ZIP 読込 */}
         <label className="btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 transition font-semibold text-sm cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500">

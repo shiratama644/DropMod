@@ -1,5 +1,5 @@
 /**
- * EnvironmentDetector の chain (PHASE11_PLAN.md §4.2 + Phase 11-B)。
+ * EnvironmentDetector の chain (PHASE11_PLAN.md §10.3 + Phase 11-B)。
  *
  * 優先順位: OfficialLauncher → Prism → Generic (最終 fallback)。
  * 上位 Detector が担当形式を判定できなければ次へ fallthrough する。

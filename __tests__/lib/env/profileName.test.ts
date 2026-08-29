@@ -1,5 +1,5 @@
 /**
- * lib/env/profileName.ts test (Phase 11-C / PHASE11_PLAN.md §6.1)
+ * lib/env/profileName.ts test (Phase 11-C / PHASE11_PLAN.md §10.1)
  */
 
 import { describe, it, expect } from 'vitest';

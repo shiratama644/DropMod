@@ -1,5 +1,5 @@
 /**
- * EnvironmentDetector の型定義 (PHASE11_PLAN.md §4.2, ChatGPT #14)。
+ * EnvironmentDetector の型定義 (PHASE11_PLAN.md §10.3, ChatGPT #14)。
  *
  * 複数ランチャー構造への対応を Strategy パターンで抽象化する。
  * Phase 11 で実装する Detector:

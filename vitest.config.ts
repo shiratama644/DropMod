@@ -95,11 +95,10 @@ export default defineConfig({
 
         // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
         // Providers は PersistQueryClientProvider を返すだけ、
-        // WebVitalsReporter は web-vitals ライブラリを attach するだけ、
-        // AppContext は Phase 9-A.5 で stub 化された (throw + pass-through)
+        // WebVitalsReporter は web-vitals ライブラリを attach するだけ。
+        // (AppContext.tsx は Phase 10-B で完全削除済みのため exclude からも除去)
         'components/Providers.tsx',
         'components/WebVitalsReporter.tsx',
-        'components/AppContext.tsx',
 
         // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----
         'hooks/useConfirm.ts',

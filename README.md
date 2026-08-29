@@ -179,7 +179,7 @@ pnpm test:unit          # vitest run (E2E は除外)
 pnpm build              # 本番ビルド
 ```
 
-- **単体テスト**: Vitest 4 + msw (Modrinth API mock) + fake-indexeddb + jsdom — **72 test files / 626 tests**、全体 statement coverage **84.5%** (2026-08-27 時点、実測)。グローバル最低ライン 60% + per-module thresholds (state 95% / store 85% 等) を `vitest.config.ts` で強制
+- **単体テスト**: Vitest 4 + msw (Modrinth API mock) + fake-indexeddb + jsdom — **73 test files / 637 tests**、全体 statement coverage **84.65%** (branches 73.74% / functions 90.55% / lines 86.69%)。2026-08-27 実測。グローバル最低ライン 60% + per-module thresholds (state 95% / store 85% 等) を `vitest.config.ts` で強制
 - **E2E**: Playwright (chromium-desktop + chromium-mobile の 2 project)、10 spec (smoke / mod-detail / mods-page / theme / offline / zip import・export / dep-check / Phase 11 取り込み 2 種)。CI での実行を推奨 (ローカルは `pnpm exec playwright install chromium` が必要)
 - **CI**: GitHub Actions ワークフロー定義は [`docs/ops/CI_WORKFLOW.yml`](./docs/ops/CI_WORKFLOW.yml) (typecheck / lint / unit → build → E2E の 3 job)。導入手順は [`docs/ops/CI_SETUP.md`](./docs/ops/CI_SETUP.md)
 
@@ -216,7 +216,7 @@ lib/
 ├── search/ constants/ state/ utils/   # 検索 SSR / 定数 / sanitizer / ユーティリティ
 scripts/                      # build.ts (環境判定ビルド) / build-env.ts / FontAwesome subset
 e2e/                          # Playwright E2E (10 spec + helpers)
-__tests__/                    # 単体テスト (72 files: components / hooks / lib / config)
+__tests__/                    # 単体テスト (73 files: components / hooks / lib / config)
 types.ts                      # 全 TypeScript 型
 ```
 

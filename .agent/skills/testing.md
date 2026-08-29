@@ -16,8 +16,16 @@
   - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
-- 現状: **548 tests / 65 files pass**（Phase 11-A〜C: Dexie v2 migration / env 基盤 (source/detector/analyzer/analysis/zipSource/profileName) ほか）。
-- **coverage threshold 全 green (Phase 10.5-A/B/C 完了、2026-08-26)**: `pnpm test:coverage` exit 0。総計 stmt 81.88 / br 69.4 / fn 89.01 / lines 84.09。
+- 現状: **637 tests / 73 files pass**（2026-08-27 実測）。内訳の中心は Phase 11-A〜C
+  （Dexie v2 migration / env 基盤: source・detector・analyzer・analysis・zipSource・profileName）
+  と Phase 10.5 の hooks / 軽量 components、および `next-config.security` /
+  `lib/server/{profile,logger,rate-limit}` / `scripts/build-env` / `readInitialTheme` ほか。
+- **coverage threshold 全 green**: `pnpm test:coverage` exit 0。総計 stmt **84.65** /
+  br **73.74** / fn **90.55** / lines **86.69**（2026-08-27 実測）。
+  - ⚠️ **branches % は `hooks/` 等のコメント・行編集でも ±0.2 程度ぶれる**（v8 の
+    ブランチ位置マッピングが行数依存のため。2026-08-27 にコメント修正のみで
+    73.92 → 73.74 に変動）。ドキュメントへ書く数値は必ず **その時点で再実行した結果**を
+    使い、他セッションの記録を流用しない。stmt / fn / lines は安定していた。
   - 10.5-A: hooks branches 61.63% / global branches 61.54% まで回復
   - 10.5-B: components stmt 73.12 / br 67.7 / fn 76.51 / lines 75.17 まで回復
   - 10.5-C: lib/store branches 80%+ まで回復（confirm.ts cleanup の queue 破棄分岐）

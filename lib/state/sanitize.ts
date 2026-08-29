@@ -47,7 +47,7 @@ const PROFILE_LOADERS: readonly ProfileLoader[] = [
   'Vanilla'
 ];
 
-/** loader 値の正規化。不正値は 'Fabric' (PHASE11_PLAN.md §4.5) */
+/** loader 値の正規化。不正値は 'Fabric' (PHASE11_PLAN.md §10.1) */
 export function normalizeLoader(raw: unknown): ProfileLoader {
   return typeof raw === 'string' && (PROFILE_LOADERS as readonly string[]).includes(raw)
     ? (raw as ProfileLoader)

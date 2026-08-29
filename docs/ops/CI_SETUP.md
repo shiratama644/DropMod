@@ -19,7 +19,8 @@ Arena エージェント (GitHub App) には `.github/workflows/` を書き込�
    ```bash
    git add .github/workflows/ci.yml
    git commit -m "ci: enable GitHub Actions workflow"
-   git push origin arena/01a0337c-dropmod   # 現在の作業ブランチ
+   # ブランチ名はセッションごとに変わるためハードコードせず現在値を使う
+   git push origin "$(git branch --show-current)"
    ```
 
 4. GitHub リポジトリ Settings > Actions > General で:
@@ -80,7 +81,7 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
 - Actions summary > `static-checks` job > `coverage-report` artifact をダウンロード
 - `coverage/index.html` をブラウザで開くと per-file カバレッジが見える
 - 現状目標: **All files 60%+, per-module thresholds (計画書 §7.5) 全 pass**
-  (2026-08-27 実測: 629 tests / statements 84.5%)
+  (2026-08-27 実測: 637 tests / 73 files / statements 84.65%)
 
 ### 4. 依存の verify
 

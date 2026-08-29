@@ -8,7 +8,10 @@
 import { SettingsPageClient } from '@/components/SettingsPageClient';
 
 export const metadata = {
-  title: '設定 - DropMod',
+  // // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため
+  // ここに ' - DropMod' を含めるとサイト名が二重になる
+  // (規約は lib/server/project-detail.ts のコメント参照)
+  title: '設定',
   description:
     'プロファイル管理・テーマ変更・ZIPインポート/エクスポート・データ初期化などの設定ページ'
 };

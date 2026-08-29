@@ -13,6 +13,8 @@ import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import type { Profile, TabName, ThemeMode } from '@/types';
+import { SyncButton } from '@/components/SyncButton';
+import { useFolderLinked } from '@/hooks/useFolderLinked';
 import { CustomDropdown } from './CustomDropdown';
 
 interface HeaderProps {
@@ -42,6 +44,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSwitchTab,
   hasDepWarning,
 }) => {
+  const folderLinked = useFolderLinked();
+
   const profileOptions = useMemo(() => {
     const safeProfiles = Array.isArray(profiles) ? profiles : [];
     return safeProfiles.map((p) => ({ label: p.name || '名称未設定', value: p.id }));
@@ -112,15 +116,20 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={onDownloadZip}
-                title="ZIP保存"
-                aria-label="ZIP保存"
-                className="p-2 text-xs font-semibold rounded-xl bg-emerald-600 active:bg-emerald-500 text-slate-950 transition flex items-center justify-center touch-target shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-download text-sm" aria-hidden="true" />
-              </button>
+              {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
+              {folderLinked ? (
+                <SyncButton variant="icon" label="フォルダへ同期" className="touch-target" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={onDownloadZip}
+                  title="ZIP保存"
+                  aria-label="ZIP保存"
+                  className="p-2 text-xs font-semibold rounded-xl bg-emerald-600 active:bg-emerald-500 text-slate-950 transition flex items-center justify-center touch-target shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
+                >
+                  <i className="fa-solid fa-download text-sm" aria-hidden="true" />
+                </button>
+              )}
 
               <label
                 title="ZIP読込"
@@ -176,14 +185,19 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={onDownloadZip}
-              className="btn-hover-effect px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20 font-mono focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <i className="fa-solid fa-file-zipper" aria-hidden="true" />
-              <span>ZIP保存 (全.jar)</span>
-            </button>
+            {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
+            {folderLinked ? (
+              <SyncButton variant="primary" label="フォルダへ同期 (全.jar)" />
+            ) : (
+              <button
+                type="button"
+                onClick={onDownloadZip}
+                className="btn-hover-effect px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20 font-mono focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <i className="fa-solid fa-file-zipper" aria-hidden="true" />
+                <span>ZIP保存 (全.jar)</span>
+              </button>
+            )}
 
             <label className="btn-hover-effect px-3 py-1.5 text-xs font-semibold rounded-xl theme-sub-box transition flex items-center gap-1.5 cursor-pointer font-mono focus-visible:ring-2 focus-visible:ring-emerald-500">
               <i className="fa-solid fa-file-import theme-text-brand" aria-hidden="true" />

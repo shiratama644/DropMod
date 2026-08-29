@@ -18,6 +18,7 @@ import { useProfilesStore } from '@/lib/store/profiles';
 
 import { ToastContainer } from './ToastContainer';
 import { ConfirmDialog } from './ConfirmDialog';
+import { InterruptedSyncDialog } from './InterruptedSyncDialog';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { DesktopSidebar } from './DesktopSidebar';
@@ -476,6 +477,9 @@ export const AppShell: React.FC<Props> = ({ children }) => {
       />
 
       <ConfirmDialog {...confirmDialogProps} />
+
+      {/* D-4: 前回の Sync が完了しないまま閉じられていたら、起動時に確認する */}
+      <InterruptedSyncDialog />
     </>
   );
 };

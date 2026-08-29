@@ -1,5 +1,5 @@
 /**
- * OfficialLauncherDetector (PHASE11_PLAN.md §4.4.1)。
+ * OfficialLauncherDetector (PHASE11_PLAN.md §10.3)。
  *
  * 公式 Minecraft Launcher の `.minecraft/versions/<id>/<id>.json` から
  * MC バージョンと Loader を検出する。

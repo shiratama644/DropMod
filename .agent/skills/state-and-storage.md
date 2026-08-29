@@ -48,22 +48,32 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 
 ## Dexie（IndexedDB, `lib/db/dexie.ts`）
 
-3 テーブル（DB 名 `DropModDB`, **schema v2**, index は v1 と同一）:
+5 テーブル（DB 名 `DropModDB`, **schema v3**）:
 
 | テーブル | PK / Index | 用途 |
 | :--- | :--- | :--- |
 | `profiles` | `id`, `updatedAt` | プロファイル本体（`ProfileRow extends Profile + updatedAt`） |
 | `apiCache` | `key`, `expiresAt` | TSQ persister 用（`data` は **string** 保持, H7-1 で二重 JSON 解消） |
 | `meta` | `key` | key-value（下記） |
+| `managedFiles` | `id`, `profileId`, `category`, `projectId`, `sha1` | **Phase 12-A**: 管理下ファイルの台帳（`ManagedFileRecord`）。Sync の削除可否判定に使用 |
+| `dirHandles` | `id`, `profileId` | **Phase 12-A**: `FileSystemDirectoryHandle` の永続化（structured clone で保存可・JSON 化不可なため `Profile` から分離） |
 
 `meta` の key: `schemaVersion` / `theme` / `currentProfileId` / `migratedAt` / `localStorageBackupExpiresAt`。
 
 ヘルパ: `putProfile` / `bulkPutProfiles` / `syncProfiles`（diff 同期, 単一 tx） / `getMeta/setMeta/deleteMeta` / `getAllProfiles` / `_clearAllForTesting`。
+**Phase 12-A 追加**: `syncManagedFiles`（台帳の diff 同期, 単一 tx） / `getManagedFiles`（path 昇順） / `deleteManagedFilesForProfile` / `saveDirHandle`（id を返す） / `getDirHandle` / `deleteDirHandle`。
 > SSR では触らない（IndexedDB はブラウザ API）。全呼び出しは Client の useEffect/handler 経由。
 
 **schema v2 migration（Phase 11-A）**: v1 DB を開いた時点で upgrade が走り、
 保存済み row を `normalizeProfileForV2` で新形状に一括変換（flat→environment、ModItem→ProjectItem、loader 正規化、updatedAt 保持）。
 テストは `__tests__/lib/db/dexie.migration.test.ts`（v1 DB を作ってから app db を開く手法）。
+
+**schema v3 migration（Phase 12-A）**: `managedFiles` / `dirHandles` の**新規テーブル追加のみ**。
+既存テーブルの index は不変・**upgrade 関数なし**なので既存データは無変換。旧 DB を開いたユーザーは
+「空の台帳」から始まる = 紐付け直後の初回 Sync では deletion が 1 件も出ない
+（§10.2 の「台帳に存在する」条件を満たさないため）。**安全側の意図した挙動**。
+テストは `__tests__/lib/db/dexie.managed.test.ts`。
+※ `SyncTransaction` テーブルは P12-B（Executor / Rollback）で **v4** として追加する。
 
 ## LocalStorage → Dexie 移行（`lib/db/migrate.ts`）
 

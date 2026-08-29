@@ -1,5 +1,5 @@
 /**
- * SHA-1 並列計算 Web Worker (PHASE11_PLAN.md §4.6.1, ChatGPT #15)。
+ * SHA-1 並列計算 Web Worker (PHASE11_PLAN.md §10.3, ChatGPT #15)。
  *
  * 大規模環境 (200+ Mods) でメインスレッドの固まりを回避するため、
  * ファイル読み込み後のハッシュ計算を Worker で実行する。

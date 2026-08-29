@@ -4,7 +4,7 @@
 
 - 集計基準: `find .archive/vite -type f -not -path '*/node_modules/*'` と `find app components hooks lib types.ts -type f` の全ファイル、およびルート設定ファイル一式
 - 比較日: 2026-08-21 (Phase 7 完了直後)
-- 対象コミット: `arena/01a01fcf-dropmod` HEAD `260075c`
+- 対象コミット: `arena/01a04363-dropmod` HEAD `260075c`
 
 > ## ⚠️ 重要: 2026-08-22 更新について
 >

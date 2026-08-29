@@ -162,3 +162,56 @@ describe('Header', () => {
     expect(props.onImportZip).toHaveBeenCalledTimes(1);
   });
 });
+
+// ============================================================================
+// Phase 12-B / D-8: フォルダ紐付け済みプロファイルでは ZIP保存 → Sync に置き換える
+// ============================================================================
+
+import { useProfilesStore as useProfilesStoreForD8 } from '@/lib/store/profiles';
+import type { LinkedSource as LinkedSourceD8 } from '@/types';
+
+const LINKED_D8: LinkedSourceD8 = {
+  kind: 'filesystem',
+  rootName: '.minecraft',
+  handleId: 'dh-1',
+  environment: { mcVersion: '1.20.1', loader: 'Fabric' },
+  contentDirs: { mods: 'mods' },
+  linkedAt: 1
+};
+
+function setLinkedProfile(linkedSource?: LinkedSourceD8) {
+  useProfilesStoreForD8.setState({
+    profiles: [
+      {
+        id: 'p1',
+        name: 'P1',
+        environment: { mcVersion: '1.20.1', loader: 'Fabric' },
+        mods: [],
+        ...(linkedSource ? { linkedSource } : {})
+      }
+    ],
+    currentProfileId: 'p1',
+    hasHydrated: true
+  });
+}
+
+describe('Header: D-8 ZIP保存 → Sync の置き換え', () => {
+  it('未紐付けなら ZIP保存 (モバイル / デスクトップ)', () => {
+    setLinkedProfile();
+    renderHeader();
+    expect(screen.getByRole('button', { name: 'ZIP保存' })).toBeInTheDocument();
+    expect(screen.getByText('ZIP保存 (全.jar)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'フォルダへ同期' })).not.toBeInTheDocument();
+  });
+
+  it('紐付け済みなら Sync に置き換わる (プロファイルごと)', () => {
+    setLinkedProfile(LINKED_D8);
+    renderHeader();
+    expect(screen.getByRole('button', { name: 'フォルダへ同期' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'フォルダへ同期 (全.jar)' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ZIP保存' })).not.toBeInTheDocument();
+    expect(screen.queryByText('ZIP保存 (全.jar)')).not.toBeInTheDocument();
+  });
+});

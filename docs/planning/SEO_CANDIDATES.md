@@ -1,6 +1,8 @@
 # SEO 改善候補リスト (候補レジストリ)
 
-> 対応 task-list ID: `SEO-1` ([docs/task-list.md](../task-list.md)) — 保留中
+> 対応 task-list ID: `SEO-1` (2-2 / 2-3 / 2-6〜。Phase 12 完了後に再開) ・
+> `SEO-2` (2-1 重複コンテンツ対策のみ。**依存なし・早期実施推奨**)
+> — 2026-08-27 に 2-1 を `SEO-2` として依存切り離し ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
 > **状態: 保留** (2026-08-24 選定 / Phase 12 完了後に再開。ただし **2-1 (重複対策) のみ早期実施推奨**)
 

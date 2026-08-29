@@ -144,3 +144,50 @@ describe('MenuBottomSheet', () => {
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+// ============================================================================
+// Phase 12-B / D-8: フォルダ紐付け済みプロファイルでは ZIP保存 → Sync に置き換える
+// ============================================================================
+
+import { useProfilesStore as useProfilesStoreForD8 } from '@/lib/store/profiles';
+import type { LinkedSource as LinkedSourceD8 } from '@/types';
+
+const LINKED_D8: LinkedSourceD8 = {
+  kind: 'filesystem',
+  rootName: '.minecraft',
+  handleId: 'dh-1',
+  environment: { mcVersion: '1.20.1', loader: 'Fabric' },
+  contentDirs: { mods: 'mods' },
+  linkedAt: 1
+};
+
+function setLinkedProfile(linkedSource?: LinkedSourceD8) {
+  useProfilesStoreForD8.setState({
+    profiles: [
+      {
+        id: 'p1',
+        name: 'P1',
+        environment: { mcVersion: '1.20.1', loader: 'Fabric' },
+        mods: [],
+        ...(linkedSource ? { linkedSource } : {})
+      }
+    ],
+    currentProfileId: 'p1',
+    hasHydrated: true
+  });
+}
+
+describe('MenuBottomSheet: D-8 ZIP保存 → Sync の置き換え', () => {
+  it('未紐付けなら ZIP 保存', () => {
+    setLinkedProfile();
+    render(<MenuBottomSheet {...makeProps()} />);
+    expect(screen.getByText('ZIP 保存')).toBeInTheDocument();
+  });
+
+  it('紐付け済みならフォルダへ同期に置き換わる', () => {
+    setLinkedProfile(LINKED_D8);
+    render(<MenuBottomSheet {...makeProps()} />);
+    expect(screen.queryByText('ZIP 保存')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'フォルダへ同期' })).toBeInTheDocument();
+  });
+});

@@ -109,13 +109,16 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P11-C2 | ZIP フォールバック (.minecraft ZIP) | 完了 | 100% | P11-C1 | Firefox/Safari で取り込み可 | `b6a5a54` |
 | P11-E2E | E2E spec 2 種 + ドキュメント | 完了 | 100% | P11-C2 | **CI 上で E2E green** | `c0d13f8` + spec 修正 `1508a6e` / run `33071105483` 全 green |
 
-### Phase 12: Sync & Modrinth Modpack (Read/Write) — 未着手
+### Phase 12: Sync & Modrinth Modpack (Read/Write) — 進行中
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P12-A | linkedSource + ManagedFile + Diff Engine | 未着手 | 0% | P11-E2E | computeSyncPlan の unit test 全分類 | - |
-| P12-B | Preview UI + Transaction + Executor + Rollback | 未着手 | 0% | P12-A | Chromium で Direct Write 動作 | - |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | 未着手 | 0% | P12-B | Firefox/Safari で ZIP Sync | - |
+| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
+| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | `4886245` ほか 11 commits / unit+component 100 files 995 tests green・**実機確認はユーザー** |
+| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **CI 実行待ち** | 70% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts` 3 scenarios + `folderPickerMock` を書き込み対応に拡張 / typecheck + `playwright --list` は green・**Sandbox は Chromium install 不可のため実実行は CI** |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | `db648c2`〜`b462bfa` の 7 commits / .mrpack overrides・Provider 抽象・Modpack 更新検知・ZipSink・Modpack ハブ・CF 検出・ZIP Sync 導線 / unit+component 108 files 1151 tests green・**実機 Firefox/Safari 確認はユーザー** |
+
+※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
 
 ### Phase 13: CurseForge 完全対応 — 未着手
 
@@ -169,7 +172,12 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | DOC-1 | README 全面更新 (ビルド/環境変数/未記載) | 完了 | 100% | - | セクション充実 + 実測値 | `ab273b1` |
 | DOC-2 | 計画書のタスク管理形式への再構成 | 完了 | 100% | - | 本ファイル + 12 計画書 + テンプレート | 本コミット |
-| SEO-1 | SEO 改善候補 (重複コンテンツ対策等) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
+| DOC-3 | ドキュメント/設定ドリフトの是正 (実測値・ブランチ名・削除済み参照) | 完了 | 100% | - | 記載値が実測と一致・stale 参照 0 件・4 検証 pass | 本コミット / `.agent/logs/2026-08-27_doc-config-drift-fix.md` |
+| DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENT.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
+| DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
+| DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
+| SEO-1 | SEO 改善候補 (JSON-LD 2-2 / 動的 OGP 2-3 / 低優先 2-6〜) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
+| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | 未着手 | 0% | - | `/{type}/[slug]` 直接 URL に noindex・一覧とモーダルは index 維持 | SEO_CANDIDATES.md 2-1 (🥇高 / Effort 極小 / 早期実施推奨) |
 
 ---
 

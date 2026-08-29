@@ -1,5 +1,5 @@
 /**
- * EnvironmentSource 抽象レイヤー (PHASE11_PLAN.md §2.3, ChatGPT #14)。
+ * EnvironmentSource 抽象レイヤー (PHASE11_PLAN.md §10.3, ChatGPT #14)。
  *
  * Chromium (File System Access API) と ZIP フォールバックで共通の
  * インターフェースを提供し、上位ロジック (Detector / Analyzer /

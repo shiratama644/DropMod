@@ -1,5 +1,5 @@
 /**
- * EnvironmentSource の ZIP 実装 (Phase 11-C、PHASE11_PLAN.md §2.2 / §4.1)。
+ * EnvironmentSource の ZIP 実装 (Phase 11-C、PHASE11_PLAN.md §10.3 / §10.5)。
  *
  * Firefox / Safari / モバイル (File System Access API 非対応) 向けの
  * フォールバック。`.minecraft` を ZIP 化したファイルを JSZip で読み、

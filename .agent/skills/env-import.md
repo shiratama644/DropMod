@@ -50,6 +50,24 @@
 - Detector / Analyzer は Fake FS + msw で統合テスト。analysis.ts は pure fixture。
 - Worker は jsdom に無いため `computeHashes` は自動でメインスレッド経路になり、その経路をテストする。
 
-## Phase 12 で追加するもの (ここにはまだ無い)
+## Phase 12 の進捗
 
-- `EnvironmentSink` (書き込み) / `readwrite` picker / dirHandles の Dexie 永続化 / `Profile.linkedSource` / `.mrpack` 取り込み / ManagedFileRecord。
+### P12-A で実装済み (2026-08-27)
+
+| モジュール | 内容 |
+| :--- | :--- |
+| `types.ts` | `Profile.linkedSource` (`LinkedSource`) / `ManagedFileRecord` / `ManagedFileSource` (`'dropmod'`・`'import'`・`'modpack'`) |
+| `lib/db/dexie.ts` | **schema v3**: `managedFiles` / `dirHandles` テーブル + 台帳・handle ヘルパ |
+| `lib/env/managed.ts` | `expandProfileToManaged`（Profile→台帳導出, **artifact 持ちのみ**）/ `mergeManagedRecords`（既存の `source`・`managedAt`・`syncedAt` を保護）/ `buildManagedFileId` (`${profileId}::${path}`) |
+| `lib/env/diff.ts` | **`computeSyncPlan()`** — 5 分類 + fingerprint unchanged 検証。pure function で書き込みなし |
+
+**削除の 3 条件 (§10.2)**: 台帳に存在 AND `local.sha1 === record.sha1` AND Profile が該当 projectId を持たない。
+fingerprint 不一致なら削除せず `unchanged` + `externallyModified: true`（`selectExternallyModified()` で抽出）。
+台帳に無いファイルは `unmanaged` = **表示のみで削除対象外**。
+「Profile が同じ project を別パスで要求」= パス移動とみなし旧パスを削除候補にする。
+
+### 残る Phase 12 の作業
+
+- **P12-B**: `EnvironmentSink`（書き込み）/ `readwrite` picker / `SyncTransaction` テーブル (Dexie v4) /
+  `executeSync` / OPFS Backup / Rollback / Sync Preview UI / Sync History UI
+- **P12-C**: `ZipSink` / `.mrpack` パーサ / `ModrinthProvider` / Modpack UI / CurseForge 検出表示

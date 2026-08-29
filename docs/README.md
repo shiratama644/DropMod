@@ -127,16 +127,18 @@ docs/
 
 ## 🔗 コード側からの参照
 
-一部のソースコード内コメントや ESLint disable 理由でドキュメントを参照しています:
+一部のソースコード内コメントでドキュメントを参照しています:
 
 | ソース | 参照先 |
 |---|---|
-| `components/AppContext.tsx` | `docs/planning/PHASE9_PLAN.md` 付録 A (AppContext stub 化) |
-| `lib/modrinth/server.ts` | `docs/planning/NEXTJS_MIGRATION_PLAN.md` §7 (キャッシュ戦略) |
-| `lib/store/confirm.ts` | `docs/audit/issues-phase9.md` B18 (並列 confirm キュー化検討) |
-| `biome.json` | `docs/audit/issues-legacy.md` (旧 eslint.config.mjs、Phase 10-P5 で移行) |
+| `lib/modrinth/server.ts` | `docs/planning/NEXTJS_MIGRATION_PLAN.md` §10.5 (キャッシュ戦略) |
+| `lib/store/confirm.ts` | `docs/audit/issues-phase9.md` B18 (並列 confirm キュー化) |
 
 ファイル移動時はこれらの参照も更新してください。
+
+※ 2026-08-27 整理: 削除済みファイルを指す 2 行を除去した。
+`components/AppContext.tsx` (Phase 10-B で完全削除) と `biome.json`
+(JSON のためコメント参照を持てず、旧 `eslint.config.mjs` も Phase 10-P5 で撤去済み)。
 
 ---
 

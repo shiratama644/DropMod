@@ -235,7 +235,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1A | 共通 UI を ui/layout/feedback へ | 完了 | 100% | ARCH-1 Go | 旧パス re-export + 4 検証 | typecheck / biome / 1244 tests / build. 計画 §10.4 |
 | ARCH-1B | landing | 完了 | 100% | ARCH-1A | `features/landing` | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1C | settings | 完了 | 100% | ARCH-1A | `features/settings` | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1D | seo + sitemap-entries | 未着手 | 0% | ARCH-1A | `features/seo`（opengraph は app 残置） | 計画 §10.5 |
+| ARCH-1D | seo + sitemap-entries | 完了 | 100% | ARCH-1A | `features/seo`（opengraph は app 残置） | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1E | catalog + categories.ts | 未着手 | 0% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | 計画 §10.5 |
 | ARCH-1F | project + project-detail.ts | 未着手 | 0% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | 計画 §10.5 |
 | ARCH-1G | profiles + loaders + contentCategory | 未着手 | 0% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | 計画 §10.5 |

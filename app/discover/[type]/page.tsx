@@ -6,7 +6,7 @@ import {
   sanitizeSearchQuery,
   type DiscoverSegment
 } from '@/lib/constants/search';
-import { loadDiscoverSearch } from '@/features/catalog/search/loadDiscoverSearch';
+import { loadDiscoverSearch } from '@/features/catalog/api/loadDiscoverSearch';
 
 // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため
 // title に ' - DropMod' を含めない (含めるとサイト名が二重になる)

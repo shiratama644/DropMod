@@ -17,7 +17,7 @@ import {
   stubRequestAnimationFrame,
   type RafStub,
   type ScrollYStub
-} from '../test-utils/browserApi';
+} from '@/__tests__/test-utils/browserApi';
 
 describe('useScrollDirection', () => {
   let scroll: ScrollYStub;

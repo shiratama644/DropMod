@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1A〜1M 実施済み。次は ARCH-1N（テスト配置）。1N〜1O 未着手** (2026-08-30)
+> **状態: ARCH-1A〜1N 実施済み。次は ARCH-1O（掃除と完了チェック）。1O 未着手** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -302,7 +302,7 @@ detector 内部・hash worker は private。Worker URL をこのフェーズで�
 ### 10.8 テスト
 
 第 1 波: `__tests__/features/<name>/` ミラー。  
-ARCH-1N 既定はミラー維持。colocation は確認待ち。
+ARCH-1N は **colocation しない**（ユーザー指示: `__tests__` にまとめる）。ディレクトリだけ Feature に揃える。
 
 `__tests__/lib/env/*` → env-import / sync / modpack に分割（ファイル単位で §10.5 に追随）。
 
@@ -461,6 +461,7 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1K | (本コミット) | features/sync + formatBytes。ZipSink は sync/sink。scan/source は lib/env 残置 |
 | ARCH-1L | (本コミット) | features/modpack + providers。mrpack/modpackAdd/Update/Hub |
 | ARCH-1M | (本コミット) | 旧パス shim 削除。公開面は @/features/<name>。lib/env 残件は scan/source/hash 等 |
+| ARCH-1N | (本コミット) | `__tests__/features/<name>/` ミラー。colocation なし |
 
 ## 13. 完了チェック（ARCH-1O）
 

@@ -144,14 +144,37 @@
 | 非コンポーネント `.ts` / `.mjs` | **camelCase** | `rateLimit.ts` / `siteUrl.ts` / `ogCopy.ts` / `buildEnv.ts` / `annotationReporter.ts` / `buildFontawesomeSubset.mjs` |
 | React コンポーネント `.tsx` | PascalCase（**対象外・維持**） | `ModCard.tsx` / `AppShell.tsx` |
 | Next.js ルーティング/特別ファイル | 固定名（**対象外・維持**） | `page.tsx` / `layout.tsx` / `route.ts` / `opengraph-image.tsx` 等（§3 参照） |
-| テストファイル | `<camelCase>.test.ts(x)` / `<camelCase>.spec.ts`。ドットは **`.test.` / `.spec.` の 1 つのみ**（対象名内にドット禁止） | `rateLimit.test.ts` / `dexieV4.test.ts` / `modDetailModal.spec.ts` |
+| テストファイル | `<camelCase>.test.ts(x)` / `<camelCase>.spec.ts`。ドットは **`.test.` / `.spec.` の 1 つのみ**（対象名内にドット禁止）。**バージョン番号を名前に含めない**（例: `dexieV4` は NG → `dexieUpgrade`） | `rateLimit.test.ts` / `dexieUpgrade.test.ts` / `modDetailModal.spec.ts` |
 | 型定義 | `<camelCase>.d.ts` | `fsAccess.d.ts` |
 | ツール設定 | 固定名（**対象外**） | `vitest.config.ts` / `playwright.config.ts` / `next.config.mjs` / `postcss.config.mjs` / `vitest.setup.ts` / `next-env.d.ts` |
 | Web Worker | camelCase（ドット廃止） | `hash.worker.ts` → `hashWorker.ts` |
 
-### 10.2 リネーム対象一覧（全 24 件 + 参照更新）
+#### ファイル名が長くなる場合のチェックポイント（2026-08-31 ユーザー指摘を反映）
 
-**非テスト (7 件):**
+ドット区切りや長い連結名 (`NewProfileModal.folderImport.test.tsx` 等) は、
+**情報をフォルダ階層で表現すれば省略できる**ことが多い。リネーム時に以下を確認する:
+
+1. **コンポーネント/モジュールの責務が多すぎないか（一番重要）**:
+   1 ファイルが複数の役割を担っている場合、長い名前は責務過大のサイン。
+   `NewProfileModal.tsx` (637 行) はフォルダ解析・AnalysisSection・自動紐付けを
+   内包しており責務が大きい。**ファイル整理では分割せず**、テスト側をフォルダで
+   集約して対処し、本体の責務分割は別タスク (ORG-4 候補, §10.2.1) に切り出す。
+2. **フォルダ構造で親情報を表現できるか**:
+   `db.managed.test.ts` → `db/managed.test.ts` のように、ドット区切りの情報を
+   フォルダ階層に置き換えるとファイル名が短くなる。実コード側に対応フォルダが
+   ある場合は**必ずミラーする** (`features/sync/services/db/managed.ts` ↔
+   `__tests__/features/sync/services/db/managed.test.ts`)。
+3. **実コード側の構造とミラーが保てるか**:
+   実コードが単一ファイル (例: `lib/db/dexie.ts`, ルート `next.config.mjs`) の場合は
+   テスト側だけフォルダ化せず、フラット連結 (`dexieMigration.test.ts`) に留める
+   (ミラー構造が崩れると ARCH-1N の「テスト配置ミラー」ルールと矛盾する)。
+4. **バージョン番号など可変情報を名前に含めない**:
+   `dexieV4` は Dexie v5 昇格時に再リネームが必要になるため NG。
+   バージョン固有の情報は describe 名・コメントに書く (`dexieUpgrade.test.ts`)。
+
+### 10.2 リネーム対象一覧（全 25 件 + 付随移動 1 件 + 参照更新）
+
+**非テスト (8 件):**
 
 | 現パス | 新パス | 参照数 |
 |---|---|---|
@@ -164,16 +187,22 @@
 | `e2e/helpers/annotation-reporter.ts` | `e2e/helpers/annotationReporter.ts` | 1 |
 | `scripts/build-fontawesome-subset.mjs` | `scripts/buildFontawesomeSubset.mjs` | package.json + コメント |
 
-**テスト (10 件):** ※「意味のないドット」6 件を含む
+**「意味のないドット」を持つテスト (6 件 + 付随移動 1 件):** ※ 2026-08-31 ユーザー指摘によりフォルダ化を判断
+
+| 現パス | 新パス | 方式 | 根拠 |
+|---|---|---|---|
+| `__tests__/features/profiles/components/NewProfileModal.folderImport.test.tsx` | `__tests__/features/profiles/components/NewProfileModal/FolderImport.test.tsx` | **フォルダ化** | `NewProfileModal.tsx` は 637 行で責務過大（フォルダ解析・AnalysisSection・自動紐付けを内包）。テスト側を `NewProfileModal/` フォルダに集約し、ファイル名は `FolderImport.test.tsx` だけで意味が通る |
+| `__tests__/features/profiles/components/NewProfileModal.test.tsx` | `__tests__/features/profiles/components/NewProfileModal/NewProfileModal.test.tsx` | 付随移動 | 同コンポーネントのテストをフォルダに集約（ドットなしだがフォルダ化に伴い移動） |
+| `__tests__/features/sync/services/db.managed.test.ts` | `__tests__/features/sync/services/db/managed.test.ts` | **フォルダ化** | 実コード `features/sync/services/db/managed.ts` が既に `db/` フォルダ内に存在 → テストも移動してミラー完成。`db` を省略し `managed.test.ts` に |
+| `__tests__/features/sync/services/db.syncTransactions.test.ts` | `__tests__/features/sync/services/db/transactions.test.ts` | **フォルダ化** | 実コード `features/sync/services/db/transactions.ts` とミラー（上と同様） |
+| `__tests__/lib/db/dexie.v4.test.ts` | `__tests__/lib/db/dexieUpgrade.test.ts` | フラット連結 | 内容 = schema v3→v4 upgrade。**バージョン番号を名前に含めない**（v5 昇格時に再リネーム不要）。`lib/db` はフラット実体のためフォルダ化せず |
+| `__tests__/lib/db/dexie.migration.test.ts` | `__tests__/lib/db/dexieMigration.test.ts` | フラット連結 | 内容 = v1→v2 migration。バージョン非依存。`lib/db` フラットに合わせる |
+| `__tests__/next-config.security.test.ts` | `__tests__/nextConfigSecurity.test.ts` | フラット連結 | 実コード `next.config.mjs` はルートの単一ファイル。`__tests__/` 直下もフラットのためフォルダ化せず |
+
+**kebab-case のテスト (4 件):** ※ camelCase 化のみ（ドット 1 つの慣習内）
 
 | 現パス | 新パス |
 |---|---|
-| `__tests__/features/profiles/components/NewProfileModal.folderImport.test.tsx` | `NewProfileModalFolderImport.test.tsx` |
-| `__tests__/features/sync/services/db.managed.test.ts` | `dbManaged.test.ts` |
-| `__tests__/features/sync/services/db.syncTransactions.test.ts` | `dbSyncTransactions.test.ts` |
-| `__tests__/lib/db/dexie.migration.test.ts` | `dexieMigration.test.ts` |
-| `__tests__/lib/db/dexie.v4.test.ts` | `dexieV4.test.ts` |
-| `__tests__/next-config.security.test.ts` | `nextConfigSecurity.test.ts` |
 | `__tests__/features/project/utils/discover-modal-metadata.test.ts` | `discoverModalMetadata.test.ts` |
 | `__tests__/lib/platform/og-copy.test.ts` | `ogCopy.test.ts` |
 | `__tests__/lib/platform/rate-limit.test.ts` | `rateLimit.test.ts` |
@@ -193,6 +222,29 @@
 
 **参照更新の手順**: リネーム後に `grep -rn "旧名" app components features hooks lib
 types scripts __tests__ e2e` で残存 0 件を確認してから次のファイルへ進む。
+
+#### 10.2.1 将来タスク候補: NewProfileModal の責務分割（ORG-4 候補・本計画の範囲外）
+
+`features/profiles/components/NewProfileModal.tsx` は **637 行**で、以下を 1 ファイルに
+内包しており責務が大きい（2026-08-31 ユーザー指摘）:
+
+- フォーム本体（名前・環境入力・作成ボタン）
+- フォルダ選択 → 解析（Phase 11）→ 自動紐付け（P12-D1）
+- ZIP / .mrpack 取り込みデータの表示
+- `AnalysisSection`（解析結果の Read-only 表示、同ファイル内の内部コンポーネント）
+
+本計画 (ORG-1〜3) は「ファイル名・配置の整理」が目的であり、**コンポーネント分割は
+スコープ外**。本計画完了後に、以下を ORG-4 として計画・実施することを提案する:
+
+- `NewProfileModal/` フォルダ化（`index.tsx` + `FolderImportSection.tsx` +
+  `AnalysisSection.tsx` 等への分割。`index.tsx` から既存 import パス
+  `@/features/profiles/components/NewProfileModal` を維持）
+- 分割後は本計画で移動したテスト
+  `__tests__/features/profiles/components/NewProfileModal/FolderImport.test.tsx` が
+  そのまま分割コンポーネントのテストとして機能する
+- 分割は「設計 → 基盤 → 機能 A → 機能 B」と段階的に行う（AGENT.md §1.2）
+
+→ ユーザー Go が出たら `docs/task-list.md` に ORG-4 を採番して計画する。
 
 ### 10.3 src/ 移行（ORG-2）
 
@@ -271,6 +323,12 @@ DropMod/
   本計画の実行ログは当日の新規ログに記録する。
 - **E2E はローカル実行不可**: e2e spec のリネーム後の動作確認は CI の
   `workflow_dispatch` で行う（§6.2）。ローカルで実行を試みない。
+- **バージョン番号をファイル名に入れない（2026-08-31 ユーザー指摘）**:
+  `dexie.v4.test.ts` の camelCase 化として `dexieV4.test.ts` を当初案としたが、
+  Dexie を v5 に昇格した際にまたリネームが必要になるため不適切。ファイル名は
+  実装バージョンではなく**内容の役割**を表す汎用名にする
+  （v3→v4 upgrade テスト → `dexieUpgrade.test.ts`）。バージョン固有の情報は
+  describe 名・コメントに書く。
 
 ## 12. 実績と証拠 (実装後に記入)
 

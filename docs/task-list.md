@@ -283,6 +283,6 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 未着手 | 0% | - | リネーム対象 24 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | 計画 §10.2 |
+| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 未着手 | 0% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | 計画 §10.2 |
 | ORG-2 | src/ 移行 (app/components/features/hooks/lib/types/styles → src/) | 未着手 | 0% | ORG-1 | src/app 有効化・`@/*` が `./src/*` を指す・coverage/@source パス整合・ルートが「設定 + docs + public」に整理 | 計画 §10.3 |
 | ORG-3 | ドキュメント更新 (AGENT.md / skills / README / task-list) | 未着手 | 0% | ORG-2 | パス表記が src/ と新ファイル名に一致・4 検証 pass | 計画 §8 |

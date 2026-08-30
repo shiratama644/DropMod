@@ -20,7 +20,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
+import { getManagedFiles, syncManagedFiles } from '../db';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { createFolderLink, releaseFolderLink } from '../link';
 import { expandProfileToManaged, mergeManagedRecords } from '../managed';

@@ -10,7 +10,8 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useInterruptedSync } from '@/features/sync/hooks/useInterruptedSync';
 import { openLinkedFolder } from '@/features/sync/link';
 import { recoverInterruptedSync } from '@/features/sync/recovery';
-import { _clearAllForTesting, createSyncTransaction, markOperationDone } from '@/lib/db/dexie';
+import { _clearAllForTesting } from '@/lib/db/dexie';
+import { createSyncTransaction, markOperationDone } from '@/features/sync';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 import type { EnvironmentSink } from '@/features/sync/sink';
@@ -56,7 +57,7 @@ async function makeInterrupted(profileId: string, status: 'pending' | 'running')
   ]);
   await markOperationDone(id, 0);
   if (status === 'running') {
-    const { updateSyncTransactionStatus } = await import('@/lib/db/dexie');
+    const { updateSyncTransactionStatus } = await import('@/features/sync');
     await updateSyncTransactionStatus(id, 'running');
   }
   return id;
@@ -109,7 +110,7 @@ describe('useInterruptedSync', () => {
   it('resolve(rollback): フォルダを開き ensureWritable してから復旧する', async () => {
     const txId = await makeInterrupted('p1', 'running');
     // モックでも DB を更新する (復旧後に取り直した一覧が消えることを検証するため)
-    const { updateSyncTransactionStatus } = await import('@/lib/db/dexie');
+    const { updateSyncTransactionStatus } = await import('@/features/sync');
     mockRecover.mockImplementation(async (input) => {
       await updateSyncTransactionStatus(input.transactionId, 'rolled-back', { rolledBackAt: 1 });
       return { ok: true, choice: input.choice, restored: 0, removed: 1, errors: [] };

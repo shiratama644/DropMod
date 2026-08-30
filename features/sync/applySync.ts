@@ -13,12 +13,7 @@
  * 実体と fingerprint が食い違い、次回 Sync の削除判定 (§10.2) が壊れる。
  */
 
-import {
-  getManagedFiles,
-  getSyncTransaction,
-  setSyncTransactionLedgerBefore,
-  syncManagedFiles
-} from '@/lib/db/dexie';
+import { getManagedFiles, getSyncTransaction, setSyncTransactionLedgerBefore, syncManagedFiles } from './db';
 import type { Profile } from '@/types';
 import { excludeDeletions } from './diff';
 import { executeSync, type ExecuteSyncResult } from './executor';

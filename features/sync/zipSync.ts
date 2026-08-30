@@ -42,7 +42,7 @@ import { ZipSink } from './sink/zip';
 import { InMemoryBackupStore } from './backup';
 import { applySync, type ApplySyncDeps, type ApplySyncResult } from './applySync';
 import type { ReadySyncOutcome } from './syncPrep';
-import { getManagedFiles } from '@/lib/db/dexie';
+import { getManagedFiles } from './db';
 import type { LinkedSource, Profile } from '@/types';
 
 /** 既定のコンテンツディレクトリ名 (`.minecraft` 標準) */

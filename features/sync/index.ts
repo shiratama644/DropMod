@@ -21,3 +21,25 @@ export {
   releaseFolderLink,
   openLinkedFolder
 } from './link';
+export {
+  syncManagedFiles,
+  getManagedFiles,
+  deleteManagedFilesForProfile,
+  saveDirHandle,
+  getDirHandle,
+  deleteDirHandle,
+  createSyncTransaction,
+  getSyncTransaction,
+  listSyncTransactions,
+  updateSyncTransactionStatus,
+  setSyncTransactionLedgerBefore,
+  markOperationDone,
+  findInterruptedSyncTransactions,
+  deleteSyncTransaction,
+  type DirHandleRow,
+  type ManagedFileRow,
+  type SyncOperationJournalEntry,
+  type SyncOperationPatch,
+  type SyncTransactionRow,
+  type SyncTransactionStatus
+} from './db';

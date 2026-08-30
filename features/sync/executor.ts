@@ -14,13 +14,7 @@
  *    (直近 `UNDO_KEEP_COUNT` 回の Sync は絶対に消さない)
  */
 
-import {
-  createSyncTransaction,
-  getSyncTransaction,
-  markOperationDone,
-  updateSyncTransactionStatus,
-  type SyncOperationJournalEntry
-} from '@/lib/db/dexie';
+import { createSyncTransaction, getSyncTransaction, markOperationDone, updateSyncTransactionStatus, type SyncOperationJournalEntry } from './db';
 import { calculateSha1 } from '@/lib/utils/hash';
 import {
   selectEvictableTransactions,

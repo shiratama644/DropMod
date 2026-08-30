@@ -8,10 +8,9 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { _clearAllForTesting, db } from '@/lib/db/dexie';
 import {
-  _clearAllForTesting,
   createSyncTransaction,
-  db,
   deleteSyncTransaction,
   findInterruptedSyncTransactions,
   getSyncTransaction,
@@ -19,7 +18,7 @@ import {
   markOperationDone,
   updateSyncTransactionStatus,
   type SyncOperationJournalEntry
-} from '@/lib/db/dexie';
+} from '@/features/sync';
 
 function op(overrides: Partial<SyncOperationJournalEntry> = {}): SyncOperationJournalEntry {
   return {

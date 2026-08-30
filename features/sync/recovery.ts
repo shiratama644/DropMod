@@ -11,11 +11,7 @@
  * 一度巻き戻して Sync し直すほうが安全。
  */
 
-import {
-  findInterruptedSyncTransactions,
-  getSyncTransaction,
-  updateSyncTransactionStatus
-} from '@/lib/db/dexie';
+import { findInterruptedSyncTransactions, getSyncTransaction, updateSyncTransactionStatus } from './db';
 import type { BackupStore } from './backup';
 import { OpfsBackupStore } from './backup';
 import { rollbackSync } from './executor';

@@ -39,7 +39,7 @@
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
 | ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
-| ARCH-2 | 実施中（2A〜2C 完了） | 次は ARCH-2D Dexie sync ヘルパ |
+| ARCH-2 | 完了（2A〜2D） | — |
 
 進行中の AI 実装タスクは **ARCH-2D**（Dexie sync ヘルパ）。
 
@@ -251,7 +251,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-2A | types.ts → types/* | 完了 | 100% | ARCH-1O | `@/types` 維持。profile/modrinth/sync/modpack/ui + index | 計画 §10.13.F |
 | ARCH-2B | store slice を Feature | 完了 | 100% | ARCH-2A | profiles/zip/dep-check。toast/confirm/ui/appActions は layout/feedback。lib/store 削除 | 計画 §10.13.F |
 | ARCH-2C | lib/platform → lib/platform | 未着手 | 0% | ARCH-2A | logger / rate-limit / APP_PROFILE / site-url | 計画 §10.13.F |
-| ARCH-2D | Dexie sync ヘルパを features/sync | 未着手 | 0% | ARCH-2B | スキーマ宣言は lib/db 残置 | 計画 §10.13.F |
+| ARCH-2D | Dexie sync ヘルパを features/sync | 完了 | 100% | ARCH-2B | スキーマ宣言は lib/db 残置。操作は features/sync/db.ts | 計画 §10.13.F |
 
 ---
 

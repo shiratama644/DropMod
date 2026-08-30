@@ -11,16 +11,18 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Dexie from 'dexie';
 import {
   db,
+  getAllProfiles,
+  _clearAllForTesting
+} from '@/lib/db/dexie';
+import {
   deleteDirHandle,
   deleteManagedFilesForProfile,
   getDirHandle,
-  getAllProfiles,
   getManagedFiles,
   saveDirHandle,
   syncManagedFiles,
-  _clearAllForTesting,
   type ManagedFileRow
-} from '@/lib/db/dexie';
+} from '@/features/sync';
 import type { ManagedFileRecord } from '@/types';
 
 const DB_NAME = 'DropModDB';

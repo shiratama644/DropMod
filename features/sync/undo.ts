@@ -20,7 +20,7 @@
  * 台帳も触らない。
  */
 
-import { getSyncTransaction, syncManagedFiles, updateSyncTransactionStatus } from '@/lib/db/dexie';
+import { getSyncTransaction, syncManagedFiles, updateSyncTransactionStatus } from './db';
 import { OpfsBackupStore, type BackupStore } from './backup';
 import { rollbackSync } from './executor';
 import type { EnvironmentSink } from './sink';

@@ -31,7 +31,7 @@ import {
   mrpackOverridesToManaged,
   parseMrpackOverrides
 } from '@/features/modpack';
-import { syncManagedFiles } from '@/lib/db/dexie';
+import { syncManagedFiles } from '@/features/sync';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {
   if (!raw) return undefined;

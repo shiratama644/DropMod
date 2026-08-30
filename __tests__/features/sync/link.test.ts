@@ -17,7 +17,8 @@ import type { PickedDirectory } from '@/features/env-import/picker';
 import { FileSystemSink } from '@/features/sync/sink/filesystem';
 import { FileSystemSource } from '@/lib/env/source';
 import type { DetectedEnvironment } from '@/features/env-import/detector';
-import { _clearAllForTesting, getDirHandle } from '@/lib/db/dexie';
+import { _clearAllForTesting } from '@/lib/db/dexie';
+import { getDirHandle } from '@/features/sync';
 import type { LinkedSource } from '@/types';
 import { asFakeDirectory, createFakeFileSystem } from '@/__tests__/test-utils/fakeFs';
 

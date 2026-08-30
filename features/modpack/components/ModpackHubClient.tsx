@@ -23,7 +23,7 @@
 
 import type React from 'react';
 import { useCallback, useState } from 'react';
-import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
+import { getManagedFiles, syncManagedFiles } from '@/features/sync';
 import { promoteModpackRecords } from '../mrpack';
 import {
   checkModpackUpdates,

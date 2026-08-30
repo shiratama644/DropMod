@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-2A〜2C 完了。次は ARCH-2D（Dexie sync ヘルパ）** (2026-08-30)
+> **状態: ARCH-2 完了（2A〜2D）** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -464,7 +464,8 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1O | `c28f51d` | 旧パス shim 削除。coverage / skills / チェックリスト |
 | ARCH-2A | `ea923d5` | types.ts → types/{profile,modrinth,sync,modpack,ui} + index。`@/types` 維持 |
 | ARCH-2B | `eb2a1a1` | store を Feature / layout / feedback へ。lib/store 削除 |
-| ARCH-2C | (本コミット) | lib/server → lib/platform（logger / rate-limit / profile / site-url） |
+| ARCH-2C | `a8fe85b` | lib/server → lib/platform（logger / rate-limit / profile / site-url） |
+| ARCH-2D | (本コミット) | Dexie sync ヘルパを features/sync/db.ts。スキーマは lib/db 残置 |
 
 ## 13. 完了チェック（ARCH-1O）
 
@@ -479,7 +480,7 @@ Go は ARCH-1O のあと別判断。
 - [x] `.archive/vite/` 無変更
 - [x] task-list 更新
 
-残件（意図的・ARCH-2D）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。Dexie sync ヘルパは ARCH-2D。
+残件（意図的）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。ARCH-2 は完了。
 
 ## 14. Go
 

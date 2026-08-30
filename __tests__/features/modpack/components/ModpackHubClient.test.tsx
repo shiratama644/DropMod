@@ -16,7 +16,8 @@ import type { ModpackUpdateReport } from '@/features/modpack/modpackUpdate';
 import { useProfilesStore } from '@/features/profiles';
 import { useConfirmStore } from '@/components/feedback/confirmStore';
 import { useToastStore } from '@/components/feedback/toastStore';
-import { getManagedFiles, syncManagedFiles, _clearAllForTesting } from '@/lib/db/dexie';
+import { _clearAllForTesting } from '@/lib/db/dexie';
+import { getManagedFiles, syncManagedFiles } from '@/features/sync';
 import type { ManagedFileRecord, Profile } from '@/types';
 import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 

@@ -8,7 +8,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
-import { db, syncManagedFiles } from '@/lib/db/dexie';
+import { db } from '@/lib/db/dexie';
+import { syncManagedFiles } from '@/features/sync/db';
 import { createFolderLink, releaseFolderLink } from '@/features/sync/link';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
@@ -19,9 +20,9 @@ vi.mock('@/features/sync/link', () => ({
   releaseFolderLink: vi.fn()
 }));
 
-// P12-D1B: seed 失敗ケースを再現するため dexie の 2 関数をモックでラップする
-vi.mock('@/lib/db/dexie', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/db/dexie')>();
+// P12-D1B: seed 失敗ケースを再現するため台帳ヘルパをモックでラップする
+vi.mock('@/features/sync/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/sync/db')>();
   return {
     ...actual,
     getManagedFiles: vi.fn(actual.getManagedFiles),

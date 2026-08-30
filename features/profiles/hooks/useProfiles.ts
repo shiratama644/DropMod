@@ -21,12 +21,15 @@ import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
   getMeta as dexieGetMeta,
-  setMeta as dexieSetMeta,
+  setMeta as dexieSetMeta
+} from '@/lib/db/dexie';
+import {
+  linkPickedDirectory,
+  expandProfileToManaged,
+  mergeManagedRecords,
   getManagedFiles,
   syncManagedFiles
-} from '@/lib/db/dexie';
-import { linkPickedDirectory } from '@/features/sync';
-import { expandProfileToManaged, mergeManagedRecords } from '@/features/sync';
+} from '@/features/sync';
 import type { DetectedEnvironment } from '@/features/env-import';
 import type { PickedDirectory } from '@/features/env-import';
 import type { LinkedSource } from '@/types';

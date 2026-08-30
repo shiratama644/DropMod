@@ -481,7 +481,8 @@ describe('useZipImport: .minecraft フォルダ全体 ZIP (Phase 11-C フォー�
 // Phase 12-C (§10.6): .mrpack の overrides を source:'modpack' として台帳化する
 // ============================================================================
 
-import { getManagedFiles, _clearAllForTesting } from '@/lib/db/dexie';
+import { _clearAllForTesting } from '@/lib/db/dexie';
+import { getManagedFiles } from '@/features/sync';
 
 /** overrides を含む .mrpack を作る */
 function makeMrpackWithOverrides(

@@ -28,7 +28,7 @@ import { useCallback, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadFileWithRetry } from '@/lib/utils/downloadFile';
-import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
+import { getManagedFiles, syncManagedFiles } from '@/features/sync';
 import {
   expandMrpackFiles,
   mrpackOverridesToManaged,

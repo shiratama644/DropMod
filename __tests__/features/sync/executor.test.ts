@@ -18,12 +18,8 @@ import {
   type ResolveContent
 } from '@/features/sync/executor';
 import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
-import {
-  _clearAllForTesting,
-  db,
-  getSyncTransaction,
-  findInterruptedSyncTransactions
-} from '@/lib/db/dexie';
+import { _clearAllForTesting, db } from '@/lib/db/dexie';
+import { getSyncTransaction, findInterruptedSyncTransactions } from '@/features/sync';
 import { MemorySink, MemoryBackupStore, sha1Of } from '@/__tests__/test-utils/memoryEnv';
 
 const OLD_A = 'old-a-content';

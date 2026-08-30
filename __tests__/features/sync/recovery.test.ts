@@ -7,15 +7,14 @@ import {
   findInterruptedSyncs,
   recoverInterruptedSync
 } from '@/features/sync/recovery';
+import { _clearAllForTesting, db } from '@/lib/db/dexie';
 import {
-  _clearAllForTesting,
   createSyncTransaction,
-  db,
   getSyncTransaction,
   markOperationDone,
-  updateSyncTransactionStatus
-} from '@/lib/db/dexie';
-import type { SyncOperationJournalEntry } from '@/lib/db/dexie';
+  updateSyncTransactionStatus,
+  type SyncOperationJournalEntry
+} from '@/features/sync';
 import { MemoryBackupStore, MemorySink } from '@/__tests__/test-utils/memoryEnv';
 
 function op(overrides: Partial<SyncOperationJournalEntry> = {}): SyncOperationJournalEntry {

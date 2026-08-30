@@ -14,7 +14,7 @@ import { undoSync } from '@/features/sync/undo';
 import { UNDO_KEEP_COUNT } from '@/features/sync/backup';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
-import type { SyncTransactionRow } from '@/lib/db/dexie';
+import type { SyncTransactionRow } from '@/features/sync';
 import type { EnvironmentSink } from '@/features/sync/sink';
 import type { LinkedSource, Profile } from '@/types';
 

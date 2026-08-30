@@ -13,7 +13,7 @@
  * 昇格が拒否された場合は **D-2** の Read-only フォールバックに入る。
  */
 
-import { deleteDirHandle, getDirHandle, saveDirHandle } from '@/lib/db/dexie';
+import { deleteDirHandle, getDirHandle, saveDirHandle } from './db';
 import type { LinkedSource } from '@/types';
 import { detectEnvironment, type DetectedEnvironment } from '@/features/env-import';
 import { pickMinecraftDirectory, type PickedDirectory } from '@/features/env-import';

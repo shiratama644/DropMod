@@ -15,7 +15,7 @@
  * 用意せずに済むようにするため)。UI 側の薄いラッパは `hooks/useSync.ts`。
  */
 
-import { getManagedFiles } from '@/lib/db/dexie';
+import { getManagedFiles } from './db';
 import type { ManagedFileRecord, Profile } from '@/types';
 import { computeSyncPlan, type LocalFileEntry, type SyncPlan } from './diff';
 import { checkEnvironmentMatch, type EnvironmentCheckResult } from './environmentCheck';

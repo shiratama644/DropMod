@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { listSyncTransactions, type SyncTransactionRow } from '@/lib/db/dexie';
+import { listSyncTransactions, type SyncTransactionRow } from '../db';
 import { openLinkedFolder } from '../link';
 import { undoSync } from '../undo';
 import { UNDO_KEEP_COUNT } from '../backup';

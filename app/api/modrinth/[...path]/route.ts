@@ -28,11 +28,11 @@ export const dynamic = 'force-dynamic';
 // 2026-08-27 セキュリティ強化 → 2026-08-27 APP_PROFILE 対応で lib/platform に集約
 // ============================================================================
 
-import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/platform/rate-limit';
+import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/platform/rateLimit';
 import { logger } from '@/lib/platform/logger';
 
 // /api 経由は 120 req/min (Modrinth の 300 req/min より厳しく)。
-// APP_PROFILE=development ではレート制限が無効化される (lib/platform/rate-limit.ts 参照)。
+// APP_PROFILE=development ではレート制限が無効化される (lib/platform/rateLimit.ts 参照)。
 const RATE_LIMIT_MAX = 120;
 
 const MODRINTH_HOST = 'api.modrinth.com';

@@ -7,7 +7,7 @@
 //   |------------------------|-------------------|--------------------------|
 //   | CSP                    | Enforce           | Report-Only (next.config) |
 //   | HSTS                   | あり (2 年+preload) | なし (next.config)        |
-//   | API レート制限           | あり               | 無効 (rate-limit.ts)      |
+//   | API レート制限           | あり               | 無効 (rateLimit.ts)      |
 //   | サーバログ debug/info    | 抑制               | 出力 (logger.ts)          |
 //
 // ■ development が有効なのは next dev (NODE_ENV=development) のみ (2026-08-27 修正)

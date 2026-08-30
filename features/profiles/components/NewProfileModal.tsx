@@ -16,7 +16,7 @@ import {
 } from '@/features/env-import';
 import { analyzeImportHealth, type AnalysisIssue } from '@/lib/env/analysis';
 import { generateProfileName } from '@/features/env-import';
-import { LOADER_DROPDOWN_OPTIONS } from '../constants/loaderVersions';
+import { LOADER_DROPDOWN_OPTIONS } from '../constants/loaderVersionTables';
 import { useLoaderVersionOptions } from '../hooks/useLoaderVersionOptions';
 import type { PendingImportData } from '@/features/zip';
 

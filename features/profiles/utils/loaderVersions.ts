@@ -7,7 +7,7 @@ import {
   FALLBACK_LOADER_VERSIONS,
   LOADER_IDS,
   type LoaderId
-} from '../constants/loaderVersions';
+} from '../constants/loaderVersionTables';
 
 export type { LoaderId };
 

@@ -236,7 +236,7 @@ Phase 7 以降、Vercel 本番デプロイ用の設定が入っています:
 
 - [`AGENT.md`](./AGENT.md) — 開発規約 (コミット手順・検証・Git 運用・コミュニケーション規約)
 - [`docs/planning/`](./docs/planning/) — フェーズ別計画書 (Phase 8〜13)・ルーティング再設計・SEO 候補
-- [`docs/complete/`](./docs/complete/) — フェーズ完了報告
+- [`docs/planning/complete/`](./docs/planning/complete/) — フェーズ完了報告
 - [`docs/ops/`](./docs/ops/) — CI / デプロイ運用
 - [`docs/audit/`](./docs/audit/) — 監査・差分記録
 

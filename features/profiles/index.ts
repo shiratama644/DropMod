@@ -20,5 +20,5 @@ export {
   LOADER_DROPDOWN_OPTIONS,
   LOADER_IDS,
   type LoaderId
-} from './constants/loaderVersions';
+} from './constants/loaderVersionTables';
 export { getLoaderVersions, isLoaderId } from './utils/loaderVersions';

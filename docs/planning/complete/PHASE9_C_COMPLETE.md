@@ -147,7 +147,7 @@ relative path `/api/modrinth` に変更 (msw v2 の path-only pattern に統一)
 
 ## 🎯 未対応 (Phase 9-D 以降で継続)
 
-- Phase 9-D: React DevTools Profiler で Context 時代の 70% 以下再レンダー実測 (`docs/complete/PHASE9_PROFILER.md`)
+- Phase 9-D: React DevTools Profiler で Context 時代の 70% 以下再レンダー実測 (`docs/planning/complete/PHASE9_PROFILER.md`)
 - Phase 9-E: E-2 キャッシュヒットバッジ、docs/audit/diff-vite-vs-nextjs.md 更新、E2E テスト網羅
 
 ## 検証結果

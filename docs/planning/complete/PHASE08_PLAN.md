@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `P8-A` 〜 `P8-E` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [docs/complete/PHASE8_COMPLETE.md](../complete/PHASE8_COMPLETE.md))
+> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [docs/planning/complete/PHASE8_COMPLETE.md](../complete/PHASE8_COMPLETE.md))
 
 ## 1. 開始前確認
 
@@ -51,7 +51,7 @@ Phase 7 までで「動くもの」は完成したが、**データ層・キャ�
 - [x] vitest + msw 導入、CI ワークフロー (`docs/ops/CI_WORKFLOW.yml`) 成形
 - [x] First Load JS 目標に対する実測値を完了レポートに記録
 - [x] `.archive/vite/` 無変更
-- [x] `docs/complete/PHASE8_COMPLETE.md` 作成
+- [x] `docs/planning/complete/PHASE8_COMPLETE.md` 作成
 
 ## 6. テスト方法
 

@@ -32,7 +32,7 @@
 | P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
 | P12-E2E | 再検証待ち (90%) | CI `workflow_dispatch` で成功/失敗/復帰の再実行 |
 | P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
-| P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
+| P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
 | UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
 | SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
@@ -109,7 +109,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P10-C | Markdown 内 `<Image>` 化 | 完了 | 100% | - | Modrinth CDN 画像の Image 化 | `4b4e5ee` |
 | P10-D | E2E カバレッジ拡張 (+3 spec) | 完了 | 100% | - | zip-import/export/dep-check spec | `817cb2e` |
 | P10-E | shimmer skeleton | 完了 | 100% | - | animate-pulse 置換 | `f59010e` |
-| P10-DOOR | Phase 10 全体の完了レビュー | 完了 | 100% | A-E | PHASE10_COMPLETE.md 記録 | docs/complete/PHASE10_COMPLETE.md |
+| P10-DOOR | Phase 10 全体の完了レビュー | 完了 | 100% | A-E | PHASE10_COMPLETE.md 記録 | docs/planning/complete/PHASE10_COMPLETE.md |
 
 ### Phase 10.5 (Emergency): カバレッジ回復 (2026-08-26)
 
@@ -164,12 +164,12 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 ### Phase 13: SEO 改善 (2026-08-30 再定義)
 
 > 旧 Phase 13 (CurseForge) はユーザー指示で
-> `.archive/docs/planning/PHASE13_PLAN.md` へ退避。ID `P13-A` / `P13-B` は再利用せず対象外。
-> 実施計画の正本: `docs/planning/PHASE13_PLAN.md`（候補表は `SEO_CANDIDATES.md`）。
+> `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避。ID `P13-A` / `P13-B` は再利用せず対象外。
+> 実施計画の正本: `docs/planning/complete/PHASE13_PLAN.md`（候補表は `SEO_CANDIDATES.md`）。
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P13-A | CurseForge Provider (API proxy + Murmur2) | 対象外 | - | - | 計画アーカイブ。API キー取得後に新 ID で再開 | `.archive/docs/planning/PHASE13_PLAN.md` |
+| P13-A | CurseForge Provider (API proxy + Murmur2) | 対象外 | - | - | 計画アーカイブ。API キー取得後に新 ID で再開 | `.archive/docs/planning/complete/PHASE13_PLAN.md` |
 | P13-B | CurseForge Modpack + 混在 Profile | 対象外 | - | P13-A | 同上 | 同上 |
 
 ---

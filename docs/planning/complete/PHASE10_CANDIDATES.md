@@ -6,7 +6,7 @@
 
 本書は Phase 9 完了時点で Phase 10 に実施するかを検討した**候補の採否記録**。
 採択された 5 項目の実施詳細は [PHASE10_PLAN.md](./PHASE10_PLAN.md)、
-実績は [docs/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md)。
+実績は [docs/planning/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md)。
 
 ## 候補の採否一覧
 

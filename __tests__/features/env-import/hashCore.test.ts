@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { hashFiles } from '@/lib/env/hashCore';
-import { computeHashes } from '@/lib/env/hashWorker';
+import { computeHashes } from '@/lib/env/computeHashes';
 import { calculateSha1 } from '@/lib/utils/hash';
 
 function makeFiles(): Array<{ path: string; data: Uint8Array }> {

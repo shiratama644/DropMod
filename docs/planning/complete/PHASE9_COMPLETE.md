@@ -2,7 +2,7 @@
 
 **期間**: 2026-08-23 (単日集中実施)
 **HEAD**: `577c31a` (Phase 9-E.4/5 コミット時点)
-**方針**: 計画書 `docs/planning/PHASE9_PLAN.md` (1629 行、92 見出し) の Sub-Phase 9-A / 9-B / 9-C / 9-D / 9-E を独立コミット単位で全遂行。
+**方針**: 計画書 `docs/planning/complete/PHASE9_PLAN.md` (1629 行、92 見出し) の Sub-Phase 9-A / 9-B / 9-C / 9-D / 9-E を独立コミット単位で全遂行。
 
 ---
 
@@ -187,7 +187,7 @@ Phase 9-C.2 実装中、`lib/modrinth/client.ts` が相対 URL `/api/modrinth/*`
 
 ## 🚀 Phase 10 (未実施) 候補
 
-計画書 §9.3 の DoD 通り、実装しなかった項目は `docs/planning/PHASE10_CANDIDATES.md` に記録。
+計画書 §9.3 の DoD 通り、実装しなかった項目は `docs/planning/complete/PHASE10_CANDIDATES.md` に記録。
 
 ### 9-E のうち Phase 10 送り
 
@@ -226,4 +226,4 @@ Phase 9-C.2 実装中、`lib/modrinth/client.ts` が相対 URL `/api/modrinth/*`
 
 ---
 
-*Phase 9 は計画書 (`docs/planning/PHASE9_PLAN.md`) 通りに全 sub-phase 完了。判断留保はゼロ。次はユーザーレビュー → Phase 10 計画。*
+*Phase 9 は計画書 (`docs/planning/complete/PHASE9_PLAN.md`) 通りに全 sub-phase 完了。判断留保はゼロ。次はユーザーレビュー → Phase 10 計画。*

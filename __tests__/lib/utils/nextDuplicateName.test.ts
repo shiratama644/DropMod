@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextDuplicateName } from '@/lib/utils/profileName';
+import { nextDuplicateName } from '@/lib/utils/nextDuplicateName';
 
 describe('nextDuplicateName', () => {
   it('未使用なら name (1)', () => {

@@ -4,8 +4,8 @@
  * Phase 11 の `EnvironmentSource` (読み取り) と**対になる書き込み側**。
  * 上位ロジック (Executor) はブラウザ差を意識せず動作する。
  *
- * - Chromium: `FileSystemSink` (`lib/env/sink/filesystem.ts`) — Direct Write
- * - Firefox / Safari / モバイル: `ZipSink` (Phase 12-C)
+ * - Chromium: `FileSystemSink` (`features/sync/services/sink/filesystem.ts`) — Direct Write
+ * - Firefox / Safari / モバイル: `ZipSink` (`features/sync/services/sink/zip.ts`)
  *
  * ## D-2 (2026-08-27 確定): 書き込み権限の昇格失敗
  *

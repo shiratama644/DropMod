@@ -25,7 +25,7 @@ import { fetchModrinthBatch, fetchModrinthVersionFilesBatch } from '@/lib/modrin
 import { detectEnvironment } from './detector';
 import type { DetectedEnvironment } from './detector/types';
 import type { EnvironmentSource } from '@/lib/env/source';
-import { computeHashes } from '@/lib/env/hashWorker';
+import { computeHashes } from '@/lib/env/computeHashes';
 
 /** カテゴリごとの対象拡張子 (計画書 §4.3) */
 /**

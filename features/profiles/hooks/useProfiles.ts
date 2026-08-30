@@ -11,7 +11,7 @@ import type {
   ModrinthVersion,
   ContentCategory
 } from '@/types';
-import { nextDuplicateName } from '@/lib/utils/profileName';
+import { nextDuplicateName } from '@/lib/utils/nextDuplicateName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';

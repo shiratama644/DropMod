@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `P10-A` 〜 `P10-E` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-23〜24 実施 / 証拠: [docs/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md))
+> **状態: 完了** (2026-08-23〜24 実施 / 証拠: [docs/planning/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md))
 
 ## 1. 開始前確認
 
@@ -38,7 +38,7 @@ Phase 9 で残った「パフォーマンス未達成分 (bundle 63 KB 超過)�
 - [x] Home bundle が 900 KB 台 (10-A 実測 **-356 KB**)
 - [x] `AppContext.tsx` が repo に存在しない
 - [x] E2E 全 spec を CI で green (ユーザー実施 — VER-1 として継続管理)
-- [x] `docs/complete/PHASE10_COMPLETE.md` に実測値を記録
+- [x] `docs/planning/complete/PHASE10_COMPLETE.md` に実測値を記録
 - [x] `.archive/vite/` 無変更
 
 ## 6. テスト方法

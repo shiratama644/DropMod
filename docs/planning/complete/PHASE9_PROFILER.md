@@ -49,7 +49,7 @@
 
 ## DoD 達成状況 (計画書 §8.5)
 
-- ✅ `docs/complete/PHASE9_PROFILER.md` 作成、before/after 数値表 + 分析
+- ✅ `docs/planning/complete/PHASE9_PROFILER.md` 作成、before/after 数値表 + 分析
 - ✅ **少なくとも 1 シナリオで 70% 以下達成** → **3 シナリオ全てで 80% 削減達成** (目標を超過)
 - ✅ 未達なし
 - ✅ `__tests__/perf/rerender.test.tsx` で継続的な回帰防止 (5 tests)

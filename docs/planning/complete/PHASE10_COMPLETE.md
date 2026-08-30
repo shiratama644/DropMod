@@ -90,7 +90,7 @@ E2E spec: **5 → 8**、test 数: **+6 test**
 | `pnpm test:unit` 全 pass、`pnpm exec biome lint` 0 error | ✅ (296 tests / 139 files clean) |
 | `AppContext.tsx` が repo に存在しない | ✅ (`git ls-files | grep -i appcontext` = 0) |
 | E2E 全 spec を CI で 1 度以上 green | 🟡 **要 CI 実行** (次回 push でユーザー確認) |
-| `docs/complete/PHASE10_COMPLETE.md` 作成 | ✅ (本ファイル) |
+| `docs/planning/complete/PHASE10_COMPLETE.md` 作成 | ✅ (本ファイル) |
 | `.archive/vite/` 無変更 | ✅ (Phase 10 全 commit で不変) |
 
 **⚠️ E2E CI 実行** のみ環境上 Sandbox で検証不可。次回 CI (GitHub Actions) 実行結果をユーザーが確認して green を判定してください。
@@ -118,4 +118,4 @@ Phase 10 完了により、Vercel デプロイ前チェックリスト (`PHASE10
 - [ ] Phase 13 (CurseForge 完全対応) 完了
 - [ ] Bundle 分析で異常な巨大化がないこと (Phase 10-A で -356 KB 達成、追加確認は Phase 13 完了後)
 
-**推奨次フェーズ**: **Phase 11 (Read-only Import & Analysis)** `docs/planning/PHASE11_PLAN.md`
+**推奨次フェーズ**: **Phase 11 (Read-only Import & Analysis)** `docs/planning/complete/PHASE11_PLAN.md`

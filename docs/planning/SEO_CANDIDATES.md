@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `SEO-1` (2-2 / 2-3 / 2-6〜) ・ `SEO-2` (2-1)
 > **Phase 13 の実施計画書は [PHASE13_PLAN.md](./PHASE13_PLAN.md)** (2026-08-30:
-> 旧 CurseForge Phase 13 は `.archive/docs/planning/PHASE13_PLAN.md` へ退避)。
+> 旧 CurseForge Phase 13 は `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避)。
 > 本書は候補レジストリ。着手用 DoD は PHASE13_PLAN.md。
 
 本書は SEO 改善の**候補と優先度の記録**。着手時は task-list.md に個別 ID を採番し、

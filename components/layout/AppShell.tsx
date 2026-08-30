@@ -12,7 +12,7 @@ import { useDependencyCheck } from '@/features/dep-check';
 import { useZipExport } from '@/features/zip';
 import { useZipImport } from '@/features/zip';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
-import { nextDuplicateName } from '@/lib/utils/profileName';
+import { nextDuplicateName } from '@/lib/utils/nextDuplicateName';
 import { db } from '@/lib/db/dexie';
 import { useProfilesStore } from '@/features/profiles';
 

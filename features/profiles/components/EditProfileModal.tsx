@@ -6,7 +6,7 @@ import type { Profile } from '@/types';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
-import { LOADER_DROPDOWN_OPTIONS } from '../constants/loaderVersions';
+import { LOADER_DROPDOWN_OPTIONS } from '../constants/loaderVersionTables';
 import { useLoaderVersionOptions } from '../hooks/useLoaderVersionOptions';
 
 interface EditProfileModalProps {

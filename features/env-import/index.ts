@@ -24,5 +24,5 @@ export {
   type ImportAnalysis
 } from './services/analyzer';
 export { pickMinecraftDirectory, type PickedDirectory } from './services/picker';
-export { generateProfileName, isUsableFolderName } from './utils/profileName';
+export { generateProfileName, isUsableFolderName } from './utils/generateProfileName';
 export { detectContentDirs } from './services/detector/types';

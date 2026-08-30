@@ -1,9 +1,9 @@
 /**
- * lib/env/profileName.ts test (Phase 11-C / PHASE11_PLAN.md §10.1)
+ * features/env-import/utils/generateProfileName.ts test (Phase 11-C)
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateProfileName, isUsableFolderName } from '@/features/env-import/utils/profileName';
+import { generateProfileName, isUsableFolderName } from '@/features/env-import/utils/generateProfileName';
 
 describe('isUsableFolderName', () => {
   it('妥当なフォルダ名は true', () => {

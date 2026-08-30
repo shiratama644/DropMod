@@ -77,6 +77,7 @@ export default defineConfig({
         'features/catalog/components/HomeInteractive.tsx',
         'components/HomeInteractive.tsx',
         'components/ModsPageClient.tsx',
+        'features/project/components/ModDetailModalShell.tsx',
         'components/ModDetailModalShell.tsx',
         // Phase 10-P1: /mods/[slug] フルページ用の刷新デザインコンポーネント。
         // ModDetailModalShell と同じく Zustand + fa-icon + next/image を

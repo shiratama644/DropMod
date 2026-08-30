@@ -10,7 +10,7 @@ import './globals.css';
 
 // FontAwesome アイコン (Phase 10-A: subset 化)
 //   全 CSS (~90 KB) + 未使用フォント (fa-regular / v4compat) を bundle するのではなく、
-//   scripts/build-fontawesome-subset.mjs で生成した subset CSS のみを import する。
+//   scripts/buildFontawesomeSubset.mjs で生成した subset CSS のみを import する。
 //   Font ファイル (fa-solid-900.woff2 / fa-brands-400.woff2) は public/webfonts/ に
 //   配置され、CSS 内の url(/webfonts/...) から絶対パス参照される。
 //   Icon 追加時は該当 JSX に <i className="fa-solid fa-xxx"> を追加した上で

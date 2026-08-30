@@ -21,7 +21,7 @@ import {
   linkNextCache,
   readUnameA,
   resolveBundler
-} from './build-env.ts';
+} from './buildEnv.ts';
 
 const cwd = process.cwd();
 const argv = process.argv.slice(2).filter((a) => a !== '--webpack' && a !== '--turbo' && a !== '--turbopack');

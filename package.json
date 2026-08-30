@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/build.ts",
-    "build:fa-subset": "node scripts/build-fontawesome-subset.mjs",
+    "build:fa-subset": "node scripts/buildFontawesomeSubset.mjs",
     "start": "next start",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",

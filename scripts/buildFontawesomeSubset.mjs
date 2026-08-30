@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // -----------------------------------------------------------------------------
-// build-fontawesome-subset.mjs (Phase 10-A)
+// buildFontawesomeSubset.mjs (Phase 10-A)
 //
 // @fortawesome/fontawesome-free の CSS から、DropMod で実際に使用している
 // icon (fa-solid / fa-brands) だけを含む subset CSS を生成する。
@@ -158,7 +158,7 @@ const brandsCommonRewritten = rewriteFontUrls(brandsCommon);
 const header = `/* -----------------------------------------------------------------------------
  * DropMod Font Awesome subset (Phase 10-A で自動生成)
  *
- * 生成元: scripts/build-fontawesome-subset.mjs
+ * 生成元: scripts/buildFontawesomeSubset.mjs
  * 元 CSS: @fortawesome/fontawesome-free (Font Awesome Free 7.x)
  * License: https://fontawesome.com/license/free
  *
@@ -171,7 +171,7 @@ const header = `/* -------------------------------------------------------------
  *   \`pnpm build:fa-subset\` を再実行してください。
  *
  * テンプレートリテラルで動的に組み立てる icon は
- *   scripts/build-fontawesome-subset.mjs の ALWAYS_INCLUDE_SOLID に手動追加。
+ *   scripts/buildFontawesomeSubset.mjs の ALWAYS_INCLUDE_SOLID に手動追加。
  * ----------------------------------------------------------------------------- */
 `;
 

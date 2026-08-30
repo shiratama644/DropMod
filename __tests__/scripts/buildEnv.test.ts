@@ -9,7 +9,7 @@ import {
   isTermux,
   linkNextCache,
   resolveBundler
-} from '@/scripts/build-env';
+} from '@/scripts/buildEnv';
 
 const PROOT_UNAME =
   'Linux localhost 6.17.0-PRoot-Distro #1 SMP PREEMPT_DYNAMIC Fri, 10 Oct 2025 00:00:00 +0000 aarch64 GNU/Linux';

@@ -95,6 +95,7 @@ export default defineConfig({
         'components/BottomNav.tsx',
         'components/EditProfileModal.tsx',
         'components/DependencyCheckModal.tsx',
+        'features/zip/components/ZipProgressModal.tsx',
         'components/ZipProgressModal.tsx',
         'components/feedback/ToastContainer.tsx',
         'components/ToastContainer.tsx',

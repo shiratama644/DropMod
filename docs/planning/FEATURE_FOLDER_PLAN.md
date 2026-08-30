@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1A〜1G 実施済み。次は ARCH-1H（zip）。1H〜1O 未着手** (2026-08-30)
+> **状態: ARCH-1A〜1H 実施済み。次は ARCH-1I（dep-check）。1I〜1O 未着手** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -455,6 +455,7 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1E | `5bb34c3` | features/catalog。loadDiscoverSearch は barrel 外（RSC） |
 | ARCH-1F | `49e93cd` | features/project。server.ts は barrel 外。index に use client なし |
 | ARCH-1G | `d85ec21` | features/profiles。loaders/fetch は barrel 外。API は shim 経由 |
+| ARCH-1H | (本コミット) | features/zip。ZipSink は含まない |
 
 ## 13. 完了チェック（ARCH-1O）
 

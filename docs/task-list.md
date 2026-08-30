@@ -38,7 +38,7 @@
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
-| ARCH-1 | 計画済み | Feature フォルダ移行。コード移動は ARCH-1A Go 待ち |
+| ARCH-1 | 計画済み（11 Feature に再構築） | コード移動は ARCH-1A Go 待ち |
 
 進行中の AI 実装タスクは **なし**。SEO コードはローカル完了。次の計画済み作業は `ARCH-1A`（Go 後）。
 
@@ -226,17 +226,27 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 ### アーキテクチャ (Feature フォルダ)
 
+> 2026-08-30 再構築: 4 Feature では `lib/env` が潰れるため 11 Feature。
+> 未着手だった ARCH-1B〜H の定義を計画再構築に合わせて更新（コード未実施のため）。
+
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | アウトライン 1〜8 を満たす計画が docs/planning にある | `FEATURE_FOLDER_PLAN.md` |
-| ARCH-1A | 共通 UI を ui/layout/feedback へ | 未着手 | 0% | ARCH-1 Go | 旧パス re-export 付きで 4 検証 pass | 計画 §9 |
-| ARCH-1B | landing Feature 切り出し | 未着手 | 0% | ARCH-1A | `features/landing` + app/page import | 計画 §9 |
-| ARCH-1C | settings Feature 切り出し | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §9 |
-| ARCH-1D | mods Feature 切り出し | 未着手 | 0% | ARCH-1A | 検索・詳細・discover。lib/search 移動 | 計画 §9 |
-| ARCH-1E | profiles Feature 切り出し | 未着手 | 0% | ARCH-1D | lib/env ごと移動。Worker パス修正 | 計画 §9 |
-| ARCH-1F | 旧パス shim 削除 | 未着手 | 0% | ARCH-1E | 深い import 0。index のみ | 計画 §9 |
-| ARCH-1G | テスト配置の最終形 | 未着手 | 0% | ARCH-1F | ミラー維持（既定）または colocation | 計画 §10.4 |
-| ARCH-1H | 掃除と完了チェック | 未着手 | 0% | ARCH-1G | 計画 §13 チェックリスト | 計画 §13 |
+| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | コードベース監査に基づく 11 Feature 計画 | `FEATURE_FOLDER_PLAN.md`（再構築） |
+| ARCH-1A | 共通 UI を ui/layout/feedback へ | 未着手 | 0% | ARCH-1 Go | 旧パス re-export + 4 検証 | 計画 §10.4 |
+| ARCH-1B | landing | 未着手 | 0% | ARCH-1A | `features/landing` | 計画 §10.5 |
+| ARCH-1C | settings | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §10.5 |
+| ARCH-1D | seo | 未着手 | 0% | ARCH-1A | `features/seo`（opengraph は app 残置） | 計画 §10.5 |
+| ARCH-1E | catalog（検索・カード） | 未着手 | 0% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch | 計画 §10.5 |
+| ARCH-1F | project（詳細・モーダル） | 未着手 | 0% | ARCH-1E | Detail / ModalShell / Gallery | 計画 §10.5 |
+| ARCH-1G | profiles（CRUD・中身一覧） | 未着手 | 0% | ARCH-1A | ModsPageClient / useProfiles | 計画 §10.5 |
+| ARCH-1H | zip（プロファイル配布 ZIP） | 未着手 | 0% | ARCH-1G | useZipExport/Import。ZipSink は含まない | 計画 §10.5 |
+| ARCH-1I | dep-check | 未着手 | 0% | ARCH-1G | フック + モーダル | 計画 §10.5 |
+| ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker のみ先に移動 | 計画 §10.10 |
+| ARCH-1K | sync（Diff/Executor/Preview） | 未着手 | 0% | ARCH-1J | lib/env の書き込み系 + Sync UI | 計画 §10.5 |
+| ARCH-1L | modpack | 未着手 | 0% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
+| ARCH-1M | 旧パス shim 削除 | 未着手 | 0% | ARCH-1B〜L | 深い import 0 | 計画 §10.10 |
+| ARCH-1N | テスト配置 | 未着手 | 0% | ARCH-1M | ミラー（既定） | 計画 §10.8 |
+| ARCH-1O | 掃除と完了チェック | 未着手 | 0% | ARCH-1N | 計画 §13 | 計画 §13 |
 
 ---
 

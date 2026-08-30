@@ -1,423 +1,354 @@
-# Feature フォルダ構造への移行
+# Feature フォルダ構造への移行（再構築）
 
-> 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画のみ）
+> 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 計画済み・未着手** (2026-08-30。コード移動はしない。Go 待ち)
+> **状態: 計画再構築済み・コード未着手** (2026-08-30)
 >
-> 進捗の正本は [docs/task-list.md](../task-list.md)。
+> 初版は landing / mods / profiles / settings の 4 分割だった。
+> **コードベース全体（app / components / hooks / lib / store）を再監査**し、
+> 実際の境界に合わせて Feature を増やした。4 つでは `lib/env`（P11 検出と
+> P12 Sync と Modpack と ZIP）が profiles に潰れ、当初の課題（混在）が残る。
 
 ## 1. 開始前確認
 
-- ブランチ `arena/01a04e55-dropmod`。本セッションで別ブランチは作らない
-- SEO-1 / SEO-2 はローカル検証済み。本計画はディレクトリ移動のみで挙動を変えない
-- `.archive/vite/` 不変。`.archive/` は PHASE13 退避以外閲覧しない
-- 現行: `components/` 直下に LP・検索・プロファイル・設定・共通 UI が混在
-- Vitest は `__tests__/` ミラー配置。カバレッジ include は `vitest.config.ts`
+- ブランチ `arena/01a04e55-dropmod`。実施までコード移動しない
+- `.archive/vite/` 不変
+- 現行の混在: `components/` 直下 35 + `landing/` 6。`hooks/` 20。`lib/env/` は
+  検出・差分・Executor・mrpack・ZIP sink が同一フォルダ
+- AppShell が profiles / dep-check / zip / グローバルモーダルを一箇所で配線
 
 ## 2. 目的 (Why)
 
-機能ドメイン（landing / mods / profiles / settings）の境界がディレクトリに現れず、
-変更影響の見積もりとテストの置き場が曖昧になっている。
-`features/<domain>` に UI・フック・ドメインロジックを集め、外部は `index.ts` 経由だけにする。
-共通は `components/{ui,layout,feedback}` に限定する。**挙動・URL・API は変えない。**
+ディレクトリが **プロダクトの境界** を表すようにする。
+「プロファイル」と「ローカルへ書く Sync」と「Modrinth 検索」は別変更理由なので
+別 Feature にする。外部は各 `index.ts` のみ。挙動・URL・API は変えない。
 
-## 3. 変更範囲 (Scope)
+## 3. 変更範囲 / 4. 禁止 / 5. DoD（計画）
 
-変更対象（実施時）:
+変更対象: `components/` `hooks/` `lib/env/` `lib/search/` `lib/seo/` `lib/providers/`
+`__tests__/` の追従、`app/` の import、vitest coverage paths、本書と task-list。
 
-- `components/` `hooks/` の再配置
-- `lib/env/` `lib/search/` の profiles / mods への移動
-- `__tests__/` の追従（または colocation。§10.4）
-- `app/` の import パス（ルートファイルは App Router のため移動しない）
-- `tsconfig.json` / `tsconfig.test.json` / `vitest.config.ts` の paths・coverage
-- `docs/task-list.md` / 本書 §12 / `docs/README.md`
+残す（横断インフラ）: `app/` ルート、`lib/db/` `lib/modrinth/` `lib/query/`
+`lib/server/`（project-detail 含む）`lib/utils/` `lib/constants/` `lib/loaders/`
+`lib/state/`。`lib/store/` は **第 1 波では残す**（slice を Feature に移すと
+AppShell 配線が壊れる。第 2 波候補として §11）。
 
-変更しない (境界外):
+禁止: 全ファイル一括移動 / Feature 間の深い import / `export *` /
+カバレッジ閾値下げ / 4 Feature に無理に戻す / 第 5 の「misc」Feature。
 
-- `app/` の URL・セグメント設定・Route Handlers
-- `lib/db/` `lib/store/` `lib/modrinth/` `lib/query/` `lib/server/` `lib/seo/` `lib/utils/` `lib/constants/`（横断インフラ）
-- `.archive/vite/`
-- 機能追加・SEO 本番目視・CurseForge
-- 本計画書作成時点のコード移動（計画のみ）
+計画 DoD: 本再構築が 11 Feature + 対応表 + 依存グラフ + フェーズを含むこと。
+コード移動は Go までしない。
 
-## 4. 禁止事項
+## 6. テスト / 7. 停止 / 8. 完了時
 
-- 1 コミットで全ファイルを動かさない
-- Feature 間の深い import（`features/mods/components/Foo` を profiles から直接）
-- `index.ts` の `export *` 乱用（明示 named export）
-- テストを通すためだけの期待値改変
-- パスだけ変えてカバレッジ include を忘れる
-- 推測でドメインを増やさない（4 Feature 固定。迷ったら共通へ）
+各実施フェーズ: `pnpm typecheck` / `biome lint` / `pnpm test:unit` / `pnpm build`。
+E2E は sync・zip・modpack 切り出し後と最終（CI）。Sandbox では E2E 必須にしない。
 
-## 5. 完了条件 (DoD) — 計画書タスク `ARCH-1`
+停止: Feature 間循環が index だけでは解けない / Dexie スキーマ分割が必要 /
+store を第 1 波で動かさないと進まない、と判断したとき。
 
-- [x] 本計画がユーザー指定アウトライン 1〜8 を含む
-- [x] Before/After が現行ツリー（2026-08-30）に対応
-- [x] `docs/task-list.md` に `ARCH-1` と実施サブ ID を登録
-- [ ] コード移動は **ARCH-1A 以降の Go** まで行わない
+ARCH-1（計画）は docs コミットのみ。
 
-実施完了時（ARCH-1H）の DoD は §16。
+## 9. サブタスク
 
-## 6. テスト方法（実施フェーズ）
-
-| 層 | 実施 | 確認内容 |
+| ID | テーマ | 依存 |
 |---|---|---|
-| Unit | 各フェーズ必須 | `pnpm test:unit` 件数減少なし |
-| typecheck | 必須 | `pnpm typecheck` |
-| lint | 必須 | `pnpm exec biome lint .` |
-| build | フェーズ末必須 | `pnpm build` |
-| E2E | ARCH-1H と profiles 切り出し後 | CI。Sandbox では必須にしない |
-| 実環境 | しない | リファクタのみ |
-
-## 7. 停止条件
-
-- Feature 境界がユーザー指定 4 つと衝突する（例: modpack を第 5 Feature にしたくなる）
-- `lib/store` や Dexie スキーマまで Feature に割る必要が出た
-- カバレッジ threshold 割れを「閾値下げ」で逃げる判断
-- 作業ツリーが未コミットのまま大規模 `git mv` が必要
-
-## 8. 完了時に行うこと（ARCH-1 = 計画）
-
-1. task-list 更新
-2. docs/README に計画書を載せる
-3. `docs(ARCH-1): …` でコミット。コードは動かさない
-
-## 9. サブタスク分割
-
-| ID | テーマ | 主要成果物 | 依存 |
-|---|---|---|---|
-| ARCH-1 | 本計画書 | `FEATURE_FOLDER_PLAN.md` | なし |
-| ARCH-1A | 共通 UI 三分（ui/layout/feedback）+ 旧パス re-export | `components/{ui,layout,feedback}` | ARCH-1 Go |
-| ARCH-1B | landing Feature | `features/landing` | ARCH-1A |
-| ARCH-1C | settings Feature | `features/settings` | ARCH-1A |
-| ARCH-1D | mods Feature（検索・詳細・discover） | `features/mods` | ARCH-1A |
-| ARCH-1E | profiles Feature（env/sync/zip/modpack） | `features/profiles` | ARCH-1D（Mod 追加 UI 依存） |
-| ARCH-1F | 旧パス shim 削除 + Public API 強制 | barrel のみ公開 | ARCH-1E |
-| ARCH-1G | テスト配置の最終形（ミラー維持 or colocation） | `__tests__` or `*.test.ts` 隣 | ARCH-1F |
-| ARCH-1H | 掃除・coverage paths・完了チェック | vitest.config / skills | ARCH-1G |
+| ARCH-1 | 本計画（再構築） | — |
+| ARCH-1A | 共通 `ui` / `layout` / `feedback` | Go |
+| ARCH-1B | `landing` | 1A |
+| ARCH-1C | `settings` | 1A |
+| ARCH-1D | `seo` | 1A |
+| ARCH-1E | `catalog`（検索・カード・Browse） | 1A |
+| ARCH-1F | `project`（詳細・モーダル・ギャラリー） | 1E |
+| ARCH-1G | `profiles`（CRUD・中身一覧） | 1A |
+| ARCH-1H | `zip`（プロファイル ZIP 入出力） | 1G |
+| ARCH-1I | `dep-check` | 1G |
+| ARCH-1J | `env-import`（検出・解析・picker） | 1G |
+| ARCH-1K | `sync`（Diff / Executor / Preview） | 1J |
+| ARCH-1L | `modpack` | 1J + 1E |
+| ARCH-1M | shim 削除 | 1B–1L |
+| ARCH-1N | テスト配置 | 1M |
+| ARCH-1O | coverage / skills / チェックリスト | 1N |
 
 ---
 
-## 10. 設計詳細
+## 10. 設計
 
-### 10.1 新ディレクトリ構造（目標）
+### 10.1 なぜ 4 つでは足りないか（監査結果）
+
+| 塊 | 根拠（コード） | 4 分割での問題 |
+|---|---|---|
+| Discover 検索 | `HomeInteractive` `lib/search` `ModCard` | 「mods」に詳細も入り肥大 |
+| プロジェクト詳細 | `ModDetailPageView` `ModDetailModalShell` ISR | 検索と ISR/JSON-LD の変更理由が違う |
+| プロファイル CRUD | `useProfiles` `NewProfileModal` `ModsPageClient` | 妥当 |
+| フォルダ検出 P11 | `lib/env/detector/*` `analyzer` `picker` | profiles に入れると Sync と混ざる |
+| Sync 書き込み P12 | `diff` `executor` `backup` `SyncPreviewModal` | 最大ドメイン。別 Feature |
+| Modpack | `mrpack` `ModpackHubClient` `useModpackAdd` | Discover 起点だが env 依存。第 3 軸 |
+| ZIP 配布 | `useZipExport/Import` `ZipProgressModal` | Zip**Sink**（Sync）と別物 |
+| 依存チェック | `useDependencyCheck` `DependencyCheckModal` | 独立フック + 専用 store slice |
+| SEO | `lib/seo` `JsonLd` `opengraph-image` | ページ横断だがドメインは明確 |
+| LP | `components/landing/*` | 妥当 |
+| 設定 | `SettingsPageClient` | 妥当・小さい |
+
+`lib/store` は profiles / zip / depCheck / ui / toast が **1 パッケージの
+複数 slice**。移動は第 2 波（循環と AppShell 登録の難度が高い）。
+
+### 10.2 Feature 一覧（11）と依存
 
 ```
-.
-├── app/                          # App Router のみ（移動しない）
-├── features/
-│   ├── landing/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   └── index.ts
-│   ├── mods/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── search/               # 旧 lib/search
-│   │   ├── server/               # project-detail の UI 近傍が必要なら。既定は lib/server 据置
-│   │   └── index.ts
-│   ├── profiles/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── env/                  # 旧 lib/env 一式
-│   │   └── index.ts
-│   └── settings/
-│       ├── components/
-│       └── index.ts
-├── components/
-│   ├── ui/                       # 純粋プリミティブ
-│   ├── layout/                   # シェル・ナビ
-│   └── feedback/                 # toast / confirm / offline / progress
-├── hooks/                        # ドメイン非依存フックのみ残す
-├── lib/                          # 横断インフラ（db/store/modrinth/query/server/seo/utils/constants）
-├── __tests__/                    # ARCH-1G まで現行ミラー。以降は §10.4
-└── e2e/                          # パス文字列以外は触らない
+catalog ──► project
+    │           │
+    │           ▼
+    └──────► profiles ◄── zip
+                 ▲         dep-check
+                 │
+            env-import
+                 ▲
+            sync    modpack ──► catalog（追加 UI）/ env-import（展開）
+
+landing / settings / seo  は他 Feature に依存しない（seo は lib/server のみ）
 ```
 
-`lib/providers/` は Modrinth プロバイダ抽象で profiles の sync が使う → **ARCH-1E で `features/profiles/providers` へ**。横断 API クライアント `lib/modrinth` は残す。
+許可する Feature→Feature: **index.ts のみ**。  
+禁止: `sync` → `catalog`、`profiles` → `sync` のコンポーネント深い import。
+profiles は sync を知らない（Settings の EnvironmentSyncSection は **sync** Feature）。
 
-### 10.2 完全ファイル移行対応表 (Before / After)
+### 10.3 目標ツリー
 
-凡例: **共通** = `components/{ui,layout,feedback}` または `hooks/` / `lib/`。**L/M/P/S** = landing/mods/profiles/settings。
+```
+features/
+  landing/          catalog/         project/
+  profiles/         env-import/      sync/
+  modpack/          zip/             dep-check/
+  settings/         seo/
+components/
+  ui/               layout/          feedback/
+hooks/              # 非ドメインのみ
+lib/
+  db/  modrinth/  query/  server/  store/  utils/  constants/  loaders/  state/
+```
 
-#### components/
+### 10.4 共通（Feature ではない）
 
-| Before | After | ドメイン |
-|---|---|---|
-| `components/landing/AnimatedStats.tsx` | `features/landing/components/AnimatedStats.tsx` | L |
-| `components/landing/HeroRotator.tsx` | `features/landing/components/HeroRotator.tsx` | L |
-| `components/landing/LandingSearchForm.tsx` | `features/landing/components/LandingSearchForm.tsx` | L |
-| `components/landing/PopularMarquee.tsx` | `features/landing/components/PopularMarquee.tsx` | L |
-| `components/landing/PreviewCard.tsx` | `features/landing/components/PreviewCard.tsx` | L |
-| `components/landing/RevealSection.tsx` | `features/landing/components/RevealSection.tsx` | L |
-| `components/HomeInteractive.tsx` | `features/mods/components/HomeInteractive.tsx` | M |
-| `components/ModCard.tsx` | `features/mods/components/ModCard.tsx` | M |
-| `components/ModDetailModalShell.tsx` | `features/mods/components/ModDetailModalShell.tsx` | M |
-| `components/ModDetailPageView.tsx` | `features/mods/components/ModDetailPageView.tsx` | M |
-| `components/ScreenshotGalleryModal.tsx` | `features/mods/components/ScreenshotGalleryModal.tsx` | M |
-| `components/ReservedCategoryPage.tsx` | `features/mods/components/ReservedCategoryPage.tsx` | M |
-| `components/BrowseBottomSheet.tsx` | `features/mods/components/BrowseBottomSheet.tsx` | M（探すシート） |
-| `components/ModsPageClient.tsx` | `features/profiles/components/ModsPageClient.tsx` | P（プロファイル Mod 一覧） |
-| `components/EditProfileModal.tsx` | `features/profiles/components/EditProfileModal.tsx` | P |
-| `components/NewProfileModal.tsx` | `features/profiles/components/NewProfileModal.tsx` | P |
-| `components/DependencyCheckModal.tsx` | `features/profiles/components/DependencyCheckModal.tsx` | P |
-| `components/EnvironmentSyncSection.tsx` | `features/profiles/components/EnvironmentSyncSection.tsx` | P |
-| `components/InterruptedSyncDialog.tsx` | `features/profiles/components/InterruptedSyncDialog.tsx` | P |
-| `components/SyncButton.tsx` | `features/profiles/components/SyncButton.tsx` | P |
-| `components/SyncHistorySection.tsx` | `features/profiles/components/SyncHistorySection.tsx` | P |
-| `components/SyncPreviewModal.tsx` | `features/profiles/components/SyncPreviewModal.tsx` | P |
-| `components/ModpackHubClient.tsx` | `features/profiles/components/ModpackHubClient.tsx` | P |
-| `components/ModpackImportModal.tsx` | `features/profiles/components/ModpackImportModal.tsx` | P |
-| `components/SettingsPageClient.tsx` | `features/settings/components/SettingsPageClient.tsx` | S |
-| `components/CustomDropdown.tsx` | `components/ui/CustomDropdown.tsx` | 共通 |
-| `components/BottomSheet.tsx` | `components/ui/BottomSheet.tsx` | 共通 |
-| `components/MarkdownRenderer.tsx` | `components/ui/MarkdownRenderer.tsx` | 共通 |
-| `components/AppShell.tsx` | `components/layout/AppShell.tsx` | 共通 |
-| `components/Header.tsx` | `components/layout/Header.tsx` | 共通 |
-| `components/BottomNav.tsx` | `components/layout/BottomNav.tsx` | 共通 |
-| `components/DesktopSidebar.tsx` | `components/layout/DesktopSidebar.tsx` | 共通 |
-| `components/MenuBottomSheet.tsx` | `components/layout/MenuBottomSheet.tsx` | 共通 |
-| `components/Providers.tsx` | `components/layout/Providers.tsx` | 共通 |
-| `components/JsonLd.tsx` | `components/layout/JsonLd.tsx` | 共通（SEO 描画） |
-| `components/WebVitalsReporter.tsx` | `components/layout/WebVitalsReporter.tsx` | 共通 |
-| `components/ConfirmDialog.tsx` | `components/feedback/ConfirmDialog.tsx` | 共通 |
-| `components/ToastContainer.tsx` | `components/feedback/ToastContainer.tsx` | 共通 |
-| `components/OfflineBanner.tsx` | `components/feedback/OfflineBanner.tsx` | 共通 |
-| `components/CacheStatusBadge.tsx` | `components/feedback/CacheStatusBadge.tsx` | 共通 |
-| `components/ZipProgressModal.tsx` | `components/feedback/ZipProgressModal.tsx` | 共通（ZIP は profiles だが進捗 UI は横断） |
+| After | Before |
+|---|---|
+| `components/ui/CustomDropdown.tsx` | `components/CustomDropdown.tsx` |
+| `components/ui/BottomSheet.tsx` | `components/BottomSheet.tsx` |
+| `components/ui/MarkdownRenderer.tsx` | `components/MarkdownRenderer.tsx` |
+| `components/layout/AppShell.tsx` | `components/AppShell.tsx` |
+| `components/layout/Header.tsx` | `components/Header.tsx` |
+| `components/layout/BottomNav.tsx` | `components/BottomNav.tsx` |
+| `components/layout/DesktopSidebar.tsx` | `components/DesktopSidebar.tsx` |
+| `components/layout/MenuBottomSheet.tsx` | `components/MenuBottomSheet.tsx` |
+| `components/layout/Providers.tsx` | `components/Providers.tsx` |
+| `components/layout/WebVitalsReporter.tsx` | `components/WebVitalsReporter.tsx` |
+| `components/feedback/ConfirmDialog.tsx` | `components/ConfirmDialog.tsx` |
+| `components/feedback/ToastContainer.tsx` | `components/ToastContainer.tsx` |
+| `components/feedback/OfflineBanner.tsx` | `components/OfflineBanner.tsx` |
+| `components/feedback/CacheStatusBadge.tsx` | `components/CacheStatusBadge.tsx` |
+| `hooks/useConfirm.ts` `useToasts.ts` `useMediaQuery.ts` `useModalA11y.ts` `useModalUi.ts` `useScrollDirection.ts` | 同左（残置） |
 
-ARCH-1A では **旧パスに 1 行 re-export** を残し、app を一度に書き換えない。
+ZipProgressModal は **zip** Feature（共通 feedback にしない。Sync の ZipSink と混ぜない）。
 
-#### hooks/
+### 10.5 Feature ごとの Before / After と Public API
 
-| Before | After | ドメイン |
-|---|---|---|
-| `hooks/useCountUp.ts` | `features/landing/hooks/useCountUp.ts` | L |
-| `hooks/useScrollReveal.ts` | `features/landing/hooks/useScrollReveal.ts` | L |
-| `hooks/useModpackAdd.ts` | `features/mods/hooks/useModpackAdd.ts` | M（Discover から追加。実装は profiles env を呼ぶ） |
-| `hooks/useProfiles.ts` | `features/profiles/hooks/useProfiles.ts` | P |
-| `hooks/useDependencyCheck.ts` | `features/profiles/hooks/useDependencyCheck.ts` | P |
-| `hooks/useEnvironmentLink.ts` | `features/profiles/hooks/useEnvironmentLink.ts` | P |
-| `hooks/useFolderLinked.ts` | `features/profiles/hooks/useFolderLinked.ts` | P |
-| `hooks/useInterruptedSync.ts` | `features/profiles/hooks/useInterruptedSync.ts` | P |
-| `hooks/useSync.ts` | `features/profiles/hooks/useSync.ts` | P |
-| `hooks/useSyncHistory.ts` | `features/profiles/hooks/useSyncHistory.ts` | P |
-| `hooks/useZipExport.ts` | `features/profiles/hooks/useZipExport.ts` | P |
-| `hooks/useZipImport.ts` | `features/profiles/hooks/useZipImport.ts` | P |
-| `hooks/useZipSync.ts` | `features/profiles/hooks/useZipSync.ts` | P |
-| `hooks/useLoaderVersionOptions.ts` | `features/profiles/hooks/useLoaderVersionOptions.ts` | P |
-| `hooks/useConfirm.ts` | `hooks/useConfirm.ts` | 共通（残置） |
-| `hooks/useToasts.ts` | `hooks/useToasts.ts` | 共通 |
-| `hooks/useMediaQuery.ts` | `hooks/useMediaQuery.ts` | 共通 |
-| `hooks/useModalA11y.ts` | `hooks/useModalA11y.ts` | 共通 |
-| `hooks/useModalUi.ts` | `hooks/useModalUi.ts` | 共通 |
-| `hooks/useScrollDirection.ts` | `hooks/useScrollDirection.ts` | 共通 |
-
-`useModpackAdd` は Discover（mods）起点だが `lib/env/modpackAdd` に依存。ARCH-1D では mods の Public API から出し、中身は profiles の env を **profiles の index 経由** で呼ぶ（ARCH-1E 後）。ARCH-1D 時点ではまだ `lib/env` 直 import を許可する。
-
-#### lib/env/ と lib/search/
+#### landing
 
 | Before | After |
 |---|---|
-| `lib/env/**`（detector / sink / hash worker 含む全ファイル） | `features/profiles/env/**`（相対構造維持） |
-| `lib/search/loadDiscoverSearch.ts` | `features/mods/search/loadDiscoverSearch.ts` |
-| `lib/providers/index.ts` `modrinth.ts` `types.ts` | `features/profiles/providers/` |
+| `components/landing/*.tsx`（6） | `features/landing/components/` |
+| `hooks/useCountUp.ts` `useScrollReveal.ts` | `features/landing/hooks/` |
 
-`lib/env/hash.worker.ts` の Worker URL は移動後に import パスを 1 箇所直す。テストの worker 参照も同時。
+公開: LP 用 6 コンポーネント + 2 フック。`app/page.tsx` が消費。
 
-#### lib/ で動かさないもの
+#### catalog（Modrinth 検索・一覧）
 
-`constants/` `db/` `loaders/` `modrinth/` `query/` `seo/` `server/` `state/` `store/` `utils/` — 横断。`lib/server/project-detail.ts` は App Router の generateMetadata が使うため **lib/server 据置**。
+| Before | After |
+|---|---|
+| `HomeInteractive.tsx` `ModCard.tsx` `BrowseBottomSheet.tsx` | `features/catalog/components/` |
+| `lib/search/loadDiscoverSearch.ts` | `features/catalog/search/` |
+| `lib/constants/search.ts` の **URL ヘルパ** | **第 1 波は lib/constants 据置**（app・SEO・catalog・project が共有） |
 
-#### app/
+公開: `HomeInteractive` `ModCard` `BrowseBottomSheet` `loadDiscoverSearch`。  
+`app/discover/[type]/page.tsx`。
 
-移動しない。import だけ `features/*/index` と `components/{ui,layout,feedback}` に付け替える（ARCH-1F）。
+#### project（詳細フルページ + プレビューモーダル）
 
-| app ファイル | 主に import する Feature |
+| Before | After |
+|---|---|
+| `ModDetailPageView.tsx` `ModDetailModalShell.tsx` `ScreenshotGalleryModal.tsx` `ReservedCategoryPage.tsx` | `features/project/components/` |
+
+`lib/server/project-detail.ts` は RSC / generateMetadata / OG が使うため **lib/server 据置**。
+公開: 上記 4 コンポーネント。`app/[projectType]/[slug]` と discover slug / 予約ページ。
+
+#### profiles
+
+| Before | After |
+|---|---|
+| `ModsPageClient.tsx` `EditProfileModal.tsx` `NewProfileModal.tsx` | `features/profiles/components/` |
+| `hooks/useProfiles.ts` `useLoaderVersionOptions.ts` | `features/profiles/hooks/` |
+
+NewProfileModal は env-import の解析 UI を **env-import の index** から使う（ARCH-1J 後）。
+1G 時点では `lib/env` 直 import を暫定許可。
+
+公開: ページクライアント、作成/編集モーダル、`useProfiles`。`app/profile/page.tsx`。
+
+#### env-import（P11 Read-only）
+
+| Before | After |
+|---|---|
+| `lib/env/detector/**` `analyzer.ts` `analysis.ts` `hash*.ts` `picker.ts` `scan.ts` `source.ts` `capabilities.ts` `resolve.ts` `profileName.ts` `zipSource.ts` | `features/env-import/` に同じ相対構造 |
+
+公開: `pickDirectory` `detectEnvironment` `analyzeEnvironment` など UI が要る最小。
+detector 内部・hash worker は private。Worker URL をこのフェーズで直す。
+
+#### sync（P12 書き込み）
+
+| Before | After |
+|---|---|
+| `diff.ts` `managed.ts` `executor.ts` `applySync.ts` `backup.ts` `recovery.ts` `undo.ts` `syncPrep.ts` `link.ts` `environmentCheck.ts` `sink.ts` `sink/**` `zipSync.ts` | `features/sync/` |
+| `EnvironmentSyncSection` `SyncButton` `SyncPreviewModal` `SyncHistorySection` `InterruptedSyncDialog` | `features/sync/components/` |
+| `useSync` `useSyncHistory` `useInterruptedSync` `useEnvironmentLink` `useFolderLinked` `useZipSync` | `features/sync/hooks/` |
+
+公開: セクション/モーダル/フック。profiles は import しない（設定ページが sync を載せる）。
+
+#### modpack
+
+| Before | After |
+|---|---|
+| `lib/env/mrpack.ts` `modpack.ts` `modpackAdd.ts` `modpackUpdate.ts` | `features/modpack/` |
+| `ModpackHubClient` `ModpackImportModal` | `features/modpack/components/` |
+| `useModpackAdd` | `features/modpack/hooks/` |
+| `lib/providers/*` | `features/modpack/providers/` |
+
+公開: Hub、Import モーダル、`useModpackAdd`。Discover 詳細はこれを呼ぶ。
+`app/modpack/page.tsx`。
+
+#### zip（プロファイルの配布 ZIP。Sync の ZipSink ではない）
+
+| Before | After |
+|---|---|
+| `useZipExport.ts` `useZipImport.ts` | `features/zip/hooks/` |
+| `ZipProgressModal.tsx` | `features/zip/components/` |
+
+公開: 2 フック + 進捗モーダル。AppShell / Header / Sidebar が消費。
+
+#### dep-check
+
+| Before | After |
+|---|---|
+| `useDependencyCheck.ts` | `features/dep-check/hooks/` |
+| `DependencyCheckModal.tsx` | `features/dep-check/components/` |
+
+`lib/store/depCheck.ts` は第 1 波据置。公開: フック + モーダル。
+
+#### settings
+
+| Before | After |
+|---|---|
+| `SettingsPageClient.tsx` | `features/settings/components/` |
+
+公開: `SettingsPageClient`。中で `features/sync` の EnvironmentSyncSection を index 経由。
+
+#### seo
+
+| Before | After |
+|---|---|
+| `lib/seo/jsonld.ts` `og-copy.ts` | `features/seo/` |
+| `components/JsonLd.tsx` | `features/seo/JsonLd.tsx` |
+
+`app/**/opengraph-image.tsx` は App Router 制約で **app に残す**。コピー関数だけ Feature。
+公開: builders + `JsonLd`。
+
+### 10.6 動かさない lib
+
+`db/`（Dexie は全 Feature の永続化）`modrinth/` `query/` `server/` `store/`（第 2 波）
+`utils/` `constants/` `loaders/` `state/sanitize.ts`。
+
+### 10.7 app の消費先
+
+| app | Feature |
 |---|---|
 | `app/page.tsx` | landing |
-| `app/discover/**` | mods |
-| `app/[projectType]/[slug]/**` | mods |
+| `app/discover/[type]/page.tsx` | catalog |
+| `app/discover/**/[slug]` | project |
+| `app/[projectType]/[slug]` | project + seo |
 | `app/profile/page.tsx` | profiles |
-| `app/modpack/page.tsx` | profiles |
-| `app/settings/page.tsx` | settings |
-| `app/resourcepack/page.tsx` `shader/page.tsx` | mods (`ReservedCategoryPage`) |
-| `app/layout.tsx` | layout + JsonLd |
+| `app/modpack/page.tsx` | modpack |
+| `app/settings/page.tsx` | settings（内部で sync） |
+| `app/resourcepack` `shader` | project (`ReservedCategoryPage`) |
+| `app/layout.tsx` | layout + seo |
 
-#### __tests__/（ARCH-1G までミラー）
+### 10.8 テスト
 
-テストファイルはソースと同じ相対パスを `__tests__/` 配下に維持する。
+第 1 波: `__tests__/features/<name>/` ミラー。  
+ARCH-1N 既定はミラー維持。colocation は確認待ち。
 
-| Before | After（ミラー方針） |
-|---|---|
-| `__tests__/components/landing/*.test.tsx` および LP 個別 | `__tests__/features/landing/components/` |
-| `__tests__/components/ModCard.test.tsx` 等 mods | `__tests__/features/mods/components/` |
-| `__tests__/components/NewProfileModal*.tsx` 等 | `__tests__/features/profiles/components/` |
-| `__tests__/components/Settings*` なし（Settings は薄い） | 追加しない |
-| `__tests__/hooks/useZip*.tsx` 等 | `__tests__/features/profiles/hooks/` |
-| `__tests__/hooks/useCountUp.test.tsx` 等 | `__tests__/features/landing/hooks/` |
-| `__tests__/lib/env/**` | `__tests__/features/profiles/env/` |
-| `__tests__/components/{Confirm,Toast,Header,BottomNav,...}` | `__tests__/components/{feedback,layout,ui}/` |
+`__tests__/lib/env/*` → env-import / sync / modpack に分割（ファイル単位で §10.5 に追随）。
 
-colocation を選ぶ場合の配置は §10.4。
+### 10.9 tsconfig
 
-### 10.3 Public API (`index.ts`)
+`@/*` で足りる。ルールは Feature 外→`@/features/<name>`（index）。
+ARCH-1M で深い import を `rg` ゼロに。Biome noRestrictedImports は 1M 以降。
 
-外部（`app/`・他 Feature・テスト）は次だけから import する。
+### 10.10 フェーズ手順（壊れない順）
 
-**`features/landing/index.ts`**
+1A 共通三分 + 旧 re-export → 1B LP → 1C settings → 1D seo（小さい・独立）→
+1E catalog → 1F project → 1G profiles → 1H zip / 1I dep-check（AppShell が両方使うので
+連続）→ 1J env-import（`git mv lib/env/detector` 等。sync/modpack がまだ lib/env の
+残りを参照できるよう **1J では detector/analyzer/picker だけ移し、残りは 1K/1L**）→
+1K 残り env の sync 系 → 1L modpack 系 → 1M shim 削除 → 1N テスト → 1O。
 
-- コンポーネント: `AnimatedStats` `HeroRotator` `LandingSearchForm` `PopularMarquee` `PreviewCard` `RevealSection`
-- フック: `useCountUp` `useScrollReveal`
-- 出さない: 内部定数、LP 専用 style helper
+`lib/env` を一度に全部移さない。1J と 1K/1L でフォルダが空になったら削除。
 
-**`features/mods/index.ts`**
+各フェーズ末: 4 検証。1K と 1H のあと E2E（CI）。
 
-- `HomeInteractive` `ModCard` `ModDetailModalShell` `ModDetailPageView` `ScreenshotGalleryModal` `ReservedCategoryPage` `BrowseBottomSheet`
-- `useModpackAdd`
-- `loadDiscoverSearch`
-- 出さない: 検索内部 facet 組み立て、モーダル内部 helper
+### 10.11 Git
 
-**`features/profiles/index.ts`**
+同一ブランチ。コミットは ID 単位。`lib/env` 分割は中間 typecheck が通る単位。
+revert はフェーズ SHA。force push しない。1J 前に任意 tag `arch-1j-pre`。
 
-- ページクライアント: `ModsPageClient` `ModpackHubClient`
-- モーダル/セクション: `NewProfileModal` `EditProfileModal` `DependencyCheckModal` `EnvironmentSyncSection` `SyncPreviewModal` `SyncButton` `SyncHistorySection` `InterruptedSyncDialog` `ModpackImportModal`
-- フック: `useProfiles` `useSync` `useZipImport` `useZipExport` `useZipSync` `useEnvironmentLink` `useFolderLinked` `useDependencyCheck` `useInterruptedSync` `useSyncHistory` `useLoaderVersionOptions`
-- env: 他 Feature が必要とする最小（`useModpackAdd` 向け `addModpackToProfile` 相当）。原則 env ファイルは profiles 内 private
-- 出さない: detector 内部、sink 実装、hash worker
-
-**`features/settings/index.ts`**
-
-- `SettingsPageClient` のみ
-
-**共通 components** は barrel 任意。`@/components/ui/CustomDropdown` の直接 import を許可（プリミティブに Public API 強制は過剰）。Feature 同士は禁止。
-
-### 10.4 テスト方針
-
-**既定（ARCH-1G まで）: `__tests__` ミラー**
-
-- vitest include が `__tests__/**` 前提
-- カバレッジ `include` を `features/**` `components/**` に更新（ARCH-1A から逐次）
-
-**ARCH-1G の選択肢（Go 時に 1 つ）**
-
-| 案 | 内容 | 採用条件 |
-|---|---|---|
-| A ミラー維持 | `__tests__/features/...` | 差分が小さく既定 |
-| B colocation | `features/mods/components/ModCard.test.tsx` | vitest include 変更 + AGENT.md 追記が必要。ユーザー確認 |
-
-計画時点の推奨は **A**。B は別確認。
-
-### 10.5 インポートパスと tsconfig
-
-現行: `"@/*": ["./*"]` のみ。追加は必須ではない（`@/features/mods` は既に解決する）。
-
-任意の明示（可読性。ARCH-1A で入れてよい）:
-
-```json
-"paths": {
-  "@/*": ["./*"],
-  "@/features/*": ["./features/*"],
-  "@/components/*": ["./components/*"]
-}
-```
-
-ルール:
-
-1. Feature 外 → `@/features/<name>`（index のみ）
-2. Feature 内 → 相対パスまたは `@/features/<name>/...`（同一 Feature の深いパスは可）
-3. 共通 UI → `@/components/ui/...` 等
-4. インフラ → `@/lib/...` `@/hooks/...`
-5. ARCH-1A〜E の shim 期間のみ `@/components/ModCard` を許可
-
-`tsconfig.test.json` も同様。Biome の `noRestrictedImports` は ARCH-1F で導入を検討（最初からだと shim と衝突）。
-
-### 10.6 段階的フェーズ
-
-**ARCH-1A 共通三分**  
-`git mv` で ui/layout/feedback へ。旧パスに `export { X } from './ui/X'`。4 検証。
-
-**ARCH-1B landing**  
-`components/landing/*` と LP フックを移動。`app/page.tsx` を `@/features/landing` に。テスト移動。4 検証。
-
-**ARCH-1C settings**  
-ファイルが少ない。`app/settings/page.tsx` のみ。
-
-**ARCH-1D mods**  
-検索・詳細・discover。`lib/search` を移す。`useModpackAdd` は暫定 `lib/env` 直 import。
-
-**ARCH-1E profiles**  
-最大。`lib/env` を丸ごと `git mv`。Worker・テスト・coverage を同じコミット塊で（env を分割コミットすると中間が壊れる）。内部相対 import を一括修正。
-
-**ARCH-1F shim 削除**  
-`rg "@/components/ModCard"` 等が 0。app と features 間は index のみ。
-
-**ARCH-1G テスト最終形**  
-案 A ならパスずれの修正のみ。
-
-**ARCH-1H**  
-coverage include、`.agent/skills` のパス、完了チェックリスト。
-
-各フェーズ終了条件: `pnpm typecheck` && `pnpm exec biome lint .` && `pnpm test:unit` && `pnpm build`。E2E は 1E と 1H（CI）。
-
-### 10.7 テスト・CI コマンド
+### 10.12 コマンド
 
 ```bash
 pnpm typecheck
 pnpm exec biome lint .
 pnpm test:unit
 pnpm build
-# ARCH-1E / 1H かつ CI またはローカル Playwright があるとき
+# 1H / 1K / 1O かつ CI
 pnpm test:e2e
 ```
 
-Sandbox では E2E を必須にしない（既存方針）。カバレッジ閾値は下げない。
-
-### 10.8 Git 運用・ロールバック
-
-- **ブランチ**: 本セッションは `arena/01a04e55-dropmod` 固定。計画も実施もこのブランチ
-- **コミット粒度**: サブ ID ごと。ARCH-1E は `git mv` と import 修正を分けず 1 論理単位（中間で typecheck が落ちるため）
-- **メッセージ**: `refactor(ARCH-1A): …` 形式
-- **ロールバック**: フェーズ単位で `git revert <sha>`。1E が大きいので env 移動前に tag `arch-1e-pre` を任意で打つ
-- **force push しない**
-- 失敗したらそのフェーズのコミットだけ戻し、shim を復活させる
-
 ---
 
-## 11. リスク・Gotchas
+## 11. リスク
 
-- `ModsPageClient` は名前が mods だが中身はプロファイル → **profiles**
-- `BrowseBottomSheet` は探す UI → **mods**。MenuBottomSheet はシェル → **layout**
-- `useModpackAdd` は mods と profiles の境界。循環 import 禁止（profiles は mods のコンポーネントを import しない）
-- hash Worker の new URL はファイル移動で壊れる
-- Next の `opengraph-image` は app に残す
-- coverage `include` を更新しないと閾値割れ
-- re-export shim を残したまま ARCH-1H すると「移行完了」に見えて未完了
+- AppShell が多数 Feature のフックを束ねる。layout が Feature を index で import するのは可
+- `useModpackAdd` を catalog に置くと env が逆流する → **modpack** に置く
+- ZIP export と ZipSink の名前衝突。フォルダを `zip` vs `sync/sink/zip`
+- constants/search を catalog に移すと seo/app が catalog 依存 → 据置
+- store 第 1 波据置。無理に移すと profiles store を zip が import する循環
+- **第 2 波（範囲外）**: `lib/store` slice を Feature へ / Dexie ヘルパを sync へ
 
-## 12. 実績と証拠
+## 12. 実績
 
-| ID | コミット | テスト | 備考 |
-|---|---|---|---|
-| ARCH-1 | (本コミット) | docs のみ | 計画。コード未移動 |
+| ID | コミット | 備考 |
+|---|---|---|
+| ARCH-1 初版 | `5a9e92c` | 4 Feature。不十分 |
+| ARCH-1 再構築 | (本コミット) | 11 Feature。コード未移動 |
 
----
+## 13. 完了チェック（ARCH-1O）
 
-## 13. 移行完了チェックリスト（ARCH-1H）
-
-- [ ] `components/` 直下にドメインコンポーネントが 0（`ui/` `layout/` `feedback/` のみ）
-- [ ] `hooks/` にドメインフックが 0
-- [ ] `lib/env/` `lib/search/` が存在しない（または deprecated re-export なし）
-- [ ] `app/` の Feature import が `@/features/<name>` のみ
-- [ ] Feature 間の深い import が `rg` で 0
-- [ ] 各 Feature の `index.ts` が named export のみ
-- [ ] `__tests__` または colocation がソースと 1:1
-- [ ] `pnpm typecheck` / biome / `test:unit` / `build` pass。件数減少なし
-- [ ] vitest coverage include が新パス。閾値維持
+- [ ] `components/` 直下ゼロ（ui/layout/feedback のみ）
+- [ ] `lib/env/` `lib/search/` `lib/seo/` `lib/providers/` 削除（shim なし）
+- [ ] 11 Feature 各 `index.ts` が named export
+- [ ] Feature 間の深い import 0
+- [ ] ZIP（配布）と ZipSink（sync）が別ディレクトリ
+- [ ] 4 検証 pass・件数減なし・coverage 閾値維持
 - [ ] `.archive/vite/` 無変更
-- [ ] task-list ARCH-1A〜H をローカル検証済みに更新
-- [ ] skills / AGENT のパス例を更新
+- [ ] task-list 更新
 
-## 16. 実施 Go の条件
+## 14. Go
 
-ユーザーが「ARCH-1A から Go」と指示するまでコードを動かさない。
-Go 時に ARCH-1G のテスト配置（A ミラー / B colocation）を確認する。未指定なら A。
+「ARCH-1A から Go」までコードを動かさない。
+1N のテスト配置は未指定ならミラー。

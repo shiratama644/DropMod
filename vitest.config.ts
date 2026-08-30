@@ -71,6 +71,7 @@ export default defineConfig({
         // これらは msw + jsdom + provider ツリー全部揃えないと render できず、
         // 単体テストの ROI が低い。実挙動は Playwright で smoke / mod-detail /
         // mods-page / offline / theme-persistence spec で担保している。
+        'components/layout/AppShell.tsx',
         'components/AppShell.tsx',
         'components/HomeInteractive.tsx',
         'components/ModsPageClient.tsx',
@@ -86,18 +87,23 @@ export default defineConfig({
         // DependencyCheckModal は結果表示のみ、ZipProgressModal は progress bar 表示のみ
         // ToastContainer は Zustand subscribe で表示するだけ (Zustand store 側でテスト済)
         // MarkdownRenderer は react-markdown をラップして h1→h2 降格するだけ
+        'components/layout/BottomNav.tsx',
         'components/BottomNav.tsx',
         'components/EditProfileModal.tsx',
         'components/DependencyCheckModal.tsx',
         'components/ZipProgressModal.tsx',
+        'components/feedback/ToastContainer.tsx',
         'components/ToastContainer.tsx',
+        'components/ui/MarkdownRenderer.tsx',
         'components/MarkdownRenderer.tsx',
 
         // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
         // Providers は PersistQueryClientProvider を返すだけ、
         // WebVitalsReporter は web-vitals ライブラリを attach するだけ。
         // (AppContext.tsx は Phase 10-B で完全削除済みのため exclude からも除去)
+        'components/layout/Providers.tsx',
         'components/Providers.tsx',
+        'components/layout/WebVitalsReporter.tsx',
         'components/WebVitalsReporter.tsx',
 
         // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----

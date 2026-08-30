@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 計画再構築済み・コード未着手** (2026-08-30)
+> **状態: 計画再構築済み。ARCH-1A 実施済み。1B〜 未着手** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -314,7 +314,8 @@ ARCH-1M で深い import を `rg` ゼロに。Biome noRestrictedImports は 1M �
 ### 10.10 フェーズ手順（壊れない順）
 
 1A 共通三分 + 旧 re-export → 1B LP → 1C settings → 1D seo（小さい・独立）→
-1E catalog → 1F project → 1G profiles → 1H zip / 1I dep-check（AppShell が両方使うので
+1E catalog（categories 含む）→ 1F project（project-detail 含む）→
+1G profiles（loaders / contentCategory）→ 1H zip / 1I dep-check（AppShell が両方使うので
 連続）→ 1J env-import（`git mv lib/env/detector` 等。sync/modpack がまだ lib/env の
 残りを参照できるよう **1J では detector/analyzer/picker だけ移し、残りは 1K/1L**）→
 1K 残り env の sync 系 → 1L modpack 系 → 1M shim 削除 → 1N テスト → 1O。

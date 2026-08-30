@@ -1,0 +1,320 @@
+'use client';
+
+import type React from 'react';
+import { useState, useRef, useEffect, useId, useCallback, useMemo } from 'react';
+import ReactDOM from 'react-dom';
+import gsap from 'gsap';
+import type { DropdownOption } from '@/types';
+
+function toneClass(tone: DropdownOption['tone']): string {
+  if (tone === 'alpha') return 'text-red-500';
+  if (tone === 'beta') return 'text-blue-500';
+  if (tone === 'stable') return 'text-emerald-500';
+  return '';
+}
+
+function DropdownOptionContent({ option }: { option: DropdownOption }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 min-w-0 ${toneClass(option.tone)}`}>
+      {option.icon ? (
+        <i className={`fa-solid ${option.icon} text-[11px] shrink-0`} aria-hidden />
+      ) : null}
+      <span className="truncate">{option.label}</span>
+    </span>
+  );
+}
+
+interface CustomDropdownProps {
+  options: DropdownOption[];
+  selectedValue: string;
+  onChange: (value: string) => void;
+  customClass?: string;
+  label?: string;
+  /**
+   * Phase 10-P5: 外側 <label htmlFor=...> と紐付けるため、trigger 要素の
+   * id を外部から指定できるようにする。未指定なら useId() で自動生成。
+   */
+  id?: string;
+}
+
+export const CustomDropdown: React.FC<CustomDropdownProps> = ({
+  options = [],
+  selectedValue,
+  onChange,
+  customClass = '',
+  label = '選択肢',
+  id,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLElement>(null);
+
+  const listboxId = useId();
+  // L5-warn 修正: useMemo でラップして useCallback deps の安定化
+  const safeOptions = useMemo(
+    () => (Array.isArray(options) ? options : []),
+    [options]
+  );
+  const selectedOption = safeOptions.find((o) => o.value === selectedValue) || safeOptions[0];
+
+  const handleClose = useCallback((immediate = false) => {
+    if (chevronRef.current) {
+      gsap.killTweensOf(chevronRef.current);
+      gsap.to(chevronRef.current, { rotate: 0, duration: 0.15 });
+    }
+
+    if (!menuRef.current || immediate) {
+      if (menuRef.current) gsap.killTweensOf(menuRef.current);
+      setIsOpen(false);
+      setFocusedIndex(-1);
+      return;
+    }
+
+    gsap.killTweensOf(menuRef.current);
+    gsap.to(menuRef.current, {
+      opacity: 0,
+      scale: 0.95,
+      duration: 0.12,
+      ease: 'power2.in',
+      onComplete: () => {
+        setIsOpen(false);
+        setFocusedIndex(-1);
+      },
+    });
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    if (safeOptions.length === 0) return;
+    const initialIndex = safeOptions.findIndex((o) => o.value === selectedValue);
+    setFocusedIndex(initialIndex >= 0 ? initialIndex : 0);
+    setIsOpen(true);
+  }, [safeOptions, selectedValue]);
+
+  // Position and animate menu when opened
+  useEffect(() => {
+    if (!isOpen || !menuRef.current || !triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const minWidth = Math.max(rect.width, 140);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const estimatedHeight = 200;
+    const openUpward = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
+
+    const menu = menuRef.current;
+    menu.style.minWidth = `${minWidth}px`;
+
+    if (openUpward) {
+      menu.style.top = 'auto';
+      menu.style.bottom = `${window.innerHeight - rect.top + 6}px`;
+      menu.style.transformOrigin = 'bottom right';
+    } else {
+      menu.style.top = `${rect.bottom + 6}px`;
+      menu.style.bottom = 'auto';
+      menu.style.transformOrigin = 'top right';
+    }
+
+    let leftPos = rect.right - minWidth;
+    if (leftPos < 10) leftPos = rect.left;
+    menu.style.left = `${Math.max(10, leftPos)}px`;
+
+    gsap.killTweensOf([menu, chevronRef.current]);
+    gsap.fromTo(
+      menu,
+      { opacity: 0, scale: 0.92, y: openUpward ? 6 : -6 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.18, ease: 'back.out(1.5)' }
+    );
+
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { rotate: 180, duration: 0.15 });
+    }
+  }, [isOpen]);
+
+  // Close dropdown on outside click / touch, window resize, or container scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const isEventInsideTriggerOrMenu = (target: Node | null): boolean => {
+      if (!target) return false;
+      if (triggerRef.current?.contains(target)) return true;
+      if (menuRef.current?.contains(target)) return true;
+      return false;
+    };
+
+    const handleOutsidePointer = (e: MouseEvent | TouchEvent) => {
+      const target = (e.target as Node) || null;
+      if (!isEventInsideTriggerOrMenu(target)) {
+        handleClose(true);
+      }
+    };
+
+    // ---------------------------------------------------------------
+    // scroll ハンドラ (M-4)
+    //
+    // 従来は capture-phase の全 scroll でメニューを即閉じていたため、
+    // メニュー自身 (overflow-y:auto / max-height:240px) を上下スクロール
+    // した瞬間に閉じてしまう不具合があった。
+    // → scroll イベントの target がメニュー内部の要素の場合は無視する。
+    // ---------------------------------------------------------------
+    const handleScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (menuRef.current && target && menuRef.current.contains(target)) {
+        return; // メニュー内スクロールは閉じない
+      }
+      handleClose(true);
+    };
+
+    const handleResize = () => handleClose(true);
+
+    document.addEventListener('mousedown', handleOutsidePointer);
+    document.addEventListener('touchstart', handleOutsidePointer, { passive: true });
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsidePointer);
+      document.removeEventListener('touchstart', handleOutsidePointer);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen, handleClose]);
+
+  // Auto-scroll focused item into view during keyboard navigation
+  useEffect(() => {
+    if (!isOpen || focusedIndex < 0 || !menuRef.current) return;
+    const focusedOptionEl = menuRef.current.children[focusedIndex] as HTMLElement | undefined;
+    focusedOptionEl?.scrollIntoView({ block: 'nearest' });
+  }, [isOpen, focusedIndex]);
+
+  // Cleanup GSAP animations on unmount
+  // L5-warn 修正: cleanup で参照する ref 値を effect 時点で capture
+  // (unmount 時に ref.current が null になっていても killTweensOf を実行)
+  useEffect(() => {
+    const menuEl = menuRef.current;
+    const chevronEl = chevronRef.current;
+    return () => {
+      if (menuEl) gsap.killTweensOf(menuEl);
+      if (chevronEl) gsap.killTweensOf(chevronEl);
+    };
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (safeOptions.length === 0) return;
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!isOpen) {
+        handleOpen();
+      } else if (focusedIndex >= 0 && safeOptions[focusedIndex]) {
+        onChange(safeOptions[focusedIndex].value);
+        handleClose(true);
+      } else {
+        handleClose(true);
+      }
+    } else if (e.key === 'Escape') {
+      if (isOpen) {
+        e.preventDefault();
+        // モーダル内でこのドロップダウンが Escape で閉じたとき、親モーダル
+        // (useModalA11y) にまで Escape が伝播すると親モーダルも閉じてしまう。
+        // ここで伝播を止めて「まずドロップダウンだけを閉じる」動作にする。
+        e.stopPropagation();
+        handleClose(true);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        handleOpen();
+      } else {
+        setFocusedIndex((prev) => (prev + 1) % safeOptions.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        handleOpen();
+      } else {
+        setFocusedIndex((prev) => (prev - 1 + safeOptions.length) % safeOptions.length);
+      }
+    }
+  };
+
+  const handleOptionClick = (value: string) => {
+    onChange(value);
+    handleClose(true);
+  };
+
+  return (
+    <div className={`custom-dropdown-container ${customClass}`}>
+      <div
+        ref={triggerRef}
+        id={id}
+        className="custom-dropdown-trigger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        role="combobox"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={isOpen ? listboxId : undefined}
+        aria-activedescendant={
+          isOpen && focusedIndex >= 0 ? `${listboxId}-option-${focusedIndex}` : undefined
+        }
+        aria-label={label}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isOpen) handleClose(true);
+          else handleOpen();
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className="trigger-label truncate">
+          {selectedOption ? <DropdownOptionContent option={selectedOption} /> : ''}
+        </span>
+        <i
+          ref={chevronRef}
+          className="fa-solid fa-chevron-down text-xs theme-text-muted transition-transform duration-200 chevron-icon"
+        />
+      </div>
+
+      {isOpen &&
+        typeof document !== 'undefined' &&
+        ReactDOM.createPortal(
+          <div
+            id={listboxId}
+            ref={menuRef}
+            className="custom-dropdown-menu-portal hide-scrollbar"
+            role="listbox"
+            aria-label={label}
+          >
+            {safeOptions.map((opt, index) => {
+              const isSelected = opt.value === selectedValue;
+              const isFocused = index === focusedIndex;
+              return (
+                // Phase 10-P5 (a11y): role="option" は ARIA listbox pattern の
+                //   一部。キーボードナビは親の combobox trigger の onKeyDown
+                //   (handleKeyDown) で ↑↓ Enter を処理しており、各 option の
+                //   onKeyDown は不要 (option 自体は tabIndex=-1)。
+                // biome-ignore lint/a11y/useKeyWithClickEvents: ARIA listbox pattern、キーボードは trigger 側で処理
+                <div
+                  id={`${listboxId}-option-${index}`}
+                  key={opt.value}
+                  className={`custom-dropdown-item ${isSelected ? 'is-selected' : ''} ${
+                    isFocused ? 'is-focused' : ''
+                  }`}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={isSelected}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick(opt.value);
+                  }}
+                >
+                  <DropdownOptionContent option={opt} />
+                  {isSelected && <i className="fa-solid fa-check text-xs theme-text-brand" />}
+                </div>
+              );
+            })}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+};

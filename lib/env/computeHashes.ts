@@ -1,7 +1,7 @@
 /**
  * SHA-1 計算のエントリポイント (Phase 11)。
  *
- * 利用可能なら Web Worker (hash.worker.ts) で計算し、Worker が使えない
+ * 利用可能なら Web Worker (hashWorker.ts) で計算し、Worker が使えない
  * 環境 (古い環境・Worker 生成失敗・テストの jsdom) ではメインスレッド
  * (hashCore.ts) にフォールバックする。結果の型はどちらも同じ。
  */
@@ -12,7 +12,7 @@ export type { HashProgress, HashResult, HashTaskInput } from './hashCore';
 
 async function hashInWorker(files: HashTaskInput[]): Promise<HashResult[]> {
   return new Promise<HashResult[]>((resolve, reject) => {
-    const worker = new Worker(new URL('./hash.worker.ts', import.meta.url));
+    const worker = new Worker(new URL('./hashWorker.ts', import.meta.url));
     let settled = false;
     worker.onmessage = (e: MessageEvent<{ ok: boolean; results?: HashResult[]; error?: string }>) => {
       settled = true;

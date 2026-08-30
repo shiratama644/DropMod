@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { HomeInteractive } from '@/components/HomeInteractive';
+import { HomeInteractive } from '@/features/catalog';
 import {
   parseDiscoverSegment,
   sanitizeSearchQuery,
   type DiscoverSegment
 } from '@/lib/constants/search';
-import { loadDiscoverSearch } from '@/lib/search/loadDiscoverSearch';
+import { loadDiscoverSearch } from '@/features/catalog/api/loadDiscoverSearch';
 
 // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため
 // title に ' - DropMod' を含めない (含めるとサイト名が二重になる)
@@ -67,6 +67,7 @@ export default async function DiscoverTypePage({
 
   return (
     <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex-1 w-full">
+      <h1 className="sr-only">{TITLES[type as DiscoverSegment].title}</h1>
       <Suspense fallback={null}>
         <HomeInteractive
           initialHits={hits}

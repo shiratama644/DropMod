@@ -171,12 +171,12 @@ pnpm install --frozen-lockfile
 
 ## 6. プロジェクト固有の遵守事項
 
-過去のセッションで実際に踏んだ地雷・確立した運用ルールを集約したもの。**計画書（`docs/planning/PHASE*_PLAN.md`）に矛盾する指定があった場合は計画書を優先**するが、それ以外は本節を厳守する。
+過去のセッションで実際に踏んだ地雷・確立した運用ルールを集約したもの。**計画書（`docs/planning/complete/PHASE*_PLAN.md`）に矛盾する指定があった場合は計画書を優先**するが、それ以外は本節を厳守する。
 
 ### 6.1 環境・ツールチェーン
-- Node.js v24.x（LTS）/ pnpm 11.x（corepack 経由）/ Next.js 16 App Router / React 19 / TypeScript 5
+- Node.js v24.x（LTS）/ pnpm 11.x（corepack 経由）/ Next.js 16 App Router / React 19 / TypeScript 7
 - Biome 2.5 (ESLint は完全撤去済み)、`biome.json` の `overrides` でテストファイルのみ `noNonNullAssertion: off`
-- Vitest 4 + jsdom + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 7.x 固定 devDep）
+- Vitest 4 + jsdom 30 + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 8.x + `@vitejs/plugin-react` 6）
 - Playwright (Chromium 単独、`--disable-gpu` 必須)
 - 状態管理: **Zustand 5**（`lib/store/` 配下）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
 - パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は Vercel 側で自動注入されるので false のままで OK）。
@@ -258,8 +258,8 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
 
 ### 6.8 ドキュメント運用
 - ドキュメントは種類別フォルダに配置し、必ず `docs/README.md` の目次を更新する:
-  - `docs/planning/PHASE{N}_PLAN.md` — 実施計画書（着手前に作成）
-  - `docs/complete/PHASE{N}_COMPLETE.md` — 完了レポート（Phase 完了時に作成）
+  - `docs/planning/complete/PHASE{N}_PLAN.md` — 実施計画書（着手前に作成）
+  - `docs/planning/complete/PHASE{N}_COMPLETE.md` — 完了レポート（Phase 完了時に作成）
   - `docs/audit/` — バグ監査・差分レポート
   - `docs/ops/` — デプロイ・CI 運用手順
 - Phase 番号は 2 桁 (`PHASE10_...` 等) で統一。過去のリネーム (`PHASE8_ → PHASE08_`) はユーザーが実施済み。

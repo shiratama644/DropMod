@@ -24,15 +24,15 @@
 // Component として SSR HTML の完全性を維持 (SEO + LCP)。
 // ============================================================================
 
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import Link from 'next/link';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
-import { RevealSection } from '@/components/landing/RevealSection';
-import { AnimatedStats } from '@/components/landing/AnimatedStats';
-import { HeroRotator } from '@/components/landing/HeroRotator';
-import { LandingSearchForm } from '@/components/landing/LandingSearchForm';
-import { PopularMarquee } from '@/components/landing/PopularMarquee';
-import { PreviewCard } from '@/components/landing/PreviewCard';
+import { RevealSection } from '@/features/landing';
+import { AnimatedStats } from '@/features/landing';
+import { HeroRotator } from '@/features/landing';
+import { LandingSearchForm } from '@/features/landing';
+import { PopularMarquee } from '@/features/landing';
+import { PreviewCard } from '@/features/landing';
 import type { ModrinthHit } from '@/types';
 
 export const metadata = {

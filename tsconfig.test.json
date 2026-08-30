@@ -21,7 +21,9 @@
     "hooks/**/*.ts",
     "lib/**/*.ts",
     "scripts/**/*.ts",
-    "types.ts",
+    "types/**/*.ts",
+    "features/**/*.ts",
+    "features/**/*.tsx",
     "next-env.d.ts"
   ],
   "exclude": [

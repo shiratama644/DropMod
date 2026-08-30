@@ -42,7 +42,7 @@
 
 ## カテゴリ・通知 (2026-08-27)
 
-- **カテゴリ表示は英語** (Modrinth 準拠。`lib/constants/categories.ts` のラベルがすべて英語)。
+- **カテゴリ表示は英語** (Modrinth 準拠。`features/catalog/constants/categories.ts` のラベルがすべて英語)。
   フィルタチップ・カードバッジ・プロファイル一覧のカテゴリ列で共有。
 - **トースト通知は設定で ON/OFF 可能** (設定ページ)。`useToastStore.enabled` +
   localStorage `dropmod_toast_enabled`。OFF 中の showToast は no-op、OFF 切替時に表示中トーストも消える。
@@ -78,7 +78,7 @@
 - **`.glass-panel` / dropdown に `backdrop-filter` は使わない**。GPU のない環境 (PRoot / software rendering・低スペック端末) で再合成のたびに「白く一瞬光る」フラッシュが起きるため削除済み。`--bg-panel` の不透明度 (dark 0.92 / light 0.96) で視覚を維持。
 - **`backdrop-filter` / `backdrop-blur-*` は全廃済み (2026-08-27)**。モーダルオーバーレイ・BottomSheet・OfflineBanner からも削除。GPU のない環境での白フラッシュは完全に解消するまで残っていたため。新規 UI でも使わないこと。
 
-## AppShell の描画分岐（`components/AppShell.tsx`）
+## AppShell の描画分岐（`components/layout/AppShell.tsx`）
 
 - **PC（md+, ≥768px）**: `<DesktopSidebar>`（fixed left `w-64`, z-40, 全ページ表示）+ 内容 `<div class="md:pl-64">`。**Header も BottomNav も非表示**。
 - **Mobile（<md）**: `<Header>`（sticky z-30, ロゴ+ボタン群）+ `<BottomNav>`（fixed bottom z-[60]）。
@@ -152,7 +152,7 @@
 - fill-mode `both` は最終キーフレーム transform が永続適用され hover 演出と
   競合するため、entrance 系は `backwards` を使うこと。
 
-## BottomSheet（`components/BottomSheet.tsx`）
+## BottomSheet（`components/ui/BottomSheet.tsx`）
 
 - 共通コンポーネント。`useModalA11y`（Escape + focus trap）再利用。
 - 開閉アニメ Anime.js（`translateY 100%→0`）。背景クリック/Escape で close。

@@ -13,9 +13,9 @@
  */
 
 import type { ContentCategory, LinkedSource } from '@/types';
-import { CATEGORY_EXTENSIONS, hasExtension } from './analyzer';
-import type { LocalFileEntry } from './diff';
-import { computeHashes } from './hashWorker';
+import { CATEGORY_EXTENSIONS, hasExtension } from '@/features/env-import';
+import type { LocalFileEntry } from '@/features/sync/utils/diff';
+import { computeHashes } from './computeHashes';
 import type { EnvironmentSource } from './source';
 
 export type ScanPhase = 'scan' | 'read' | 'hash';

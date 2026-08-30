@@ -10,7 +10,7 @@
 | `/` | ランディング（LP） | RSC（Header 非表示） | `app/page.tsx` |
 | `/discover` | → リダイレクト `/discover/mods` | `redirect()` | `app/discover/page.tsx` |
 | `/discover/{mods,modpacks,resourcepacks,shaders}` | **検索一覧**（複数形） | RSC + Client（searchParams `?q=` で動的） | `app/discover/[type]/page.tsx` |
-| `/discover/<複数>/<slug>`（例: `/discover/mods/sodium`） | **プレビューモーダル** | Intercept（soft nav＝一覧保持）／直接＝モーダル単体 | `app/discover/[type]/[slug]/` + `@modal/(.)[slug]/` |
+| `/discover/<複数>/<slug>`（例: `/discover/mods/sodium`） | **プレビューモーダル**（直接 URL は **noindex** + canonical 詳細。SEO-2） | Intercept（soft nav＝一覧保持）／直接＝モーダル単体 | `app/discover/[type]/[slug]/` + `@modal/(.)[slug]/` |
 | `/{mod,modpack,resourcepack,shader}/[slug]`（例: `/mod/sodium`） | **詳細フルページ**（単数形・型別・Modrinth 準拠） | SSG + ISR 1h + OGP | `app/[projectType]/[slug]/page.tsx` |
 | `/profile` | 選択中プロファイルの Mod 一覧 | Client | `app/profile/page.tsx` |
 | `/settings` | 設定 | Client | `app/settings/page.tsx` |

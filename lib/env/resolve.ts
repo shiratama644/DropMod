@@ -20,9 +20,9 @@
 
 import type { ContentCategory, LinkedSource, Profile, ProjectItem } from '@/types';
 import { downloadFileWithRetry } from '@/lib/utils/downloadFile';
-import { buildTargetPath, CATEGORY_DIR_KEY, type SyncPlanEntry } from './diff';
-import type { ResolveContent, ResolvedContent } from './executor';
-import { itemsOfCategory } from './managed';
+import { buildTargetPath, CATEGORY_DIR_KEY, type SyncPlanEntry } from '@/features/sync/utils/diff';
+import type { ResolveContent, ResolvedContent } from '@/features/sync/services/executor';
+import { itemsOfCategory } from '@/features/sync/utils/managed';
 
 export interface ContentResolverOptions {
   profile: Profile;

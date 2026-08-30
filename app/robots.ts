@@ -8,7 +8,7 @@
 // - sitemap.xml の場所を明示
 // -----------------------------------------------------------------------------
 
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import type { MetadataRoute } from 'next';
 
 function resolveBaseUrl(): string {

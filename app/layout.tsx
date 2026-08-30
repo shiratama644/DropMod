@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-import { AppShell } from '@/components/AppShell';
-import { Providers as QueryProviders } from '@/components/Providers';
+import { AppShell } from '@/components/layout/AppShell';
+import { JsonLd } from '@/features/seo';
+import { Providers as QueryProviders } from '@/components/layout/Providers';
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/features/seo';
+import { resolveSiteOrigin } from '@/lib/platform/site-url';
 import './globals.css';
 
 // FontAwesome アイコン (Phase 10-A: subset 化)
@@ -75,7 +78,7 @@ export const metadata: Metadata = {
       'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'DropMod - Minecraft Mod Downloader',
     description:
       'Modrinth から Minecraft の Mod を検索・ダウンロード・プロファイル管理できる Web アプリ'
@@ -184,6 +187,8 @@ try {
              AppShell の中で useQueryClient() を使うため、AppShell 全体を
              PersistQueryClientProvider の中に入れる必要がある。 */}
         <QueryProviders>
+          <JsonLd data={buildWebSiteJsonLd(resolveSiteOrigin())} />
+          <JsonLd data={buildOrganizationJsonLd(resolveSiteOrigin())} />
           <AppShell>{children}</AppShell>
         </QueryProviders>
       </body>

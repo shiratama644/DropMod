@@ -20,7 +20,7 @@
  */
 
 import { useEffect } from 'react';
-import { useUiState } from '@/lib/store/uiState';
+import { useUiState } from '@/components/layout/uiState';
 
 export function useModalRegistration(isOpen: boolean): void {
   const openModal = useUiState((s) => s.openModal);

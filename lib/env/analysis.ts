@@ -17,7 +17,7 @@
  * `hooks/useDependencyCheck.ts` を Profile 保存後に実行する方針 (§5)。
  */
 
-import type { ImportAnalysis } from './analyzer';
+import type { ImportAnalysis } from '@/features/env-import';
 
 export type AnalysisIssueId =
   | 'mc-compatibility'

@@ -19,6 +19,32 @@
 
 ---
 
+## 未完了サマリー (2026-08-30 ソース + 計画書突合)
+
+> 計画書と task-list の食い違い: `PHASE12_PLAN.md` §13 は P12-B / P12-C を「未着手」と
+> 残しているが、**ソースでは実装済み**。正本は本ファイル。`PHASE12D_FIX_PLAN.md` §12
+> の実績表は D1/D2 までで、D3/D1B は未記入だがソース・本表ではローカル検証済み。
+> 「完了」誤記は見つからず。実装済みなのに「未着手」だったのは計画書側のみ。
+
+| ID | 状態 | 残作業 |
+|---|---|---|
+| P12-B | 実環境検証待ち (実装 90%) | 実機 Chromium で Direct Write + Transaction/Backup/Rollback |
+| P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
+| P12-E2E | 再検証待ち (90%) | CI `workflow_dispatch` で成功/失敗/復帰の再実行 |
+| P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
+| P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
+| UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
+| SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
+| SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
+| SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
+| DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
+| ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
+| ARCH-2 | 完了（2A〜2D） | — |
+
+進行中の AI 実装タスクは **ARCH-2D**（Dexie sync ヘルパ）。
+
+---
+
 ## フェーズタスク
 
 ### Next.js 移行 (Vite + Hono → Next.js 16)
@@ -83,7 +109,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P10-C | Markdown 内 `<Image>` 化 | 完了 | 100% | - | Modrinth CDN 画像の Image 化 | `4b4e5ee` |
 | P10-D | E2E カバレッジ拡張 (+3 spec) | 完了 | 100% | - | zip-import/export/dep-check spec | `817cb2e` |
 | P10-E | shimmer skeleton | 完了 | 100% | - | animate-pulse 置換 | `f59010e` |
-| P10-DOOR | Phase 10 全体の完了レビュー | 完了 | 100% | A-E | PHASE10_COMPLETE.md 記録 | docs/complete/PHASE10_COMPLETE.md |
+| P10-DOOR | Phase 10 全体の完了レビュー | 完了 | 100% | A-E | PHASE10_COMPLETE.md 記録 | docs/planning/complete/PHASE10_COMPLETE.md |
 
 ### Phase 10.5 (Emergency): カバレッジ回復 (2026-08-26)
 
@@ -117,12 +143,13 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | 本コミット / 5 分類 + fingerprint unchanged を 47 tests で cover・Dexie v3 追加 |
-| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | `4886245` ほか 11 commits / unit+component 100 files 995 tests green・**実機確認はユーザー** |
-| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | run `33245015014` で **DIAG[preview] n=1 / cur=default-pr** を特定 → 原因 = **Profile 作成の永続化競合** / 修正 `ab5fd0b3` (即時永続化・`await onCreate`・`/tag/game_version` モック・DIAG 強化) → **手動 run `33246962952` で成功シナリオ PASS** / 残る失敗シナリオは **E2E 注入パス不一致** (書込先 = 台帳 `mods/e2e-sodium.jar`、注入は `...-0.6.0.jar` を指定) → `926c279f` で修正済み・**要再実行 (workflow_dispatch)** |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | `db648c2`〜`b462bfa` の 7 commits / .mrpack overrides・Provider 抽象・Modpack 更新検知・ZipSink・Modpack ハブ・CF 検出・ZIP Sync 導線 / unit+component 108 files 1151 tests green・**実機 Firefox/Safari 確認はユーザー** |
+| P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | `lib/env/diff.ts` / `managed.ts` / Dexie v3 (`managedFiles`/`dirHandles`)。5 分類 + fingerprint unchanged。**2026-08-30 ソース確認済** |
+| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | **実装はソース上完了** (2026-08-30): Dexie v4 `syncTransactions` / `executeSync` / `backup.ts` (UNDO_KEEP_COUNT=3) / `applySync` / `recovery` / `undo` / `SyncPreviewModal` / `InterruptedSyncDialog` (D-4) / `SyncHistorySection` / `environmentCheck` (D-1) / `FileSystemSink`。`4886245` ほか。**未完了は実機確認のみ** |
+| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts` 存在確認 (2026-08-30)。run `33245015014` DIAG → 修正 `ab5fd0b3` → 手動 `33246962952` 成功系 PASS / 失敗系パス修正 `926c279f`・**要 CI 再実行 (workflow_dispatch)** |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30): `lib/env/sink/zip.ts` / `mrpack.ts` / `modpack.ts` (CF 検出のみ) / `modpackUpdate.ts` / `lib/providers/modrinth.ts` / `ModpackHubClient` (`promoteModpackRecords` = D-6) / `useZipSync`。`db648c2`〜`b462bfa`。**未完了は実機 Firefox/Safari 確認のみ** |
 
-※ **Phase 12 の設計論点 6 件は 2026-08-27 にユーザーと確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-6）。着手を妨げる未確定事項は無い。
+※ **Phase 12 の設計論点は 2026-08-27 / 08-29 に確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-10）。着手を妨げる未確定事項は無い。
+※ `PHASE12_PLAN.md` §13 の「P12-B/C 未着手」は **陳腐化**。実装有無は本表とソースを正とする。
 
 ### Phase 12-D: ユーザー報告バグ 3 件修正 (2026-08-29)
 
@@ -134,15 +161,16 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | P12-D1B | 設定ページ「環境との同期」の紐付けでも台帳 seed | ローカル検証済み | 100% | P12-D1 | `useEnvironmentLink.link()` 成功時に §10.5 の artifact 台帳 seed (expandProfileToManaged + merge + syncManagedFiles) を実行。新規作成 (D1) と同じ整合性。失敗は warning のみ (紐付けは成功扱い) | `c7f8db8` / docs `cfaa0f1` / typecheck・biome・unit 1216 passed・build pass |
 
-### Phase 13: CurseForge 完全対応 — 延期 (2026-08-29)
+### Phase 13: SEO 改善 (2026-08-30 再定義)
 
-> **延期理由 (ユーザー確定 2026-08-29)**: まだ CurseForge の API キーを取得していないため。
-> API キー取得後に再開する。再開時の依存は従来どおり P12-C 完了。
+> 旧 Phase 13 (CurseForge) はユーザー指示で
+> `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避。ID `P13-A` / `P13-B` は再利用せず対象外。
+> 実施計画の正本: `docs/planning/complete/PHASE13_PLAN.md`（候補表は `SEO_CANDIDATES.md`）。
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| P13-A | CurseForge Provider (API proxy + Murmur2) | 保留 | 0% | P12-C | Phase 12 完了後に詳細策定 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
-| P13-B | CurseForge Modpack + 混在 Profile | 保留 | 0% | P13-A | 同上 | **API キー未取得のため延期** (2026-08-29 ユーザー確定) |
+| P13-A | CurseForge Provider (API proxy + Murmur2) | 対象外 | - | - | 計画アーカイブ。API キー取得後に新 ID で再開 | `.archive/docs/planning/complete/PHASE13_PLAN.md` |
+| P13-B | CurseForge Modpack + 混在 Profile | 対象外 | - | P13-A | 同上 | 同上 |
 
 ---
 
@@ -155,6 +183,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | AGT-1 | .agent/ 自己知識管理システム初期構築 | 完了 | 100% | - | AGENT.md §8 + skills 10 種 | `ecdbb69` |
 | AGT-2 | §7 コミュニケーション規約 | 完了 | 100% | - | AGENT.md §7 | `7f579df` |
 | TOOL-1 | Node LTS 24 / pnpm 11 / vitest 4 統一 | 完了 | 100% | - | .nvmrc=24 + typecheck green | `49c74b6`〜`ccd5f98` |
+| DEP-1 | 依存関係を latest へ（パッチ + メジャー） | 完了 | 100% | - | 4 検証 pass。next 16.3.3 / TS 7 / vite 8 / jsdom 30 / web-vitals 6 / jest-dom 7 | 2026-08-30 本コミット |
 | PERF-1 | 画像表示の高速化・高画質化 (unoptimized 方針) | 完了 | 100% | - | LCP 改善 + 詳細レイアウト修正 | `d41cee5` |
 | BUG-1 | 全ファイル包括バグハント (8 件) | 完了 | 100% | - | 8 件修正 + 回帰テスト | `3f05032` |
 
@@ -193,8 +222,36 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENT.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
 | DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
 | DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
-| SEO-1 | SEO 改善候補 (JSON-LD 2-2 / 動的 OGP 2-3 / 低優先 2-6〜) | 保留 | 0% | P12-C | 候補リストから実施判断 | `fc2b2b6` / SEO_CANDIDATES.md |
-| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | 未着手 | 0% | - | `/{type}/[slug]` 直接 URL に noindex・一覧とモーダルは index 維持 | SEO_CANDIDATES.md 2-1 (🥇高 / Effort 極小 / 早期実施推奨) |
+| SEO-1 | SEO 改善 (JSON-LD 2-2 / パンくず 2-4 / 動的 OGP 2-3 / sitemap 2-5 / 見出し・内部リンク 2-6) | ローカル検証済み | 100% | SEO-2 | 実装済み。本番 JSON-LD / OG 目視はユーザー延期 (完了にしない) | `52bf0b9` / typecheck + biome + 1244 tests + build |
+| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | ローカル検証済み | 100% | - | 実装済み。本番 meta robots 目視はユーザー延期 (完了にしない) | `080ede1` / typecheck + biome + 1235 tests + build |
+
+### アーキテクチャ (Feature フォルダ)
+
+> 2026-08-30 再構築: 4 Feature では `lib/env` が潰れるため 11 Feature。
+> 未着手だった ARCH-1B〜H の定義を計画再構築に合わせて更新（コード未実施のため）。
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---:|---|---|---|
+| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査を §10.5/§9 に反映。ARCH-1P 不採番 | `FEATURE_FOLDER_PLAN.md` / `d0c1d6a` + 本整合コミット |
+| ARCH-1A | 共通 UI を ui/layout/feedback へ | 完了 | 100% | ARCH-1 Go | 旧パス re-export + 4 検証 | `8561047` / typecheck / biome / 1244 tests / build. 計画 §10.4 |
+| ARCH-1B | landing | 完了 | 100% | ARCH-1A | `features/landing` | `45ba247` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1C | settings | 完了 | 100% | ARCH-1A | `features/settings` | `14fddb0` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1D | seo + sitemap-entries | 完了 | 100% | ARCH-1A | `features/seo`（opengraph は app 残置） | `d5ba1b4` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1E | catalog + categories.ts | 完了 | 100% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | `5bb34c3` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1F | project + project-detail.ts | 完了 | 100% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | `49e93cd` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1G | profiles + loaders + contentCategory | 完了 | 100% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | `d85ec21` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1H | zip（プロファイル配布 ZIP） | 完了 | 100% | ARCH-1G | useZipExport/Import。ZipSink は含まない | typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1I | dep-check | 完了 | 100% | ARCH-1G | フック + モーダル | typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1J | env-import（検出・解析） | 完了 | 100% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | typecheck / biome / 1244 tests / build. 計画 §10.10 |
+| ARCH-1K | sync + formatBytes | 完了 | 100% | ARCH-1J | lib/env の書き込み系 + Sync UI + format.ts | typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1L | modpack | 完了 | 100% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
+| ARCH-1M | 旧パス shim 削除 | 完了 | 100% | ARCH-1B〜L | 公開面は @/features | `5ba2d90` |
+| ARCH-1N | テスト配置 | 完了 | 100% | ARCH-1M | `__tests__/features/<name>/` ミラー（colocation なし） | `ff44edd` |
+| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。lib/env KEEP は ARCH-2 | `c28f51d` |
+| ARCH-2A | types.ts → types/* | 完了 | 100% | ARCH-1O | `@/types` 維持。profile/modrinth/sync/modpack/ui + index | 計画 §10.13.F |
+| ARCH-2B | store slice を Feature | 完了 | 100% | ARCH-2A | profiles/zip/dep-check。toast/confirm/ui/appActions は layout/feedback。lib/store 削除 | 計画 §10.13.F |
+| ARCH-2C | lib/platform → lib/platform | 未着手 | 0% | ARCH-2A | logger / rate-limit / APP_PROFILE / site-url | 計画 §10.13.F |
+| ARCH-2D | Dexie sync ヘルパを features/sync | 完了 | 100% | ARCH-2B | スキーマ宣言は lib/db 残置。操作は features/sync/db.ts | 計画 §10.13.F |
 
 ---
 
@@ -214,5 +271,5 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | VER-1 | E2E 全 spec の CI green 確認 | 完了 | 100% | P11-E2E | GitHub Actions で全 spec green | run `33071105483` (2026-08-27, 74 tests pass) |
 | VER-2 | CSP Enforce の実環境表示確認 | 実環境検証待ち | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | ユーザー実施 |
-| DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C, P13-B | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針 (最終ステップ) |
+| DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針。旧 P13-B (CF) 依存は解除 |
 | EXP-1 | Vite 版資産の .archive 保管維持 | 完了 (継続) | 100% | - | 全タスクで .archive/vite 無変更 | 各コミットの検証チェックリスト |

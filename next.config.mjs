@@ -33,7 +33,7 @@
 //   | upgrade-insecure-requests  | あり               | なし            |
 //   | connect-src (HMR websocket)| なし               | ws://localhost  |
 //
-// 解決優先度 (ランタイム側 lib/server/profile.ts と同一ロジック):
+// 解決優先度 (ランタイム側 lib/platform/profile.ts と同一ロジック):
 //   1. APP_PROFILE — 明示指定 (development は NODE_ENV !== production のみ有効)
 //   2. VERCEL_ENV  — production|preview → production / development → development
 //   3. NODE_ENV    — development → development / それ以外 → production
@@ -247,6 +247,22 @@ const nextConfig = {
         // 画像・アイコン・favicon などの静的リソースは SNS プレビュー等
         // クロスオリジン参照を許可
         source: '/:path*.(png|jpg|jpeg|gif|webp|avif|svg|ico|webmanifest)',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/:projectType/:slug/opengraph-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/:projectType/:slug/twitter-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/opengraph-image',
+        headers: imageCorsHeaders
+      },
+      {
+        source: '/twitter-image',
         headers: imageCorsHeaders
       }
     ];

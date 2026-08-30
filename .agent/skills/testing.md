@@ -12,8 +12,8 @@
 
 ## スタック
 
-- **Vitest 4** + jsdom + @testing-library/react **16** + user-event 14 + **msw 2.15** + fake-indexeddb 6。
-  - **vite は `^7.3.6` を devDependencies に明示固定**（vitest 4 の peer `^6||^7||^8` を野放しにすると vite 8 が解決され `@vitejs/plugin-react@4`（peer 〜^7）と不整合するため）。
+- **Vitest 4** + jsdom 30 + @testing-library/react **16** + user-event 14 + **msw 2.15** + fake-indexeddb 6 + jest-dom 7（peer `@testing-library/dom`）。
+  - **vite は `^8.2.2` + `@vitejs/plugin-react@^6`**（plugin-react 6 は Vite 8 専用。vitest 4 の peer は `^6||^7||^8`）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
 - 現状: **637 tests / 73 files pass**（2026-08-27 実測）。内訳の中心は Phase 11-A〜C
@@ -76,7 +76,8 @@
 | lib/modrinth | 65 | server/client |
 | lib/utils | 60 | |
 | hooks | 70 | |
-| components | 50 | |
+| components | 50 | ui / layout / feedback |
+| features | 50 | `__tests__/features/<name>/` ミラー（colocation なし） |
 | **全体** | **60** | |
 
 `coverage.exclude`: `app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。

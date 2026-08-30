@@ -8,14 +8,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
+import { server } from '@/__tests__/mocks/server';
 import {
   useProjectQuery,
   useVersionsQuery,
   useProjectsBatchQuery
 } from '@/lib/query/hooks';
 import { clearApiCache } from '@/lib/modrinth/client';
-import { createQueryWrapper, createTestQueryClient } from '../../test-utils/queryWrapper';
+import { createQueryWrapper, createTestQueryClient } from '@/__tests__/test-utils/queryWrapper';
 
 describe('lib/query/hooks', () => {
   beforeEach(() => {

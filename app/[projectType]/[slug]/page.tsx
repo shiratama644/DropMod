@@ -11,12 +11,19 @@
 
 import { notFound } from 'next/navigation';
 
-import { ModDetailPageView } from '@/components/ModDetailPageView';
+import { JsonLd } from '@/features/seo';
+import { ModDetailPageView } from '@/features/project';
+import {
+  buildBreadcrumbListJsonLd,
+  buildSoftwareApplicationJsonLd,
+  detailBreadcrumbItems
+} from '@/features/seo';
 import {
   buildDetailMetadata,
   fetchProjectDetailData,
   generateDetailStaticParams
-} from '@/lib/server/project-detail';
+} from '@/features/project/api/projectDetail';
+import { resolveSiteOrigin } from '@/lib/platform/site-url';
 import {
   PROJECT_TYPES,
   parseDetailType,
@@ -60,11 +67,19 @@ export default async function ProjectDetailRoutePage({ params }: Params) {
   const { project, versions, author } = await fetchProjectDetailData(slug);
   if (!project) notFound();
 
+  const withAuthor = { ...project, author: author ?? project.author };
+  const origin = resolveSiteOrigin();
+
   return (
-    <ModDetailPageView
-      project={{ ...project, author: author ?? project.author }}
-      versions={versions}
-      slug={slug}
-    />
+    <>
+      <JsonLd data={buildSoftwareApplicationJsonLd(origin, type, withAuthor)} />
+      <JsonLd
+        data={buildBreadcrumbListJsonLd(
+          origin,
+          detailBreadcrumbItems(type, slug, withAuthor.title)
+        )}
+      />
+      <ModDetailPageView project={withAuthor} versions={versions} slug={slug} />
+    </>
   );
 }

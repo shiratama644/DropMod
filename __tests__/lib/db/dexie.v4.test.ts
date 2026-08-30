@@ -9,15 +9,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import Dexie from 'dexie';
-import {
-  db,
-  getAllProfiles,
-  getDirHandle,
-  getManagedFiles,
-  listSyncTransactions,
-  type ProfileRow,
-  type SyncTransactionRow
-} from '@/lib/db/dexie';
+import { db, getAllProfiles, type ProfileRow, type SyncTransactionRow } from '@/lib/db/dexie';
+import { getDirHandle, getManagedFiles, listSyncTransactions } from '@/features/sync';
 import type { ManagedFileRecord } from '@/types';
 
 const DB_NAME = 'DropModDB';

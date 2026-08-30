@@ -1,8 +1,8 @@
 /**
  * SHA-1 一括計算のコア (Phase 11 / 計画書 §4.6.1)。
  *
- * Worker (hash.worker.ts) とメインスレッド fallback (hashWorker.ts) の
- * 両方から使う pure な実装。テストはこのモジュール経由で検証する。
+ * Worker (hash.worker.ts) とメインスレッド fallback (`computeHashes.ts` 経由)
+ * の両方から使う pure な実装。テストはこのモジュール経由で検証する。
  */
 
 import { calculateSha1 } from '@/lib/utils/hash';

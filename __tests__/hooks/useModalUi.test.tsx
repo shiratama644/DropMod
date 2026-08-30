@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useModalRegistration } from '@/hooks/useModalUi';
-import { useUiState } from '@/lib/store/uiState';
+import { useUiState } from '@/components/layout/uiState';
 
 /** useModalRegistration を呼ぶだけのプローブ (引数は isOpen) */
 function Probe({ isOpen }: { isOpen: boolean }) {

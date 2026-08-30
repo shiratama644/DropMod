@@ -343,7 +343,7 @@ export function useAppAction<K extends keyof AppActions>(key: K): AppActions[K] 
 
 **修正方針 (実装しない)**:
 - hooks/useZipExport.ts の `ZipProgressState` と `INITIAL_STATE` を削除
-- 必要なら `import type { ZipProgressState } from '@/lib/store/zipExport'` に置き換え
+- 必要なら `import type { ZipProgressState } from '@/features/zip'` に置き換え
 
 ---
 
@@ -853,12 +853,12 @@ React.RefObject は参照 stable なので OK。onClose が親で useCallback �
 
 | No | ドキュメント | 現状 | 推奨 |
 |---|---|---|---|
-| DOC-1 | `docs/complete/PHASE9_COMPLETE.md` | Coverage 91.34% と記載 | 91.5% に更新 (D17 参照) |
-| DOC-2 | `docs/planning/PHASE9_PLAN.md` §5.5 / §10.1 | 50 行 / 60 行の齟齬 | どちらかに統一 (D16 参照) |
-| DOC-3 | `docs/planning/PHASE9_PLAN.md` §6.2 (depCheck) | `markChecked: () => void` のみ | `markChecked` は lastCheckAt + isChecking=false と明記 (D7 参照) |
-| DOC-4 | `docs/planning/PHASE9_PLAN.md` §3.2 | 6 store のみ列挙 | appActions.ts を追加 (D14 参照) |
-| DOC-5 | `docs/planning/PHASE9_PLAN.md` §3.3 | `query/{client,hooks}.test.ts` | `hooks.test.tsx` のみ (D15 参照) |
-| DOC-6 | `docs/complete/PHASE9_PROFILER.md` | Scenario A/B/C は theme/toast/zip | 計画書 §8.3 のシナリオ (フィルタ/プロファイル切替/Mod 追加) との齟齬を明示 (D12/D13 参照) |
+| DOC-1 | `docs/planning/complete/PHASE9_COMPLETE.md` | Coverage 91.34% と記載 | 91.5% に更新 (D17 参照) |
+| DOC-2 | `docs/planning/complete/PHASE9_PLAN.md` §5.5 / §10.1 | 50 行 / 60 行の齟齬 | どちらかに統一 (D16 参照) |
+| DOC-3 | `docs/planning/complete/PHASE9_PLAN.md` §6.2 (depCheck) | `markChecked: () => void` のみ | `markChecked` は lastCheckAt + isChecking=false と明記 (D7 参照) |
+| DOC-4 | `docs/planning/complete/PHASE9_PLAN.md` §3.2 | 6 store のみ列挙 | appActions.ts を追加 (D14 参照) |
+| DOC-5 | `docs/planning/complete/PHASE9_PLAN.md` §3.3 | `query/{client,hooks}.test.ts` | `hooks.test.tsx` のみ (D15 参照) |
+| DOC-6 | `docs/planning/complete/PHASE9_PROFILER.md` | Scenario A/B/C は theme/toast/zip | 計画書 §8.3 のシナリオ (フィルタ/プロファイル切替/Mod 追加) との齟齬を明示 (D12/D13 参照) |
 | DOC-7 | `hooks/useDependencyCheck.ts` L61 | 「前回の hasDepWarning を保持して無音失敗」 | 「前回値は保持されず false になる (仕様バグ、B22 参照)」に修正 |
 
 ---

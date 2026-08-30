@@ -1,11 +1,17 @@
 // /discover/<複数>/<slug> 直接アクセス時のプレビューモーダル（単体描画）。
 // soft nav 時は @modal/(.)[slug] が Intercept するのでこちらは直接 URL/共有/リロード時のみ。
 
-import { ModDetailModalShell } from '@/components/ModDetailModalShell';
-import { fetchProjectDetailData } from '@/lib/server/project-detail';
+import { ModDetailModalShell } from '@/features/project';
+import { fetchProjectDetailData } from '@/features/project/api/projectDetail';
+import { buildDiscoverModalMetadata } from '@/features/project/utils/discoverModalMetadata';
 
 interface Params {
   params: Promise<{ type: string; slug: string }>;
+}
+
+export async function generateMetadata({ params }: Params) {
+  const { type, slug } = await params;
+  return buildDiscoverModalMetadata(type, slug);
 }
 
 export default async function DiscoverModalDirectPage({ params }: Params) {

@@ -41,9 +41,10 @@ export default defineConfig({
       include: [
         'app/**/*.{ts,tsx}',
         'components/**/*.{ts,tsx}',
+        'features/**/*.{ts,tsx}',
         'hooks/**/*.{ts,tsx}',
         'lib/**/*.{ts,tsx}',
-        'types.ts'
+        'types/**/*.ts'
       ],
       exclude: [
         '**/*.test.{ts,tsx}',
@@ -65,40 +66,37 @@ export default defineConfig({
         'app/**/page.tsx',            // Server Components: RSC 統合は E2E で
         'app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
         'app/**/layout.tsx',          // nested layout も同様 (RSC wrapper = E2E 担保。Phase 10.5-A)
-        'types.ts',                   // 純粋な型定義 (JS 実体なし)
+        'types/**',                    // 純粋な型定義 (JS 実体なし)
 
         // ---- Large orchestrator Client Components (E2E で担保) ----
         // これらは msw + jsdom + provider ツリー全部揃えないと render できず、
         // 単体テストの ROI が低い。実挙動は Playwright で smoke / mod-detail /
         // mods-page / offline / theme-persistence spec で担保している。
-        'components/AppShell.tsx',
-        'components/HomeInteractive.tsx',
-        'components/ModsPageClient.tsx',
-        'components/ModDetailModalShell.tsx',
-        // Phase 10-P1: /mods/[slug] フルページ用の刷新デザインコンポーネント。
-        // ModDetailModalShell と同じく Zustand + fa-icon + next/image を
-        // 大量に使うため単体テスト ROI 低、E2E (mod-detail-modal / smoke) で担保。
-        'components/ModDetailPageView.tsx',
-        'components/SettingsPageClient.tsx',
+        'components/layout/AppShell.tsx',
+        'features/catalog/components/HomeInteractive.tsx',
+        'features/profiles/components/ModsPageClient.tsx',
+        'features/project/components/ModDetailModalShell.tsx',
+        'features/project/components/ModDetailPageView.tsx',
+        'features/settings/components/SettingsPageClient.tsx',
 
         // ---- Presentational-only Client Components (単体テスト ROI 低) ----
         // BottomNav は現状 aria-current ロジックのみ、EditProfile は NewProfile と同型
         // DependencyCheckModal は結果表示のみ、ZipProgressModal は progress bar 表示のみ
         // ToastContainer は Zustand subscribe で表示するだけ (Zustand store 側でテスト済)
         // MarkdownRenderer は react-markdown をラップして h1→h2 降格するだけ
-        'components/BottomNav.tsx',
-        'components/EditProfileModal.tsx',
-        'components/DependencyCheckModal.tsx',
-        'components/ZipProgressModal.tsx',
-        'components/ToastContainer.tsx',
-        'components/MarkdownRenderer.tsx',
+        'components/layout/BottomNav.tsx',
+        'features/profiles/components/EditProfileModal.tsx',
+        'features/dep-check/components/DependencyCheckModal.tsx',
+        'features/zip/components/ZipProgressModal.tsx',
+        'components/feedback/ToastContainer.tsx',
+        'components/ui/MarkdownRenderer.tsx',
 
         // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
         // Providers は PersistQueryClientProvider を返すだけ、
         // WebVitalsReporter は web-vitals ライブラリを attach するだけ。
         // (AppContext.tsx は Phase 10-B で完全削除済みのため exclude からも除去)
-        'components/Providers.tsx',
-        'components/WebVitalsReporter.tsx',
+        'components/layout/Providers.tsx',
+        'components/layout/WebVitalsReporter.tsx',
 
         // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----
         'hooks/useConfirm.ts',
@@ -129,7 +127,43 @@ export default defineConfig({
           functions: 95,
           lines: 95
         },
-        'lib/store/**/*.ts': {
+        'features/profiles/store/store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/zip/store/zipExport.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/zip/store/zipImport.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/dep-check/store/store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/feedback/*Store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/layout/uiState.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/layout/appActions.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
@@ -176,7 +210,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.')
+      '@': path.resolve(import.meta.dirname, '.')
     }
   }
 });

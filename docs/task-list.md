@@ -273,3 +273,16 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | VER-2 | CSP Enforce の実環境表示確認 | 実環境検証待ち | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | ユーザー実施 |
 | DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針。旧 P13-B (CF) 依存は解除 |
 | EXP-1 | Vite 版資産の .archive 保管維持 | 完了 (継続) | 100% | - | 全タスクで .archive/vite 無変更 | 各コミットの検証チェックリスト |
+
+## コードベース整理 (2026-08-31 計画)
+
+> 計画書: `docs/planning/CODEBASE_ORG_PLAN.md`（_TEMPLATE.md 準拠）。
+> ユーザー方針: 命名規則は camelCase 統一（React コンポーネント PascalCase / Next.js
+> ルーティングファイルは対象外）・「意味のないドット」（`dexie.v4.test.ts` 等）排除・
+> アプリコードは src/ へ（__tests__ / e2e / scripts / public はルート残置）。
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---:|---|---|---|
+| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 未着手 | 0% | - | リネーム対象 24 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | 計画 §10.2 |
+| ORG-2 | src/ 移行 (app/components/features/hooks/lib/types/styles → src/) | 未着手 | 0% | ORG-1 | src/app 有効化・`@/*` が `./src/*` を指す・coverage/@source パス整合・ルートが「設定 + docs + public」に整理 | 計画 §10.3 |
+| ORG-3 | ドキュメント更新 (AGENT.md / skills / README / task-list) | 未着手 | 0% | ORG-2 | パス表記が src/ と新ファイル名に一致・4 検証 pass | 計画 §8 |

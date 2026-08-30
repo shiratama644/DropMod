@@ -9,14 +9,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useZipSync } from '@/features/sync/hooks/useZipSync';
-import { prepareZipSync, applyZipSync } from '@/features/sync/zipSync';
-import type { PrepareZipSyncOutcome } from '@/features/sync/zipSync';
+import { prepareZipSync, applyZipSync } from '@/features/sync/services/zipSync';
+import type { PrepareZipSyncOutcome } from '@/features/sync/services/zipSync';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 import type { Profile } from '@/types';
-import type { ExecuteSyncResult } from '@/features/sync/executor';
+import type { ExecuteSyncResult } from '@/features/sync/services/executor';
 
-vi.mock('@/features/sync/zipSync', () => ({
+vi.mock('@/features/sync/services/zipSync', () => ({
   prepareZipSync: vi.fn(),
   applyZipSync: vi.fn()
 }));

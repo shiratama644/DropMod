@@ -39,12 +39,12 @@ import {
   type SyncConflictEntry,
   type SyncPlan,
   type SyncPlanEntry
-} from '../diff';
+} from '../utils/diff';
 import type { ModpackConflictChoice } from '@/features/modpack';
 import type { ApplyProgress } from '../hooks/useSync';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
-import { formatBytes } from '../format';
+import { formatBytes } from '../utils/format';
 import type { ManagedFileSource } from '@/types';
 
 /** 削除元の内訳バッジ (§10.3) */

@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { applySync, type ReadySyncOutcome } from '@/features/sync/applySync';
-import { undoSync } from '@/features/sync/undo';
-import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
+import { applySync, type ReadySyncOutcome } from '@/features/sync/services/applySync';
+import { undoSync } from '@/features/sync/services/undo';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/utils/diff';
 import { _clearAllForTesting } from '@/lib/db/dexie';
 import {
   createSyncTransaction,

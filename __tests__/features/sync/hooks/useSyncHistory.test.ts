@@ -9,17 +9,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSyncHistory } from '@/features/sync/hooks/useSyncHistory';
 import { db, _clearAllForTesting } from '@/lib/db/dexie';
-import { openLinkedFolder } from '@/features/sync/link';
-import { undoSync } from '@/features/sync/undo';
-import { UNDO_KEEP_COUNT } from '@/features/sync/backup';
+import { openLinkedFolder } from '@/features/sync/services/link';
+import { undoSync } from '@/features/sync/services/undo';
+import { UNDO_KEEP_COUNT } from '@/features/sync/services/backup';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 import type { SyncTransactionRow } from '@/features/sync';
-import type { EnvironmentSink } from '@/features/sync/sink';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
 import type { LinkedSource, Profile } from '@/types';
 
-vi.mock('@/features/sync/link', () => ({ openLinkedFolder: vi.fn() }));
-vi.mock('@/features/sync/undo', () => ({ undoSync: vi.fn() }));
+vi.mock('@/features/sync/services/link', () => ({ openLinkedFolder: vi.fn() }));
+vi.mock('@/features/sync/services/undo', () => ({ undoSync: vi.fn() }));
 
 const mockOpen = vi.mocked(openLinkedFolder);
 const mockUndo = vi.mocked(undoSync);

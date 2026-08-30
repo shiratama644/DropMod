@@ -30,12 +30,12 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { applySync } from '../applySync';
-import { prepareSync, type PrepareSyncOutcome } from '../syncPrep';
+import { applySync } from '../services/applySync';
+import { prepareSync, type PrepareSyncOutcome } from '../services/syncPrep';
 import type { ScanProgress } from '@/lib/env/scan';
-import type { ExecuteSyncResult } from '../executor';
+import type { ExecuteSyncResult } from '../services/executor';
 import { applyLockedVersionsToProfile, type ModpackConflictChoice } from '@/features/modpack';
-import { computeSyncPlan } from '../diff';
+import { computeSyncPlan } from '../utils/diff';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 

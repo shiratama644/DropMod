@@ -8,18 +8,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useInterruptedSync } from '@/features/sync/hooks/useInterruptedSync';
-import { openLinkedFolder } from '@/features/sync/link';
-import { recoverInterruptedSync } from '@/features/sync/recovery';
+import { openLinkedFolder } from '@/features/sync/services/link';
+import { recoverInterruptedSync } from '@/features/sync/services/recovery';
 import { _clearAllForTesting } from '@/lib/db/dexie';
 import { createSyncTransaction, markOperationDone } from '@/features/sync';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
-import type { EnvironmentSink } from '@/features/sync/sink';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
 import type { LinkedSource, Profile } from '@/types';
 
-vi.mock('@/features/sync/link', () => ({ openLinkedFolder: vi.fn() }));
-vi.mock('@/features/sync/recovery', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/features/sync/recovery')>();
+vi.mock('@/features/sync/services/link', () => ({ openLinkedFolder: vi.fn() }));
+vi.mock('@/features/sync/services/recovery', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/sync/services/recovery')>();
   return { ...actual, recoverInterruptedSync: vi.fn() };
 });
 

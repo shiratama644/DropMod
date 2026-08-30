@@ -9,7 +9,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SyncHistorySection } from '@/features/sync/components/SyncHistorySection';
 import { useSyncHistory } from '@/features/sync/hooks/useSyncHistory';
 import { useProfilesStore } from '@/features/profiles';
-import { UNDO_KEEP_COUNT } from '@/features/sync/backup';
+import { UNDO_KEEP_COUNT } from '@/features/sync/services/backup';
 import type { SyncHistoryItem } from '@/features/sync/hooks/useSyncHistory';
 
 vi.mock('@/features/sync/hooks/useSyncHistory', () => ({ useSyncHistory: vi.fn() }));

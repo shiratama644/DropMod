@@ -12,9 +12,9 @@ import {
   linkPickedDirectory,
   openLinkedFolder,
   releaseFolderLink
-} from '@/features/sync/link';
+} from '@/features/sync/services/link';
 import type { PickedDirectory } from '@/features/env-import/services/picker';
-import { FileSystemSink } from '@/features/sync/sink/filesystem';
+import { FileSystemSink } from '@/features/sync/services/sink/filesystem';
 import { FileSystemSource } from '@/lib/env/source';
 import type { DetectedEnvironment } from '@/features/env-import/services/detector';
 import { _clearAllForTesting } from '@/lib/db/dexie';

@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   findInterruptedSyncs,
   recoverInterruptedSync
-} from '@/features/sync/recovery';
+} from '@/features/sync/services/recovery';
 import { _clearAllForTesting, db } from '@/lib/db/dexie';
 import {
   createSyncTransaction,

@@ -10,7 +10,7 @@ import {
   estimateFreeBytes,
   prepareSync,
   WRITE_PERMISSION_DENIED_MESSAGE
-} from '@/features/sync/syncPrep';
+} from '@/features/sync/services/syncPrep';
 import type { ScanProgress, ScanResult } from '@/lib/env/scan';
 import type { EnvironmentSource } from '@/lib/env/source';
 import type { ManagedFileRecord, Profile } from '@/types';

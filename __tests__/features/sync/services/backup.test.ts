@@ -15,7 +15,7 @@ import {
   selectEvictableTransactions,
   type BackupTransactionSummary,
   InMemoryBackupStore
-} from '@/features/sync/backup';
+} from '@/features/sync/services/backup';
 import {
   asFakeDirectory,
   createFakeFileSystem,

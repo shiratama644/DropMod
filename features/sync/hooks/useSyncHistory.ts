@@ -17,10 +17,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { listSyncTransactions, type SyncTransactionRow } from '../db';
-import { openLinkedFolder } from '../link';
-import { undoSync } from '../undo';
-import { UNDO_KEEP_COUNT } from '../backup';
+import { listSyncTransactions, type SyncTransactionRow } from '../services/db';
+import { openLinkedFolder } from '../services/link';
+import { undoSync } from '../services/undo';
+import { UNDO_KEEP_COUNT } from '../services/backup';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 

@@ -20,8 +20,8 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { prepareZipSync, applyZipSync } from '../zipSync';
-import type { PrepareZipSyncOutcome } from '../zipSync';
+import { prepareZipSync, applyZipSync } from '../services/zipSync';
+import type { PrepareZipSyncOutcome } from '../services/zipSync';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 

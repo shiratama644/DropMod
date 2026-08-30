@@ -13,8 +13,8 @@
 import type {
   BackupTransactionSummary,
   BackupStore
-} from '@/features/sync/backup';
-import type { EnvironmentSink } from '@/features/sync/sink';
+} from '@/features/sync/services/backup';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
 
 /** バイト列を比較用に文字列化する (Uint8Array は内容で比較できないため) */
 function key(data: Uint8Array): string {

@@ -23,7 +23,7 @@ import { useState } from 'react';
 import { SyncPreviewModal } from './SyncPreviewModal';
 import { useSync } from '../hooks/useSync';
 import type { ModpackConflictChoice } from '@/features/modpack';
-import type { PrepareSyncOutcome } from '../syncPrep';
+import type { PrepareSyncOutcome } from '../services/syncPrep';
 
 export type SyncButtonVariant = 'primary' | 'primaryLg' | 'ghost' | 'icon';
 

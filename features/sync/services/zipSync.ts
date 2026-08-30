@@ -33,10 +33,10 @@
  */
 
 import JSZip from 'jszip';
-import { computeSyncPlan, type SyncPlan } from './diff';
+import { computeSyncPlan, type SyncPlan } from '../utils/diff';
 import { scanLocalEnvironment, type ScanProgress } from '@/lib/env/scan';
 import { analyzeEnvironmentSource } from '@/features/env-import';
-import { checkEnvironmentMatch, type EnvironmentCheckResult } from './environmentCheck';
+import { checkEnvironmentMatch, type EnvironmentCheckResult } from '../utils/environmentCheck';
 import { ZipSource } from '@/lib/env/zipSource';
 import { ZipSink } from './sink/zip';
 import { InMemoryBackupStore } from './backup';

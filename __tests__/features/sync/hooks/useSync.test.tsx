@@ -8,17 +8,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSync } from '@/features/sync/hooks/useSync';
-import { prepareSync } from '@/features/sync/syncPrep';
-import { applySync } from '@/features/sync/applySync';
+import { prepareSync } from '@/features/sync/services/syncPrep';
+import { applySync } from '@/features/sync/services/applySync';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
-import type { SyncPlan } from '@/features/sync/diff';
-import type { EnvironmentSink } from '@/features/sync/sink';
-import type { ExecuteSyncResult } from '@/features/sync/executor';
+import type { SyncPlan } from '@/features/sync/utils/diff';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
+import type { ExecuteSyncResult } from '@/features/sync/services/executor';
 import type { Profile } from '@/types';
 
-vi.mock('@/features/sync/syncPrep', () => ({ prepareSync: vi.fn() }));
-vi.mock('@/features/sync/applySync', () => ({ applySync: vi.fn() }));
+vi.mock('@/features/sync/services/syncPrep', () => ({ prepareSync: vi.fn() }));
+vi.mock('@/features/sync/services/applySync', () => ({ applySync: vi.fn() }));
 
 const mockPrepare = vi.mocked(prepareSync);
 const mockApply = vi.mocked(applySync);

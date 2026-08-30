@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { FileSystemSink } from '@/features/sync/sink/filesystem';
+import { FileSystemSink } from '@/features/sync/services/sink/filesystem';
 import {
   asFakeDirectory,
   createFakeFileSystem,

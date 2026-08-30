@@ -15,9 +15,9 @@
 
 import { getManagedFiles, getSyncTransaction, setSyncTransactionLedgerBefore, syncManagedFiles } from './db';
 import type { Profile } from '@/types';
-import { excludeDeletions } from './diff';
+import { excludeDeletions } from '../utils/diff';
 import { executeSync, type ExecuteSyncResult } from './executor';
-import { applyJournalToLedger } from './managed';
+import { applyJournalToLedger } from '../utils/managed';
 import { createContentResolver } from '@/lib/env/resolve';
 import { OpfsBackupStore, type BackupStore } from './backup';
 import { estimateFreeBytes, type ReadySyncOutcome } from './syncPrep';

@@ -17,8 +17,8 @@
 
 import { getManagedFiles } from './db';
 import type { ManagedFileRecord, Profile } from '@/types';
-import { computeSyncPlan, type LocalFileEntry, type SyncPlan } from './diff';
-import { checkEnvironmentMatch, type EnvironmentCheckResult } from './environmentCheck';
+import { computeSyncPlan, type LocalFileEntry, type SyncPlan } from '../utils/diff';
+import { checkEnvironmentMatch, type EnvironmentCheckResult } from '../utils/environmentCheck';
 import { openLinkedFolder } from './link';
 import { scanLocalEnvironment, type ScanProgress } from '@/lib/env/scan';
 import type { EnvironmentSink } from './sink';

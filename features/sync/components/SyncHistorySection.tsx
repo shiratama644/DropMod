@@ -18,8 +18,8 @@
 import type React from 'react';
 import { useSyncHistory } from '../hooks/useSyncHistory';
 import { useProfilesStore } from '@/features/profiles';
-import { UNDO_KEEP_COUNT } from '../backup';
-import type { SyncTransactionRow } from '../db';
+import { UNDO_KEEP_COUNT } from '../services/backup';
+import type { SyncTransactionRow } from '../services/db';
 
 const STATUS_META: Record<
   SyncTransactionRow['status'],

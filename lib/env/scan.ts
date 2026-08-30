@@ -14,7 +14,7 @@
 
 import type { ContentCategory, LinkedSource } from '@/types';
 import { CATEGORY_EXTENSIONS, hasExtension } from '@/features/env-import';
-import type { LocalFileEntry } from '@/features/sync/diff';
+import type { LocalFileEntry } from '@/features/sync/utils/diff';
 import { computeHashes } from './hashWorker';
 import type { EnvironmentSource } from './source';
 

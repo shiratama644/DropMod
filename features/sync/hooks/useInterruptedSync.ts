@@ -18,14 +18,14 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { openLinkedFolder } from '../link';
+import { openLinkedFolder } from '../services/link';
 import {
   findInterruptedSyncs,
   recoverInterruptedSync,
   type InterruptedSyncChoice,
   type InterruptedSyncInfo
-} from '../recovery';
-import type { EnvironmentSink } from '../sink';
+} from '../services/recovery';
+import type { EnvironmentSink } from '../services/sink';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 

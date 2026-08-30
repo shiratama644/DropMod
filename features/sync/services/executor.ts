@@ -21,7 +21,7 @@ import {
   UNDO_KEEP_COUNT,
   type BackupStore
 } from './backup';
-import type { SyncPlan, SyncPlanEntry } from './diff';
+import type { SyncPlan, SyncPlanEntry } from '../utils/diff';
 import type { EnvironmentSink } from './sink';
 
 /** 操作をスキップした理由 (UI でそのまま表示する) */

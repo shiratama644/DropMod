@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SyncPreviewModal } from '@/features/sync/components/SyncPreviewModal';
-import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/utils/diff';
 import type { ManagedFileSource } from '@/types';
 
 function makePlan(overrides: Partial<SyncPlan> = {}): SyncPlan {

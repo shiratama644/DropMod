@@ -9,20 +9,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
 import { db } from '@/lib/db/dexie';
-import { syncManagedFiles } from '@/features/sync/db';
-import { createFolderLink, releaseFolderLink } from '@/features/sync/link';
+import { syncManagedFiles } from '@/features/sync/services/db';
+import { createFolderLink, releaseFolderLink } from '@/features/sync/services/link';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 import type { LinkedSource, Profile, ProjectItem } from '@/types';
 
-vi.mock('@/features/sync/link', () => ({
+vi.mock('@/features/sync/services/link', () => ({
   createFolderLink: vi.fn(),
   releaseFolderLink: vi.fn()
 }));
 
 // P12-D1B: seed 失敗ケースを再現するため台帳ヘルパをモックでラップする
-vi.mock('@/features/sync/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/features/sync/db')>();
+vi.mock('@/features/sync/services/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/sync/services/db')>();
   return {
     ...actual,
     getManagedFiles: vi.fn(actual.getManagedFiles),

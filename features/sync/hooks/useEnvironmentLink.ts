@@ -20,10 +20,10 @@
  */
 
 import { useCallback, useState } from 'react';
-import { getManagedFiles, syncManagedFiles } from '../db';
+import { getManagedFiles, syncManagedFiles } from '../services/db';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { createFolderLink, releaseFolderLink } from '../link';
-import { expandProfileToManaged, mergeManagedRecords } from '../managed';
+import { createFolderLink, releaseFolderLink } from '../services/link';
+import { expandProfileToManaged, mergeManagedRecords } from '../utils/managed';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 

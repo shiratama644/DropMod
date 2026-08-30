@@ -18,11 +18,11 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import { SyncButton } from './SyncButton';
 import { useAppAction } from '@/components/layout/appActions';
-import type { ReadySyncOutcome } from '../syncPrep';
+import type { ReadySyncOutcome } from '../services/syncPrep';
 import {
   checkEnvironmentMatch,
   ENVIRONMENT_FIELD_LABEL
-} from '../environmentCheck';
+} from '../utils/environmentCheck';
 import { useEnvironmentLink } from '../hooks/useEnvironmentLink';
 import { useZipSync } from '../hooks/useZipSync';
 import { useProfilesStore } from '@/features/profiles';

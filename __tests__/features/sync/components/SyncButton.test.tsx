@@ -9,8 +9,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SyncButton } from '@/features/sync/components/SyncButton';
 import { useSync } from '@/features/sync/hooks/useSync';
-import type { SyncPlan } from '@/features/sync/diff';
-import type { EnvironmentSink } from '@/features/sync/sink';
+import type { SyncPlan } from '@/features/sync/utils/diff';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
 
 vi.mock('@/features/sync/hooks/useSync', () => ({ useSync: vi.fn() }));
 const mockUseSync = vi.mocked(useSync);

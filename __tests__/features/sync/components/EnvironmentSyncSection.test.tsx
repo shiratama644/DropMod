@@ -15,8 +15,8 @@ import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
 import { useSync } from '@/features/sync/hooks/useSync';
 import { useZipSync } from '@/features/sync/hooks/useZipSync';
 import { useAppActionsStore } from '@/components/layout/appActions';
-import type { SyncPlan } from '@/features/sync/diff';
-import type { EnvironmentSink } from '@/features/sync/sink';
+import type { SyncPlan } from '@/features/sync/utils/diff';
+import type { EnvironmentSink } from '@/features/sync/services/sink';
 import type { LinkedSource, Profile } from '@/types';
 
 // link.ts は自前のテストを持つため、フックごと差し替えて表示分岐に絞る

@@ -9,18 +9,18 @@ export { useInterruptedSync, type UseInterruptedSyncResult } from './hooks/useIn
 export { useEnvironmentLink, type EnvironmentLinkState } from './hooks/useEnvironmentLink';
 export { useFolderLinked } from './hooks/useFolderLinked';
 export { useZipSync, type ZipSyncState, type UseZipSyncReturn } from './hooks/useZipSync';
-export { formatBytes } from './format';
+export { formatBytes } from './utils/format';
 export {
   buildManagedFileId,
   expandProfileToManaged,
   mergeManagedRecords
-} from './managed';
+} from './utils/managed';
 export {
   createFolderLink,
   linkPickedDirectory,
   releaseFolderLink,
   openLinkedFolder
-} from './link';
+} from './services/link';
 export {
   syncManagedFiles,
   getManagedFiles,
@@ -42,4 +42,4 @@ export {
   type SyncOperationPatch,
   type SyncTransactionRow,
   type SyncTransactionStatus
-} from './db';
+} from './services/db';

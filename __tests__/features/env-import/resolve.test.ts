@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createContentResolver, findProfileItem } from '@/lib/env/resolve';
-import type { SyncPlanEntry } from '@/features/sync/diff';
+import type { SyncPlanEntry } from '@/features/sync/utils/diff';
 import type { Profile, ProjectItem } from '@/types';
 
 const CONTENT = new TextEncoder().encode('jar-bytes');

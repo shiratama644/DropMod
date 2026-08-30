@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { InterruptedSyncDialog } from '@/features/sync/components/InterruptedSyncDialog';
 import { useInterruptedSync } from '@/features/sync/hooks/useInterruptedSync';
-import type { InterruptedSyncInfo } from '@/features/sync/recovery';
+import type { InterruptedSyncInfo } from '@/features/sync/services/recovery';
 
 vi.mock('@/features/sync/hooks/useInterruptedSync', () => ({ useInterruptedSync: vi.fn() }));
 const mockUse = vi.mocked(useInterruptedSync);

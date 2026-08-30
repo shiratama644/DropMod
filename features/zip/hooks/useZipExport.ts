@@ -7,7 +7,7 @@ import type { Profile, ProjectItem } from '@/types';
 // B5 修正: ZipProgressState 型は lib/store/zipExport.ts に一本化。
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。
-import { useZipExportStore, type ZipProgressState } from '../zipExport';
+import { useZipExportStore, type ZipProgressState } from '../store/zipExport';
 import { contentCategoryOf } from '@/features/profiles';
 
 // ==========================================

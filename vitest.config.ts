@@ -133,13 +133,13 @@ export default defineConfig({
           functions: 90,
           lines: 85
         },
-        'features/zip/zipExport.ts': {
+        'features/zip/store/zipExport.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'features/zip/zipImport.ts': {
+        'features/zip/store/zipImport.ts': {
           statements: 85,
           branches: 80,
           functions: 90,

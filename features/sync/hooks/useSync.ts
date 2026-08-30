@@ -34,7 +34,7 @@ import { applySync } from '@/lib/env/applySync';
 import { prepareSync, type PrepareSyncOutcome } from '@/lib/env/syncPrep';
 import type { ScanProgress } from '@/lib/env/scan';
 import type { ExecuteSyncResult } from '@/lib/env/executor';
-import { applyLockedVersionsToProfile, type ModpackConflictChoice } from '@/lib/env/modpackAdd';
+import { applyLockedVersionsToProfile, type ModpackConflictChoice } from '@/features/modpack/modpackAdd';
 import { computeSyncPlan } from '@/lib/env/diff';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';

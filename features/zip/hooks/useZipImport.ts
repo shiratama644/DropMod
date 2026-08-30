@@ -20,7 +20,7 @@ import { useZipImportStore } from '@/lib/store/zipImport';
 import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
 import { primaryCategoryId } from '@/lib/constants/categories';
 import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
-import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/lib/env/modpack';
+import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/features/modpack/modpack';
 import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
 import { analyzeImportHealth } from '@/lib/env/analysis';
 import { generateProfileName } from '@/lib/env/profileName';
@@ -30,7 +30,7 @@ import {
   modpackLocksFromItems,
   mrpackOverridesToManaged,
   parseMrpackOverrides
-} from '@/lib/env/mrpack';
+} from '@/features/modpack/mrpack';
 import { syncManagedFiles } from '@/lib/db/dexie';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {

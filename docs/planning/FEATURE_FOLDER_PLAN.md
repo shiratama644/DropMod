@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1A〜1K 実施済み。次は ARCH-1L（modpack）。1L〜1O 未着手** (2026-08-30)
+> **状態: ARCH-1A〜1L 実施済み。次は ARCH-1M（shim 削除）。1M〜1O 未着手** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -459,6 +459,7 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1I | `01935fe` | features/dep-check。store slice は据置 |
 | ARCH-1J | `5ac722e` | features/env-import（detector/analyzer/picker/profileName）。hash/source は lib/env 残置 |
 | ARCH-1K | (本コミット) | features/sync + formatBytes。ZipSink は sync/sink。scan/source は lib/env 残置 |
+| ARCH-1L | (本コミット) | features/modpack + providers。mrpack/modpackAdd/Update/Hub |
 
 ## 13. 完了チェック（ARCH-1O）
 

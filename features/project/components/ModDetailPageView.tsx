@@ -51,8 +51,8 @@ import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { useToastStore } from '@/lib/store/toast';
-import { useModpackAdd } from '@/hooks/useModpackAdd';
-import { ModpackImportModal } from '@/components/ModpackImportModal';
+import { useModpackAdd } from '@/features/modpack/hooks/useModpackAdd';
+import { ModpackImportModal } from '@/features/modpack/components/ModpackImportModal';
 import {
   discoverPathForType,
   discoverPathFromProjectType,

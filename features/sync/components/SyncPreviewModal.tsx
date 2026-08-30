@@ -40,7 +40,7 @@ import {
   type SyncPlan,
   type SyncPlanEntry
 } from '@/lib/env/diff';
-import type { ModpackConflictChoice } from '@/lib/env/modpackAdd';
+import type { ModpackConflictChoice } from '@/features/modpack/modpackAdd';
 import type { ApplyProgress } from '@/hooks/useSync';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';

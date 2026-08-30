@@ -22,8 +22,8 @@ import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
 
 // `checkModpackUpdates` だけ差し替える。**`updateIssueFromReport` は実物を使う**ので
 // importOriginal で透過させる (モックに含め忘れると描画時に undefined 呼び出しで落ちる)。
-vi.mock('@/lib/env/modpackUpdate', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/env/modpackUpdate')>();
+vi.mock('@/features/modpack/modpackUpdate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/modpack/modpackUpdate')>();
   return { ...actual, checkModpackUpdates: vi.fn() };
 });
 const mockCheck = vi.mocked(checkModpackUpdates);

@@ -11,7 +11,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/__tests__/mocks/server';
 import { useProfiles } from '@/features/profiles/hooks/useProfiles';
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '@/features/profiles';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '@/__tests__/test-utils/queryWrapper';
 import { db, getDirHandle, getManagedFiles } from '@/lib/db/dexie';

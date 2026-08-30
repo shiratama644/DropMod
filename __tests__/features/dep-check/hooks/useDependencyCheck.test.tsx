@@ -10,7 +10,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/__tests__/mocks/server';
 import { useDependencyCheck } from '@/features/dep-check/hooks/useDependencyCheck';
-import { useDepCheckStore } from '@/lib/store/depCheck';
+import { useDepCheckStore } from '@/features/dep-check';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '@/__tests__/test-utils/queryWrapper';
 import type { Profile } from '@/types';

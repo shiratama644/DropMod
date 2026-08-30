@@ -26,8 +26,8 @@ import {
   type InterruptedSyncInfo
 } from '../recovery';
 import type { EnvironmentSink } from '../sink';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export interface UseInterruptedSyncResult {
   /** 検出された中断 Journal。空なら何もしない */

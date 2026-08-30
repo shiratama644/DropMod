@@ -343,7 +343,7 @@ export function useAppAction<K extends keyof AppActions>(key: K): AppActions[K] 
 
 **修正方針 (実装しない)**:
 - hooks/useZipExport.ts の `ZipProgressState` と `INITIAL_STATE` を削除
-- 必要なら `import type { ZipProgressState } from '@/lib/store/zipExport'` に置き換え
+- 必要なら `import type { ZipProgressState } from '@/features/zip'` に置き換え
 
 ---
 

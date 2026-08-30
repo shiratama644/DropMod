@@ -9,12 +9,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EnvironmentSyncSection } from '@/features/sync/components/EnvironmentSyncSection';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useConfirmStore } from '@/lib/store/confirm';
+import { useProfilesStore } from '@/features/profiles';
+import { useConfirmStore } from '@/components/feedback/confirmStore';
 import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
 import { useSync } from '@/features/sync/hooks/useSync';
 import { useZipSync } from '@/features/sync/hooks/useZipSync';
-import { useAppActionsStore } from '@/lib/store/appActions';
+import { useAppActionsStore } from '@/components/layout/appActions';
 import type { SyncPlan } from '@/features/sync/diff';
 import type { EnvironmentSink } from '@/features/sync/sink';
 import type { LinkedSource, Profile } from '@/types';

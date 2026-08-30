@@ -22,8 +22,8 @@ import { queryKeys, type SearchQueryParams } from '@/lib/query/keys';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { ModCard } from './ModCard';
 import { CacheStatusBadge } from '@/components/feedback/CacheStatusBadge';
-import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
-import { useAppAction } from '@/lib/store/appActions';
+import { useCurrentProfileWithFallback } from '@/features/profiles';
+import { useAppAction } from '@/components/layout/appActions';
 
 // ============================================================================
 // HomeInteractive

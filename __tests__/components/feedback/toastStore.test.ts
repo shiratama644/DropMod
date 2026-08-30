@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useToastStore, readToastEnabledPref } from '@/lib/store/toast';
+import { useToastStore, readToastEnabledPref } from '@/components/feedback/toastStore';
 
 describe('useToastStore', () => {
   beforeEach(() => {

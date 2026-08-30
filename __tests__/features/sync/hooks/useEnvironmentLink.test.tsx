@@ -10,8 +10,8 @@ import { renderHook, act } from '@testing-library/react';
 import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
 import { db, syncManagedFiles } from '@/lib/db/dexie';
 import { createFolderLink, releaseFolderLink } from '@/features/sync/link';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 import type { LinkedSource, Profile, ProjectItem } from '@/types';
 
 vi.mock('@/features/sync/link', () => ({

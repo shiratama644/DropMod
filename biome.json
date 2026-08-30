@@ -53,7 +53,7 @@
           "options": {
             "patterns": [
               {
-                "group": ["@/lib/providers", "@/lib/providers/**", "@/lib/search/**", "@/lib/seo/**", "@/lib/loaders/**"],
+                "group": ["@/lib/providers", "@/lib/providers/**", "@/lib/search/**", "@/lib/seo/**", "@/lib/loaders/**", "@/lib/store", "@/lib/store/**"],
                 "message": "ARCH-1M: Feature の公開面 (@/features/<name>) から import する"
               },
               {

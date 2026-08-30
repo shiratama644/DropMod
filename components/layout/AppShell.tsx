@@ -14,7 +14,7 @@ import { useZipImport } from '@/features/zip';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
 import { nextDuplicateName } from '@/lib/utils/profileName';
 import { db } from '@/lib/db/dexie';
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '@/features/profiles';
 
 import { ToastContainer } from '../feedback/ToastContainer';
 import { ConfirmDialog } from '../feedback/ConfirmDialog';
@@ -25,7 +25,7 @@ import { DesktopSidebar } from './DesktopSidebar';
 import { NewProfileModal, EditProfileModal } from '@/features/profiles';
 import { DependencyCheckModal } from '@/features/dep-check';
 import { ZipProgressModal } from '@/features/zip';
-import { useAppActionsStore } from '@/lib/store/appActions';
+import { useAppActionsStore } from '@/components/layout/appActions';
 // QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
 // AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)
 import { OfflineBanner } from '../feedback/OfflineBanner';

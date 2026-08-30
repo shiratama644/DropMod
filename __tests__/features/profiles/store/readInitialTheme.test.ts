@@ -7,7 +7,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readInitialTheme } from '@/lib/store/profiles';
+import { readInitialTheme } from '@/features/profiles';
 
 function setCookie(raw: string): void {
   vi.stubGlobal('document', { cookie: raw });

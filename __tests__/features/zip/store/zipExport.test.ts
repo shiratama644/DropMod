@@ -4,7 +4,7 @@ import {
   useZipExportStore,
   selectZipProgress,
   selectZipIsOpen
-} from '@/lib/store/zipExport';
+} from '@/features/zip/zipExport';
 
 describe('useZipExportStore', () => {
   beforeEach(() => {

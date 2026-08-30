@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useDepCheckStore } from '@/lib/store/depCheck';
+import { useDepCheckStore } from '@/features/dep-check';
 
 describe('useDepCheckStore', () => {
   beforeEach(() => {

@@ -15,8 +15,8 @@ import { renderHook, act } from '@testing-library/react';
 import {
   useCurrentProfileWithFallback,
   _EMPTY_PROFILE_FOR_TEST
-} from '@/lib/store/useCurrentProfileWithFallback';
-import { useProfilesStore } from '@/lib/store/profiles';
+} from '@/features/profiles/hooks/useCurrentProfileWithFallback';
+import { useProfilesStore } from '@/features/profiles';
 import type { Profile } from '@/types';
 
 describe('useCurrentProfileWithFallback (B33 修正)', () => {

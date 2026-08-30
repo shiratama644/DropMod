@@ -127,7 +127,43 @@ export default defineConfig({
           functions: 95,
           lines: 95
         },
-        'lib/store/**/*.ts': {
+        'features/profiles/store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/zip/zipExport.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/zip/zipImport.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'features/dep-check/store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/feedback/*Store.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/layout/uiState.ts': {
+          statements: 85,
+          branches: 80,
+          functions: 90,
+          lines: 85
+        },
+        'components/layout/appActions.ts': {
           statements: 85,
           branches: 80,
           functions: 90,

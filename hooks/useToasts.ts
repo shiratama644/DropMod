@@ -7,7 +7,7 @@
  * 呼び出し側のコード変更なしで置換完了。
  */
 
-import { useToastStore } from '@/lib/store/toast';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export const useToasts = () => {
   const toasts = useToastStore((s) => s.toasts);

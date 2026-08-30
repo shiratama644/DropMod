@@ -17,7 +17,7 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { SyncButton } from './SyncButton';
-import { useAppAction } from '@/lib/store/appActions';
+import { useAppAction } from '@/components/layout/appActions';
 import type { ReadySyncOutcome } from '../syncPrep';
 import {
   checkEnvironmentMatch,
@@ -25,8 +25,8 @@ import {
 } from '../environmentCheck';
 import { useEnvironmentLink } from '../hooks/useEnvironmentLink';
 import { useZipSync } from '../hooks/useZipSync';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useConfirmStore } from '@/lib/store/confirm';
+import { useProfilesStore } from '@/features/profiles';
+import { useConfirmStore } from '@/components/feedback/confirmStore';
 
 /** `linkedAt` をローカル時刻の文字列にする */
 function formatLinkedAt(ms: number): string {

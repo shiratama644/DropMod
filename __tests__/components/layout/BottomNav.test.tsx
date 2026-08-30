@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { useUiState } from '@/lib/store/uiState';
+import { useUiState } from '@/components/layout/uiState';
 import type { TabName, ThemeMode } from '@/types';
 
 function baseProps() {

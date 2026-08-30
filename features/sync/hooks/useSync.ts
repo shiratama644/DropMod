@@ -36,8 +36,8 @@ import type { ScanProgress } from '@/lib/env/scan';
 import type { ExecuteSyncResult } from '../executor';
 import { applyLockedVersionsToProfile, type ModpackConflictChoice } from '@/features/modpack';
 import { computeSyncPlan } from '../diff';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export type SyncPhase = 'idle' | 'preparing' | 'ready' | 'running' | 'finished';
 

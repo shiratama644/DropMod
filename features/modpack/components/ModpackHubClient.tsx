@@ -30,9 +30,9 @@ import {
   updateIssueFromReport,
   type ModpackUpdateReport
 } from '../modpackUpdate';
-import { useConfirmStore } from '@/lib/store/confirm';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useConfirmStore } from '@/components/feedback/confirmStore';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 /** `importedAt` をローカル時刻の文字列にする */
 function formatImportedAt(ms: number): string {

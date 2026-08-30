@@ -13,7 +13,7 @@ import JSZip from 'jszip';
 import {
   useModpackAdd
 } from '@/features/modpack/hooks/useModpackAdd';
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '@/features/profiles';
 import { db } from '@/lib/db/dexie';
 import type { ModrinthProject, ModrinthVersion, MrpackIndex } from '@/types';
 
@@ -264,7 +264,7 @@ describe('useModpackAdd', () => {
   });
 });
 
-import { useToastStore } from '@/lib/store/toast';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 /** 直近の toast に info が含まれるか (導入済みメッセージ) */
 function useToastStoreStateHasInfo(): boolean {

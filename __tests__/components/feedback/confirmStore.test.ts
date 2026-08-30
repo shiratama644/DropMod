@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useConfirmStore } from '@/lib/store/confirm';
+import { useConfirmStore } from '@/components/feedback/confirmStore';
 
 describe('useConfirmStore', () => {
   beforeEach(() => {

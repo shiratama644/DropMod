@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useUiState } from '@/lib/store/uiState';
+import { useUiState } from '@/components/layout/uiState';
 
 describe('lib/store/uiState — モーダルカウント (BottomNav 非表示用)', () => {
   beforeEach(() => {

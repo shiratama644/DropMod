@@ -16,7 +16,7 @@ import {
   fetchModrinthVersionFilesBatch
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
-import { useZipImportStore } from '@/lib/store/zipImport';
+import { useZipImportStore } from '../zipImport';
 import { contentCategoryFromProject } from '@/features/profiles';
 import { primaryCategoryId } from '@/features/catalog';
 import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';

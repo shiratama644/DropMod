@@ -12,7 +12,7 @@ import {
   useAppAction,
   useAppActionValue,
   type AppActions
-} from '@/lib/store/appActions';
+} from '@/components/layout/appActions';
 
 function makeActions(overrides: Partial<AppActions> = {}): AppActions {
   return {

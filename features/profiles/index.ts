@@ -3,6 +3,13 @@ export { EditProfileModal } from './components/EditProfileModal';
 export { NewProfileModal } from './components/NewProfileModal';
 export { useProfiles } from './hooks/useProfiles';
 export { useLoaderVersionOptions } from './hooks/useLoaderVersionOptions';
+export { useCurrentProfileWithFallback } from './hooks/useCurrentProfileWithFallback';
+export {
+  useProfilesStore,
+  selectCurrentProfile,
+  readInitialTheme,
+  type ProfilesState
+} from './store';
 export {
   contentCategoryOf,
   contentCategoryFromPath,

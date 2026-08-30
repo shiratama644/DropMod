@@ -22,8 +22,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { prepareZipSync, applyZipSync } from '../zipSync';
 import type { PrepareZipSyncOutcome } from '../zipSync';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export interface ZipSyncState {
   /** 実行中 (編成 + 適用の両方) */

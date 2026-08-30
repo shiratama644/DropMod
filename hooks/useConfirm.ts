@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { useConfirmStore } from '@/lib/store/confirm';
+import { useConfirmStore } from '@/components/feedback/confirmStore';
 import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 export function useConfirm() {

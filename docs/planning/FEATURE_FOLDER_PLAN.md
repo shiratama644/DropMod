@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1 完了。ARCH-2A 完了。次は ARCH-2B（store）** (2026-08-30)
+> **状態: ARCH-2A 完了。ARCH-2B 実施中（store slice）** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -463,7 +463,8 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1M | (本コミット) | 旧パス shim 削除。公開面は @/features/<name>。lib/env 残件は scan/source/hash 等 |
 | ARCH-1N | `ff44edd` | `__tests__/features/<name>/` ミラー。colocation なし |
 | ARCH-1O | `c28f51d` | 旧パス shim 削除。coverage / skills / チェックリスト |
-| ARCH-2A | (本コミット) | types.ts → types/{profile,modrinth,sync,modpack,ui} + index。`@/types` 維持 |
+| ARCH-2A | `ea923d5` | types.ts → types/{profile,modrinth,sync,modpack,ui} + index。`@/types` 維持 |
+| ARCH-2B | (本コミット) | store を Feature / layout / feedback へ。lib/store 削除 |
 
 ## 13. 完了チェック（ARCH-1O）
 

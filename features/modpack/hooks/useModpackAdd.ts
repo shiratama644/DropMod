@@ -41,8 +41,8 @@ import {
   type ModpackAddPlan,
   type ModpackConflictChoice
 } from '../modpackAdd';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 import type { ModrinthProject, MrpackIndex } from '@/types';
 
 export interface UseModpackAddResult {

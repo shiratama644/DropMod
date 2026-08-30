@@ -11,8 +11,8 @@ import { useInterruptedSync } from '@/features/sync/hooks/useInterruptedSync';
 import { openLinkedFolder } from '@/features/sync/link';
 import { recoverInterruptedSync } from '@/features/sync/recovery';
 import { _clearAllForTesting, createSyncTransaction, markOperationDone } from '@/lib/db/dexie';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 import type { EnvironmentSink } from '@/features/sync/sink';
 import type { LinkedSource, Profile } from '@/types';
 

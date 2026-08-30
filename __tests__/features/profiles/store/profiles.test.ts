@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useProfilesStore, selectCurrentProfile } from '@/lib/store/profiles';
+import { useProfilesStore, selectCurrentProfile } from '@/features/profiles';
 import type { Profile, ProjectItem } from '@/types';
 
 const P1: Profile = {

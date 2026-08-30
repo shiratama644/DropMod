@@ -16,7 +16,7 @@
  * Zustand v5 の `useSyncExternalStore` が参照変化を毎回検知して無限ループになる。
  */
 
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '@/features/profiles';
 
 export function useFolderLinked(): boolean {
   return useProfilesStore((s) => {

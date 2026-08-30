@@ -22,10 +22,10 @@ import type React from 'react';
 import { useState, useMemo, useCallback, createContext, useContext } from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
-import { useZipExportStore } from '@/lib/store/zipExport';
-import { useDepCheckStore } from '@/lib/store/depCheck';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
+import { useZipExportStore } from '@/features/zip';
+import { useDepCheckStore } from '@/features/dep-check';
 
 // ============================================================================
 // ヘルパー: render count 集計

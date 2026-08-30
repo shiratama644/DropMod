@@ -167,7 +167,7 @@ describe('Header', () => {
 // Phase 12-B / D-8: フォルダ紐付け済みプロファイルでは ZIP保存 → Sync に置き換える
 // ============================================================================
 
-import { useProfilesStore as useProfilesStoreForD8 } from '@/lib/store/profiles';
+import { useProfilesStore as useProfilesStoreForD8 } from '@/features/profiles';
 import type { LinkedSource as LinkedSourceD8 } from '@/types';
 
 const LINKED_D8: LinkedSourceD8 = {

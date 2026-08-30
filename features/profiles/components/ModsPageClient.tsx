@@ -12,8 +12,8 @@ import type { ContentCategory, DropdownOption, ProjectItem, ModrinthVersion } fr
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
-import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
-import { useAppAction } from '@/lib/store/appActions';
+import { useCurrentProfileWithFallback } from '../hooks/useCurrentProfileWithFallback';
+import { useAppAction } from '@/components/layout/appActions';
 import { contentCategoryOf } from '../contentCategory';
 import { categoryLabel } from '@/features/catalog';
 import { detailPathFromProject } from '@/lib/constants/search';

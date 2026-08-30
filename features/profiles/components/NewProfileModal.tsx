@@ -18,7 +18,7 @@ import { analyzeImportHealth, type AnalysisIssue } from '@/lib/env/analysis';
 import { generateProfileName } from '@/features/env-import';
 import { LOADER_DROPDOWN_OPTIONS } from '../loaders/loaderVersions';
 import { useLoaderVersionOptions } from '../hooks/useLoaderVersionOptions';
-import type { PendingImportData } from '@/lib/store/zipImport';
+import type { PendingImportData } from '@/features/zip';
 
 interface NewProfileModalProps {
   isOpen: boolean;

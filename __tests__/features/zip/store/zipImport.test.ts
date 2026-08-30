@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useZipImportStore, type PendingImportData } from '@/lib/store/zipImport';
+import { useZipImportStore, type PendingImportData } from '@/features/zip';
 import type { ProjectItem } from '@/types';
 
 const M1: ProjectItem = {

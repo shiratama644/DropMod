@@ -21,8 +21,8 @@ import { listSyncTransactions, type SyncTransactionRow } from '@/lib/db/dexie';
 import { openLinkedFolder } from '../link';
 import { undoSync } from '../undo';
 import { UNDO_KEEP_COUNT } from '../backup';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export interface SyncHistoryItem {
   id: string;

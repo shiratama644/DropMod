@@ -12,7 +12,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/__tests__/mocks/server';
 import { useZipExport } from '@/features/zip/hooks/useZipExport';
-import { useZipExportStore } from '@/lib/store/zipExport';
+import { useZipExportStore } from '@/features/zip';
 import type { Profile } from '@/types';
 
 // ------------------ Fixture helpers ------------------

@@ -11,8 +11,8 @@ import { renderHook, act } from '@testing-library/react';
 import { useZipSync } from '@/features/sync/hooks/useZipSync';
 import { prepareZipSync, applyZipSync } from '@/features/sync/zipSync';
 import type { PrepareZipSyncOutcome } from '@/features/sync/zipSync';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 import type { Profile } from '@/types';
 import type { ExecuteSyncResult } from '@/features/sync/executor';
 

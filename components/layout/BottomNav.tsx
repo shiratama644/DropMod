@@ -20,7 +20,7 @@ import type React from 'react';
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { TabName, ThemeMode } from '@/types';
-import { useUiState } from '@/lib/store/uiState';
+import { useUiState } from '@/components/layout/uiState';
 import { BrowseBottomSheet } from '@/features/catalog';
 import { MenuBottomSheet } from './MenuBottomSheet';
 

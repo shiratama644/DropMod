@@ -36,7 +36,7 @@ import {
   META_KEYS,
   LOCAL_STORAGE_KEYS
 } from '@/lib/db/migrate';
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '../store';
 import { queryKeys } from '@/lib/query/keys';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;

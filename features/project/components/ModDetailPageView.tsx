@@ -48,9 +48,9 @@ import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
-import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
-import { useAppAction } from '@/lib/store/appActions';
-import { useToastStore } from '@/lib/store/toast';
+import { useCurrentProfileWithFallback } from '@/features/profiles';
+import { useAppAction } from '@/components/layout/appActions';
+import { useToastStore } from '@/components/feedback/toastStore';
 import { useModpackAdd } from '@/features/modpack';
 import { ModpackImportModal } from '@/features/modpack';
 import {

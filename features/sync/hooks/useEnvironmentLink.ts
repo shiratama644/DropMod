@@ -24,8 +24,8 @@ import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
 import { createFolderLink, releaseFolderLink } from '../link';
 import { expandProfileToManaged, mergeManagedRecords } from '../managed';
-import { useProfilesStore } from '@/lib/store/profiles';
-import { useToastStore } from '@/lib/store/toast';
+import { useProfilesStore } from '@/features/profiles';
+import { useToastStore } from '@/components/feedback/toastStore';
 
 export interface EnvironmentLinkState {
   /** このブラウザがフォルダ選択 (File System Access API) に対応しているか */

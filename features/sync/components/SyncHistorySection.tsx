@@ -17,7 +17,7 @@
 
 import type React from 'react';
 import { useSyncHistory } from '../hooks/useSyncHistory';
-import { useProfilesStore } from '@/lib/store/profiles';
+import { useProfilesStore } from '@/features/profiles';
 import { UNDO_KEEP_COUNT } from '../backup';
 import type { SyncTransactionRow } from '@/lib/db/dexie';
 

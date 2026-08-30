@@ -11,7 +11,7 @@ import type { Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import JSZip from 'jszip';
 import { useZipImport } from '@/features/zip/hooks/useZipImport';
-import { useZipImportStore } from '@/lib/store/zipImport';
+import { useZipImportStore } from '@/features/zip';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { calculateSha1 } from '@/lib/utils/hash';
 import { http, HttpResponse } from 'msw';

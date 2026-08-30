@@ -231,18 +231,18 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査（types/platform は Feature にしない） | `FEATURE_FOLDER_PLAN.md` §10.13 |
+| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査を §10.5/§9 に反映。ARCH-1P 不採番 | `FEATURE_FOLDER_PLAN.md` / `d0c1d6a` + 本整合コミット |
 | ARCH-1A | 共通 UI を ui/layout/feedback へ | 未着手 | 0% | ARCH-1 Go | 旧パス re-export + 4 検証 | 計画 §10.4 |
 | ARCH-1B | landing | 未着手 | 0% | ARCH-1A | `features/landing` | 計画 §10.5 |
 | ARCH-1C | settings | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §10.5 |
-| ARCH-1D | seo | 未着手 | 0% | ARCH-1A | `features/seo`（opengraph は app 残置） | 計画 §10.5 |
-| ARCH-1E | catalog（検索・カード） | 未着手 | 0% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch | 計画 §10.5 |
-| ARCH-1F | project（詳細・モーダル） | 未着手 | 0% | ARCH-1E | Detail / ModalShell / Gallery | 計画 §10.5 |
-| ARCH-1G | profiles（CRUD・中身一覧） | 未着手 | 0% | ARCH-1A | ModsPageClient / useProfiles | 計画 §10.5 |
+| ARCH-1D | seo + sitemap-entries | 未着手 | 0% | ARCH-1A | `features/seo`（opengraph は app 残置） | 計画 §10.5 |
+| ARCH-1E | catalog + categories.ts | 未着手 | 0% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | 計画 §10.5 |
+| ARCH-1F | project + project-detail.ts | 未着手 | 0% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | 計画 §10.5 |
+| ARCH-1G | profiles + loaders + contentCategory | 未着手 | 0% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | 計画 §10.5 |
 | ARCH-1H | zip（プロファイル配布 ZIP） | 未着手 | 0% | ARCH-1G | useZipExport/Import。ZipSink は含まない | 計画 §10.5 |
 | ARCH-1I | dep-check | 未着手 | 0% | ARCH-1G | フック + モーダル | 計画 §10.5 |
-| ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker のみ先に移動 | 計画 §10.10 |
-| ARCH-1K | sync（Diff/Executor/Preview） | 未着手 | 0% | ARCH-1J | lib/env の書き込み系 + Sync UI | 計画 §10.5 |
+| ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | 計画 §10.10 |
+| ARCH-1K | sync + formatBytes | 未着手 | 0% | ARCH-1J | lib/env の書き込み系 + Sync UI + format.ts | 計画 §10.5 |
 | ARCH-1L | modpack | 未着手 | 0% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
 | ARCH-1M | 旧パス shim 削除 | 未着手 | 0% | ARCH-1B〜L | 深い import 0 | 計画 §10.10 |
 | ARCH-1N | テスト配置 | 未着手 | 0% | ARCH-1M | ミラー（既定） | 計画 §10.8 |

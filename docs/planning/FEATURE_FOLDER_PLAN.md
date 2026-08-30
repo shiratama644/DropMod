@@ -26,18 +26,23 @@
 ## 3. 変更範囲 / 4. 禁止 / 5. DoD（計画）
 
 変更対象: `components/` `hooks/` `lib/env/` `lib/search/` `lib/seo/` `lib/providers/`
-`__tests__/` の追従、`app/` の import、vitest coverage paths、本書と task-list。
+`lib/loaders/`、`lib/constants/categories.ts` `loaderVersions.ts`、
+`lib/server/project-detail.ts` `sitemap-entries.ts`、`lib/utils/format.ts`
+`contentCategory.ts`、`__tests__/` の追従、`app/` の import、vitest coverage
+paths、本書と task-list。
 
-残す（横断インフラ）: `app/` ルート、`lib/db/` `lib/modrinth/` `lib/query/`
-`lib/server/`（project-detail 含む）`lib/utils/` `lib/constants/` `lib/loaders/`
-`lib/state/`。`lib/store/` は **第 1 波では残す**（slice を Feature に移すと
-AppShell 配線が壊れる。第 2 波候補として §11）。
+残す（横断インフラ）: `app/` ルート（api / opengraph-image 含む）、`lib/db/`
+`lib/modrinth/` `lib/query/` `lib/store/`（第 1 波）`lib/state/`、
+`lib/utils/`（id/hash/image/download。format/contentCategory 以外）、
+`lib/constants/search.ts`、`lib/server/` の logger / rate-limit / profile /
+site-url（第 1 波はパス変更しない。リネームは ARCH-2C）。
 
 禁止: 全ファイル一括移動 / Feature 間の深い import / `export *` /
-カバレッジ閾値下げ / 4 Feature に無理に戻す / 第 5 の「misc」Feature。
+カバレッジ閾値下げ / 4 Feature に無理に戻す / 第 12 Feature / 第 5 の「misc」。
+`types.ts` 分割・store slice 移動は第 1 波禁止（ARCH-2）。
 
-計画 DoD: 本再構築が 11 Feature + 対応表 + 依存グラフ + フェーズを含むこと。
-コード移動は Go までしない。
+計画 DoD: 11 Feature + §10.5 対応表が §10.13.A の寄せを含む + 依存グラフ +
+フェーズ ID。コード移動は Go までしない。
 
 ## 6. テスト / 7. 停止 / 8. 完了時
 
@@ -53,22 +58,24 @@ ARCH-1（計画）は docs コミットのみ。
 
 | ID | テーマ | 依存 |
 |---|---|---|
-| ARCH-1 | 本計画（再構築） | — |
+| ARCH-1 | 本計画（再構築 + 再監査） | — |
 | ARCH-1A | 共通 `ui` / `layout` / `feedback` | Go |
 | ARCH-1B | `landing` | 1A |
 | ARCH-1C | `settings` | 1A |
-| ARCH-1D | `seo` | 1A |
-| ARCH-1E | `catalog`（検索・カード・Browse） | 1A |
-| ARCH-1F | `project`（詳細・モーダル・ギャラリー） | 1E |
-| ARCH-1G | `profiles`（CRUD・中身一覧） | 1A |
+| ARCH-1D | `seo` + `sitemap-entries` | 1A |
+| ARCH-1E | `catalog` + `categories.ts` | 1A |
+| ARCH-1F | `project` + `project-detail.ts` | 1E |
+| ARCH-1G | `profiles` + loaders + `contentCategory` | 1A |
 | ARCH-1H | `zip`（プロファイル ZIP 入出力） | 1G |
 | ARCH-1I | `dep-check` | 1G |
-| ARCH-1J | `env-import`（検出・解析・picker） | 1G |
-| ARCH-1K | `sync`（Diff / Executor / Preview） | 1J |
+| ARCH-1J | `env-import`（検出・解析・picker・profileName） | 1G |
+| ARCH-1K | `sync` + `formatBytes` | 1J |
 | ARCH-1L | `modpack` | 1J + 1E |
 | ARCH-1M | shim 削除 | 1B–1L |
 | ARCH-1N | テスト配置 | 1M |
 | ARCH-1O | coverage / skills / チェックリスト | 1N |
+
+**ARCH-1P は採番しない。** types 分割・`lib/platform` リネーム・store は ARCH-2（§10.13.F）。
 
 ---
 
@@ -125,7 +132,9 @@ components/
   ui/               layout/          feedback/
 hooks/              # 非ドメインのみ
 lib/
-  db/  modrinth/  query/  server/  store/  utils/  constants/  loaders/  state/
+  db/  modrinth/  query/  server/  store/  utils/  constants/  state/
+  # server = logger/rate-limit/profile/site-url のみ（ARCH-2C で platform へ）
+  # constants = search.ts のみ。loaders は profiles へ移して削除
 ```
 
 ### 10.4 共通（Feature ではない）
@@ -167,9 +176,10 @@ ZipProgressModal は **zip** Feature（共通 feedback にしない。Sync の Z
 |---|---|
 | `HomeInteractive.tsx` `ModCard.tsx` `BrowseBottomSheet.tsx` | `features/catalog/components/` |
 | `lib/search/loadDiscoverSearch.ts` | `features/catalog/search/` |
+| `lib/constants/categories.ts` | `features/catalog/constants/categories.ts` |
 | `lib/constants/search.ts` の **URL ヘルパ** | **第 1 波は lib/constants 据置**（app・SEO・catalog・project が共有） |
 
-公開: `HomeInteractive` `ModCard` `BrowseBottomSheet` `loadDiscoverSearch`。  
+公開: `HomeInteractive` `ModCard` `BrowseBottomSheet` `loadDiscoverSearch` `categories`。  
 `app/discover/[type]/page.tsx`。
 
 #### project（詳細フルページ + プレビューモーダル）
@@ -177,9 +187,11 @@ ZipProgressModal は **zip** Feature（共通 feedback にしない。Sync の Z
 | Before | After |
 |---|---|
 | `ModDetailPageView.tsx` `ModDetailModalShell.tsx` `ScreenshotGalleryModal.tsx` `ReservedCategoryPage.tsx` | `features/project/components/` |
+| `lib/server/project-detail.ts` | `features/project/server.ts` |
 
-`lib/server/project-detail.ts` は RSC / generateMetadata / OG が使うため **lib/server 据置**。
-公開: 上記 4 コンポーネント。`app/[projectType]/[slug]` と discover slug / 予約ページ。
+RSC / generateMetadata / OG は `@/features/project` から server 関数を取る。
+**index.ts に `'use client'` を置かない**（client コンポーネントは `components/` 側）。
+公開: 上記 4 コンポーネント + `loadProjectDetail` 等。`app/[projectType]/[slug]` と discover slug / 予約ページ。
 
 #### profiles
 
@@ -187,11 +199,15 @@ ZipProgressModal は **zip** Feature（共通 feedback にしない。Sync の Z
 |---|---|
 | `ModsPageClient.tsx` `EditProfileModal.tsx` `NewProfileModal.tsx` | `features/profiles/components/` |
 | `hooks/useProfiles.ts` `useLoaderVersionOptions.ts` | `features/profiles/hooks/` |
+| `lib/constants/loaderVersions.ts` `lib/loaders/*` | `features/profiles/loaders/` |
+| `lib/utils/contentCategory.ts` | `features/profiles/contentCategory.ts` |
 
 NewProfileModal は env-import の解析 UI を **env-import の index** から使う（ARCH-1J 後）。
 1G 時点では `lib/env` 直 import を暫定許可。
 
-公開: ページクライアント、作成/編集モーダル、`useProfiles`。`app/profile/page.tsx`。
+公開: ページクライアント、作成/編集モーダル、`useProfiles`、loader 定数、`contentCategory`。
+`app/profile/page.tsx`。`app/api/loaders` は薄いプロキシのまま app に残し、実装は profiles を呼ぶ。
+zip / modpack のカテゴリ判定は **profiles の index** 経由。
 
 #### env-import（P11 Read-only）
 
@@ -209,6 +225,7 @@ detector 内部・hash worker は private。Worker URL をこのフェーズで�
 | `diff.ts` `managed.ts` `executor.ts` `applySync.ts` `backup.ts` `recovery.ts` `undo.ts` `syncPrep.ts` `link.ts` `environmentCheck.ts` `sink.ts` `sink/**` `zipSync.ts` | `features/sync/` |
 | `EnvironmentSyncSection` `SyncButton` `SyncPreviewModal` `SyncHistorySection` `InterruptedSyncDialog` | `features/sync/components/` |
 | `useSync` `useSyncHistory` `useInterruptedSync` `useEnvironmentLink` `useFolderLinked` `useZipSync` | `features/sync/hooks/` |
+| `lib/utils/format.ts`（`formatBytes`） | `features/sync/format.ts` |
 
 公開: セクション/モーダル/フック。profiles は import しない（設定ページが sync を載せる）。
 
@@ -255,15 +272,18 @@ detector 内部・hash worker は private。Worker URL をこのフェーズで�
 | Before | After |
 |---|---|
 | `lib/seo/jsonld.ts` `og-copy.ts` | `features/seo/` |
+| `lib/server/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` |
 | `components/JsonLd.tsx` | `features/seo/JsonLd.tsx` |
 
 `app/**/opengraph-image.tsx` は App Router 制約で **app に残す**。コピー関数だけ Feature。
 公開: builders + `JsonLd`。
 
-### 10.6 動かさない lib
+### 10.6 動かさない lib（第 1 波）
 
-`db/`（Dexie は全 Feature の永続化）`modrinth/` `query/` `server/` `store/`（第 2 波）
-`utils/` `constants/` `loaders/` `state/sanitize.ts`。
+`db/`（Dexie）`modrinth/` `query/` `store/`（第 2 波）`state/sanitize.ts`。
+`utils/` の id/hash/image/download（format / contentCategory は移す）。
+`constants/search.ts`。`server/` の logger / rate-limit / profile / site-url。
+`loaders/` は 1G で空にして削除。
 
 ### 10.7 app の消費先
 
@@ -340,7 +360,7 @@ pnpm test:e2e
 
 `lib/constants/search.ts`（URL ヘルパ）は **引き続き lib 据置**。app / seo / catalog / project / sitemap が同じモジュールを必要とし、catalog に移すと seo が catalog に依存する。
 
-#### B. Feature にしない。別フォルダ（第 1.5 波 / ARCH-1P 候補）
+#### B. Feature にしない。別フォルダ（第 1 波ではやらない。ARCH-2）
 
 | 塊 | 提案 | 第 1 波でやらない理由 |
 |---|---|---|
@@ -425,13 +445,15 @@ Go は ARCH-1O のあと別判断。
 |---|---|---|
 | ARCH-1 初版 | `5a9e92c` | 4 Feature。不十分 |
 | ARCH-1 再構築 | `12821ca` | 11 Feature |
-| 再監査 | (本コミット) | 第 12 Feature なし。types/ と lib/platform と既存 11 への追加寄せ |
+| 再監査 | `d0c1d6a` | 第 12 Feature なし。types/ と lib/platform と既存 11 への追加寄せ |
 
 ## 13. 完了チェック（ARCH-1O）
 
 - [ ] `components/` 直下ゼロ（ui/layout/feedback のみ）
-- [ ] `lib/env/` `lib/search/` `lib/seo/` `lib/providers/` 削除（shim なし）
-- [ ] 11 Feature 各 `index.ts` が named export
+- [ ] `lib/env/` `lib/search/` `lib/seo/` `lib/providers/` `lib/loaders/` 削除（shim なし）
+- [ ] `lib/constants/` は `search.ts` のみ。`categories.ts` `loaderVersions.ts` は Feature へ
+- [ ] `project-detail.ts` `sitemap-entries.ts` `format.ts` `contentCategory.ts` が対応 Feature にある
+- [ ] 11 Feature 各 `index.ts` が named export（project の index に `'use client'` なし）
 - [ ] Feature 間の深い import 0
 - [ ] ZIP（配布）と ZipSink（sync）が別ディレクトリ
 - [ ] 4 検証 pass・件数減なし・coverage 閾値維持

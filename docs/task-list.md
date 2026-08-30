@@ -38,9 +38,9 @@
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
-| ARCH-1 | 計画済み（11 Feature に再構築） | コード移動は ARCH-1A Go 待ち |
+| ARCH-1 | 実施中（1A〜1G 完了） | 次は ARCH-1H zip。1H〜1O 未着手 |
 
-進行中の AI 実装タスクは **なし**。SEO コードはローカル完了。次の計画済み作業は `ARCH-1A`（Go 後）。
+進行中の AI 実装タスクは **ARCH-1H**（zip。1G 完了後の次）。SEO コードはローカル完了。
 
 ---
 
@@ -232,13 +232,13 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
 | ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査を §10.5/§9 に反映。ARCH-1P 不採番 | `FEATURE_FOLDER_PLAN.md` / `d0c1d6a` + 本整合コミット |
-| ARCH-1A | 共通 UI を ui/layout/feedback へ | 完了 | 100% | ARCH-1 Go | 旧パス re-export + 4 検証 | typecheck / biome / 1244 tests / build. 計画 §10.4 |
-| ARCH-1B | landing | 完了 | 100% | ARCH-1A | `features/landing` | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1C | settings | 完了 | 100% | ARCH-1A | `features/settings` | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1D | seo + sitemap-entries | 完了 | 100% | ARCH-1A | `features/seo`（opengraph は app 残置） | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1E | catalog + categories.ts | 完了 | 100% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1F | project + project-detail.ts | 完了 | 100% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1G | profiles + loaders + contentCategory | 完了 | 100% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1A | 共通 UI を ui/layout/feedback へ | 完了 | 100% | ARCH-1 Go | 旧パス re-export + 4 検証 | `8561047` / typecheck / biome / 1244 tests / build. 計画 §10.4 |
+| ARCH-1B | landing | 完了 | 100% | ARCH-1A | `features/landing` | `45ba247` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1C | settings | 完了 | 100% | ARCH-1A | `features/settings` | `14fddb0` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1D | seo + sitemap-entries | 完了 | 100% | ARCH-1A | `features/seo`（opengraph は app 残置） | `d5ba1b4` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1E | catalog + categories.ts | 完了 | 100% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | `5bb34c3` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1F | project + project-detail.ts | 完了 | 100% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | `49e93cd` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
+| ARCH-1G | profiles + loaders + contentCategory | 完了 | 100% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | `d85ec21` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1H | zip（プロファイル配布 ZIP） | 未着手 | 0% | ARCH-1G | useZipExport/Import。ZipSink は含まない | 計画 §10.5 |
 | ARCH-1I | dep-check | 未着手 | 0% | ARCH-1G | フック + モーダル | 計画 §10.5 |
 | ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | 計画 §10.10 |

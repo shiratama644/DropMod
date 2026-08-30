@@ -27,13 +27,13 @@
 | [project-overview.md](./project-overview.md) | 製品概要・技術スタック・フェーズ進捗（0–13）。最初に読む。 | 2026-08-27 |
 | [architecture-and-data-flow.md](./architecture-and-data-flow.md) | RootLayout→AppShell→Zustand→Dexie→TSQ→Modrinth の全体レイヤとデータフロー。 | 2026-08-24 |
 | [state-and-storage.md](./state-and-storage.md) | Zustand 7 store 設計・appActionsStore（Server→Client 制約）・ProjectItem データモデル・**Dexie v3（managedFiles / dirHandles）**・LocalStorage 移行・cookie。 | 2026-08-27 |
-| [modrinth-integration.md](./modrinth-integration.md) | server.ts/client.ts・キャッシュ TTL・レート制限 (429 backoff + breaker)・バッチ・slim version・プロキシ Route Handler。 | 2026-08-27 |
+| [modrinth-integration.md](./modrinth-integration.md) | server.ts/client.ts・キャッシュ TTL・レート制限 (429 backoff + breaker)・バッチ・slim version・プロキシ Route Handler。 | 2026-08-31 |
 | [image-strategy.md](./image-strategy.md) | ⭐ 画像の高速化・高画質化の方針（unoptimized / raw_url / ネイティブ img）。直近で確立した重要知見。 | 2026-08-24 |
-| [routing-and-pages.md](./routing-and-pages.md) | URL 設計（2026-08-24 再設計後：検索複数形/詳細単数形型別/モーダル/詳細の4責務）。SEO-2 noindex。 | 2026-08-30 |
+| [routing-and-pages.md](./routing-and-pages.md) | URL 設計（2026-08-24 再設計後：検索複数形/詳細単数形型別/モーダル/詳細の4責務）。SEO-2 noindex。 | 2026-08-31 |
 | [env-import.md](./env-import.md) | Import 基盤（EnvironmentSource / Detector chain / Analyzer + SHA-1 Worker / Analysis / ZIP fallback）+ **Phase 12-A の Sync 基盤（ManagedFileRecord / `computeSyncPlan`）**。 MojoLauncher (mojo_instance.json) 検出含む。 | 2026-08-29 |
-| [app-profile.md](./app-profile.md) | APP_PROFILE (production/development) による CSP/HSTS/レート制限/ログ切替。.env は next.config 評価前にロードされる点、headers は build 時確定する点。 | 2026-08-27 |
+| [app-profile.md](./app-profile.md) | APP_PROFILE (production/development) による CSP/HSTS/レート制限/ログ切替。.env は next.config 評価前にロードされる点、headers は build 時確定する点。 | 2026-08-31 |
 | [ui-layout.md](./ui-layout.md) | 🎨 アクションボタン設計ルール (主操作右端・緑 1 色のみ) / 検索表示形式 (モバイル 3 カラム compact) / PC サイドバー / BottomNav / z-index / モーダル / glass 方針 (backdrop-blur 全廃)。 | 2026-08-27 |
-| [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-30 |
+| [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-31 |
 | [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策 (webpack キャッシュ条件含む、AGENT.md §6 の実態版)。 | 2026-08-27 |
 
 ## 運用ルール

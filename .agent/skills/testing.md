@@ -19,7 +19,7 @@
 - 現状: **637 tests / 73 files pass**（2026-08-27 実測）。内訳の中心は Phase 11-A〜C
   （Dexie v2 migration / env 基盤: source・detector・analyzer・analysis・zipSource・profileName）
   と Phase 10.5 の hooks / 軽量 components、および `next-config.security` /
-  `lib/server/{profile,logger,rate-limit}` / `scripts/build-env` / `readInitialTheme` ほか。
+  `lib/platform/{profile,logger,rate-limit}` / `scripts/build-env` / `readInitialTheme` ほか。
 - **coverage threshold 全 green**: `pnpm test:coverage` exit 0。総計 stmt **84.65** /
   br **73.74** / fn **90.55** / lines **86.69**（2026-08-27 実測）。
   - ⚠️ **branches % は `hooks/` 等のコメント・行編集でも ±0.2 程度ぶれる**（v8 の

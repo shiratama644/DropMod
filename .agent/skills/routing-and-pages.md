@@ -35,7 +35,7 @@
 - `detailPathForType(type, slug)` / `detailPathFromProject(projectType, slug)` → `/<型>/<slug>`
 - `parseDiscoverSegment`（複数形）/ `parseDetailType`（単数形）
 
-## 詳細/モーダルのデータ取得（`lib/server/project-detail.ts`）
+## 詳細/モーダルのデータ取得（`features/project/api/projectDetail.ts`）
 - `fetchProjectDetailData(slug)` — project/versions/author 並列取得（両ルートで共用）
 - `generateDetailStaticParams(type)` — 人気上位の事前生成
 - `buildDetailMetadata(type, slug)` — OGP/canonical（`/<型>/<slug>`）

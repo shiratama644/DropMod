@@ -3,7 +3,7 @@
 `APP_PROFILE=production | development` (.env / 環境変数) でアプリ全体の
 セキュリティレベルとログ出力を切り替える仕組み。
 
-## 解決優先度 (lib/server/profile.ts と next.config.mjs の 2 箇所で同一ロジック)
+## 解決優先度 (lib/platform/profile.ts と next.config.mjs の 2 箇所で同一ロジック)
 
 1. `APP_PROFILE` — 明示指定 (最優先)。**development は NODE_ENV !== production
    のときのみ有効** (2026-08-27 修正: NODE_ENV=production では無視して production)
@@ -30,8 +30,8 @@
 | HSTS | 2 年 + preload | なし | next.config.mjs (build 時) |
 | upgrade-insecure-requests | あり | なし | next.config.mjs (build 時) |
 | connect-src ws://localhost (HMR) | なし | あり | next.config.mjs (build 時) |
-| API レート制限 (/api/*) | 120/60 req/min | 無効 | lib/server/rate-limit.ts (runtime) |
-| サーバログ debug/info | 抑制 | 出力 | lib/server/logger.ts (runtime) |
+| API レート制限 (/api/*) | 120/60 req/min | 無効 | lib/platform/rate-limit.ts (runtime) |
+| サーバログ debug/info | 抑制 | 出力 | lib/platform/logger.ts (runtime) |
 | /api/health の profile | "production" | "development" | app/api/health (runtime) |
 
 ## 重要事実 (2026-08-27 実証済み)
@@ -50,7 +50,7 @@
    (同一プロセスの再評価は env 共有で、子プロセスは fork 時の env 継承で抑止。
    ガード値を profile にすると変更時のみ再表示)。実装例は next.config.mjs の
    `BANNER_GUARD_KEY` 参照。
-4. サーバーロガーは `lib/server/logger.ts` を使う:
+4. サーバーロガーは `lib/platform/logger.ts` を使う:
    `logger.debug/info` は development のみ、`logger.warn/error` は常時出力。
    既存の `console.warn('[DropMod] msg', ...)` と同じ出力形式 (prefix 連結) なので
    spy テスト互換。クライアントコードでは使わない (誤 import 時は静かに fail-quiet)。
@@ -65,9 +65,9 @@
 
 ## テスト
 
-- `__tests__/lib/server/profile.test.ts` — 解決ロジック純粋関数テスト
-- `__tests__/lib/server/logger.test.ts` — `// @vitest-environment node` 必須
+- `__tests__/lib/platform/profile.test.ts` — 解決ロジック純粋関数テスト
+- `__tests__/lib/platform/logger.test.ts` — `// @vitest-environment node` 必須
   (jsdom だと window が有り server 判定にならないため)
-- `__tests__/lib/server/rate-limit.test.ts` — production/development 両挙動
+- `__tests__/lib/platform/rate-limit.test.ts` — production/development 両挙動
 - `__tests__/next-config.security.test.ts` — vi.resetModules + 動的 import で
   next.config.mjs を両プロファイルで読み分ける回帰テスト

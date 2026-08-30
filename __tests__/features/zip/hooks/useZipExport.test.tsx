@@ -295,7 +295,7 @@ describe('useZipExport', () => {
   // B27 (対応済み): JSZip.generateAsync の success 完了検証は E2E 側に集約
   //   vi.doMock は module cache 評価後の late-mock として効かないため、
   //   単体テストで真の success フロー ('1/1 個の .jar' toast) を強制するのは困難。
-  //   → E2E (Playwright、e2e/zip-export.spec.ts 予定) で担保する方針を明示。
+  //   → E2E (Playwright、e2e/zipExport.spec.ts 予定) で担保する方針を明示。
   //   現状の DL 経路テストは fetch ヒット + modal 遷移 + 完了/失敗 toast 到達を検証。
 
   it('hook 戻り値の zipProgress/isZipModalOpen は store と同期', async () => {

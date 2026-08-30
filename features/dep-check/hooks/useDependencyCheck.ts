@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Profile, ModrinthVersion } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { fetchModrinthBatch } from '@/lib/modrinth/client';
-import { useDepCheckStore } from '../store';
+import { useDepCheckStore } from '../store/store';
 
 // プロファイル変更後、依存チェックを実行するまでの待機時間 (デバウンス)
 // Modを連続追加/削除する際に何度も走らないように短い遅延を挟む

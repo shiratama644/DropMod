@@ -145,7 +145,7 @@ export default defineConfig({
           functions: 90,
           lines: 85
         },
-        'features/dep-check/store.ts': {
+        'features/dep-check/store/store.ts': {
           statements: 85,
           branches: 80,
           functions: 90,

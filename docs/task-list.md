@@ -238,7 +238,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1D | seo + sitemap-entries | 完了 | 100% | ARCH-1A | `features/seo`（opengraph は app 残置） | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1E | catalog + categories.ts | 完了 | 100% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1F | project + project-detail.ts | 完了 | 100% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1G | profiles + loaders + contentCategory | 未着手 | 0% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | 計画 §10.5 |
+| ARCH-1G | profiles + loaders + contentCategory | 完了 | 100% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1H | zip（プロファイル配布 ZIP） | 未着手 | 0% | ARCH-1G | useZipExport/Import。ZipSink は含まない | 計画 §10.5 |
 | ARCH-1I | dep-check | 未着手 | 0% | ARCH-1G | フック + モーダル | 計画 §10.5 |
 | ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | 計画 §10.10 |

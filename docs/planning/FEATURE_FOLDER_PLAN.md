@@ -452,7 +452,9 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1B | `45ba247` | features/landing + 旧パス re-export |
 | ARCH-1C | `14fddb0` | features/settings + 旧パス re-export |
 | ARCH-1D | `d5ba1b4` | features/seo + sitemap-entries。opengraph は app 残置 |
-| ARCH-1E | (本コミット) | features/catalog。loadDiscoverSearch は barrel 外（RSC） |
+| ARCH-1E | `5bb34c3` | features/catalog。loadDiscoverSearch は barrel 外（RSC） |
+| ARCH-1F | `49e93cd` | features/project。server.ts は barrel 外。index に use client なし |
+| ARCH-1G | (本コミット) | features/profiles。loaders/fetch は barrel 外。API は shim 経由 |
 
 ## 13. 完了チェック（ARCH-1O）
 

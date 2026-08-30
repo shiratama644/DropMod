@@ -319,6 +319,94 @@ pnpm build
 pnpm test:e2e
 ```
 
+### 10.13 再監査（11 Feature のあと、まだまとめられるもの）
+
+`types.ts` / `lib/{utils,constants,server,query,loaders,store,db}` / `app/api` /
+重複ヘルパまで import 元を辿った。結論: **第 12 Feature は増やさない**。
+代わりに **Feature 以外のフォルダ整理** と **既存 11 への追加移動** がある。
+
+#### A. 既存 Feature へ寄せてよい（第 1 波に含める）
+
+| Before | 寄せ先 | 理由 |
+|---|---|---|
+| `lib/constants/categories.ts` | `features/catalog/constants/categories.ts` | 消費は HomeInteractive / ModCard が主。facet ラベル |
+| `lib/server/project-detail.ts` | `features/project/server.ts` | RSC でも Feature 配下でよい。`'use client'` ではない。discover slug と詳細 page だけが本番 import（profile/settings はコメント参照のみ） |
+| `lib/server/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` | sitemap.ts と SEO 専用 |
+| `lib/seo/*` に加えて上記 | seo | 既定どおり |
+| `lib/constants/loaderVersions.ts` + `lib/loaders/*` | `features/profiles/loaders/` | `useLoaderVersionOptions` と New/Edit Profile。API route は薄いプロキシのまま `app/api/loaders` |
+| `lib/utils/format.ts` (`formatBytes`) | `features/sync/format.ts` | 消費は `SyncPreviewModal` のみ |
+| `lib/env/profileName.ts` | env-import（既定） | フォルダ名デフォルト。`lib/utils/profileName.ts`（複製名）とは別関数。**統合しない** |
+| `lib/utils/contentCategory.ts` | `features/profiles/contentCategory.ts` | Profile の 3 カテゴリ。zip/modpack は profiles index 経由 |
+
+`lib/constants/search.ts`（URL ヘルパ）は **引き続き lib 据置**。app / seo / catalog / project / sitemap が同じモジュールを必要とし、catalog に移すと seo が catalog に依存する。
+
+#### B. Feature にしない。別フォルダ（第 1.5 波 / ARCH-1P 候補）
+
+| 塊 | 提案 | 第 1 波でやらない理由 |
+|---|---|---|
+| ルート `types.ts` (432 行) | `types/profile.ts` `modrinth.ts` `sync.ts` `modpack.ts` `ui.ts` に分割し `types/index.ts` で再 export | 全 Feature が `@/types` 依存。分割は機械的だが衝突しやすい。**フォルダ `types/` であり Feature ではない** |
+| `lib/db/` | 残置。必要なら `lib/platform/db` | Dexie スキーマは profiles+sync+query の共有永続化 |
+| `lib/modrinth/` | 残置（HTTP クライアント） | catalog/project/dep-check/seo のインフラ |
+| `lib/query/` | 残置 | `useProjectQuery` は profiles、無限検索は catalog。データ層 |
+| `lib/server/logger.ts` `rate-limit.ts` `profile.ts` (APP_PROFILE) | `lib/platform/` にリネーム可 | セキュリティと API。Feature にすると settings と混同 |
+| `lib/server/site-url.ts` | seo に寄せてもよいが layout と sitemap と jsonld が共有 → **`lib/platform/site-url.ts`** が適切 |
+| `lib/store/*` | 第 2 波で slice を Feature へ | AppShell が全 slice を登録。先に移すと循環 |
+| `lib/state/sanitize.ts` | db マイグレーションと共有 | profiles 専用に見えて Dexie v2 が依存 |
+| `lib/utils/{id,hash,image,download,downloadFile}` | `lib/utils` 残置 | id/hash は db+env+toast。image は landing/catalog/project。download は project+zip |
+| `app/api/**` | App Router 残置 | Feature に Route Handler を埋め込まない（現行規約） |
+| `app/**/opengraph-image.tsx` | app 残置 | Next のファイルコンベンション |
+| `hooks/useModalUi.ts` 等 | `hooks/` 残置 | シェル横断 |
+| `e2e/` | 残置。spec 名は Feature に対応済み | ヘルパだけ `e2e/helpers` |
+| `scripts/` `styles/` | 残置 | ビルド資産 |
+
+**theme を Feature にしない。** `theme` は `lib/store/profiles.ts` に乗っている。settings と Header が読む。独立 Feature にすると store 分割が前提。
+
+**modrinth を Feature にしない。** API ラッパであり UI ドメインではない。
+
+#### C. 増やすべきでない第 12 Feature
+
+| 候補 | 不採用理由 |
+|---|---|
+| `theme` | store に同居。UI は layout |
+| `search`（catalog と別） | HomeInteractive と loadDiscoverSearch は一体 |
+| `gallery` | project の一部 |
+| `shell` | `components/layout` で足りる |
+| `platform` as Feature | インフラ。`lib/` が正しい |
+| ZIP と ZipSink の統合 | 変更理由が配布 vs ローカル同期で逆 |
+
+#### D. 重複・ドリフト（移動時に直す。別タスクにしない）
+
+- `formatDownloads` が `ModDetailPageView` / `ModDetailModalShell` / `og-copy` に三重。seo の `formatOgDownloads` に寄せるか `lib/utils/format.ts` へ（第 1 波のついでで可。新規 ID 不要）
+- `profileName` が utils（複製）と env（フォルダ名）で別物。名前を `nextDuplicateName` / `generateProfileName` のまま別ディレクトリ
+- `robots.ts` が独自 `resolveBaseUrl`。`site-url.ts` に統一（seo/platform 寄せのとき）
+
+#### E. 第 1 波のあとに残る `lib/` 目標
+
+```
+lib/
+  db/           Dexie
+  modrinth/     HTTP
+  query/        TSQ
+  platform/     logger, rate-limit, APP_PROFILE, site-url  （任意リネーム）
+  store/        第 2 波まで
+  state/        sanitize
+  utils/        id hash image download
+  constants/    search.ts のみ
+```
+
+`lib/env` `search` `seo` `providers` `loaders` は空にして削除。
+
+#### F. 第 2 波（ARCH-2、本計画の範囲外・採番のみ）
+
+| 候補 | 内容 |
+|---|---|
+| ARCH-2A | `types.ts` → `types/*` |
+| ARCH-2B | store slice を Feature（profiles/zip/dep-check/ui/toast） |
+| ARCH-2C | `lib/server` → `lib/platform` リネーム |
+| ARCH-2D | Dexie sync ヘルパを `features/sync/db.ts`（スキーマ宣言は db に残す） |
+
+Go は ARCH-1O のあと別判断。
+
 ---
 
 ## 11. リスク
@@ -328,14 +416,16 @@ pnpm test:e2e
 - ZIP export と ZipSink の名前衝突。フォルダを `zip` vs `sync/sink/zip`
 - constants/search を catalog に移すと seo/app が catalog 依存 → 据置
 - store 第 1 波据置。無理に移すと profiles store を zip が import する循環
-- **第 2 波（範囲外）**: `lib/store` slice を Feature へ / Dexie ヘルパを sync へ
+- **第 2 波（範囲外）**: §10.13.F（types 分割 / store / platform リネーム）
+- `project-detail` を Feature に移すと app の RSC import が `@/features/project` になる。index から server 関数を出してよい（`'use client'` を index に置かない）
 
 ## 12. 実績
 
 | ID | コミット | 備考 |
 |---|---|---|
 | ARCH-1 初版 | `5a9e92c` | 4 Feature。不十分 |
-| ARCH-1 再構築 | (本コミット) | 11 Feature。コード未移動 |
+| ARCH-1 再構築 | `12821ca` | 11 Feature |
+| 再監査 | (本コミット) | 第 12 Feature なし。types/ と lib/platform と既存 11 への追加寄せ |
 
 ## 13. 完了チェック（ARCH-1O）
 

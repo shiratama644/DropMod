@@ -231,7 +231,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | コードベース監査に基づく 11 Feature 計画 | `FEATURE_FOLDER_PLAN.md`（再構築） |
+| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査（types/platform は Feature にしない） | `FEATURE_FOLDER_PLAN.md` §10.13 |
 | ARCH-1A | 共通 UI を ui/layout/feedback へ | 未着手 | 0% | ARCH-1 Go | 旧パス re-export + 4 検証 | 計画 §10.4 |
 | ARCH-1B | landing | 未着手 | 0% | ARCH-1A | `features/landing` | 計画 §10.5 |
 | ARCH-1C | settings | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §10.5 |

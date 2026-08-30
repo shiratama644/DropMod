@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1A〜1D 実施済み。1E〜 未着手** (2026-08-30)
+> **状態: ARCH-1A〜1E 実施済み。1F〜 未着手** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -451,7 +451,8 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1A | `8561047` | ui / layout / feedback + 旧パス re-export |
 | ARCH-1B | `45ba247` | features/landing + 旧パス re-export |
 | ARCH-1C | `14fddb0` | features/settings + 旧パス re-export |
-| ARCH-1D | (本コミット) | features/seo + sitemap-entries。opengraph は app 残置 |
+| ARCH-1D | `d5ba1b4` | features/seo + sitemap-entries。opengraph は app 残置 |
+| ARCH-1E | (本コミット) | features/catalog。loadDiscoverSearch は barrel 外（RSC） |
 
 ## 13. 完了チェック（ARCH-1O）
 

@@ -74,6 +74,7 @@ export default defineConfig({
         // mods-page / offline / theme-persistence spec で担保している。
         'components/layout/AppShell.tsx',
         'components/AppShell.tsx',
+        'features/catalog/components/HomeInteractive.tsx',
         'components/HomeInteractive.tsx',
         'components/ModsPageClient.tsx',
         'components/ModDetailModalShell.tsx',

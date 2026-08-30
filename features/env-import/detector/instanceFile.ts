@@ -16,7 +16,7 @@
  */
 
 import type { ProfileLoader } from '@/types';
-import type { EnvironmentSource } from '../source';
+import type { EnvironmentSource } from '@/lib/env/source';
 import {
   type DetectedEnvironment,
   type EnvironmentDetector,

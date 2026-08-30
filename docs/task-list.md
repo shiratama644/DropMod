@@ -233,7 +233,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | 11 Feature + 再監査を §10.5/§9 に反映。ARCH-1P 不採番 | `FEATURE_FOLDER_PLAN.md` / `d0c1d6a` + 本整合コミット |
 | ARCH-1A | 共通 UI を ui/layout/feedback へ | 完了 | 100% | ARCH-1 Go | 旧パス re-export + 4 検証 | typecheck / biome / 1244 tests / build. 計画 §10.4 |
-| ARCH-1B | landing | 未着手 | 0% | ARCH-1A | `features/landing` | 計画 §10.5 |
+| ARCH-1B | landing | 完了 | 100% | ARCH-1A | `features/landing` | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1C | settings | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §10.5 |
 | ARCH-1D | seo + sitemap-entries | 未着手 | 0% | ARCH-1A | `features/seo`（opengraph は app 残置） | 計画 §10.5 |
 | ARCH-1E | catalog + categories.ts | 未着手 | 0% | ARCH-1A | HomeInteractive / ModCard / loadDiscoverSearch / categories | 計画 §10.5 |

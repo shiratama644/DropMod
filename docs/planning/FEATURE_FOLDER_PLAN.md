@@ -478,7 +478,7 @@ Go は ARCH-1O のあと別判断。
 - [x] `.archive/vite/` 無変更
 - [x] task-list 更新
 
-残件（意図的・ARCH-2）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。store / types / `lib/server`→platform は ARCH-2。
+残件（意図的・ARCH-2）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。store / `lib/server`→platform は ARCH-2。ドメインフック shim は削除済み（`hooks/` は横断のみ）。
 
 ## 14. Go
 

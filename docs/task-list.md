@@ -247,7 +247,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1L | modpack | 完了 | 100% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
 | ARCH-1M | 旧パス shim 削除 | 完了 | 100% | ARCH-1B〜L | 公開面は @/features | `5ba2d90` |
 | ARCH-1N | テスト配置 | 完了 | 100% | ARCH-1M | `__tests__/features/<name>/` ミラー（colocation なし） | `ff44edd` |
-| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。hooks ドメイン shim と lib/env KEEP は残件 | `c28f51d` |
+| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。lib/env KEEP は ARCH-2 | `c28f51d` |
 | ARCH-2A | types.ts → types/* | 完了 | 100% | ARCH-1O | `@/types` 維持。profile/modrinth/sync/modpack/ui + index | 計画 §10.13.F |
 | ARCH-2B | store slice を Feature | 未着手 | 0% | ARCH-2A | profiles/zip/dep-check/ui/toast | 計画 §10.13.F |
 | ARCH-2C | lib/server → lib/platform | 未着手 | 0% | ARCH-2A | logger / rate-limit / APP_PROFILE / site-url | 計画 §10.13.F |

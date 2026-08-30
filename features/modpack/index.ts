@@ -8,34 +8,34 @@ export {
   expandMrpackFiles,
   modpackLocksFromItems,
   environmentFromMrpack,
-} from './mrpack';
+} from './services/mrpack';
 export type {
   MrpackOverrideFile,
   MrpackSkippedFile,
   MrpackOverridesResult,
   ExpandMrpackFilesDeps,
-} from './mrpack';
+} from './services/mrpack';
 export {
   detectModpackFormat,
   CURSEFORGE_UNSUPPORTED_MESSAGE,
-} from './modpack';
-export type { ModpackFormat, ModpackFormatInfo } from './modpack';
+} from './services/modpack';
+export type { ModpackFormat, ModpackFormatInfo } from './services/modpack';
 export {
   buildModpackAddPlan,
   applyModpackAddPlan,
   applyLockedVersionsToProfile,
-} from './modpackAdd';
+} from './utils/modpackAdd';
 export type {
   ModpackAddConflict,
   ModpackAddPlan,
   ModpackConflictChoice,
-} from './modpackAdd';
-export { checkModpackUpdates, updateIssueFromReport } from './modpackUpdate';
+} from './utils/modpackAdd';
+export { checkModpackUpdates, updateIssueFromReport } from './services/modpackUpdate';
 export type {
   ModpackUpdateEntry,
   ModpackUpdateReport,
   CheckModpackUpdatesInput,
-} from './modpackUpdate';
+} from './services/modpackUpdate';
 export { useModpackAdd } from './hooks/useModpackAdd';
 export { ModpackHubClient } from './components/ModpackHubClient';
 export { ModpackImportModal } from './components/ModpackImportModal';
@@ -45,7 +45,7 @@ export {
   getProvider,
   ModrinthProvider,
   modrinthProvider
-} from './providers';
+} from './api/providers';
 export type {
   ContentProvider,
   ProviderId,
@@ -55,4 +55,4 @@ export type {
   ProviderSearchInput,
   ProviderSearchResult,
   ProviderUpdateInfo
-} from './providers';
+} from './api/providers';

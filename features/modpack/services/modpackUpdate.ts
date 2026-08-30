@@ -19,7 +19,7 @@
  */
 
 import type { Profile, ProjectItem } from '@/types';
-import { getProvider, type ContentProvider, type ProviderUpdateInfo } from './providers';
+import { getProvider, type ContentProvider, type ProviderUpdateInfo } from '../api/providers';
 import type { AnalysisIssue } from '@/lib/env/analysis';
 
 export interface ModpackUpdateEntry {

@@ -34,13 +34,13 @@ import {
   mrpackOverridesToManaged,
   parseMrpackOverrides,
   type MrpackOverrideFile
-} from '../mrpack';
+} from '../services/mrpack';
 import {
   applyModpackAddPlan,
   buildModpackAddPlan,
   type ModpackAddPlan,
   type ModpackConflictChoice
-} from '../modpackAdd';
+} from '../utils/modpackAdd';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';
 import type { ModrinthProject, MrpackIndex } from '@/types';

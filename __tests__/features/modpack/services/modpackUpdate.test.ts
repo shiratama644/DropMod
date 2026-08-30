@@ -9,7 +9,7 @@ import {
   checkModpackUpdates,
   updateIssueFromReport,
   type ModpackUpdateReport
-} from '@/features/modpack/modpackUpdate';
+} from '@/features/modpack/services/modpackUpdate';
 import type { ContentProvider, ProviderUpdateInfo } from '@/features/modpack';
 import type { Profile, ProjectItem } from '@/types';
 

@@ -24,12 +24,12 @@
 import type React from 'react';
 import { useCallback, useState } from 'react';
 import { getManagedFiles, syncManagedFiles } from '@/features/sync';
-import { promoteModpackRecords } from '../mrpack';
+import { promoteModpackRecords } from '../services/mrpack';
 import {
   checkModpackUpdates,
   updateIssueFromReport,
   type ModpackUpdateReport
-} from '../modpackUpdate';
+} from '../services/modpackUpdate';
 import { useConfirmStore } from '@/components/feedback/confirmStore';
 import { useProfilesStore } from '@/features/profiles';
 import { useToastStore } from '@/components/feedback/toastStore';

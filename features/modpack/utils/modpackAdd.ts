@@ -21,7 +21,7 @@
  */
 
 import type { ContentCategory, Profile, ProjectItem } from '@/types';
-import { modpackLocksFromItems } from './mrpack';
+import { modpackLocksFromItems } from '../services/mrpack';
 
 /** 競合 1 件: Profile 版と Modpack 版 */
 export interface ModpackAddConflict {

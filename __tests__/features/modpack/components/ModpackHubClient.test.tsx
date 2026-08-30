@@ -11,8 +11,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ModpackHubClient } from '@/features/modpack/components/ModpackHubClient';
-import { checkModpackUpdates } from '@/features/modpack/modpackUpdate';
-import type { ModpackUpdateReport } from '@/features/modpack/modpackUpdate';
+import { checkModpackUpdates } from '@/features/modpack/services/modpackUpdate';
+import type { ModpackUpdateReport } from '@/features/modpack/services/modpackUpdate';
 import { useProfilesStore } from '@/features/profiles';
 import { useConfirmStore } from '@/components/feedback/confirmStore';
 import { useToastStore } from '@/components/feedback/toastStore';
@@ -23,8 +23,8 @@ import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 // `checkModpackUpdates` だけ差し替える。**`updateIssueFromReport` は実物を使う**ので
 // importOriginal で透過させる (モックに含め忘れると描画時に undefined 呼び出しで落ちる)。
-vi.mock('@/features/modpack/modpackUpdate', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/features/modpack/modpackUpdate')>();
+vi.mock('@/features/modpack/services/modpackUpdate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/modpack/services/modpackUpdate')>();
   return { ...actual, checkModpackUpdates: vi.fn() };
 });
 const mockCheck = vi.mocked(checkModpackUpdates);

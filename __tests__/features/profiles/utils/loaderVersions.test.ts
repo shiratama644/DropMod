@@ -9,7 +9,7 @@ import {
   parseFabricOrQuiltLoaders,
   parseMavenVersions,
   withPreferredVersion
-} from '@/features/profiles/loaders/versions';
+} from '@/features/profiles/utils/loaderVersions';
 
 describe('getLoaderVersions fallback', () => {
   it('Fabric の先頭は 0.19.3', () => {

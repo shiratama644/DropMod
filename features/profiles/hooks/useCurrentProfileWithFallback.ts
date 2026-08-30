@@ -15,7 +15,7 @@
  */
 
 import { useMemo } from 'react';
-import { useProfilesStore, selectCurrentProfile } from '../store';
+import { useProfilesStore, selectCurrentProfile } from '../store/store';
 import type { Profile } from '@/types';
 
 /** hydration 中に一時的に返される空プロファイル (参照安定な module-level 定数) */

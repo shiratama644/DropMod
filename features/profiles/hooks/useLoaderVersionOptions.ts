@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fetchLoaderVersions } from '../loaders/fetch';
-import { getLoaderVersions, withPreferredVersion } from '../loaders/versions';
+import { fetchLoaderVersions } from '../api/fetchLoaderVersions';
+import { getLoaderVersions, withPreferredVersion } from '../utils/loaderVersions';
 
 export function useLoaderVersionOptions(
   loader: string,

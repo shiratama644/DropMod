@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fetchLoaderVersions } from '@/features/profiles/loaders/fetch';
+import { fetchLoaderVersions } from '@/features/profiles/api/fetchLoaderVersions';
 
 describe('fetchLoaderVersions', () => {
   it('API が 0.19.3 を返せば含める', async () => {

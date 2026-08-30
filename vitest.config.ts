@@ -127,7 +127,7 @@ export default defineConfig({
           functions: 95,
           lines: 95
         },
-        'features/profiles/store.ts': {
+        'features/profiles/store/store.ts': {
           statements: 85,
           branches: 80,
           functions: 90,

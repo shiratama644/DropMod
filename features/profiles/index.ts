@@ -9,17 +9,16 @@ export {
   selectCurrentProfile,
   readInitialTheme,
   type ProfilesState
-} from './store';
+} from './store/store';
 export {
   contentCategoryOf,
   contentCategoryFromPath,
   contentCategoryFromProject
-} from './contentCategory';
+} from './utils/contentCategory';
 export {
   FALLBACK_LOADER_VERSIONS,
   LOADER_DROPDOWN_OPTIONS,
   LOADER_IDS,
-  getLoaderVersions,
-  isLoaderId,
   type LoaderId
-} from './loaders/loaderVersions';
+} from './constants/loaderVersions';
+export { getLoaderVersions, isLoaderId } from './utils/loaderVersions';

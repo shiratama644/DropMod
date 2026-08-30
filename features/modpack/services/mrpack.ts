@@ -35,7 +35,7 @@ import {
   fetchModrinthBatch,
   fetchModrinthVersionFilesBatch
 } from '@/lib/modrinth/client';
-import { contentCategoryFromPath, contentCategoryFromProject } from '@/features/profiles/contentCategory';
+import { contentCategoryFromPath, contentCategoryFromProject } from '@/features/profiles/utils/contentCategory';
 import { primaryCategoryId } from '@/features/catalog';
 import { calculateSha1 } from '@/lib/utils/hash';
 import { generateId } from '@/lib/utils/id';

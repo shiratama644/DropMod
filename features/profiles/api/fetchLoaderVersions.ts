@@ -3,7 +3,7 @@ import {
   isLoaderId,
   mergeVersionLists,
   withPreferredVersion
-} from './versions';
+} from '../utils/loaderVersions';
 
 export async function fetchLoaderVersions(
   loader: string,

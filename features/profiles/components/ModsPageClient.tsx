@@ -14,7 +14,7 @@ import { fetchStableModVersion } from '@/lib/modrinth/client';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { useCurrentProfileWithFallback } from '../hooks/useCurrentProfileWithFallback';
 import { useAppAction } from '@/components/layout/appActions';
-import { contentCategoryOf } from '../contentCategory';
+import { contentCategoryOf } from '../utils/contentCategory';
 import { categoryLabel } from '@/features/catalog';
 import { detailPathFromProject } from '@/lib/constants/search';
 import { versionDropdownOption } from '@/lib/utils/versionOption';

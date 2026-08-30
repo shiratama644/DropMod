@@ -15,7 +15,7 @@ import { nextDuplicateName } from '@/lib/utils/profileName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
-import { contentCategoryFromProject, contentCategoryOf } from '../contentCategory';
+import { contentCategoryFromProject, contentCategoryOf } from '../utils/contentCategory';
 import { primaryCategoryId } from '@/features/catalog';
 import {
   syncProfiles as dexieSyncProfiles,
@@ -39,7 +39,7 @@ import {
   META_KEYS,
   LOCAL_STORAGE_KEYS
 } from '@/lib/db/migrate';
-import { useProfilesStore } from '../store';
+import { useProfilesStore } from '../store/store';
 import { queryKeys } from '@/lib/query/keys';
 
 type ConfirmFn = (options: ConfirmDialogOptions) => Promise<boolean>;

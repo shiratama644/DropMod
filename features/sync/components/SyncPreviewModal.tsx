@@ -300,7 +300,7 @@ export function SyncPreviewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="modal-card glass-panel w-full max-w-lg rounded-3xl border shadow-2xl relative flex flex-col max-h-[85vh]"
+        className="modal-card glass-panel w-full max-w-lg rounded-3xl border shadow-2xl relative flex flex-col modal-max-h"
       >
         {/* ヘッダ */}
         <div className="flex items-center gap-3 border-b border-slate-500/20 p-5 pb-3">

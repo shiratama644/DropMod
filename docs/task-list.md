@@ -38,8 +38,9 @@
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
+| ARCH-1 | 計画済み | Feature フォルダ移行。コード移動は ARCH-1A Go 待ち |
 
-進行中の AI 実装タスクは **なし**。SEO のコード作業はローカル完了。次のコード候補は P12-E2E の CI 再実行依頼など。
+進行中の AI 実装タスクは **なし**。SEO コードはローカル完了。次の計画済み作業は `ARCH-1A`（Go 後）。
 
 ---
 
@@ -222,6 +223,20 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
 | SEO-1 | SEO 改善 (JSON-LD 2-2 / パンくず 2-4 / 動的 OGP 2-3 / sitemap 2-5 / 見出し・内部リンク 2-6) | ローカル検証済み | 100% | SEO-2 | 実装済み。本番 JSON-LD / OG 目視はユーザー延期 (完了にしない) | `52bf0b9` / typecheck + biome + 1244 tests + build |
 | SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | ローカル検証済み | 100% | - | 実装済み。本番 meta robots 目視はユーザー延期 (完了にしない) | `080ede1` / typecheck + biome + 1235 tests + build |
+
+### アーキテクチャ (Feature フォルダ)
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---:|---|---|---|
+| ARCH-1 | Feature フォルダ移行の計画書 | 完了 | 100% | - | アウトライン 1〜8 を満たす計画が docs/planning にある | `FEATURE_FOLDER_PLAN.md` |
+| ARCH-1A | 共通 UI を ui/layout/feedback へ | 未着手 | 0% | ARCH-1 Go | 旧パス re-export 付きで 4 検証 pass | 計画 §9 |
+| ARCH-1B | landing Feature 切り出し | 未着手 | 0% | ARCH-1A | `features/landing` + app/page import | 計画 §9 |
+| ARCH-1C | settings Feature 切り出し | 未着手 | 0% | ARCH-1A | `features/settings` | 計画 §9 |
+| ARCH-1D | mods Feature 切り出し | 未着手 | 0% | ARCH-1A | 検索・詳細・discover。lib/search 移動 | 計画 §9 |
+| ARCH-1E | profiles Feature 切り出し | 未着手 | 0% | ARCH-1D | lib/env ごと移動。Worker パス修正 | 計画 §9 |
+| ARCH-1F | 旧パス shim 削除 | 未着手 | 0% | ARCH-1E | 深い import 0。index のみ | 計画 §9 |
+| ARCH-1G | テスト配置の最終形 | 未着手 | 0% | ARCH-1F | ミラー維持（既定）または colocation | 計画 §10.4 |
+| ARCH-1H | 掃除と完了チェック | 未着手 | 0% | ARCH-1G | 計画 §13 チェックリスト | 計画 §13 |
 
 ---
 

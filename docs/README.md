@@ -22,6 +22,7 @@ docs/
 │   ├── PHASE11_PLAN.md                 # Phase 11 (Read-only Import & Analysis)
 │   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
 │   ├── PHASE13_PLAN.md                # Phase 13 (SEO。ローカル検証済み。本番目視は延期)
+│   ├── FEATURE_FOLDER_PLAN.md         # Feature フォルダ移行 (ARCH-1。コード未着手)
 │   ├── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
 │   └── SEO_CANDIDATES.md              # SEO 候補レジストリ (2-1〜2-6 は SEO-2/SEO-1 で実施済み)
 ├── complete/                          # 完了レポート

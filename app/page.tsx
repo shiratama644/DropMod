@@ -24,7 +24,7 @@
 // Component として SSR HTML の完全性を維持 (SEO + LCP)。
 // ============================================================================
 
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import Link from 'next/link';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { RevealSection } from '@/features/landing';

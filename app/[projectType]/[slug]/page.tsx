@@ -23,7 +23,7 @@ import {
   fetchProjectDetailData,
   generateDetailStaticParams
 } from '@/features/project/server';
-import { resolveSiteOrigin } from '@/lib/server/site-url';
+import { resolveSiteOrigin } from '@/lib/platform/site-url';
 import {
   PROJECT_TYPES,
   parseDetailType,

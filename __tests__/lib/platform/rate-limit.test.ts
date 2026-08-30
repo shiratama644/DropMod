@@ -4,15 +4,15 @@ import {
   API_CORS_HEADERS,
   checkRateLimit,
   getClientIp
-} from '@/lib/server/rate-limit';
-import { _resetAppProfileCacheForTesting } from '@/lib/server/profile';
+} from '@/lib/platform/rate-limit';
+import { _resetAppProfileCacheForTesting } from '@/lib/platform/profile';
 
 function resetAll(): void {
   _resetRateLimitForTesting();
   _resetAppProfileCacheForTesting();
 }
 
-describe('lib/server/rate-limit — プロファイル連動レート制限', () => {
+describe('lib/platform/rate-limit — プロファイル連動レート制限', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     resetAll();

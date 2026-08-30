@@ -22,7 +22,7 @@
 //   しまう重大な footgun があった。ランタイム側でもビルド済み成果物との
 //   プロファイル混在を防ぐため、production コンテキストでは一律 production。
 //
-// 解決優先度 (lib/server/profile.ts と next.config.mjs の 2 箇所で同一ロジック):
+// 解決優先度 (lib/platform/profile.ts と next.config.mjs の 2 箇所で同一ロジック):
 //   1. APP_PROFILE — 明示指定 (development は NODE_ENV !== production のみ有効)
 //   2. VERCEL_ENV  — production|preview → production / development → development
 //   3. NODE_ENV    — development → development / それ以外 → production

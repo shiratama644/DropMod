@@ -7,7 +7,7 @@
 // 薄く保つ（二重実装・二重 fetch を防ぐ）。
 // ============================================================================
 
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import type { Metadata } from 'next';
 import {
   fetchModrinthProject,

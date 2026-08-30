@@ -1,4 +1,4 @@
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 
 /**
  * sitemap / JSON-LD / OGP で使うサイト origin。

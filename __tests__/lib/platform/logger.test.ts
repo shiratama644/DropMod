@@ -3,10 +3,10 @@
 //    jsdom ではなく node 環境でテストする。
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { logger } from '@/lib/server/logger';
-import { _resetAppProfileCacheForTesting } from '@/lib/server/profile';
+import { logger } from '@/lib/platform/logger';
+import { _resetAppProfileCacheForTesting } from '@/lib/platform/profile';
 
-describe('lib/server/logger — APP_PROFILE 連動ログレベル', () => {
+describe('lib/platform/logger — APP_PROFILE 連動ログレベル', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
   let debugSpy: ReturnType<typeof vi.spyOn>;

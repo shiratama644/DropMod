@@ -8,14 +8,14 @@ import {
   parseFabricOrQuiltLoaders,
   parseMavenVersions
 } from '@/features/profiles/loaders/versions';
-import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
-import { logger } from '@/lib/server/logger';
+import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/platform/rate-limit';
+import { logger } from '@/lib/platform/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // loader versions は頻繁に変わらない → 60 req/min。
-// APP_PROFILE=development ではレート制限が無効化される (lib/server/rate-limit.ts 参照)。
+// APP_PROFILE=development ではレート制限が無効化される (lib/platform/rate-limit.ts 参照)。
 const RATE_LIMIT_MAX = 60;
 
 const USER_AGENT =

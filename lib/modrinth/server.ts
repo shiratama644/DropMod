@@ -27,7 +27,7 @@
 //   - タイムアウト時は throw され、上位の try/catch で fallback される。
 // ============================================================================
 
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import { unstable_cache } from 'next/cache';
 import type { ModrinthHit, ModrinthProject, ModrinthVersion } from '@/types';
 

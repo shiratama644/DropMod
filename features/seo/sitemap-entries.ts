@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { PROJECT_TYPES, detailPathFromProject, type ProjectType } from '@/lib/constants/search';
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 
 /** 型あたりの人気件数。4 型 × 25 = 100 URL。build 時 4 search で 429 を避ける。 */
 export const SITEMAP_PER_TYPE = 25;

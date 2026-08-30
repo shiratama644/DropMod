@@ -4,9 +4,9 @@ import {
   getAppProfile,
   resolveAppProfile,
   type ProfileEnv
-} from '@/lib/server/profile';
+} from '@/lib/platform/profile';
 
-describe('lib/server/profile — APP_PROFILE 解決', () => {
+describe('lib/platform/profile — APP_PROFILE 解決', () => {
   describe('resolveAppProfile (純粋関数)', () => {
     it('APP_PROFILE=production を尊重する', () => {
       expect(resolveAppProfile({ APP_PROFILE: 'production' })).toBe('production');

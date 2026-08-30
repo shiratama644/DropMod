@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import { popularDetailSitemapEntries, staticSitemapEntries } from '@/features/seo';
-import { resolveSiteOrigin } from '@/lib/server/site-url';
+import { resolveSiteOrigin } from '@/lib/platform/site-url';
 
 export const revalidate = 3600;
 

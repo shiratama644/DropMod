@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { JsonLd } from '@/features/seo';
 import { Providers as QueryProviders } from '@/components/layout/Providers';
 import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/features/seo';
-import { resolveSiteOrigin } from '@/lib/server/site-url';
+import { resolveSiteOrigin } from '@/lib/platform/site-url';
 import './globals.css';
 
 // FontAwesome アイコン (Phase 10-A: subset 化)

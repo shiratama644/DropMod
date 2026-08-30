@@ -2,7 +2,7 @@
 // API Route Handler 共通ガード — CORS ヘッダー + レート制限 + クライアント IP
 //
 // 2026-08-27 までは app/api/modrinth と app/api/loaders に同じ実装が
-// 重複していたのを lib/server に集約した (Phase: APP_PROFILE 対応)。
+// 重複していたのを lib/platform に集約した (Phase: APP_PROFILE 対応)。
 //
 // - CORS: Same-Origin のみ (外部サイトからの API 悪用を防止)。
 //   'Access-Control-Allow-Origin: same-origin' は仕様上どの Origin とも

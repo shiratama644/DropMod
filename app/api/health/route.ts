@@ -6,12 +6,12 @@
 //
 // APP_PROFILE の解決結果 (production / development) も返す。
 // セキュリティヘッダー (CSP/HSTS) は build 時に確定するため、ここは
-// ランタイム側の解決結果である点に注意 (lib/server/profile.ts 参照)。
+// ランタイム側の解決結果である点に注意 (lib/platform/profile.ts 参照)。
 //
 // HEAD method も 200 で応答 (監視ツールは HEAD で叩くことが多い)。
 // ============================================================================
 
-import { getAppProfile } from '@/lib/server/profile';
+import { getAppProfile } from '@/lib/platform/profile';
 
 export const runtime = 'nodejs';
 

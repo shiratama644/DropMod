@@ -1,4 +1,4 @@
-import { logger } from '@/lib/server/logger';
+import { logger } from '@/lib/platform/logger';
 import { cookies } from 'next/headers';
 import { fetchModrinthSearch } from '@/lib/modrinth/server';
 import { SEARCH_LIMIT, type ProjectType } from '@/lib/constants/search';

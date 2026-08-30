@@ -27,7 +27,7 @@
 
 - SEO-2: `app/discover/[type]/[slug]/page.tsx` / `buildDiscoverModalMetadata`
 - SEO-1: `lib/seo/*` / `components/JsonLd.tsx` / 詳細 page + layout /
-  `opengraph-image.tsx` / `lib/server/sitemap-entries.ts` / パンくず UI /
+  `opengraph-image.tsx` / `lib/platform/sitemap-entries.ts` / パンくず UI /
   discover `h1` / カテゴリ → `?q=` リンク
 
 変更しない (境界外):

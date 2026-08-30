@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-2A 完了。ARCH-2B 実施中（store slice）** (2026-08-30)
+> **状態: ARCH-2A〜2C 完了。次は ARCH-2D（Dexie sync ヘルパ）** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -27,14 +27,14 @@
 
 変更対象: `components/` `hooks/` `lib/env/` `lib/search/` `lib/seo/` `lib/providers/`
 `lib/loaders/`、`lib/constants/categories.ts` `loaderVersions.ts`、
-`lib/server/project-detail.ts` `sitemap-entries.ts`、`lib/utils/format.ts`
+`lib/platform/project-detail.ts` `sitemap-entries.ts`、`lib/utils/format.ts`
 `contentCategory.ts`、`__tests__/` の追従、`app/` の import、vitest coverage
 paths、本書と task-list。
 
 残す（横断インフラ）: `app/` ルート（api / opengraph-image 含む）、`lib/db/`
 `lib/modrinth/` `lib/query/` `lib/store/`（第 1 波）`lib/state/`、
 `lib/utils/`（id/hash/image/download。format/contentCategory 以外）、
-`lib/constants/search.ts`、`lib/server/` の logger / rate-limit / profile /
+`lib/constants/search.ts`、`lib/platform/` の logger / rate-limit / profile /
 site-url（第 1 波はパス変更しない。リネームは ARCH-2C）。
 
 禁止: 全ファイル一括移動 / Feature 間の深い import / `export *` /
@@ -113,7 +113,7 @@ catalog ──► project
                  ▲
             sync    modpack ──► catalog（追加 UI）/ env-import（展開）
 
-landing / settings / seo  は他 Feature に依存しない（seo は lib/server のみ）
+landing / settings / seo  は他 Feature に依存しない（seo は lib/platform のみ）
 ```
 
 許可する Feature→Feature: **index.ts のみ**。  
@@ -132,8 +132,7 @@ components/
   ui/               layout/          feedback/
 hooks/              # 非ドメインのみ
 lib/
-  db/  modrinth/  query/  server/  store/  utils/  constants/  state/
-  # server = logger/rate-limit/profile/site-url のみ（ARCH-2C で platform へ）
+  db/  modrinth/  query/  platform/  utils/  constants/  state/
   # constants = search.ts のみ。loaders は profiles へ移して削除
 ```
 
@@ -187,7 +186,7 @@ ZipProgressModal は **zip** Feature（共通 feedback にしない。Sync の Z
 | Before | After |
 |---|---|
 | `ModDetailPageView.tsx` `ModDetailModalShell.tsx` `ScreenshotGalleryModal.tsx` `ReservedCategoryPage.tsx` | `features/project/components/` |
-| `lib/server/project-detail.ts` | `features/project/server.ts` |
+| `lib/platform/project-detail.ts` | `features/project/server.ts` |
 
 RSC / generateMetadata / OG は `@/features/project` から server 関数を取る。
 **index.ts に `'use client'` を置かない**（client コンポーネントは `components/` 側）。
@@ -272,7 +271,7 @@ detector 内部・hash worker は private。Worker URL をこのフェーズで�
 | Before | After |
 |---|---|
 | `lib/seo/jsonld.ts` `og-copy.ts` | `features/seo/` |
-| `lib/server/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` |
+| `lib/platform/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` |
 | `components/JsonLd.tsx` | `features/seo/JsonLd.tsx` |
 
 `app/**/opengraph-image.tsx` は App Router 制約で **app に残す**。コピー関数だけ Feature。
@@ -282,7 +281,7 @@ detector 内部・hash worker は private。Worker URL をこのフェーズで�
 
 `db/`（Dexie）`modrinth/` `query/` `store/`（第 2 波）`state/sanitize.ts`。
 `utils/` の id/hash/image/download（format / contentCategory は移す）。
-`constants/search.ts`。`server/` の logger / rate-limit / profile / site-url。
+`constants/search.ts`。`platform/` の logger / rate-limit / profile / site-url。
 `loaders/` は 1G で空にして削除。
 
 ### 10.7 app の消費先
@@ -351,8 +350,8 @@ pnpm test:e2e
 | Before | 寄せ先 | 理由 |
 |---|---|---|
 | `lib/constants/categories.ts` | `features/catalog/constants/categories.ts` | 消費は HomeInteractive / ModCard が主。facet ラベル |
-| `lib/server/project-detail.ts` | `features/project/server.ts` | RSC でも Feature 配下でよい。`'use client'` ではない。discover slug と詳細 page だけが本番 import（profile/settings はコメント参照のみ） |
-| `lib/server/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` | sitemap.ts と SEO 専用 |
+| `lib/platform/project-detail.ts` | `features/project/server.ts` | RSC でも Feature 配下でよい。`'use client'` ではない。discover slug と詳細 page だけが本番 import（profile/settings はコメント参照のみ） |
+| `lib/platform/sitemap-entries.ts` | `features/seo/sitemap-entries.ts` | sitemap.ts と SEO 専用 |
 | `lib/seo/*` に加えて上記 | seo | 既定どおり |
 | `lib/constants/loaderVersions.ts` + `lib/loaders/*` | `features/profiles/loaders/` | `useLoaderVersionOptions` と New/Edit Profile。API route は薄いプロキシのまま `app/api/loaders` |
 | `lib/utils/format.ts` (`formatBytes`) | `features/sync/format.ts` | 消費は `SyncPreviewModal` のみ |
@@ -369,8 +368,8 @@ pnpm test:e2e
 | `lib/db/` | 残置。必要なら `lib/platform/db` | Dexie スキーマは profiles+sync+query の共有永続化 |
 | `lib/modrinth/` | 残置（HTTP クライアント） | catalog/project/dep-check/seo のインフラ |
 | `lib/query/` | 残置 | `useProjectQuery` は profiles、無限検索は catalog。データ層 |
-| `lib/server/logger.ts` `rate-limit.ts` `profile.ts` (APP_PROFILE) | `lib/platform/` にリネーム可 | セキュリティと API。Feature にすると settings と混同 |
-| `lib/server/site-url.ts` | seo に寄せてもよいが layout と sitemap と jsonld が共有 → **`lib/platform/site-url.ts`** が適切 |
+| `lib/platform/logger.ts` `rate-limit.ts` `profile.ts` (APP_PROFILE) | `lib/platform/` にリネーム可 | セキュリティと API。Feature にすると settings と混同 |
+| `lib/platform/site-url.ts` | seo に寄せてもよいが layout と sitemap と jsonld が共有 → **`lib/platform/site-url.ts`** が適切 |
 | `lib/store/*` | 第 2 波で slice を Feature へ | AppShell が全 slice を登録。先に移すと循環 |
 | `lib/state/sanitize.ts` | db マイグレーションと共有 | profiles 専用に見えて Dexie v2 が依存 |
 | `lib/utils/{id,hash,image,download,downloadFile}` | `lib/utils` 残置 | id/hash は db+env+toast。image は landing/catalog/project。download は project+zip |
@@ -464,7 +463,8 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1N | `ff44edd` | `__tests__/features/<name>/` ミラー。colocation なし |
 | ARCH-1O | `c28f51d` | 旧パス shim 削除。coverage / skills / チェックリスト |
 | ARCH-2A | `ea923d5` | types.ts → types/{profile,modrinth,sync,modpack,ui} + index。`@/types` 維持 |
-| ARCH-2B | (本コミット) | store を Feature / layout / feedback へ。lib/store 削除 |
+| ARCH-2B | `eb2a1a1` | store を Feature / layout / feedback へ。lib/store 削除 |
+| ARCH-2C | (本コミット) | lib/server → lib/platform（logger / rate-limit / profile / site-url） |
 
 ## 13. 完了チェック（ARCH-1O）
 
@@ -479,7 +479,7 @@ Go は ARCH-1O のあと別判断。
 - [x] `.archive/vite/` 無変更
 - [x] task-list 更新
 
-残件（意図的・ARCH-2）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。store / `lib/server`→platform は ARCH-2。ドメインフック shim は削除済み（`hooks/` は横断のみ）。
+残件（意図的・ARCH-2D）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。Dexie sync ヘルパは ARCH-2D。
 
 ## 14. Go
 

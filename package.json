@@ -63,7 +63,7 @@
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "tailwindcss": "^4",
-    "typescript": "^7.0.2",
+    "typescript": "6.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
   },

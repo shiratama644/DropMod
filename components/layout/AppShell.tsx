@@ -7,10 +7,10 @@ import type { TabName } from '@/types';
 
 import { useToasts } from '@/hooks/useToasts';
 import { useConfirm } from '@/hooks/useConfirm';
-import { useProfiles } from '@/hooks/useProfiles';
-import { useDependencyCheck } from '@/hooks/useDependencyCheck';
-import { useZipExport } from '@/hooks/useZipExport';
-import { useZipImport } from '@/hooks/useZipImport';
+import { useProfiles } from '@/features/profiles';
+import { useDependencyCheck } from '@/features/dep-check';
+import { useZipExport } from '@/features/zip';
+import { useZipImport } from '@/features/zip';
 import { fetchLatestMinecraftVersions } from '@/lib/modrinth/client';
 import { nextDuplicateName } from '@/lib/utils/profileName';
 import { db } from '@/lib/db/dexie';
@@ -18,14 +18,13 @@ import { useProfilesStore } from '@/lib/store/profiles';
 
 import { ToastContainer } from '../feedback/ToastContainer';
 import { ConfirmDialog } from '../feedback/ConfirmDialog';
-import { InterruptedSyncDialog } from '../InterruptedSyncDialog';
+import { InterruptedSyncDialog } from '@/features/sync';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { DesktopSidebar } from './DesktopSidebar';
-import { NewProfileModal } from '../NewProfileModal';
-import { EditProfileModal } from '../EditProfileModal';
-import { DependencyCheckModal } from '../DependencyCheckModal';
-import { ZipProgressModal } from '../ZipProgressModal';
+import { NewProfileModal, EditProfileModal } from '@/features/profiles';
+import { DependencyCheckModal } from '@/features/dep-check';
+import { ZipProgressModal } from '@/features/zip';
 import { useAppActionsStore } from '@/lib/store/appActions';
 // QueryProviders は app/layout.tsx に移設 (C7-2 対応で useQueryClient が
 // AppShell 内で呼ばれるようになったため、AppShell 自身を Provider 内に配置する必要あり)

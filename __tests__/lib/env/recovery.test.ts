@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   findInterruptedSyncs,
   recoverInterruptedSync
-} from '@/lib/env/recovery';
+} from '@/features/sync/recovery';
 import {
   _clearAllForTesting,
   createSyncTransaction,

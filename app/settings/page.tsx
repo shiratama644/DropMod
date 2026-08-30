@@ -5,7 +5,7 @@
 // データ初期化を提供する Client Component。
 // ============================================================================
 
-import { SettingsPageClient } from '@/components/SettingsPageClient';
+import { SettingsPageClient } from '@/features/settings';
 
 export const metadata = {
   // // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため

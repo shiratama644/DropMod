@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NewProfileModal } from '@/components/NewProfileModal';
+import { NewProfileModal } from '@/features/profiles/components/NewProfileModal';
 import type { ProjectItem } from '@/types';
 
 const mcVersions = ['1.21.4', '1.20.1'];

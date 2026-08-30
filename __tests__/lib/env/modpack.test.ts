@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
-import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/lib/env/modpack';
+import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/features/modpack/modpack';
 
 async function zipBlob(build: (zip: JSZip) => void): Promise<Blob> {
   const zip = new JSZip();

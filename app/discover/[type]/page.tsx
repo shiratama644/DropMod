@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { HomeInteractive } from '@/components/HomeInteractive';
+import { HomeInteractive } from '@/features/catalog';
 import {
   parseDiscoverSegment,
   sanitizeSearchQuery,
   type DiscoverSegment
 } from '@/lib/constants/search';
-import { loadDiscoverSearch } from '@/lib/search/loadDiscoverSearch';
+import { loadDiscoverSearch } from '@/features/catalog/search/loadDiscoverSearch';
 
 // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため
 // title に ' - DropMod' を含めない (含めるとサイト名が二重になる)

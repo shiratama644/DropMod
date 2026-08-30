@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
-import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { useScrollReveal } from '@/features/landing/hooks/useScrollReveal';
 import {
   stubMatchMedia,
   stubIntersectionObserver,

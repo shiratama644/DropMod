@@ -6,7 +6,7 @@ import {
   buildWebSiteJsonLd,
   detailBreadcrumbItems,
   serializeJsonLd
-} from '@/lib/seo/jsonld';
+} from '@/features/seo';
 
 const ORIGIN = 'https://dropmod.example';
 

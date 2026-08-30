@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ReservedCategoryPage } from '@/components/ReservedCategoryPage';
+import { ReservedCategoryPage } from '@/features/project/components/ReservedCategoryPage';
 
 describe('ReservedCategoryPage', () => {
   const props = {

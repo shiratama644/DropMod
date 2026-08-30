@@ -12,11 +12,11 @@ import {
   linkPickedDirectory,
   openLinkedFolder,
   releaseFolderLink
-} from '@/lib/env/link';
-import type { PickedDirectory } from '@/lib/env/picker';
-import { FileSystemSink } from '@/lib/env/sink/filesystem';
+} from '@/features/sync/link';
+import type { PickedDirectory } from '@/features/env-import/picker';
+import { FileSystemSink } from '@/features/sync/sink/filesystem';
 import { FileSystemSource } from '@/lib/env/source';
-import type { DetectedEnvironment } from '@/lib/env/detector';
+import type { DetectedEnvironment } from '@/features/env-import/detector';
 import { _clearAllForTesting, getDirHandle } from '@/lib/db/dexie';
 import type { LinkedSource } from '@/types';
 import { asFakeDirectory, createFakeFileSystem } from '../../test-utils/fakeFs';

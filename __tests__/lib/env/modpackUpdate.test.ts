@@ -9,8 +9,8 @@ import {
   checkModpackUpdates,
   updateIssueFromReport,
   type ModpackUpdateReport
-} from '@/lib/env/modpackUpdate';
-import type { ContentProvider, ProviderUpdateInfo } from '@/lib/providers';
+} from '@/features/modpack/modpackUpdate';
+import type { ContentProvider, ProviderUpdateInfo } from '@/features/modpack';
 import type { Profile, ProjectItem } from '@/types';
 
 function versionInfo(overrides: Partial<ProviderUpdateInfo> = {}): ProviderUpdateInfo {

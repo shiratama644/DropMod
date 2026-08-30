@@ -25,9 +25,9 @@
 
 import { create } from 'zustand';
 import type { Profile, ProjectItem, ModrinthVersion, ContentCategory, ProfileContentExtras } from '@/types';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
-import type { PickedDirectory } from '@/lib/env/picker';
-import type { DetectedEnvironment } from '@/lib/env/detector';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
+import type { PickedDirectory } from '@/features/env-import';
+import type { DetectedEnvironment } from '@/features/env-import';
 
 // ============================================================================
 // Actions 型

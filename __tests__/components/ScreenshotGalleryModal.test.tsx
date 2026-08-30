@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ScreenshotGalleryModal } from '@/components/ScreenshotGalleryModal';
+import { ScreenshotGalleryModal } from '@/features/project/components/ScreenshotGalleryModal';
 import type { ModrinthGalleryImage } from '@/types';
 
 const images: ModrinthGalleryImage[] = [

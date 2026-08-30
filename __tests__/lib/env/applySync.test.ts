@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { applySync, type ReadySyncOutcome } from '@/lib/env/applySync';
-import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
+import { applySync, type ReadySyncOutcome } from '@/features/sync/applySync';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
 import { _clearAllForTesting, getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
 import type { ManagedFileRecord, Profile } from '@/types';
 import { calculateSha1 } from '@/lib/utils/hash';

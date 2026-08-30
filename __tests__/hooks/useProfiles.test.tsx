@@ -10,7 +10,7 @@ import type { Mock } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
-import { useProfiles } from '@/hooks/useProfiles';
+import { useProfiles } from '@/features/profiles/hooks/useProfiles';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '../test-utils/queryWrapper';
@@ -18,7 +18,7 @@ import { db, getDirHandle, getManagedFiles } from '@/lib/db/dexie';
 import { createFakeFileSystem } from '../test-utils/fakeFs';
 import { FileSystemSource } from '@/lib/env/source';
 import type { ProjectItem, ThemeMode } from '@/types';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 // ------------------ Reset helpers ------------------
 

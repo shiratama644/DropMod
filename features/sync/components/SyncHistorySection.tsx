@@ -16,9 +16,9 @@
  */
 
 import type React from 'react';
-import { useSyncHistory } from '@/hooks/useSyncHistory';
+import { useSyncHistory } from '../hooks/useSyncHistory';
 import { useProfilesStore } from '@/lib/store/profiles';
-import { UNDO_KEEP_COUNT } from '@/lib/env/backup';
+import { UNDO_KEEP_COUNT } from '../backup';
 import type { SyncTransactionRow } from '@/lib/db/dexie';
 
 const STATUS_META: Record<

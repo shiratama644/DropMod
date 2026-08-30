@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ModCard } from '@/components/ModCard';
+import { ModCard } from '@/features/catalog/components/ModCard';
 import type { ModrinthHit, Profile } from '@/types';
 
 const baseHit: ModrinthHit = {

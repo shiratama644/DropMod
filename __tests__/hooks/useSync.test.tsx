@@ -7,18 +7,18 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useSync } from '@/hooks/useSync';
-import { prepareSync } from '@/lib/env/syncPrep';
-import { applySync } from '@/lib/env/applySync';
+import { useSync } from '@/features/sync/hooks/useSync';
+import { prepareSync } from '@/features/sync/syncPrep';
+import { applySync } from '@/features/sync/applySync';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
-import type { SyncPlan } from '@/lib/env/diff';
-import type { EnvironmentSink } from '@/lib/env/sink';
-import type { ExecuteSyncResult } from '@/lib/env/executor';
+import type { SyncPlan } from '@/features/sync/diff';
+import type { EnvironmentSink } from '@/features/sync/sink';
+import type { ExecuteSyncResult } from '@/features/sync/executor';
 import type { Profile } from '@/types';
 
-vi.mock('@/lib/env/syncPrep', () => ({ prepareSync: vi.fn() }));
-vi.mock('@/lib/env/applySync', () => ({ applySync: vi.fn() }));
+vi.mock('@/features/sync/syncPrep', () => ({ prepareSync: vi.fn() }));
+vi.mock('@/features/sync/applySync', () => ({ applySync: vi.fn() }));
 
 const mockPrepare = vi.mocked(prepareSync);
 const mockApply = vi.mocked(applySync);

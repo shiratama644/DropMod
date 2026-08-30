@@ -20,10 +20,10 @@
  */
 
 import { useState } from 'react';
-import { SyncPreviewModal } from '@/components/SyncPreviewModal';
-import { useSync } from '@/hooks/useSync';
-import type { ModpackConflictChoice } from '@/features/modpack/modpackAdd';
-import type { PrepareSyncOutcome } from '@/lib/env/syncPrep';
+import { SyncPreviewModal } from './SyncPreviewModal';
+import { useSync } from '../hooks/useSync';
+import type { ModpackConflictChoice } from '@/features/modpack';
+import type { PrepareSyncOutcome } from '../syncPrep';
 
 export type SyncButtonVariant = 'primary' | 'primaryLg' | 'ghost' | 'icon';
 

@@ -14,8 +14,8 @@
 //      onClose を明示すると close アニメが 2 回走る)
 // -----------------------------------------------------------------------------
 
-import { SyncButton } from '@/components/SyncButton';
-import { useFolderLinked } from '@/hooks/useFolderLinked';
+import { SyncButton } from '@/features/sync';
+import { useFolderLinked } from '@/features/sync';
 import type React from 'react';
 import { useCallback, useRef } from 'react';
 import Link from 'next/link';

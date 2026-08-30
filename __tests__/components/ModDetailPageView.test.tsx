@@ -25,7 +25,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { render } from '@testing-library/react';
-import { ModDetailPageView } from '@/components/ModDetailPageView';
+import { ModDetailPageView } from '@/features/project/components/ModDetailPageView';
 import type { ModrinthProject, ModrinthVersion } from '@/types';
 
 const fullProject: ModrinthProject = {

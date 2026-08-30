@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useFolderLinked } from '@/hooks/useFolderLinked';
+import { useFolderLinked } from '@/features/sync/hooks/useFolderLinked';
 import { useProfilesStore } from '@/lib/store/profiles';
 import type { LinkedSource, Profile } from '@/types';
 

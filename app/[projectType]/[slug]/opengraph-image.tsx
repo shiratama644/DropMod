@@ -1,8 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { parseDetailType } from '@/lib/constants/search';
 import { fetchModrinthProject } from '@/lib/modrinth/server';
-import { formatOgDownloads } from '@/lib/seo/og-copy';
-import { projectTypeLabel } from '@/lib/seo/jsonld';
+import { formatOgDownloads } from '@/features/seo';
+import { projectTypeLabel } from '@/features/seo';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;

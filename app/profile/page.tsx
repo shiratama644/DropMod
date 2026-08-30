@@ -11,7 +11,7 @@
 //   - 旧 /mods は 301 redirect で /profile に飛ばす (SEO 保全)
 // ============================================================================
 
-import { ModsPageClient } from '@/components/ModsPageClient';
+import { ModsPageClient } from '@/features/profiles';
 
 export const metadata = {
   // // ルートレイアウトの title.template = '%s | DropMod' が自動付与されるため

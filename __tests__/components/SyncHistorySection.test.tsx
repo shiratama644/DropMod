@@ -6,13 +6,13 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SyncHistorySection } from '@/components/SyncHistorySection';
-import { useSyncHistory } from '@/hooks/useSyncHistory';
+import { SyncHistorySection } from '@/features/sync/components/SyncHistorySection';
+import { useSyncHistory } from '@/features/sync/hooks/useSyncHistory';
 import { useProfilesStore } from '@/lib/store/profiles';
-import { UNDO_KEEP_COUNT } from '@/lib/env/backup';
-import type { SyncHistoryItem } from '@/hooks/useSyncHistory';
+import { UNDO_KEEP_COUNT } from '@/features/sync/backup';
+import type { SyncHistoryItem } from '@/features/sync/hooks/useSyncHistory';
 
-vi.mock('@/hooks/useSyncHistory', () => ({ useSyncHistory: vi.fn() }));
+vi.mock('@/features/sync/hooks/useSyncHistory', () => ({ useSyncHistory: vi.fn() }));
 const mockUse = vi.mocked(useSyncHistory);
 
 const undo = vi.fn(async () => undefined);

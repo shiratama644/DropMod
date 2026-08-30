@@ -16,8 +16,8 @@ import {
   executeSync,
   rollbackSync,
   type ResolveContent
-} from '@/lib/env/executor';
-import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
+} from '@/features/sync/executor';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
 import {
   _clearAllForTesting,
   db,

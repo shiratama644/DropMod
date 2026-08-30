@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PreviewCard } from '@/components/landing/PreviewCard';
+import { PreviewCard } from '@/features/landing/components/PreviewCard';
 import type { ModrinthHit } from '@/types';
 
 const baseHit: ModrinthHit = {

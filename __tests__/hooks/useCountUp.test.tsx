@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { useCountUp } from '@/hooks/useCountUp';
+import { useCountUp } from '@/features/landing/hooks/useCountUp';
 import {
   stubMatchMedia,
   stubIntersectionObserver,

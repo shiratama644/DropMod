@@ -16,15 +16,15 @@
 
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { SyncButton } from '@/components/SyncButton';
+import { SyncButton } from './SyncButton';
 import { useAppAction } from '@/lib/store/appActions';
-import type { ReadySyncOutcome } from '@/lib/env/syncPrep';
+import type { ReadySyncOutcome } from '../syncPrep';
 import {
   checkEnvironmentMatch,
   ENVIRONMENT_FIELD_LABEL
-} from '@/lib/env/environmentCheck';
-import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
-import { useZipSync } from '@/hooks/useZipSync';
+} from '../environmentCheck';
+import { useEnvironmentLink } from '../hooks/useEnvironmentLink';
+import { useZipSync } from '../hooks/useZipSync';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
 

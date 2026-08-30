@@ -10,7 +10,7 @@ import {
   checkEnvironmentMatch,
   ENVIRONMENT_FIELDS,
   ENVIRONMENT_FIELD_LABEL
-} from '@/lib/env/environmentCheck';
+} from '@/features/sync/environmentCheck';
 import type { Profile } from '@/types';
 
 /** `Profile['environment']` と同じ形 */

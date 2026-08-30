@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
-import { useZipExport } from '@/hooks/useZipExport';
+import { useZipExport } from '@/features/zip/hooks/useZipExport';
 import { useZipExportStore } from '@/lib/store/zipExport';
 import type { Profile } from '@/types';
 

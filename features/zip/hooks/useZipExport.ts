@@ -8,7 +8,7 @@ import type { Profile, ProjectItem } from '@/types';
 //   hooks/useZipExport.ts で重複定義していた interface と INITIAL_STATE (dead code)
 //   を削除し、store から import して名前空間衝突リスクを排除。
 import { useZipExportStore, type ZipProgressState } from '@/lib/store/zipExport';
-import { contentCategoryOf } from '@/lib/utils/contentCategory';
+import { contentCategoryOf } from '@/features/profiles';
 
 // ==========================================
 // 定数

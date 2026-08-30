@@ -12,7 +12,7 @@ import type {
   ModrinthProject,
   ModrinthVersion
 } from '@/types';
-import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
+import { contentCategoryFromProject } from '@/features/profiles/contentCategory';
 import type {
   ContentProvider,
   ProviderContext,

@@ -51,15 +51,15 @@ import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { useToastStore } from '@/lib/store/toast';
-import { useModpackAdd } from '@/features/modpack/hooks/useModpackAdd';
-import { ModpackImportModal } from '@/features/modpack/components/ModpackImportModal';
+import { useModpackAdd } from '@/features/modpack';
+import { ModpackImportModal } from '@/features/modpack';
 import {
   discoverPathForType,
   discoverPathFromProjectType,
   modrinthProjectUrl,
   parseProjectType
 } from '@/lib/constants/search';
-import { projectTypeLabel } from '@/lib/seo/jsonld';
+import { projectTypeLabel } from '@/features/seo';
 
 // -----------------------------------------------------------------------------
 // Props

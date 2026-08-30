@@ -20,8 +20,8 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { prepareZipSync, applyZipSync } from '@/lib/env/zipSync';
-import type { PrepareZipSyncOutcome } from '@/lib/env/zipSync';
+import { prepareZipSync, applyZipSync } from '../zipSync';
+import type { PrepareZipSyncOutcome } from '../zipSync';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
 

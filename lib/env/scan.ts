@@ -13,8 +13,8 @@
  */
 
 import type { ContentCategory, LinkedSource } from '@/types';
-import { CATEGORY_EXTENSIONS, hasExtension } from './analyzer';
-import type { LocalFileEntry } from './diff';
+import { CATEGORY_EXTENSIONS, hasExtension } from '@/features/env-import';
+import type { LocalFileEntry } from '@/features/sync/diff';
 import { computeHashes } from './hashWorker';
 import type { EnvironmentSource } from './source';
 

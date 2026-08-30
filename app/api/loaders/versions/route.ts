@@ -7,7 +7,7 @@ import {
   neoforgeVersionsForMc,
   parseFabricOrQuiltLoaders,
   parseMavenVersions
-} from '@/lib/loaders/versions';
+} from '@/features/profiles/loaders/versions';
 import { API_CORS_HEADERS, checkRateLimit, getClientIp } from '@/lib/server/rate-limit';
 import { logger } from '@/lib/server/logger';
 

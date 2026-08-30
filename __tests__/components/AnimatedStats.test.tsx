@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { AnimatedStats } from '@/components/landing/AnimatedStats';
+import { AnimatedStats } from '@/features/landing/components/AnimatedStats';
 import {
   stubMatchMedia,
   stubIntersectionObserver,

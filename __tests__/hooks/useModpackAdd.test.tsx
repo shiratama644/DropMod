@@ -12,7 +12,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import JSZip from 'jszip';
 import {
   useModpackAdd
-} from '@/hooks/useModpackAdd';
+} from '@/features/modpack/hooks/useModpackAdd';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { db } from '@/lib/db/dexie';
 import type { ModrinthProject, ModrinthVersion, MrpackIndex } from '@/types';

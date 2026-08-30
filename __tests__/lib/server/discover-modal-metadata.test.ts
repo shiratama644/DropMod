@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDiscoverModalMetadata } from '@/lib/server/project-detail';
+import { buildDiscoverModalMetadata } from '@/features/project/server';
 
 describe('buildDiscoverModalMetadata (SEO-2)', () => {
   it('モーダル直接 URL は noindex かつ follow、canonical は詳細へ', () => {

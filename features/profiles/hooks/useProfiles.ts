@@ -13,10 +13,10 @@ import type {
 } from '@/types';
 import { nextDuplicateName } from '@/lib/utils/profileName';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
 import { contentCategoryFromProject, contentCategoryOf } from '../contentCategory';
-import { primaryCategoryId } from '@/lib/constants/categories';
+import { primaryCategoryId } from '@/features/catalog';
 import {
   syncProfiles as dexieSyncProfiles,
   getAllProfiles as dexieGetAllProfiles,
@@ -25,10 +25,10 @@ import {
   getManagedFiles,
   syncManagedFiles
 } from '@/lib/db/dexie';
-import { linkPickedDirectory } from '@/lib/env/link';
-import { expandProfileToManaged, mergeManagedRecords } from '@/lib/env/managed';
-import type { DetectedEnvironment } from '@/lib/env/detector';
-import type { PickedDirectory } from '@/lib/env/picker';
+import { linkPickedDirectory } from '@/features/sync';
+import { expandProfileToManaged, mergeManagedRecords } from '@/features/sync';
+import type { DetectedEnvironment } from '@/features/env-import';
+import type { PickedDirectory } from '@/features/env-import';
 import type { LinkedSource } from '@/types';
 import {
   migrateFromLocalStorage,

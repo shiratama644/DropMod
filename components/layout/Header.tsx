@@ -13,8 +13,8 @@ import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import type { Profile, TabName, ThemeMode } from '@/types';
-import { SyncButton } from '@/components/SyncButton';
-import { useFolderLinked } from '@/hooks/useFolderLinked';
+import { SyncButton } from '@/features/sync';
+import { useFolderLinked } from '@/features/sync';
 import { CustomDropdown } from '../ui/CustomDropdown';
 
 interface HeaderProps {

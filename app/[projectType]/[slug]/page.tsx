@@ -11,18 +11,18 @@
 
 import { notFound } from 'next/navigation';
 
-import { JsonLd } from '@/components/JsonLd';
-import { ModDetailPageView } from '@/components/ModDetailPageView';
+import { JsonLd } from '@/features/seo';
+import { ModDetailPageView } from '@/features/project';
 import {
   buildBreadcrumbListJsonLd,
   buildSoftwareApplicationJsonLd,
   detailBreadcrumbItems
-} from '@/lib/seo/jsonld';
+} from '@/features/seo';
 import {
   buildDetailMetadata,
   fetchProjectDetailData,
   generateDetailStaticParams
-} from '@/lib/server/project-detail';
+} from '@/features/project/server';
 import { resolveSiteOrigin } from '@/lib/server/site-url';
 import {
   PROJECT_TYPES,

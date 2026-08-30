@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LandingSearchForm } from '@/components/landing/LandingSearchForm';
+import { LandingSearchForm } from '@/features/landing/components/LandingSearchForm';
 import { navigationMock } from '../test-utils/navigation';
 
 vi.mock('next/navigation', async () => {

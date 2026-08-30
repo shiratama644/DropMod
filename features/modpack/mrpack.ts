@@ -35,11 +35,11 @@ import {
   fetchModrinthBatch,
   fetchModrinthVersionFilesBatch
 } from '@/lib/modrinth/client';
-import { contentCategoryFromPath, contentCategoryFromProject } from '@/lib/utils/contentCategory';
-import { primaryCategoryId } from '@/lib/constants/categories';
+import { contentCategoryFromPath, contentCategoryFromProject } from '@/features/profiles/contentCategory';
+import { primaryCategoryId } from '@/features/catalog';
 import { calculateSha1 } from '@/lib/utils/hash';
 import { generateId } from '@/lib/utils/id';
-import { buildManagedFileId } from '@/lib/env/managed';
+import { buildManagedFileId } from '@/features/sync';
 
 /** 環境ルートへコピーされる overrides ディレクトリ (DropMod はクライアントアプリ) */
 export const OVERRIDES_DIRS = ['overrides', 'client-overrides'] as const;

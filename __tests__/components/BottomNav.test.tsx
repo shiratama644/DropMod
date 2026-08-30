@@ -1,6 +1,6 @@
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BottomNav } from '@/components/BottomNav';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { useUiState } from '@/lib/store/uiState';
 import type { TabName, ThemeMode } from '@/types';
 

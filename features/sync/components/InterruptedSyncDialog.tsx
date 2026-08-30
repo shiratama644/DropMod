@@ -12,7 +12,7 @@ import type React from 'react';
 import { useRef, useId } from 'react';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
-import { useInterruptedSync } from '@/hooks/useInterruptedSync';
+import { useInterruptedSync } from '../hooks/useInterruptedSync';
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleString('ja-JP', { hour12: false });

@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useConfirmStore } from '@/lib/store/confirm';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 export function useConfirm() {
   // このインスタンス固有の Symbol (レンダー間で不変)

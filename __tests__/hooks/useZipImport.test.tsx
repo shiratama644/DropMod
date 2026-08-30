@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import JSZip from 'jszip';
-import { useZipImport } from '@/hooks/useZipImport';
+import { useZipImport } from '@/features/zip/hooks/useZipImport';
 import { useZipImportStore } from '@/lib/store/zipImport';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { calculateSha1 } from '@/lib/utils/hash';

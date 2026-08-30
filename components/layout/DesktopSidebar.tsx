@@ -24,8 +24,8 @@
 //   代わりに /mods ページ上部で type filter があれば十分)
 // -----------------------------------------------------------------------------
 
-import { SyncButton } from '@/components/SyncButton';
-import { useFolderLinked } from '@/hooks/useFolderLinked';
+import { SyncButton } from '@/features/sync';
+import { useFolderLinked } from '@/features/sync';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import Link from 'next/link';

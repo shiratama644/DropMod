@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { BrowseBottomSheet } from '@/components/BrowseBottomSheet';
+import { BrowseBottomSheet } from '@/features/catalog/components/BrowseBottomSheet';
 import { navigationMock } from '../test-utils/navigation';
 import {
   stubMatchMedia,

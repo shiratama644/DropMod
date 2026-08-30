@@ -8,7 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CustomDropdown } from '@/components/CustomDropdown';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 
 const options = [
   { label: 'Fabric', value: 'Fabric' },

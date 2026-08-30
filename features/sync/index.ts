@@ -10,3 +10,14 @@ export { useEnvironmentLink, type EnvironmentLinkState } from './hooks/useEnviro
 export { useFolderLinked } from './hooks/useFolderLinked';
 export { useZipSync, type ZipSyncState, type UseZipSyncReturn } from './hooks/useZipSync';
 export { formatBytes } from './format';
+export {
+  buildManagedFileId,
+  expandProfileToManaged,
+  mergeManagedRecords
+} from './managed';
+export {
+  createFolderLink,
+  linkPickedDirectory,
+  releaseFolderLink,
+  openLinkedFolder
+} from './link';

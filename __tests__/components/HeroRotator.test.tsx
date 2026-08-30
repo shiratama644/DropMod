@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { HeroRotator } from '@/components/landing/HeroRotator';
+import { HeroRotator } from '@/features/landing/components/HeroRotator';
 import {
   stubMatchMedia,
   type MatchMediaStub

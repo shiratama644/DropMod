@@ -15,7 +15,7 @@ import {
   OVERRIDES_DIRS,
   parseMrpackOverrides,
   promoteModpackRecords
-} from '@/lib/env/mrpack';
+} from '@/features/modpack/mrpack';
 import type { ManagedFileRecord, ModrinthProject, ModrinthVersion, MrpackIndex, ProjectItem } from '@/types';
 import { calculateSha1 } from '@/lib/utils/hash';
 

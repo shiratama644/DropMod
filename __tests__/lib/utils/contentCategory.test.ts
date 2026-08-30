@@ -3,7 +3,7 @@ import {
   contentCategoryFromPath,
   contentCategoryFromProject,
   contentCategoryOf
-} from '@/lib/utils/contentCategory';
+} from '@/features/profiles';
 
 describe('contentCategoryOf', () => {
   it('未指定は mod', () => {

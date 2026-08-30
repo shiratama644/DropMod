@@ -7,12 +7,12 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SyncButton } from '@/components/SyncButton';
-import { useSync } from '@/hooks/useSync';
-import type { SyncPlan } from '@/lib/env/diff';
-import type { EnvironmentSink } from '@/lib/env/sink';
+import { SyncButton } from '@/features/sync/components/SyncButton';
+import { useSync } from '@/features/sync/hooks/useSync';
+import type { SyncPlan } from '@/features/sync/diff';
+import type { EnvironmentSink } from '@/features/sync/sink';
 
-vi.mock('@/hooks/useSync', () => ({ useSync: vi.fn() }));
+vi.mock('@/features/sync/hooks/useSync', () => ({ useSync: vi.fn() }));
 const mockUseSync = vi.mocked(useSync);
 
 const prepareMock = vi.fn();

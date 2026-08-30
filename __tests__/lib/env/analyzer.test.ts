@@ -8,8 +8,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
-import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
-import type { AnalyzeProgress } from '@/lib/env/analyzer';
+import { analyzeEnvironmentSource } from '@/features/env-import/analyzer';
+import type { AnalyzeProgress } from '@/features/env-import/analyzer';
 import { FileSystemSource } from '@/lib/env/source';
 import { createFakeFileSystem } from '../../test-utils/fakeFs';
 import { calculateSha1 } from '@/lib/utils/hash';

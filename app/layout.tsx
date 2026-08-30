@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-import { AppShell } from '@/components/AppShell';
-import { JsonLd } from '@/components/JsonLd';
-import { Providers as QueryProviders } from '@/components/Providers';
-import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/seo/jsonld';
+import { AppShell } from '@/components/layout/AppShell';
+import { JsonLd } from '@/features/seo';
+import { Providers as QueryProviders } from '@/components/layout/Providers';
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/features/seo';
 import { resolveSiteOrigin } from '@/lib/server/site-url';
 import './globals.css';
 

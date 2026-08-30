@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ModrinthProvider } from '@/lib/providers/modrinth';
-import { availableProviders, DEFAULT_PROVIDER_ID, getProvider } from '@/lib/providers';
+import { ModrinthProvider } from '@/features/modpack/providers/modrinth';
+import { availableProviders, DEFAULT_PROVIDER_ID, getProvider } from '@/features/modpack/providers';
 import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ModrinthVersion } from '@/types';
 

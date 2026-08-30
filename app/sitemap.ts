@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { logger } from '@/lib/server/logger';
-import { popularDetailSitemapEntries, staticSitemapEntries } from '@/lib/server/sitemap-entries';
+import { popularDetailSitemapEntries, staticSitemapEntries } from '@/features/seo';
 import { resolveSiteOrigin } from '@/lib/server/site-url';
 
 export const revalidate = 3600;

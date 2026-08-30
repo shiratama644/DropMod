@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PopularMarquee } from '@/components/landing/PopularMarquee';
+import { PopularMarquee } from '@/features/landing/components/PopularMarquee';
 import type { ModrinthHit } from '@/types';
 import {
   stubMatchMedia,

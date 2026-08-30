@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import JSZip from 'jszip';
-import { prepareZipSync, applyZipSync } from '@/lib/env/zipSync';
+import { prepareZipSync, applyZipSync } from '@/features/sync/zipSync';
 import { getManagedFiles, syncManagedFiles, _clearAllForTesting } from '@/lib/db/dexie';
 import { calculateSha1 } from '@/lib/utils/hash';
 import type { ManagedFileRecord, Profile } from '@/types';

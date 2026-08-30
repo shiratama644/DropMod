@@ -16,13 +16,13 @@ import {
   PrismDetector,
   MojoLauncherDetector,
   GenericDetector
-} from '@/lib/env/detector';
+} from '@/features/env-import/detector';
 import {
   parseVersionManifest,
   extractMcVersionFromId
-} from '@/lib/env/detector/official';
-import { parseMmcPack } from '@/lib/env/detector/prism';
-import { parseMojoInstance } from '@/lib/env/detector/mojoLauncher';
+} from '@/features/env-import/detector/official';
+import { parseMmcPack } from '@/features/env-import/detector/prism';
+import { parseMojoInstance } from '@/features/env-import/detector/mojoLauncher';
 import { FileSystemSource } from '@/lib/env/source';
 import { createFakeFileSystem } from '../../test-utils/fakeFs';
 

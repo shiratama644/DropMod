@@ -17,20 +17,20 @@ import {
 } from '@/lib/modrinth/client';
 import { generateId } from '@/lib/utils/id';
 import { useZipImportStore } from '@/lib/store/zipImport';
-import { contentCategoryFromProject } from '@/lib/utils/contentCategory';
-import { primaryCategoryId } from '@/lib/constants/categories';
+import { contentCategoryFromProject } from '@/features/profiles';
+import { primaryCategoryId } from '@/features/catalog';
 import { ZipSource, isMinecraftFolderZip } from '@/lib/env/zipSource';
-import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/features/modpack/modpack';
-import { analyzeEnvironmentSource } from '@/lib/env/analyzer';
+import { detectModpackFormat, CURSEFORGE_UNSUPPORTED_MESSAGE } from '@/features/modpack';
+import { analyzeEnvironmentSource } from '@/features/env-import';
 import { analyzeImportHealth } from '@/lib/env/analysis';
-import { generateProfileName } from '@/lib/env/profileName';
+import { generateProfileName } from '@/features/env-import';
 import {
   environmentFromMrpack,
   expandMrpackFiles,
   modpackLocksFromItems,
   mrpackOverridesToManaged,
   parseMrpackOverrides
-} from '@/features/modpack/mrpack';
+} from '@/features/modpack';
 import { syncManagedFiles } from '@/lib/db/dexie';
 
 function normalizeImportedLoader(raw: string | undefined): string | undefined {

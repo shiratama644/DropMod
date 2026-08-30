@@ -13,7 +13,7 @@
 // ============================================================================
 
 import type { Metadata } from 'next';
-import { ModpackHubClient } from '@/features/modpack/components/ModpackHubClient';
+import { ModpackHubClient } from '@/features/modpack';
 
 export const metadata: Metadata = {
   // ルートレイアウトの template が '%s | DropMod' なので、

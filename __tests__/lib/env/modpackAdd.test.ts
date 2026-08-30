@@ -12,7 +12,7 @@ import {
   applyModpackAddPlan,
   buildModpackAddPlan,
   type ModpackAddPlan
-} from '@/lib/env/modpackAdd';
+} from '@/features/modpack/modpackAdd';
 import type { Profile, ProjectItem } from '@/types';
 
 const PACK_META = {

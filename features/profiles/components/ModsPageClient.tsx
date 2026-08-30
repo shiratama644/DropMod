@@ -1,7 +1,7 @@
 'use client';
 
-import { SyncButton } from '@/components/SyncButton';
-import { useFolderLinked } from '@/hooks/useFolderLinked';
+import { SyncButton } from '@/features/sync';
+import { useFolderLinked } from '@/features/sync';
 import type React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { downloadAsBlob } from '@/lib/utils/download';
 import { useCurrentProfileWithFallback } from '@/lib/store/useCurrentProfileWithFallback';
 import { useAppAction } from '@/lib/store/appActions';
 import { contentCategoryOf } from '../contentCategory';
-import { categoryLabel } from '@/lib/constants/categories';
+import { categoryLabel } from '@/features/catalog';
 import { detailPathFromProject } from '@/lib/constants/search';
 import { versionDropdownOption } from '@/lib/utils/versionOption';
 

@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
-import { RevealSection } from '@/components/landing/RevealSection';
+import { RevealSection } from '@/features/landing/components/RevealSection';
 import {
   stubMatchMedia,
   stubIntersectionObserver,

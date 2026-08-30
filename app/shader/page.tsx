@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ReservedCategoryPage } from '@/components/ReservedCategoryPage';
+import { ReservedCategoryPage } from '@/features/project';
 
 export const metadata: Metadata = {
   title: 'Shaders',

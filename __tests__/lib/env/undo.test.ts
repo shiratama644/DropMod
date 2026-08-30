@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { applySync, type ReadySyncOutcome } from '@/lib/env/applySync';
-import { undoSync } from '@/lib/env/undo';
-import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
+import { applySync, type ReadySyncOutcome } from '@/features/sync/applySync';
+import { undoSync } from '@/features/sync/undo';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
 import {
   _clearAllForTesting,
   createSyncTransaction,

@@ -7,15 +7,15 @@ import type { ProjectItem, ProfileContentExtras, UnknownFile } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { pickMinecraftDirectory, type PickedDirectory } from '@/lib/env/picker';
-import { rootTypeLabel, type DetectedEnvironment } from '@/lib/env/detector';
+import { pickMinecraftDirectory, type PickedDirectory } from '@/features/env-import';
+import { rootTypeLabel, type DetectedEnvironment } from '@/features/env-import';
 import {
   analyzeEnvironmentSource,
   type AnalyzeProgress,
   type ImportAnalysis
-} from '@/lib/env/analyzer';
+} from '@/features/env-import';
 import { analyzeImportHealth, type AnalysisIssue } from '@/lib/env/analysis';
-import { generateProfileName } from '@/lib/env/profileName';
+import { generateProfileName } from '@/features/env-import';
 import { LOADER_DROPDOWN_OPTIONS } from '../loaders/loaderVersions';
 import { useLoaderVersionOptions } from '../hooks/useLoaderVersionOptions';
 import type { PendingImportData } from '@/lib/store/zipImport';

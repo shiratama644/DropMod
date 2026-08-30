@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MenuBottomSheet } from '@/components/MenuBottomSheet';
+import { MenuBottomSheet } from '@/components/layout/MenuBottomSheet';
 import { navigationMock } from '../test-utils/navigation';
 import {
   stubMatchMedia,

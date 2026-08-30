@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { CacheStatusBadge } from '@/components/CacheStatusBadge';
+import { CacheStatusBadge } from '@/components/feedback/CacheStatusBadge';
 
 describe('CacheStatusBadge', () => {
   it('dataUpdatedAt=0 & isFetching=false なら何も描画しない', () => {

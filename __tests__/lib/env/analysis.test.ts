@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { analyzeImportHealth } from '@/lib/env/analysis';
-import type { ImportAnalysis } from '@/lib/env/analyzer';
+import type { ImportAnalysis } from '@/features/env-import/analyzer';
 import type { ModrinthVersion, ProjectItem } from '@/types';
 
 function makeVersion(overrides: Partial<ModrinthVersion> = {}): ModrinthVersion {

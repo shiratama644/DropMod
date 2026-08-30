@@ -18,9 +18,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { listSyncTransactions, type SyncTransactionRow } from '@/lib/db/dexie';
-import { openLinkedFolder } from '@/lib/env/link';
-import { undoSync } from '@/lib/env/undo';
-import { UNDO_KEEP_COUNT } from '@/lib/env/backup';
+import { openLinkedFolder } from '../link';
+import { undoSync } from '../undo';
+import { UNDO_KEEP_COUNT } from '../backup';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
 

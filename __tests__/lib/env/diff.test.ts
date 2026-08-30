@@ -15,8 +15,8 @@ import {
   selectDeletionsRequiringConfirm,
   selectExternallyModified,
   type LocalFileEntry
-} from '@/lib/env/diff';
-import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
+} from '@/features/sync/diff';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
 import type { ManagedFileRecord, Profile, ProjectItem } from '@/types';
 
 const NOW = 1_700_000_000_000;

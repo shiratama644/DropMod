@@ -8,29 +8,29 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { EnvironmentSyncSection } from '@/components/EnvironmentSyncSection';
+import { EnvironmentSyncSection } from '@/features/sync/components/EnvironmentSyncSection';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
-import { useEnvironmentLink } from '@/hooks/useEnvironmentLink';
-import { useSync } from '@/hooks/useSync';
-import { useZipSync } from '@/hooks/useZipSync';
+import { useEnvironmentLink } from '@/features/sync/hooks/useEnvironmentLink';
+import { useSync } from '@/features/sync/hooks/useSync';
+import { useZipSync } from '@/features/sync/hooks/useZipSync';
 import { useAppActionsStore } from '@/lib/store/appActions';
-import type { SyncPlan } from '@/lib/env/diff';
-import type { EnvironmentSink } from '@/lib/env/sink';
+import type { SyncPlan } from '@/features/sync/diff';
+import type { EnvironmentSink } from '@/features/sync/sink';
 import type { LinkedSource, Profile } from '@/types';
 
 // link.ts は自前のテストを持つため、フックごと差し替えて表示分岐に絞る
-vi.mock('@/hooks/useEnvironmentLink', () => ({
+vi.mock('@/features/sync/hooks/useEnvironmentLink', () => ({
   useEnvironmentLink: vi.fn()
 }));
 const mockUseLink = vi.mocked(useEnvironmentLink);
 
 // useSync も自前のテストを持つため、ここでは接続 (ボタン → Preview) に絞る
-vi.mock('@/hooks/useSync', () => ({ useSync: vi.fn() }));
+vi.mock('@/features/sync/hooks/useSync', () => ({ useSync: vi.fn() }));
 const mockUseSync = vi.mocked(useSync);
 
 // useZipSync も自前のテストを持つため、ここでは導線の表示/接続に絞る
-vi.mock('@/hooks/useZipSync', () => ({ useZipSync: vi.fn() }));
+vi.mock('@/features/sync/hooks/useZipSync', () => ({ useZipSync: vi.fn() }));
 const mockUseZipSync = vi.mocked(useZipSync);
 // 引数型を付けないと mock.calls が空タプルになり calls[0][0] を読めない
 const exportSyncAsZip = vi.fn(async (_seed?: File) => undefined);

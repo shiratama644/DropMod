@@ -20,7 +20,7 @@
 
 import type { ContentCategory, ModrinthProject, ModrinthVersion, ProjectItem, UnknownFile } from '@/types';
 import { generateId } from '@/lib/utils/id';
-import { primaryCategoryId } from '@/lib/constants/categories';
+import { primaryCategoryId } from '@/features/catalog';
 import { fetchModrinthBatch, fetchModrinthVersionFilesBatch } from '@/lib/modrinth/client';
 import { detectEnvironment } from './detector';
 import type { DetectedEnvironment } from './detector/types';

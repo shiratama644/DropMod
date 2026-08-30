@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { computeConcurrency } from '@/hooks/useZipExport';
+import { computeConcurrency } from '@/features/zip/hooks/useZipExport';
 
 describe('computeConcurrency', () => {
   const originalNavigator = globalThis.navigator;

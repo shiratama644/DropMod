@@ -12,7 +12,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 export interface ConfirmState extends ConfirmDialogOptions {
   isOpen: boolean;

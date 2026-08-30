@@ -10,15 +10,15 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ModpackHubClient } from '@/components/ModpackHubClient';
-import { checkModpackUpdates } from '@/lib/env/modpackUpdate';
-import type { ModpackUpdateReport } from '@/lib/env/modpackUpdate';
+import { ModpackHubClient } from '@/features/modpack/components/ModpackHubClient';
+import { checkModpackUpdates } from '@/features/modpack/modpackUpdate';
+import type { ModpackUpdateReport } from '@/features/modpack/modpackUpdate';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useConfirmStore } from '@/lib/store/confirm';
 import { useToastStore } from '@/lib/store/toast';
 import { getManagedFiles, syncManagedFiles, _clearAllForTesting } from '@/lib/db/dexie';
 import type { ManagedFileRecord, Profile } from '@/types';
-import type { ConfirmDialogOptions } from '@/components/ConfirmDialog';
+import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 
 // `checkModpackUpdates` だけ差し替える。**`updateIssueFromReport` は実物を使う**ので
 // importOriginal で透過させる (モックに含め忘れると描画時に undefined 呼び出しで落ちる)。

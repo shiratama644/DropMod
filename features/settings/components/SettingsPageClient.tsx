@@ -11,8 +11,8 @@ import {
   getMigrationStatus,
   restoreFromLocalStorageBackup
 } from '@/lib/db/migrate';
-import { EnvironmentSyncSection } from '@/components/EnvironmentSyncSection';
-import { SyncHistorySection } from '@/components/SyncHistorySection';
+import { EnvironmentSyncSection } from '@/features/sync';
+import { SyncHistorySection } from '@/features/sync';
 
 // ============================================================================
 // SettingsPageClient (Phase 9-A.1: useAppContext 撤去)

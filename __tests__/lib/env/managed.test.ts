@@ -17,7 +17,7 @@ import {
   MANAGED_ID_SEPARATOR,
   mergeManagedRecords,
   parseManagedFileId
-} from '@/lib/env/managed';
+} from '@/features/sync/managed';
 import type { ManagedFileRecord, Profile, ProjectItem } from '@/types';
 
 const NOW = 1_700_000_000_000;

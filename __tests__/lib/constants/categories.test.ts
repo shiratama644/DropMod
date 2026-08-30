@@ -4,7 +4,7 @@ import {
   categoriesForProjectType,
   categoryLabel,
   primaryCategoryId
-} from '@/lib/constants/categories';
+} from '@/features/catalog';
 
 describe('categoriesForProjectType', () => {
   it('mod は従来 CATEGORIES と同じ', () => {

@@ -21,7 +21,7 @@ import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import type { TabName, ThemeMode } from '@/types';
 import { useUiState } from '@/lib/store/uiState';
-import { BrowseBottomSheet } from '../BrowseBottomSheet';
+import { BrowseBottomSheet } from '@/features/catalog';
 import { MenuBottomSheet } from './MenuBottomSheet';
 
 interface BottomNavProps {

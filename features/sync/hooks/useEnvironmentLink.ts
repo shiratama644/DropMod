@@ -22,8 +22,8 @@
 import { useCallback, useState } from 'react';
 import { getManagedFiles, syncManagedFiles } from '@/lib/db/dexie';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { createFolderLink, releaseFolderLink } from '@/lib/env/link';
-import { expandProfileToManaged, mergeManagedRecords } from '@/lib/env/managed';
+import { createFolderLink, releaseFolderLink } from '../link';
+import { expandProfileToManaged, mergeManagedRecords } from '../managed';
 import { useProfilesStore } from '@/lib/store/profiles';
 import { useToastStore } from '@/lib/store/toast';
 

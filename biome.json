@@ -46,6 +46,38 @@
       "preset": "recommended",
       "performance": {
         "noImgElement": "warn"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@/lib/providers", "@/lib/providers/**", "@/lib/search/**", "@/lib/seo/**", "@/lib/loaders/**"],
+                "message": "ARCH-1M: Feature の公開面 (@/features/<name>) から import する"
+              },
+              {
+                "group": [
+                  "@/hooks/useProfiles",
+                  "@/hooks/useSync",
+                  "@/hooks/useZipExport",
+                  "@/hooks/useZipImport",
+                  "@/hooks/useZipSync",
+                  "@/hooks/useModpackAdd",
+                  "@/hooks/useDependencyCheck",
+                  "@/hooks/useCountUp",
+                  "@/hooks/useScrollReveal",
+                  "@/hooks/useEnvironmentLink",
+                  "@/hooks/useFolderLinked",
+                  "@/hooks/useInterruptedSync",
+                  "@/hooks/useSyncHistory",
+                  "@/hooks/useLoaderVersionOptions"
+                ],
+                "message": "ARCH-1M: ドメインフックは @/features/<name> から import する"
+              }
+            ]
+          }
+        }
       }
     }
   },

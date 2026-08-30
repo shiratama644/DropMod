@@ -25,3 +25,4 @@ export {
 } from './analyzer';
 export { pickMinecraftDirectory, type PickedDirectory } from './picker';
 export { generateProfileName, isUsableFolderName } from './profileName';
+export { detectContentDirs } from './detector/types';

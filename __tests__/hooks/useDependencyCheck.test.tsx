@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
-import { useDependencyCheck } from '@/hooks/useDependencyCheck';
+import { useDependencyCheck } from '@/features/dep-check/hooks/useDependencyCheck';
 import { useDepCheckStore } from '@/lib/store/depCheck';
 import { clearApiCache } from '@/lib/modrinth/client';
 import { createQueryWrapper } from '../test-utils/queryWrapper';

@@ -16,7 +16,7 @@
 import { create } from 'zustand';
 import type { ProjectItem, UnknownFile } from '@/types';
 import type { AnalysisIssue } from '@/lib/env/analysis';
-import type { DetectedEnvironment } from '@/lib/env/detector/types';
+import type { DetectedEnvironment } from '@/features/env-import';
 
 // ============================================================================
 // 型

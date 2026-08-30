@@ -8,8 +8,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ModpackImportModal } from '@/components/ModpackImportModal';
-import type { ModpackAddPlan } from '@/lib/env/modpackAdd';
+import { ModpackImportModal } from '@/features/modpack/components/ModpackImportModal';
+import type { ModpackAddPlan } from '@/features/modpack/modpackAdd';
 import type { ProjectItem } from '@/types';
 
 function item(projectId: string, versionId: string, name: string): ProjectItem {

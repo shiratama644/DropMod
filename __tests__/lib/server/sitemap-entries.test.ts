@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { staticSitemapEntries } from '@/lib/server/sitemap-entries';
+import { staticSitemapEntries } from '@/features/seo';
 
 describe('staticSitemapEntries (SEO-1 / 2-5)', () => {
   it('4 型の discover 一覧を含む', () => {

@@ -39,3 +39,20 @@ export type {
 export { useModpackAdd } from './hooks/useModpackAdd';
 export { ModpackHubClient } from './components/ModpackHubClient';
 export { ModpackImportModal } from './components/ModpackImportModal';
+export {
+  availableProviders,
+  DEFAULT_PROVIDER_ID,
+  getProvider,
+  ModrinthProvider,
+  modrinthProvider
+} from './providers';
+export type {
+  ContentProvider,
+  ProviderId,
+  ProviderProject,
+  ProviderVersion,
+  ProviderContext,
+  ProviderSearchInput,
+  ProviderSearchResult,
+  ProviderUpdateInfo
+} from './providers';

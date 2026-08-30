@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
-import { OfflineBanner } from '@/components/OfflineBanner';
+import { OfflineBanner } from '@/components/feedback/OfflineBanner';
 
 describe('OfflineBanner', () => {
   let originalOnLine: PropertyDescriptor | undefined;

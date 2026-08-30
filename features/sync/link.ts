@@ -15,8 +15,8 @@
 
 import { deleteDirHandle, getDirHandle, saveDirHandle } from '@/lib/db/dexie';
 import type { LinkedSource } from '@/types';
-import { detectEnvironment, type DetectedEnvironment } from '@/lib/env/detector';
-import { pickMinecraftDirectory, type PickedDirectory } from '@/lib/env/picker';
+import { detectEnvironment, type DetectedEnvironment } from '@/features/env-import';
+import { pickMinecraftDirectory, type PickedDirectory } from '@/features/env-import';
 import type { EnvironmentSink } from './sink';
 import { FileSystemSink } from './sink/filesystem';
 import { FileSystemSource, type EnvironmentSource } from '@/lib/env/source';

@@ -7,11 +7,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import JSZip from 'jszip';
-import { normalizeZipPath, ZipSink } from '@/lib/env/sink/zip';
-import { executeSync } from '@/lib/env/executor';
-import { rollbackSync } from '@/lib/env/executor';
+import { normalizeZipPath, ZipSink } from '@/features/sync/sink/zip';
+import { executeSync } from '@/features/sync/executor';
+import { rollbackSync } from '@/features/sync/executor';
 import { _clearAllForTesting } from '@/lib/db/dexie';
-import type { SyncPlan, SyncPlanEntry } from '@/lib/env/diff';
+import type { SyncPlan, SyncPlanEntry } from '@/features/sync/diff';
 import { calculateSha1 } from '@/lib/utils/hash';
 import { MemoryBackupStore } from '../../test-utils/memoryEnv';
 

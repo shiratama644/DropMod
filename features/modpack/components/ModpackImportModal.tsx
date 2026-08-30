@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useId, useRef, useState } from 'react';
-import type { ModpackAddPlan, ModpackConflictChoice } from '@/features/modpack/modpackAdd';
+import type { ModpackAddPlan, ModpackConflictChoice } from '../modpackAdd';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 

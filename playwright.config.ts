@@ -45,7 +45,7 @@ export default defineConfig({
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ['list'],
     // 失敗テストを GitHub アノテーションに出力 (エージェントが API で読めるように。2026-08-27)
-    ['./e2e/helpers/annotation-reporter.ts']
+    ['./e2e/helpers/annotationReporter.ts']
   ],
   timeout: 30_000,
   expect: {

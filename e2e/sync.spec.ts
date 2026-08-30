@@ -63,7 +63,7 @@ const DOWNLOADED_JAR = 'e2e-downloaded-jar-bytes';
 /**
  * ページ内の JS 例外を収集する。
  *
- * `annotation-reporter.ts` はエラーメッセージを**先頭 200 字に切り詰め、改行を
+ * `annotationReporter.ts` はエラーメッセージを**先頭 200 字に切り詰め、改行を
  * スペース化する**。Playwright の定型文 (`Error: expect(locator)… Call log:`) が
  * 先頭に来ると肝心の情報が消えるため、失敗時は必ず短い診断を先頭に置いて投げる。
  */

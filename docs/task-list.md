@@ -240,7 +240,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1F | project + project-detail.ts | 完了 | 100% | ARCH-1E | Detail / ModalShell / Gallery / server.ts（index に use client 禁止） | `49e93cd` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1G | profiles + loaders + contentCategory | 完了 | 100% | ARCH-1A | ModsPageClient / useProfiles / loaders / contentCategory | `d85ec21` / typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1H | zip（プロファイル配布 ZIP） | 完了 | 100% | ARCH-1G | useZipExport/Import。ZipSink は含まない | typecheck / biome / 1244 tests / build. 計画 §10.5 |
-| ARCH-1I | dep-check | 未着手 | 0% | ARCH-1G | フック + モーダル | 計画 §10.5 |
+| ARCH-1I | dep-check | 完了 | 100% | ARCH-1G | フック + モーダル | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1J | env-import（検出・解析） | 未着手 | 0% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | 計画 §10.10 |
 | ARCH-1K | sync + formatBytes | 未着手 | 0% | ARCH-1J | lib/env の書き込み系 + Sync UI + format.ts | 計画 §10.5 |
 | ARCH-1L | modpack | 未着手 | 0% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |

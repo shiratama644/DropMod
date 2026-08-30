@@ -455,7 +455,8 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1E | `5bb34c3` | features/catalog。loadDiscoverSearch は barrel 外（RSC） |
 | ARCH-1F | `49e93cd` | features/project。server.ts は barrel 外。index に use client なし |
 | ARCH-1G | `d85ec21` | features/profiles。loaders/fetch は barrel 外。API は shim 経由 |
-| ARCH-1H | (本コミット) | features/zip。ZipSink は含まない |
+| ARCH-1H | `52490b1` | features/zip。ZipSink は含まない |
+| ARCH-1I | (本コミット) | features/dep-check。store slice は据置 |
 
 ## 13. 完了チェック（ARCH-1O）
 

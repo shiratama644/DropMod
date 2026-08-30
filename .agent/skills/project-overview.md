@@ -51,7 +51,7 @@
 | **10.5** | **Emergency: カバレッジ回復**（A〜C 完了で全 threshold green。D/E は任意） | ✅ A〜C |
 | **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ✅ 11-A/B/C + E2E 完了（CI run `33071105483` green / 74 E2E pass） |
 | 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ 未着手（着手前に PHASE12_PLAN §12 の設計論点 6 件を確定） |
-| 13 | SEO（候補 2-1 noindex が先行。旧 CurseForge 計画は `.archive/docs/planning/`） | ⏳ SEO-2 |
+| 13 | SEO（2-1〜2-6。旧 CurseForge は `.archive/docs/planning/`） | ローカル検証済み（本番目視は延期） |
 | 最終 | Vercel 本番デプロイ（Hobby 制約のため全 Phase 後） | ⏳ |
 
 ## 規模（2026-08-27 実測・`*.ts/*.tsx/*.mjs` の行数）

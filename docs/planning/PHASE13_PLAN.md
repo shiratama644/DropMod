@@ -2,102 +2,122 @@
 
 > 対応 task-list ID: `SEO-2` / `SEO-1` ([docs/task-list.md](../task-list.md))
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 着手** (2026-08-30 ユーザー確定: 旧 Phase 13 CurseForge 計画は
-> `.archive/docs/planning/PHASE13_PLAN.md` へ退避。Phase 13 の正本は
-> [SEO_CANDIDATES.md](./SEO_CANDIDATES.md) の実施計画である本書)
+> **状態: ローカル検証済み** (2026-08-30)
 >
-> 候補の詳細・優先度表は SEO_CANDIDATES.md を継承する。本書は着手用 DoD。
+> - 旧 CurseForge Phase 13 は `.archive/docs/planning/PHASE13_PLAN.md` へ退避
+> - 候補表の正本は [SEO_CANDIDATES.md](./SEO_CANDIDATES.md)
+> - 本番 HTML（meta robots / JSON-LD / OG 画像）の目視は **ユーザー指示で未実施**
+>   （状態は「完了」にしない。DEPLOY-1 後に確認する）
 
 ## 1. 開始前確認
 
 - CurseForge 計画が `.archive/docs/planning/PHASE13_PLAN.md` にあること
-- `SEO-2` は依存なし。`SEO-1` は 2-2 以降で Phase 12 完了後でも可
+- SEO-2 (`080ede1`) → SEO-1 (`52bf0b9`) の順で実装済み
 - AGENT.md §6 / `.agent/skills/routing-and-pages.md`
 
 ## 2. 目的 (Why)
 
-同一プロジェクトにプレビュー URL と詳細 URL が並立し、検索エンジンが順位を
-分散させる。詳細 `/<型>/<slug>` だけを index 対象にし、プレビュー直接 URL は
-辿れても索引しない。
+1. プレビュー URL と詳細 URL の順位分散を止める（詳細だけ index）
+2. 詳細を検索エンジン・SNS が理解できる形にする（JSON-LD / パンくず / 1200×630 OG）
+3. 発見性を 4 型に広げる（sitemap + 見出し・内部リンク）
 
 ## 3. 変更範囲 (Scope)
 
-変更対象:
+実施済み:
 
-- `app/discover/[type]/[slug]/page.tsx` — 直接アクセス用プレビュー
-- `lib/server/project-detail.ts` — メタ生成の純関数（テスト可能に）
-- `docs/task-list.md` / 本書 §12 / `docs/README.md`
-- 回帰テスト
+- SEO-2: `app/discover/[type]/[slug]/page.tsx` / `buildDiscoverModalMetadata`
+- SEO-1: `lib/seo/*` / `components/JsonLd.tsx` / 詳細 page + layout /
+  `opengraph-image.tsx` / `lib/server/sitemap-entries.ts` / パンくず UI /
+  discover `h1` / カテゴリ → `?q=` リンク
 
 変更しない (境界外):
 
-- `app/[projectType]/[slug]/page.tsx` の index（詳細は正。noindex しない）
-- `/discover/<複数>` 一覧の index
-- `@modal/(.)[slug]`（Intercept。クローラは直接ページを GET する）
-- JSON-LD / 動的 OGP / sitemap 拡充 → `SEO-1`
-- CurseForge → アーカイブ済み。再開は API キー取得後に別計画
+- 詳細・一覧の index（noindex しない）
+- `@modal/(.)[slug]` への metadata（クローラは直接ページを GET）
+- CurseForge（アーカイブ済み）
 - `.archive/vite/` 不変
+- 本番デプロイ・本番 HTML 目視（DEPLOY-1 / ユーザー判断）
 
 ## 4. 禁止事項
 
-- 詳細ページ (`/<型>/<slug>`) に noindex を付けない（task-list 旧 DoD は誤記）
-- 一覧を noindex しない
-- Intercept ルートに `revalidate` 等のセグメント設定を置かない
-- SEO-1 を同時に実装しない
+- 詳細 (`/<型>/<slug>`) や一覧を noindex しない
+- `aggregateRating` を付けない（Modrinth に実評価がない）
+- Intercept ルートにセグメント設定（`revalidate` 等）を置かない
+- 本番チェックを勝手に始めない（2026-08-30 ユーザー確定）
 
 ## 5. 完了条件 (DoD)
 
-- [x] `/discover/<複数>/<slug>` の metadata が `robots: { index: false, follow: true }`
-- [x] 同一ページの canonical が `/<型>/<slug>`（詳細）を指す
-- [x] 詳細ページ・一覧の robots は従来どおり index 可能
-- [x] 純関数の unit test が上記を固定する
-- [x] 4 検証 pass・`.archive/vite/` 無変更・task-list 更新
+ローカル（達成）:
+
+- [x] `/discover/<複数>/<slug>` が `robots: { index: false, follow: true }`
+- [x] 同 URL の canonical が `/<型>/<slug>`
+- [x] 詳細・一覧は index 可能
+- [x] JSON-LD: SoftwareApplication / WebSite+SearchAction / Organization / BreadcrumbList
+- [x] 動的 OG 1200×630（詳細 + サイト）
+- [x] sitemap が 4 型の人気 URL + lastmod
+- [x] 純関数の unit test + 4 検証 pass
+
+本番（未実施・ユーザー延期）:
+
+- [ ] デプロイ後に meta robots / JSON-LD / OG 画像を目視
 
 ## 6. テスト方法
 
 | 層 | 実施 | 確認内容 |
 |---|---|---|
-| Unit (vitest) | 必須 | noindex + canonical パス |
-| Component | しない | メタは RSC |
-| E2E | しない | Sandbox 不可。HTML の robots は本番後 |
-| 実環境 | 本番後 | デプロイ後に meta robots を目視 |
+| Unit (vitest) | 実施済み | noindex / JSON-LD / OG 文言 / sitemap 静的 URL |
+| Component | パンくず smoke のみ | RSC メタは unit |
+| E2E | しない | Sandbox 不可 |
+| 実環境 | **延期** | DEPLOY-1 後 |
 
 ## 7. 停止条件
 
-- 詳細まで noindex したくなる判断（ユーザー確認）
-- Intercept 側にも metadata が必要と分かった場合（通常不要）
+- 詳細まで noindex したくなる判断
+- 本番チェックの開始（ユーザー確認が必要）
 
 ## 8. 完了時に行うこと
 
-4 検証 → `feat(SEO-2): …` → task-list 更新。SEO-1 は勝手に始めない。
+ローカル 4 検証と task-list 更新は済み。task-list の状態は **ローカル検証済み** のまま。
+「完了」は本番目視のあと。
 
 ## 9. サブタスク分割
 
-| ID | テーマ | 主要成果物 | 依存 |
+| ID | テーマ | 主要成果物 | 状態 |
 |---|---|---|---|
-| SEO-2 | 重複対策 (候補 2-1) | モーダル直接ページ noindex + canonical | なし |
-| SEO-1 | JSON-LD / パンくず / 動的 OGP / sitemap / 見出し | 候補 2-2 以降 | SEO-2 |
+| SEO-2 | 重複対策 (2-1) | モーダル直接ページ noindex + canonical | ローカル検証済み `080ede1` |
+| SEO-1 | 2-2〜2-6 | JSON-LD / パンくず / OG / sitemap / h1 | ローカル検証済み `52bf0b9` |
 
 ## 10. 設計詳細・仕様
 
-クローラは `/discover/mods/sodium` を GET すると
-`app/discover/[type]/[slug]/page.tsx` が返る（Intercept ではない）。
+### SEO-2
+
+クローラの GET `/discover/mods/sodium` → `app/discover/[type]/[slug]/page.tsx`。
 
 ```ts
 robots: { index: false, follow: true }
 alternates: { canonical: '/mod/sodium' }
 ```
 
-`follow: true` で詳細・一覧へのリンクは辿れる。sitemap は既に詳細 URL のみ。
+未知の discover segment は noindex のみ（誤 canonical なし）。
+
+### SEO-1
+
+- SoftwareApplication: GameExtension / 無料 Offer / DL は interactionStatistic
+- SearchAction: `/discover/mods?q={search_term_string}`
+- OG: `next/og` 1200×630。twitter-image の `runtime` / `revalidate` はリテラル必須
+- sitemap: 型あたり 25 件（4 型）。`date_modified` があれば lastmod
+- 2-6: discover の sr-only h1。詳細カテゴリは一覧 `?q=`（facet ではない）
 
 ## 11. リスク・Gotchas
 
-- Next.js のセグメント設定はリテラル必須。本タスクでは置かない
-- 未知の discover segment では canonical を付けず noindex のみ
+- セグメント設定は静的リテラル必須。re-export すると build が落ちる（twitter-image）
+- next/og の日本語は Google Fonts 取得に依存。サイト OG は英字にした
+- 本番未確認のまま「完了」にしない
 
-## 12. 実績と証拠 (実装後に記入)
+## 12. 実績と証拠
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
 | SEO-2 | `080ede1` | typecheck / biome / 1235 tests / build | noindex+follow + canonical |
-| SEO-1 | (本コミット) | typecheck / biome / 1244 tests / build | JSON-LD / OG 1200×630 / sitemap 4 型 |
+| SEO-1 | `52bf0b9` | typecheck / biome / 1244 tests / build | JSON-LD / OG 1200×630 / sitemap 4 型 |
+| 計画後始末 | (本コミット) | docs のみ | 本番目視はユーザー延期 |

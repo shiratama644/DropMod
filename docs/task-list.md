@@ -35,11 +35,11 @@
 | P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
 | UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
 | SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
-| SEO-2 | ローカル検証済み | noindex+canonical をプレビュー直接 URL に付与 |
-| SEO-1 | ローカル検証済み | JSON-LD / 動的 OGP / sitemap 4 型 / パンくず |
+| SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
+| SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
 
-進行中の AI 実装タスクは **なし** (次のコード作業候補は SEO-2 または P12-E2E の CI 再実行依頼)。
+進行中の AI 実装タスクは **なし**。SEO のコード作業はローカル完了。次のコード候補は P12-E2E の CI 再実行依頼など。
 
 ---
 
@@ -220,8 +220,8 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENT.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
 | DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
 | DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
-| SEO-1 | SEO 改善 (JSON-LD 2-2 / パンくず 2-4 / 動的 OGP 2-3 / sitemap 2-5 / 見出し・内部リンク 2-6) | ローカル検証済み | 100% | SEO-2 | SoftwareApplication + WebSite/SearchAction + BreadcrumbList。1200×630 OG。sitemap 4 型 + lastmod。discover に h1。カテゴリは一覧へリンク。aggregateRating なし | 2026-08-30 typecheck + biome + 1244 tests + build |
-| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | ローカル検証済み | 100% | - | **`/discover/<複数>/<slug>`** に noindex+follow。canonical は `/<型>/<slug>`。一覧と詳細は index 維持 | 2026-08-30 typecheck + biome + 1235 tests + build |
+| SEO-1 | SEO 改善 (JSON-LD 2-2 / パンくず 2-4 / 動的 OGP 2-3 / sitemap 2-5 / 見出し・内部リンク 2-6) | ローカル検証済み | 100% | SEO-2 | 実装済み。本番 JSON-LD / OG 目視はユーザー延期 (完了にしない) | `52bf0b9` / typecheck + biome + 1244 tests + build |
+| SEO-2 | 重複コンテンツ対策: モーダル直接ページの noindex (候補 2-1) | ローカル検証済み | 100% | - | 実装済み。本番 meta robots 目視はユーザー延期 (完了にしない) | `080ede1` / typecheck + biome + 1235 tests + build |
 
 ---
 

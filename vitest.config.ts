@@ -82,6 +82,7 @@ export default defineConfig({
         // 大量に使うため単体テスト ROI 低、E2E (mod-detail-modal / smoke) で担保。
         'components/ModDetailPageView.tsx',
         'components/SettingsPageClient.tsx',
+        'features/settings/components/SettingsPageClient.tsx',
 
         // ---- Presentational-only Client Components (単体テスト ROI 低) ----
         // BottomNav は現状 aria-current ロジックのみ、EditProfile は NewProfile と同型

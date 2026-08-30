@@ -447,6 +447,10 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1 初版 | `5a9e92c` | 4 Feature。不十分 |
 | ARCH-1 再構築 | `12821ca` | 11 Feature |
 | 再監査 | `d0c1d6a` | 第 12 Feature なし。types/ と lib/platform と既存 11 への追加寄せ |
+| 計画整合 | `db6222c` | §9/§10.5 に寄せを反映。ARCH-1P 不採番 |
+| ARCH-1A | `8561047` | ui / layout / feedback + 旧パス re-export |
+| ARCH-1B | `45ba247` | features/landing + 旧パス re-export |
+| ARCH-1C | (本コミット) | features/settings + 旧パス re-export |
 
 ## 13. 完了チェック（ARCH-1O）
 

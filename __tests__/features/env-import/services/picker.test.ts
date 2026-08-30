@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { pickMinecraftDirectory } from '@/features/env-import/picker';
+import { pickMinecraftDirectory } from '@/features/env-import/services/picker';
 import { createFakeFileSystem } from '@/__tests__/test-utils/fakeFs';
 
 describe('pickMinecraftDirectory', () => {

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateProfileName, isUsableFolderName } from '@/features/env-import/profileName';
+import { generateProfileName, isUsableFolderName } from '@/features/env-import/utils/profileName';
 
 describe('isUsableFolderName', () => {
   it('妥当なフォルダ名は true', () => {

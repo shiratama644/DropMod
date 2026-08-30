@@ -13,10 +13,10 @@ import {
   openLinkedFolder,
   releaseFolderLink
 } from '@/features/sync/link';
-import type { PickedDirectory } from '@/features/env-import/picker';
+import type { PickedDirectory } from '@/features/env-import/services/picker';
 import { FileSystemSink } from '@/features/sync/sink/filesystem';
 import { FileSystemSource } from '@/lib/env/source';
-import type { DetectedEnvironment } from '@/features/env-import/detector';
+import type { DetectedEnvironment } from '@/features/env-import/services/detector';
 import { _clearAllForTesting } from '@/lib/db/dexie';
 import { getDirHandle } from '@/features/sync';
 import type { LinkedSource } from '@/types';

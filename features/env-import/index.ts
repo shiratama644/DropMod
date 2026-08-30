@@ -15,14 +15,14 @@ export {
   type RootType,
   type ParsedLauncherEnv,
   type InstanceFileDetectorOptions
-} from './detector';
+} from './services/detector';
 export {
   analyzeEnvironmentSource,
   CATEGORY_EXTENSIONS,
   hasExtension,
   type AnalyzeProgress,
   type ImportAnalysis
-} from './analyzer';
-export { pickMinecraftDirectory, type PickedDirectory } from './picker';
-export { generateProfileName, isUsableFolderName } from './profileName';
-export { detectContentDirs } from './detector/types';
+} from './services/analyzer';
+export { pickMinecraftDirectory, type PickedDirectory } from './services/picker';
+export { generateProfileName, isUsableFolderName } from './utils/profileName';
+export { detectContentDirs } from './services/detector/types';

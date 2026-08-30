@@ -20,7 +20,7 @@ ARCH-1 で 11 Feature へファイルを移し、ARCH-2 で types / store / plat
 - 空スロットは作らない。
 - Zustand は `store/`（`hooks/` / `services/` に入れない）。既存 `__tests__/features/{profiles,zip}/store/` に合わせる。
 - 共有型はルート `types/`（`@/types`）のまま。Feature `types/` は専用型があるときだけ。今回、Feature `types/` を新設する必要はない（detector / provider の型は既存ネストに残す）。
-- 分類は **ディレクトリ名ではなく実装の責務**（I/O・HTTP → `api`/`services`、純粋関数 → `utils`、定数 → `constants`）。
+- 分類は **ディレクトリ名ではなく実装の責務**（外部データソースへのアクセス → `api/`、Feature 内の業務・副作用・オーケストレーション → `services/`、純粋関数 → `utils`、定数 → `constants`）。
 
 ---
 
@@ -48,15 +48,26 @@ ARCH-1 で 11 Feature へファイルを移し、ARCH-2 で types / store / plat
 
 ## 3. スロット判定ルール（実装時に再確認）
 
-| 責務 | スロット |
+| 責務 | 置き場所 |
 |---|---|
-| HTTP / Route Handler 呼び出し / cookie+fetch | `api/` |
-| DOM / OPFS / File System Access / Dexie 操作 / 副作用パイプライン | `services/` |
+| 外部データソースとの通信・取得（Modrinth API 等。cookie 経由の検索含む） | Feature の `api/` |
+| Next.js Route Handler（HTTP エンドポイントそのもの） | **`app/api/` 据え置き。Feature へ移さない** |
+| Feature 内の業務処理・副作用・オーケストレーション（DOM / OPFS / File System Access / Dexie / 検出パイプライン等）。外部 API クライアントは置かない | Feature の `services/` |
 | 純粋関数（入出力が引数と戻り値のみ） | `utils/` |
 | リテラル・ID 表・フォールバック表 | `constants/` |
 | Zustand `create(...)` | `store/` |
 | React コンポーネント | `components/` |
 | React hooks | `hooks/`（既存。今回は移動しないものが大半） |
+
+境界の要約:
+
+```
+外部API・データソースへのアクセス → Feature の api/
+Next.js Route Handler           → app/api/
+Feature 内の業務・副作用・編成   → Feature の services/
+```
+
+`api/` は「HTTP という技術」ではなく **外部データソースへのアクセス** を表す。Route Handler を Feature の `api/` に移すことはしない。`services/` に Modrinth クライアントや検索フェッチを置かず、`api/` に業務オーケストレーション（Sync executor 等）を置かない。
 
 同一ファイルに純関数と副作用が混在する場合は **ファイルを分割せず、主責務のスロットへ丸ごと移す**（例: `backup.ts`、`mrpack.ts`）。独立してテストされ、かつ主モジュールと責務が明らかに違う純関数だけ分割する（`buildDiscoverModalMetadata`、`staticSitemapEntries`、`versions.ts` の定数）。
 
@@ -124,7 +135,7 @@ Go までコード変更しない。task-list への行追加は Go 承認と同
 | `providers/` | `api/providers/`（ネスト維持） | `lib/modrinth/client` 経由の HTTP。抽象インターフェースでも実装が通信なら `api/` |
 | `modpack.ts` | `services/modpack.ts` | ZIP を読んで形式判定（I/O） |
 | `mrpack.ts` | `services/mrpack.ts` | parse + `expandMrpackFiles` の HTTP。純ヘルパは同一ファイルに残す |
-| `modpackAdd.ts` | `utils/modpackAdd.ts` | 純粋（計画計算） |
+| `modpackAdd.ts` | `utils/modpackAdd.ts` | **実装確認済み（2026-08-30）**。export は `buildModpackAddPlan` / `applyModpackAddPlan` / `applyLockedVersionsToProfile` と型のみ。ファイル先頭コメントどおり pure。DB・React・Provider・fetch なし。I/O は呼び出し側 `hooks/useModpackAdd.ts`。`Date.now()` は引数 `now` の既定値のみで、本体は引数と戻り値の変換。よって `utils/`（`services/` ではない） |
 | `modpackUpdate.ts` | `services/modpackUpdate.ts` | provider 経由の更新検知が主。`updateIssueFromReport` は同居 |
 
 ### 5.5 profiles — ARCH-3E
@@ -241,10 +252,10 @@ import は `@/features/...` の新パス。
 1. 全 Feature 直下のファイルが `index.ts` のみ。許可外ディレクトリが Feature 直下に無い。
 2. 空の `api/` `types/` 等を作っていない。
 3. Zustand がすべて `store/` にある。
-4. 公開識別子の削除・リネームが無い（パスのみ）。
+4. 公開識別子の削除・リネームが無い（パスのみ）。ARCH-3 開始前後で各 Feature の `index.ts` の named export / re-export を比較し、**意図しない export の削除・追加・変更が無い**こと。配置変更であり Public API の意味・公開範囲は変えない。`'use client'` barrel はサーバー専用モジュールを誤って再 export しない制約を維持しつつ、必要な公開識別子が欠落しないこと。
 5. 深パス grep で旧パス 0 件。
 6. 4 検証: typecheck / biome / `pnpm test:coverage` / `pnpm build`（build は ECONNRESET でも exit 0 なら成功）。
-7. `.archive/` 無変更。`app/` `lib/db` `lib/platform` のロジック無変更（import パス以外）。
+7. `.archive/` 無変更。`app/` `lib/db` `lib/platform` のロジック無変更（import パス以外）。`app/api/` の Route Handler は移さない。
 
 ---
 

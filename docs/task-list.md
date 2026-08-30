@@ -38,9 +38,10 @@
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
-| ARCH-1 | 完了（1A〜1O） | 第 1 波完了。ARCH-2 は別判断 |
+| ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
+| ARCH-2 | 実施中（2A 完了） | 次は ARCH-2B store |
 
-進行中の AI 実装タスクは **ARCH-1H**（zip。1G 完了後の次）。SEO コードはローカル完了。
+進行中の AI 実装タスクは **ARCH-2B**（store slice）。
 
 ---
 
@@ -244,9 +245,13 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1J | env-import（検出・解析） | 完了 | 100% | ARCH-1G | detector/analyzer/picker/profileName のみ先に移動 | typecheck / biome / 1244 tests / build. 計画 §10.10 |
 | ARCH-1K | sync + formatBytes | 完了 | 100% | ARCH-1J | lib/env の書き込み系 + Sync UI + format.ts | typecheck / biome / 1244 tests / build. 計画 §10.5 |
 | ARCH-1L | modpack | 完了 | 100% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
-| ARCH-1M | 旧パス shim 削除 | 未着手 | 0% | ARCH-1B〜L | 深い import 0 | 計画 §10.10 |
-| ARCH-1N | テスト配置 | 未着手 | 0% | ARCH-1M | ミラー（既定） | 計画 §10.8 |
-| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。lib/env KEEP は ARCH-2 | 計画 §13 |
+| ARCH-1M | 旧パス shim 削除 | 完了 | 100% | ARCH-1B〜L | 公開面は @/features | `5ba2d90` |
+| ARCH-1N | テスト配置 | 完了 | 100% | ARCH-1M | `__tests__/features/<name>/` ミラー（colocation なし） | `ff44edd` |
+| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。hooks ドメイン shim と lib/env KEEP は残件 | `c28f51d` |
+| ARCH-2A | types.ts → types/* | 完了 | 100% | ARCH-1O | `@/types` 維持。profile/modrinth/sync/modpack/ui + index | 計画 §10.13.F |
+| ARCH-2B | store slice を Feature | 未着手 | 0% | ARCH-2A | profiles/zip/dep-check/ui/toast | 計画 §10.13.F |
+| ARCH-2C | lib/server → lib/platform | 未着手 | 0% | ARCH-2A | logger / rate-limit / APP_PROFILE / site-url | 計画 §10.13.F |
+| ARCH-2D | Dexie sync ヘルパを features/sync | 未着手 | 0% | ARCH-2B | スキーマ宣言は lib/db 残置 | 計画 §10.13.F |
 
 ---
 

@@ -38,7 +38,7 @@
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
-| ARCH-1 | 実施中（1A〜1N 完了） | 次は ARCH-1O 掃除と完了チェック |
+| ARCH-1 | 完了（1A〜1O） | 第 1 波完了。ARCH-2 は別判断 |
 
 進行中の AI 実装タスクは **ARCH-1H**（zip。1G 完了後の次）。SEO コードはローカル完了。
 
@@ -246,7 +246,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-1L | modpack | 完了 | 100% | ARCH-1J, ARCH-1E | Hub / mrpack / useModpackAdd | 計画 §10.5 |
 | ARCH-1M | 旧パス shim 削除 | 未着手 | 0% | ARCH-1B〜L | 深い import 0 | 計画 §10.10 |
 | ARCH-1N | テスト配置 | 未着手 | 0% | ARCH-1M | ミラー（既定） | 計画 §10.8 |
-| ARCH-1O | 掃除と完了チェック | 未着手 | 0% | ARCH-1N | 計画 §13 | 計画 §13 |
+| ARCH-1O | 掃除と完了チェック | 完了 | 100% | ARCH-1N | shim 削除 + coverage/skills。lib/env KEEP は ARCH-2 | 計画 §13 |
 
 ---
 

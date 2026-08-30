@@ -76,7 +76,8 @@
 | lib/modrinth | 65 | server/client |
 | lib/utils | 60 | |
 | hooks | 70 | |
-| components | 50 | |
+| components | 50 | ui / layout / feedback |
+| features | 50 | `__tests__/features/<name>/` ミラー（colocation なし） |
 | **全体** | **60** | |
 
 `coverage.exclude`: `app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。

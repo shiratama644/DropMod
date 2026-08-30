@@ -3,7 +3,9 @@
 > `.minecraft` / Prism インスタンスの解析・Import (Read-only) を触る時に読む。
 > PHASE11_PLAN.md §2〜§6 の実装。**Phase 11 は絶対に Read-only** (書き込み=Sync は Phase 12)。
 
-## モジュール構成 (`lib/env/`)
+## モジュール構成
+
+読み取り系の公開面は `features/env-import/`。スキャン・Source・hash・capabilities はまだ `lib/env/`（第 1 波 KEEP。ARCH-2 で寄せる）。
 
 | ファイル | 役割 |
 | :--- | :--- |

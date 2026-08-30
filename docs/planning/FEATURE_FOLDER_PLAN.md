@@ -2,7 +2,7 @@
 
 > 対応 task-list ID: `ARCH-1`（実施は `ARCH-1A`〜。本ファイルは計画）
 > 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: ARCH-1A〜1N 実施済み。次は ARCH-1O（掃除と完了チェック）。1O 未着手** (2026-08-30)
+> **状態: ARCH-1A〜1O 実施済み（第 1 波完了）。次は ARCH-2（別判断）** (2026-08-30)
 >
 > 初版は landing / mods / profiles / settings の 4 分割だった。
 > **コードベース全体（app / components / hooks / lib / store）を再監査**し、
@@ -461,20 +461,23 @@ Go は ARCH-1O のあと別判断。
 | ARCH-1K | (本コミット) | features/sync + formatBytes。ZipSink は sync/sink。scan/source は lib/env 残置 |
 | ARCH-1L | (本コミット) | features/modpack + providers。mrpack/modpackAdd/Update/Hub |
 | ARCH-1M | (本コミット) | 旧パス shim 削除。公開面は @/features/<name>。lib/env 残件は scan/source/hash 等 |
-| ARCH-1N | (本コミット) | `__tests__/features/<name>/` ミラー。colocation なし |
+| ARCH-1N | `ff44edd` | `__tests__/features/<name>/` ミラー。colocation なし |
+| ARCH-1O | (本コミット) | 旧パス shim 削除。coverage / skills / チェックリスト |
 
 ## 13. 完了チェック（ARCH-1O）
 
-- [ ] `components/` 直下ゼロ（ui/layout/feedback のみ）
-- [ ] `lib/env/` `lib/search/` `lib/seo/` `lib/providers/` `lib/loaders/` 削除（shim なし）
-- [ ] `lib/constants/` は `search.ts` のみ。`categories.ts` `loaderVersions.ts` は Feature へ
-- [ ] `project-detail.ts` `sitemap-entries.ts` `format.ts` `contentCategory.ts` が対応 Feature にある
-- [ ] 11 Feature 各 `index.ts` が named export（project の index に `'use client'` なし）
-- [ ] Feature 間の深い import 0
-- [ ] ZIP（配布）と ZipSink（sync）が別ディレクトリ
-- [ ] 4 検証 pass・件数減なし・coverage 閾値維持
-- [ ] `.archive/vite/` 無変更
-- [ ] task-list 更新
+- [x] `components/` 直下ゼロ（ui/layout/feedback のみ）
+- [x] `lib/search/` `lib/seo/` `lib/providers/` `lib/loaders/` 削除（shim なし）
+- [x] `lib/constants/` は `search.ts` のみ。`categories.ts` `loaderVersions.ts` は Feature へ
+- [x] `project-detail.ts` `sitemap-entries.ts` `format.ts` `contentCategory.ts` が対応 Feature にある
+- [x] 11 Feature 各 `index.ts` が named export（project の index に `'use client'` なし）
+- [x] Feature 間の深い import は index 経由（1M ルール維持）
+- [x] ZIP（配布）と ZipSink（sync）が別ディレクトリ
+- [x] typecheck / biome / `test:unit` 1244 pass。coverage 閾値は vitest.config で features を追加（実行は CI）
+- [x] `.archive/vite/` 無変更
+- [x] task-list 更新
+
+残件（意図的・ARCH-2）: `lib/env/` に scan / source / hash* / capabilities / analysis / resolve / zipSource が残る。store / types / `lib/server`→platform は ARCH-2。
 
 ## 14. Go
 

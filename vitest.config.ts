@@ -73,17 +73,10 @@ export default defineConfig({
         // 単体テストの ROI が低い。実挙動は Playwright で smoke / mod-detail /
         // mods-page / offline / theme-persistence spec で担保している。
         'components/layout/AppShell.tsx',
-        'components/AppShell.tsx',
         'features/catalog/components/HomeInteractive.tsx',
-        'components/HomeInteractive.tsx',
-        'components/ModsPageClient.tsx',
+        'features/profiles/components/ModsPageClient.tsx',
         'features/project/components/ModDetailModalShell.tsx',
-        'components/ModDetailModalShell.tsx',
-        // Phase 10-P1: /mods/[slug] フルページ用の刷新デザインコンポーネント。
-        // ModDetailModalShell と同じく Zustand + fa-icon + next/image を
-        // 大量に使うため単体テスト ROI 低、E2E (mod-detail-modal / smoke) で担保。
-        'components/ModDetailPageView.tsx',
-        'components/SettingsPageClient.tsx',
+        'features/project/components/ModDetailPageView.tsx',
         'features/settings/components/SettingsPageClient.tsx',
 
         // ---- Presentational-only Client Components (単体テスト ROI 低) ----
@@ -92,25 +85,18 @@ export default defineConfig({
         // ToastContainer は Zustand subscribe で表示するだけ (Zustand store 側でテスト済)
         // MarkdownRenderer は react-markdown をラップして h1→h2 降格するだけ
         'components/layout/BottomNav.tsx',
-        'components/BottomNav.tsx',
-        'components/EditProfileModal.tsx',
+        'features/profiles/components/EditProfileModal.tsx',
         'features/dep-check/components/DependencyCheckModal.tsx',
-        'components/DependencyCheckModal.tsx',
         'features/zip/components/ZipProgressModal.tsx',
-        'components/ZipProgressModal.tsx',
         'components/feedback/ToastContainer.tsx',
-        'components/ToastContainer.tsx',
         'components/ui/MarkdownRenderer.tsx',
-        'components/MarkdownRenderer.tsx',
 
         // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
         // Providers は PersistQueryClientProvider を返すだけ、
         // WebVitalsReporter は web-vitals ライブラリを attach するだけ。
         // (AppContext.tsx は Phase 10-B で完全削除済みのため exclude からも除去)
         'components/layout/Providers.tsx',
-        'components/Providers.tsx',
         'components/layout/WebVitalsReporter.tsx',
-        'components/WebVitalsReporter.tsx',
 
         // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----
         'hooks/useConfirm.ts',

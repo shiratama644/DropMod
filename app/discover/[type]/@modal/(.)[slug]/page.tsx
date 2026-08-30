@@ -2,7 +2,7 @@
 // モーダルとして重ねる（一覧は破棄されず状態保持）。
 
 import { ModDetailModalShell } from '@/features/project';
-import { fetchProjectDetailData } from '@/features/project/server';
+import { fetchProjectDetailData } from '@/features/project/api/projectDetail';
 
 interface Params {
   params: Promise<{ type: string; slug: string }>;

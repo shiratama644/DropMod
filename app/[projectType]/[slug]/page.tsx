@@ -22,7 +22,7 @@ import {
   buildDetailMetadata,
   fetchProjectDetailData,
   generateDetailStaticParams
-} from '@/features/project/server';
+} from '@/features/project/api/projectDetail';
 import { resolveSiteOrigin } from '@/lib/platform/site-url';
 import {
   PROJECT_TYPES,

@@ -15,11 +15,7 @@ import {
   fetchModrinthProjectVersions,
   fetchModrinthSearch
 } from '@/lib/modrinth/server';
-import {
-  detailPathForType,
-  parseDiscoverSegment,
-  type ProjectType
-} from '@/lib/constants/search';
+import { detailPathForType, type ProjectType } from '@/lib/constants/search';
 import type { ModrinthProject, ModrinthVersion } from '@/types';
 
 export const DETAIL_REVALIDATE = 3600; // 1時間 ISR
@@ -125,19 +121,4 @@ export async function buildDetailMetadata(
       alternates: { canonical: canonicalPath }
     };
   }
-}
-
-/**
- * プレビューモーダル直接 URL (`/discover/<複数>/<slug>`) の metadata。
- * SEO-2 / PHASE13_PLAN.md: 詳細を正として index せず、canonical だけ詳細へ向ける。
- */
-export function buildDiscoverModalMetadata(typeSegment: string, slug: string): Metadata {
-  const projectType = parseDiscoverSegment(typeSegment);
-  const metadata: Metadata = {
-    robots: { index: false, follow: true }
-  };
-  if (projectType) {
-    metadata.alternates = { canonical: detailPathForType(projectType, slug) };
-  }
-  return metadata;
 }

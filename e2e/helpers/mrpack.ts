@@ -5,7 +5,7 @@
  *   - modrinth.index.json (必須、パック仕様)
  *   - overrides/ (任意、config などの追加ファイル)
  *
- * DropMod の zip-import テストで、Playwright の setInputFiles に渡すため
+ * DropMod の zipImport テストで、Playwright の setInputFiles に渡すため
  * のダミーとして利用する。
  */
 

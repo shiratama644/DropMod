@@ -1,7 +1,7 @@
 /**
  * E2E ヘルパー: .minecraft 構造の ZIP 生成 + Modrinth API モック (Phase 11)
  *
- * Phase 11-C の E2E (zip-env-import / folder-import) で使う共通 fixture。
+ * Phase 11-C の E2E (zipEnvImport / folderImport) で使う共通 fixture。
  *
  * - buildMinecraftEnvZip(): mods/ + versions/ + resourcepacks/ を含む
  *   「.minecraft を ZIP 化した」ファイルを Buffer で生成。

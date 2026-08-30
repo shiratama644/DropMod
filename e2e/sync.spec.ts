@@ -27,7 +27,7 @@
  * タイムアウト時はセクションの表示文言をエラーメッセージに含める。
  *
  * ※ File System Access API は Desktop Chromium のみなので、モバイル viewport では
- *   skip する (既存の folder-import.spec.ts と同じ方針)。
+ *   skip する (既存の folderImport.spec.ts と同じ方針)。
  */
 
 import { test, expect, type Page } from '@playwright/test';

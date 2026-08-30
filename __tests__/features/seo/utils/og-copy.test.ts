@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatOgDownloads } from '@/features/seo';
+import { formatOgDownloads } from '@/features/seo/utils/og-copy';
 
 describe('formatOgDownloads (SEO-1 / 2-3)', () => {
   it('百万単位を短縮する', () => {

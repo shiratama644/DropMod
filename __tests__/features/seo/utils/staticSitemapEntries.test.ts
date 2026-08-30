@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { staticSitemapEntries } from '@/features/seo';
+import { staticSitemapEntries } from '@/features/seo/utils/staticSitemapEntries';
 
 describe('staticSitemapEntries (SEO-1 / 2-5)', () => {
   it('4 型の discover 一覧を含む', () => {

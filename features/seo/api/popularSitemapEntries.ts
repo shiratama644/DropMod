@@ -6,69 +6,6 @@ import { logger } from '@/lib/platform/logger';
 /** 型あたりの人気件数。4 型 × 25 = 100 URL。build 時 4 search で 429 を避ける。 */
 export const SITEMAP_PER_TYPE = 25;
 
-export function staticSitemapEntries(
-  baseUrl: string,
-  now: Date
-): MetadataRoute.Sitemap {
-  return [
-    { url: `${baseUrl}/`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
-    {
-      url: `${baseUrl}/discover/mods`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 1.0
-    },
-    {
-      url: `${baseUrl}/discover/modpacks`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 0.8
-    },
-    {
-      url: `${baseUrl}/discover/resourcepacks`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 0.8
-    },
-    {
-      url: `${baseUrl}/discover/shaders`,
-      lastModified: now,
-      changeFrequency: 'hourly',
-      priority: 0.8
-    },
-    {
-      url: `${baseUrl}/profile`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.4
-    },
-    {
-      url: `${baseUrl}/settings`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.3
-    },
-    {
-      url: `${baseUrl}/modpack`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5
-    },
-    {
-      url: `${baseUrl}/resourcepack`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5
-    },
-    {
-      url: `${baseUrl}/shader`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5
-    }
-  ];
-}
-
 function parseLastModified(raw: string | undefined, fallback: Date): Date {
   if (!raw) return fallback;
   const d = new Date(raw);

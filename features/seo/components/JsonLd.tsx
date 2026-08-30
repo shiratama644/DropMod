@@ -1,4 +1,4 @@
-import { serializeJsonLd } from './jsonld';
+import { serializeJsonLd } from '../utils/jsonld';
 
 /** RSC 用 JSON-LD。ユーザー入力は JSON.stringify + `<` エスケープ。 */
 export function JsonLd({ data }: { data: unknown }) {

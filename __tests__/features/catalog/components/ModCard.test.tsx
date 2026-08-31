@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ModCard } from '@/features/catalog/components/ModCard';
 import type { ModrinthHit, Profile } from '@/types';
@@ -24,6 +24,13 @@ const baseHit: ModrinthHit = {
   downloads: 1_500_000,
   project_type: 'mod'
 };
+
+/** container 内の n 番目の <img> を取得 */
+function containerImg(container: HTMLElement, i = 0): HTMLElement {
+  const img = container.querySelectorAll('img')[i];
+  if (!img) throw new Error(`img[${i}] がありません`);
+  return img as HTMLElement;
+}
 
 function makeProfile(mods: Profile['mods'] = []): Profile {
   return {
@@ -118,6 +125,28 @@ describe('ModCard', () => {
     expect(screen.getByText(/42/)).toBeInTheDocument();
   });
 
+  it('DL 数が 0 なら「0」を表示', () => {
+    render(
+      <ModCard
+        hit={{ ...baseHit, downloads: 0 }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('DL 数が 1000 以上なら K 表記', () => {
+    render(
+      <ModCard
+        hit={{ ...baseHit, downloads: 2500 }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/2\.5K/)).toBeInTheDocument();
+  });
+
   it('icon_url なしなら fa-cube プレースホルダーを表示', () => {
     const { container } = render(
       <ModCard
@@ -141,6 +170,41 @@ describe('ModCard', () => {
     const img = screen.getByAltText('Sodium');
     expect(img).toBeInTheDocument();
     expect(img.tagName).toBe('IMG');
+  });
+
+  it('icon 読み込み失敗 (onError) で fa-cube にフォールバック', () => {
+    const { container } = render(
+      <ModCard
+        hit={{ ...baseHit, icon_url: 'https://example.com/icon.png' }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    fireEvent.error(screen.getByAltText('Sodium'));
+    expect(container.querySelector('.fa-cube')).not.toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('author が空なら「Modrinth」を表示', () => {
+    render(
+      <ModCard
+        hit={{ ...baseHit, author: '' }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Modrinth')).toBeInTheDocument();
+  });
+
+  it('description が空なら「説明はありません。」を表示', () => {
+    render(
+      <ModCard
+        hit={{ ...baseHit, description: '' }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+      />
+    );
+    expect(screen.getByText('説明はありません。')).toBeInTheDocument();
   });
 
   it('未追加なら「追加」(緑)、追加済なら「削除」(赤) のトグルボタン', () => {
@@ -230,6 +294,62 @@ describe('ModCard', () => {
     expect(banner?.className).toContain('sm:h-60');
   });
 
+  it('max レイアウトは banner 読み込み失敗でアイコン表示にフォールバック', () => {
+    const { container } = render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          featured_gallery: 'https://example.com/banner.png',
+          icon_url: 'https://example.com/icon.png'
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="max"
+      />
+    );
+    // 最初の <img> はバナー (alt="")
+    fireEvent.error(containerImg(container, 0));
+    // フォールバックでアイコン (alt=Sodium) が出る
+    expect(screen.getByAltText('Sodium')).toBeInTheDocument();
+  });
+
+  it('max レイアウトは featured_gallery が無ければアイコンを大きく表示', () => {
+    render(
+      <ModCard
+        hit={{ ...baseHit, icon_url: 'https://example.com/icon.png' }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="max"
+      />
+    );
+    expect(screen.getByAltText('Sodium')).toBeInTheDocument();
+  });
+
+  it('max レイアウトは banner も icon も無ければ fa-image プレースホルダー', () => {
+    const { container } = render(
+      <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} layout="max" />
+    );
+    expect(container.querySelector('.fa-image')).not.toBeNull();
+  });
+
+  it('max レイアウトは banner と icon の両方が失敗したら fa-image', () => {
+    const { container } = render(
+      <ModCard
+        hit={{
+          ...baseHit,
+          featured_gallery: 'https://example.com/banner.png',
+          icon_url: 'https://example.com/icon.png'
+        }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="max"
+      />
+    );
+    fireEvent.error(containerImg(container, 0)); // banner 失敗 → アイコン表示
+    fireEvent.error(container.querySelector('img') as HTMLElement); // アイコンも失敗
+    expect(container.querySelector('.fa-image')).not.toBeNull();
+  });
+
   it('追加済みと未追加でボタン寸法が同一 (h-9 + min-w-[7rem])', () => {
     const { rerender } = render(
       <ModCard hit={baseHit} profile={makeProfile()} onToggleMod={vi.fn()} />
@@ -309,6 +429,38 @@ describe('ModCard: モバイル 3 カラム compact カード (Phase 11 UI)', ()
     const card = container.querySelector('a');
     expect(card?.className).not.toContain('aspect-square');
     expect(card?.className).toContain('justify-between');
+  });
+
+  it('compact カードは icon_url なしなら fa-cube プレースホルダー', () => {
+    const { container } = renderMobile('3');
+    expect(container.querySelector('.fa-cube')).not.toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('compact カードは icon 読み込み失敗で fa-cube にフォールバック', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: query === '(max-width: 767px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      }))
+    );
+    const { container } = render(
+      <ModCard
+        hit={{ ...baseHit, icon_url: 'https://example.com/icon.png' }}
+        profile={makeProfile()}
+        onToggleMod={vi.fn()}
+        layout="3"
+      />
+    );
+    fireEvent.error(containerImg(container, 0));
+    expect(container.querySelector('.fa-cube')).not.toBeNull();
   });
 
   it('compact カードの 追加 ボタンは全幅・高さ h-7 でトグルが発火する', async () => {

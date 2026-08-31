@@ -132,8 +132,7 @@ docs/
 
 | ソース | 参照先 |
 |---|---|
-| `lib/modrinth/server.ts` | `docs/planning/NEXTJS_MIGRATION_PLAN.md` §10.5 (キャッシュ戦略) |
-| `lib/store/confirm.ts` | `docs/audit/issues-phase9.md` B18 (並列 confirm キュー化) |
+| `src/lib/modrinth/server.ts` | `docs/planning/NEXTJS_MIGRATION_PLAN.md` §10.5 (キャッシュ戦略) |
 
 ファイル移動時はこれらの参照も更新してください。
 

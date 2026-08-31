@@ -5,7 +5,7 @@
 
 ## モジュール構成
 
-読み取り系の公開面は `features/env-import/`。スキャン・Source・hash・capabilities はまだ `lib/env/`（第 1 波 KEEP。ARCH-2 で寄せる）。
+読み取り系の公開面は `src/features/env-import/`。スキャン・Source・hash・capabilities はまだ `src/lib/env/`（第 1 波 KEEP。ARCH-2 で寄せる）。
 
 | ファイル | 役割 |
 | :--- | :--- |
@@ -14,7 +14,7 @@
 | `picker.ts` | `pickMinecraftDirectory()`: `showDirectoryPicker({mode:'read'})`。キャンセル (AbortError) は null。**ハンドル永続化は Phase 12 延期** |
 | `zipSource.ts` | `ZipSource` (JSZip 実装・Firefox/Safari フォールバック) + `isMinecraftFolderZip()` (経路分岐判定) |
 | `detector/` | Strategy: `OfficialLauncherDetector` (versions/*.json) → `PrismDetector` (mmc-pack.json) → `MojoLauncherDetector` (mojo_instance.json, MojoLauncher = PojavLauncher ベース) → `GenericDetector` (fallback)。chain は `registry.ts` の `DETECTOR_REGISTRY` (priority 順) から構築。`detectEnvironment()` が chain entry |
-| `hashCore.ts` / `hash.worker.ts` / `hashWorker.ts` | SHA-1 一括計算。**Worker→メインスレッド自動 fallback** (jsdom・Worker 失敗時)。コアは hashCore (pure) |
+| `hashCore.ts` / `hashWorker.ts` | SHA-1 一括計算。**Worker→メインスレッド自動 fallback** (jsdom・Worker 失敗時)。コアは hashCore (pure) |
 | `analyzer.ts` | `analyzeEnvironmentSource()`: 検出→列挙 (mods/*.jar, RP/shader/*.zip)→ハッシュ→`/version_files` (100 個 batch)→`/projects`→**ImportAnalysis** (ProjectItem[] ×3 + UnknownFile[] + versionsByProject) |
 | `analysis.ts` | `analyzeImportHealth()`: §5 の検証 (MC/Loader 互換・依存・競合・未識別・Shader 前提)。pure |
 | `profileName.ts` | §6.1 の名前自動生成: 妥当フォルダ名→そのまま / 不適切→`Fabric 1.21.1` / 検出失敗→空欄 |
@@ -59,9 +59,9 @@
 | モジュール | 内容 |
 | :--- | :--- |
 | `types.ts` | `Profile.linkedSource` (`LinkedSource`) / `ManagedFileRecord` / `ManagedFileSource` (`'dropmod'`・`'import'`・`'modpack'`) |
-| `lib/db/dexie.ts` | **schema v3**: `managedFiles` / `dirHandles` テーブル + 台帳・handle ヘルパ |
-| `lib/env/managed.ts` | `expandProfileToManaged`（Profile→台帳導出, **artifact 持ちのみ**）/ `mergeManagedRecords`（既存の `source`・`managedAt`・`syncedAt` を保護）/ `buildManagedFileId` (`${profileId}::${path}`) |
-| `lib/env/diff.ts` | **`computeSyncPlan()`** — 5 分類 + fingerprint unchanged 検証。pure function で書き込みなし |
+| `src/lib/db/dexie.ts` | **schema v3**: `managedFiles` / `dirHandles` テーブル + 台帳・handle ヘルパ |
+| `src/lib/env/managed.ts` → `src/features/sync/services/db/managed.ts` | `expandProfileToManaged`（Profile→台帳導出, **artifact 持ちのみ**）/ `mergeManagedRecords`（既存の `source`・`managedAt`・`syncedAt` を保護）/ `buildManagedFileId` (`${profileId}::${path}`) |
+| `src/lib/env/diff.ts` → `src/features/sync/utils/diff.ts` | **`computeSyncPlan()`** — 5 分類 + fingerprint unchanged 検証。pure function で書き込みなし |
 
 **削除の 3 条件 (§10.2)**: 台帳に存在 AND `local.sha1 === record.sha1` AND Profile が該当 projectId を持たない。
 fingerprint 不一致なら削除せず `unchanged` + `externallyModified: true`（`selectExternallyModified()` で抽出）。

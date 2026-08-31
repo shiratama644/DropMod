@@ -42,7 +42,7 @@
 
 ## カテゴリ・通知 (2026-08-27)
 
-- **カテゴリ表示は英語** (Modrinth 準拠。`features/catalog/constants/categories.ts` のラベルがすべて英語)。
+- **カテゴリ表示は英語** (Modrinth 準拠。`src/features/catalog/constants/categories.ts` のラベルがすべて英語)。
   フィルタチップ・カードバッジ・プロファイル一覧のカテゴリ列で共有。
 - **トースト通知は設定で ON/OFF 可能** (設定ページ)。`useToastStore.enabled` +
   localStorage `dropmod_toast_enabled`。OFF 中の showToast は no-op、OFF 切替時に表示中トーストも消える。
@@ -71,14 +71,14 @@
   aspect-square アイコン + line-clamp-2 タイトル + DL 数 + 全幅 h-7 追加ボタンの
   最小構成。PC 版カードの縮小ではなく独自 UI (スマホでも 3 カラムするため)。
 - 「最大」のヘッダー画像は `h-44 sm:h-60` で大きく表示。
-- `hooks/useMediaQuery.ts`: SSR/jsom-safe な media query hook (`useIsMobile`)。
+- `src/hooks/useMediaQuery.ts`: SSR/jsom-safe な media query hook (`useIsMobile`)。
 
 ## ガラス表現 (glass-panel) の方針 (2026-08-27)
 
 - **`.glass-panel` / dropdown に `backdrop-filter` は使わない**。GPU のない環境 (PRoot / software rendering・低スペック端末) で再合成のたびに「白く一瞬光る」フラッシュが起きるため削除済み。`--bg-panel` の不透明度 (dark 0.92 / light 0.96) で視覚を維持。
 - **`backdrop-filter` / `backdrop-blur-*` は全廃済み (2026-08-27)**。モーダルオーバーレイ・BottomSheet・OfflineBanner からも削除。GPU のない環境での白フラッシュは完全に解消するまで残っていたため。新規 UI でも使わないこと。
 
-## AppShell の描画分岐（`components/layout/AppShell.tsx`）
+## AppShell の描画分岐（`src/components/layout/AppShell.tsx`）
 
 - **PC（md+, ≥768px）**: `<DesktopSidebar>`（fixed left `w-64`, z-40, 全ページ表示）+ 内容 `<div class="md:pl-64">`。**Header も BottomNav も非表示**。
 - **Mobile（<md）**: `<Header>`（sticky z-30, ロゴ+ボタン群）+ `<BottomNav>`（fixed bottom z-[60]）。
@@ -86,7 +86,7 @@
 
 > §6.6（AGENT.md）の PC/モバイル分離・z-index 序列・BottomSheet 仕様が正。ここは実体メモ。
 
-## body と全体余白（`app/layout.tsx`）
+## body と全体余白（`src/app/layout.tsx`）
 
 - `<body class="min-h-screen flex flex-col pb-28 md:pb-0 ...">`
 - **`pb-28`（mobile）** = BottomNav クリアランス（7rem）。**`md:pb-0`（PC）** = PC は下部固定バーが無いため余白なし（※ かつて `md:pb-24` で LP フッター下に空白ができていた → 修正済 `ed5f7c1`）。
@@ -124,8 +124,8 @@
 
 - **モーダル表示中は BottomNav が画面外へスライドして非表示** (280ms、
   visibility 遅延遷移で完了後に完全 hidden = タブ順序からも除去)。
-- 仕組み: 各モーダルが `hooks/useModalUi.ts` の `useModalRegistration(isOpen)` で
-  `lib/store/uiState.ts` (Zustand) の openModalCount に登録 → BottomNav が
+- 仕組み: 各モーダルが `src/hooks/useModalUi.ts` の `useModalRegistration(isOpen)` で
+  `src/components/layout/uiState.ts` (Zustand) の openModalCount に登録 → BottomNav が
   `.nav-modal-hidden` クラスを付与 (globals.css)。
 - 対象 7 モーダル: NewProfile / EditProfile / DependencyCheck / ZipProgress /
   ConfirmDialog / ModDetailModalShell (modal) / ScreenshotGallery。
@@ -152,7 +152,7 @@
 - fill-mode `both` は最終キーフレーム transform が永続適用され hover 演出と
   競合するため、entrance 系は `backwards` を使うこと。
 
-## BottomSheet（`components/ui/BottomSheet.tsx`）
+## BottomSheet（`src/components/ui/BottomSheet.tsx`）
 
 - 共通コンポーネント。`useModalA11y`（Escape + focus trap）再利用。
 - 開閉アニメ Anime.js（`translateY 100%→0`）。背景クリック/Escape で close。
@@ -172,7 +172,7 @@
 
 ## テーマ（CSS 変数）
 
-- `app/globals.css` に `--bg-panel` / `--color-text-brand` 等の CSS 変数で定義。`dark` クラスを `<html>` に付与（`.dark` / `:root`）。
+- `src/app/globals.css` に `--bg-panel` / `--color-text-brand` 等の CSS 変数で定義。`dark` クラスを `<html>` に付与（`.dark` / `:root`）。
 - Tailwind v4 CSS-in-CSS 方式（`@import "tailwindcss"`）。config ファイル無し。
 
 ## 404 ページ (app/not-found.tsx、2026-08-27 リニューアル)

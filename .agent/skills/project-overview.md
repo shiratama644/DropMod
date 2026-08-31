@@ -58,12 +58,14 @@
 
 | ディレクトリ | 行数 |
 | :--- | ---: |
-| `app/` | 1,871（`globals.css` 575 行は別途） |
-| `components/` | 9,181 |
-| `lib/` | 5,476 |
-| `hooks/` | 2,541 |
-| `__tests__/` | 11,721（**73 files / 637 tests**） |
-| `e2e/` | 1,266（**10 spec**） |
+| `src/app/` | 1,973（`globals.css` 575 行は別途） |
+| `src/components/` | 3,519 |
+| `src/features/` | 18,542 |
+| `src/lib/` | 3,711 |
+| `src/hooks/` | 406 |
+| `src/types/` | 477 |
+| `__tests__/` | 22,713（**115 files / 1,244 tests**） |
+| `e2e/` | 1,224（**11 spec**） |
 
 最大ファイル: `DependencyCheckModal.tsx`(907)・`useProfiles.ts`(894)・`ModsPageClient.tsx`(716)・
 `ModDetailPageView.tsx`(689)・`HomeInteractive.tsx`(653)。

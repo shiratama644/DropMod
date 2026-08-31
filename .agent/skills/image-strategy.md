@@ -25,7 +25,7 @@
 
 Modrinth CDN は既に最適化済み WebP をグローバル エッジキャッシュで配信。`next/image` の `/_next/image` プロキシ（sharp 未導入で超重い）を通すのは二重処理の無駄。**`unoptimized` でブラウザが CDN から直接取得** → 最速。
 
-判定ヘルパ `lib/utils/image.ts`:
+判定ヘルパ `src/lib/utils/image.ts`:
 ```ts
 shouldUnoptimizeImage(src) = isAnimatedImageUrl(src) || isModrinthCdnUrl(src)
 ```
@@ -60,7 +60,7 @@ shouldUnoptimizeImage(src) = isAnimatedImageUrl(src) || isModrinthCdnUrl(src)
 
 ## アイコン追加時（FontAwesome subset）
 
-`<i className="fa-solid fa-xxx">` 追加後は **必ず `pnpm build:fa-subset`** で `styles/fontawesome-subset.css` 再生成（AGENT.md §6.7）。
+`<i className="fa-solid fa-xxx">` 追加後は **必ず `pnpm build:fa-subset`** で `src/styles/fontawesome-subset.css` 再生成（AGENT.md §6.7）。
 
 ## 関連
 

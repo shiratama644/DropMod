@@ -178,7 +178,7 @@ pnpm install --frozen-lockfile
 - Biome 2.5 (ESLint は完全撤去済み)、`biome.json` の `overrides` でテストファイルのみ `noNonNullAssertion: off`
 - Vitest 4 + jsdom 30 + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 8.x + `@vitejs/plugin-react` 6）
 - Playwright (Chromium 単独、`--disable-gpu` 必須)
-- 状態管理: **Zustand 5**（`lib/store/` 配下）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
+- 状態管理: **Zustand 5**（`src/features/*/store/`・`src/components/{feedback,layout}/*Store.ts` 等に分散）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
 - パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は Vercel 側で自動注入されるので false のままで OK）。
 
 ### 6.2 サンドボックス制約（乗り越えず、迂回する）
@@ -197,7 +197,7 @@ pnpm install --frozen-lockfile
 ### 6.4 React / Next.js 実装ルール
 - **React error #310 対策**: モーダル・BottomSheet 等のコンポーネントで **全 hook (`useCallback` / `useState` / `useRef` / `useEffect` / `useId` / `useModalA11y` / etc.) を `if (!isOpen) return null;` の前** に配置する。Rules of Hooks 違反で production build 時に minified error #310 になる。
 - **JSX 内で日本語テキストと `{式}` を汚く混ぜない**: 「〜個の{count}件」のような接続はテンプレートリテラル（``` `${count}個` ```）または構造化（`<span>{count}</span>個`）で表現する。
-- **Server Component → Client Component への関数 props 渡し不可**（Next.js 仕様）。`lib/store/appActions.ts`（Zustand `appActionsStore`）に登録して Client 側から取得する形式に統一。
+- **Server Component → Client Component への関数 props 渡し不可**（Next.js 仕様）。`src/components/layout/appActions.ts`（Zustand `appActionsStore`）に登録して Client 側から取得する形式に統一。
 - **useAppContext は撤去済み**（Phase 10-B で完全削除）。新規に `React.createContext` を使わない。状態は Zustand、アクションは `appActionsStore` 経由で取得。
 - **production build (`pnpm start`) で動作確認する**: dev mode では React minified error や CSP エラーを見落とすことが実際にあった。ユーザーに変更を提供する前に必ず `pnpm build && pnpm start` で HTTP 200 を確認。
 
@@ -217,7 +217,7 @@ pnpm install --frozen-lockfile
     ```
 - `<span>` 等の generic 要素に `aria-label` を付ける時は `role="img"` を明示する（`lint/a11y/useAriaPropsSupportedByRole` 対応）。
 - テストファイル (`__tests__/**/*.{ts,tsx}`) は `overrides` で `noNonNullAssertion` off。プロダクションコードでは non-null assertion 禁止。
-- 自動生成 CSS (`styles/fontawesome-subset.css` 等) は `biome.json` の `files.includes` で `!` prefix 明示的に除外。
+- 自動生成 CSS (`src/styles/fontawesome-subset.css` 等) は `biome.json` の `files.includes` で `!` prefix 明示的に除外。
 
 ### 6.6 UI 実装ルール（Phase 9.5-G 以降の確定事項）
 
@@ -247,13 +247,13 @@ pnpm install --frozen-lockfile
 Header / BottomNav はスクロール方向に関わらず**常時表示**する。`shouldHideNav` / `hidden` prop / `useScrollDirection` による hide は撤回済み。再導入しない。
 
 ### 6.7 FontAwesome subset 化の運用（Phase 10-A 導入）
-- `@fortawesome/fontawesome-free/css/all.min.css` の全読込は撤去済み。`styles/fontawesome-subset.css` (自動生成) を `app/layout.tsx` で import。
+- `@fortawesome/fontawesome-free/css/all.min.css` の全読込は撤去済み。`src/styles/fontawesome-subset.css` (自動生成) を `src/app/layout.tsx` で import。
 - Font ファイル (`fa-solid-900.woff2`, `fa-brands-400.woff2`) は `public/webfonts/` に配置され、CSS 内 `url(/webfonts/...)` から絶対パス参照される。
 - **新規 icon 追加時の手順**:
   1. JSX に `<i className="fa-solid fa-xxx" />` を追加（通常通り）
-  2. **必ず** `pnpm build:fa-subset` を再実行して `styles/fontawesome-subset.css` を再生成
-  3. commit 時は `styles/fontawesome-subset.css` の変更も含める
-- **テンプレートリテラルで動的に組み立てる icon**（例: ``` `fa-chevron-${up ? 'up' : 'down'}` ```）は grep で拾えないので、`scripts/build-fontawesome-subset.mjs` の `ALWAYS_INCLUDE_SOLID` セットに手動追加する。
+  2. **必ず** `pnpm build:fa-subset` を再実行して `src/styles/fontawesome-subset.css` を再生成
+  3. commit 時は `src/styles/fontawesome-subset.css` の変更も含める
+- **テンプレートリテラルで動的に組み立てる icon**（例: ``` `fa-chevron-${up ? 'up' : 'down'}` ```）は grep で拾えないので、`scripts/buildFontawesomeSubset.mjs` の `ALWAYS_INCLUDE_SOLID` セットに手動追加する。
 - **FA 7 Free には存在しない icon 名を使わない**（例: `fa-wifi-slash` は存在しない、`fa-plug-circle-xmark` を使う）。追加前に `grep -c "\.fa-xxx{" node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css` で確認。
 
 ### 6.8 ドキュメント運用

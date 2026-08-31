@@ -30,7 +30,7 @@
 | HSTS | 2 年 + preload | なし | next.config.mjs (build 時) |
 | upgrade-insecure-requests | あり | なし | next.config.mjs (build 時) |
 | connect-src ws://localhost (HMR) | なし | あり | next.config.mjs (build 時) |
-| API レート制限 (/api/*) | 120/60 req/min | 無効 | lib/platform/rate-limit.ts (runtime) |
+| API レート制限 (/api/*) | 120/60 req/min | 無効 | src/lib/platform/rateLimit.ts (runtime) |
 | サーバログ debug/info | 抑制 | 出力 | lib/platform/logger.ts (runtime) |
 | /api/health の profile | "production" | "development" | app/api/health (runtime) |
 
@@ -42,7 +42,7 @@
    実環境変数が常に優先。.ts/.mjs 問わず (webpack キャッシュ問題さえなければ)。
 2. **headers() は build 時に routes-manifest.json へ確定**。
    APP_PROFILE を変えたら `pnpm build` し直すこと (next dev は .env 変更で
-   自動再起動)。ランタイム側 (logger/rate-limit/health) は起動時に解決するため、
+   自動再起動)。ランタイム側 (logger/rateLimit/health) は起動時に解決するため、
    ビルドとランタイムでプロファイルが混在し得る (デバッグ時に混乱しやすいので注意)。
 3. **next.config の module scope の console 出力は build 中に複数回評価される**
    (main プロセス 1 + jest-worker processChild × 3 = webpack で最大 4 回)。
@@ -50,7 +50,7 @@
    (同一プロセスの再評価は env 共有で、子プロセスは fork 時の env 継承で抑止。
    ガード値を profile にすると変更時のみ再表示)。実装例は next.config.mjs の
    `BANNER_GUARD_KEY` 参照。
-4. サーバーロガーは `lib/platform/logger.ts` を使う:
+4. サーバーロガーは `src/lib/platform/logger.ts` を使う:
    `logger.debug/info` は development のみ、`logger.warn/error` は常時出力。
    既存の `console.warn('[DropMod] msg', ...)` と同じ出力形式 (prefix 連結) なので
    spy テスト互換。クライアントコードでは使わない (誤 import 時は静かに fail-quiet)。
@@ -68,6 +68,6 @@
 - `__tests__/lib/platform/profile.test.ts` — 解決ロジック純粋関数テスト
 - `__tests__/lib/platform/logger.test.ts` — `// @vitest-environment node` 必須
   (jsdom だと window が有り server 判定にならないため)
-- `__tests__/lib/platform/rate-limit.test.ts` — production/development 両挙動
-- `__tests__/next-config.security.test.ts` — vi.resetModules + 動的 import で
+- `__tests__/lib/platform/rateLimit.test.ts` — production/development 両挙動
+- `__tests__/nextConfigSecurity.test.ts` — vi.resetModules + 動的 import で
   next.config.mjs を両プロファイルで読み分ける回帰テスト

@@ -127,7 +127,7 @@ Vercel の Node/pnpm バージョンが古い可能性があります。Project 
 ### 7.2 Modrinth API から 429 が返る
 
 - `MODRINTH_USER_AGENT` を設定しているか確認
-- `lib/modrinth/server.ts` のキャッシュ TTL (`REVALIDATE.SEARCH` = 300s 等) が効いているか (Vercel Data Cache のヒット率を Vercel Dashboard → Analytics で確認)
+- `src/lib/modrinth/server.ts` のキャッシュ TTL (`REVALIDATE.SEARCH` = 300s 等) が効いているか (Vercel Data Cache のヒット率を Vercel Dashboard → Analytics で確認)
 - 短時間に大量アクセスされる場合は `revalidate` 値を長めに調整
 
 ### 7.3 og:image が反映されない
@@ -138,7 +138,7 @@ Vercel の Node/pnpm バージョンが古い可能性があります。Project 
 
 ### 7.4 モーダルが直接 URL 時に消えない
 
-`app/@modal/[...catchAll]/page.tsx` と `app/@modal/default.tsx` の両方が存在するか確認。片方でも欠けるとモーダルが残ります。
+`src/app/discover/[type]/@modal/(.)[slug]/page.tsx`（Intercepting Modal）と `src/app/discover/[type]/@modal/default.tsx`（直接 URL 時）の両方が存在するか確認。片方でも欠けるとモーダルが残ります。
 
 ## 8. ロールバック
 

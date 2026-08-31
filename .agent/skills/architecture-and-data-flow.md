@@ -26,12 +26,12 @@ app/layout.tsx  (RootLayout = Server Component)
 
 | 層 | 役割 | 主ファイル |
 | :--- | :--- | :--- |
-| Component | UI・イベント | `components/**` |
-| State (Zustand) | クライアント状態（純粋 setter のみ） | `lib/store/{profiles,toast,confirm,zipExport,zipImport,depCheck,appActions}.ts` |
-| Hooks | 副作用・API 呼・業務ロジック | `hooks/{useProfiles,useZipExport,useZipImport,useDependencyCheck,...}.ts` |
-| Storage (Dexie) | 永続化 | `lib/db/{dexie,migrate}.ts` |
-| Query (TSQ) | サーバ状態+キャッシュ | `lib/query/{client,keys,hooks}.ts` |
-| Network | HTTP | `lib/modrinth/{server,client}.ts`, `app/api/modrinth/[...path]/route.ts` |
+| Component | UI・イベント | `src/components/**` |
+| State (Zustand) | クライアント状態（純粋 setter のみ） | `src/features/{profiles,zip,dep-check}/store/*.ts` + `src/components/{feedback,layout}/*Store.ts` + `src/components/layout/appActions.ts` |
+| Hooks | 副作用・API 呼・業務ロジック | `src/features/*/hooks/*.ts`（ドメイン別）+ `src/hooks/*.ts`（共通） |
+| Storage (Dexie) | 永続化 | `src/lib/db/{dexie,migrate}.ts` |
+| Query (TSQ) | サーバ状態+キャッシュ | `src/lib/query/{client,keys,hooks}.ts` |
+| Network | HTTP | `src/lib/modrinth/{server,client}.ts`, `src/app/api/modrinth/[...path]/route.ts` |
 
 > **設計原則**: Zustand store は「シンプルな state 容器 + 純粋 updater」に徹し、
 > Modrinth API 呼び出し・cookie・Toast 連携などの**副作用は hooks 側**に持たせる
@@ -41,14 +41,14 @@ app/layout.tsx  (RootLayout = Server Component)
 
 **「Home で Mod を検索」**: `HomeInteractive` の `useInfiniteQuery` → TSQ が Dexie `apiCache` 確認 → hit で即表示+background refetch / miss で `/api/modrinth/search` fetch → Dexie に persist。
 
-**「Mod をプロファイルに追加」**: `handleToggleMod`（hooks/useProfiles）→ `useProfilesStore.addModToProfile` → state 更新 → `save` useEffect が `dexieSyncProfiles` で永続化。`appActionsStore` 経由で下流が action を取得。
+**「Mod をプロファイルに追加」**: `handleToggleMod`（src/hooks/useProfiles）→ `useProfilesStore.addModToProfile` → state 更新 → `save` useEffect が `dexieSyncProfiles` で永続化。`appActionsStore` 経由で下流が action を取得。
 
-**「Mod 詳細を SSR」**: `app/mods/[slug]/page.tsx`（RSC）が `fetchModrinthProject` + `fetchModrinthProjectVersions` + `fetchModrinthProjectAuthor` を並列 fetch（ISR 1h）→ `ModDetailPageView` に props 渡し。
+**「Mod 詳細を SSR」**: `src/app/[projectType]/[slug]/page.tsx`（RSC）が `fetchModrinthProject` + `fetchModrinthProjectVersions` + `fetchModrinthProjectAuthor` を並列 fetch（ISR 1h）→ `ModDetailPageView` に props 渡し。
 
 ## Server / Client 境界の要点
 
-- `app/layout.tsx`, `app/**/page.tsx`, `app/mods/[slug]/page.tsx` = **Server Component**（SSR/ISR）
-- `'use client'`: AppShell, HomeInteractive, ModDetailPageView, ModsPageClient, SettingsPageClient, Header, BottomNav, DesktopSidebar, 各モーダル, MarkdownRenderer 等（ブラウザ API/hooks/event 使うもの）
+- `src/app/layout.tsx`, `src/app/**/page.tsx`, `src/app/[projectType]/[slug]/page.tsx` = **Server Component**（SSR/ISR）
+- `'use client'`: AppShell, HomeInteractive, ModDetailPageView, ModsPageClient, SettingsPageClient, Header, BottomNav, DesktopSidebar, 各モーダル, MarkdownRenderer 等（ブラウザ API/src/hooks/event 使うもの）
 - **Server Component → Client Component へ関数 props 渡し不可**（Next.js 仕様）。これが `appActionsStore` 存在理由。
 
 ## 関連

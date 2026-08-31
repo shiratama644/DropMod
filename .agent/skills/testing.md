@@ -82,6 +82,13 @@
 
 `coverage.exclude`: `src/app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`src/lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`src/lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。
 
+- **COV-90 計画（2026-09-01〜）**: カバレッジ 4 指標 90% 化を `docs/planning/COVERAGE_90_PLAN.md`
+  で進行中（COV-1〜5）。COV-1 で barrel re-export / 純粋な型定義（`**/types.ts`）/
+  Next.js 生成画像（opengraph/twitter-image）/ Web Worker エントリ（hashWorker）/
+  interface 定義のみ（sink.ts）/ re-export barrel（sync db.ts）を exclude に整理済み
+  （`6abdddf`）。実測 88.56 / 78.55 / 92.64 / 90.41（st/br/fn/ln、129 files）。
+  0% ファイルは COV-2/3 のテスト対象 4 件のみに縮小。
+
 ## テストヘルパ
 
 - `__tests__/test-utils/queryWrapper.tsx` — `createTestQueryClient` + `createQueryWrapper`（TSQ Provider 注入）。

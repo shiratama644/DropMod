@@ -33,7 +33,7 @@
 | [env-import.md](./env-import.md) | Import 基盤（EnvironmentSource / Detector chain / Analyzer + SHA-1 Worker / Analysis / ZIP fallback）+ **Phase 12-A の Sync 基盤（ManagedFileRecord / `computeSyncPlan`）**。 MojoLauncher (mojo_instance.json) 検出含む。 | 2026-08-31 |
 | [app-profile.md](./app-profile.md) | APP_PROFILE (production/development) による CSP/HSTS/レート制限/ログ切替。.env は next.config 評価前にロードされる点、headers は build 時確定する点。 | 2026-08-31 |
 | [ui-layout.md](./ui-layout.md) | 🎨 アクションボタン設計ルール (主操作右端・緑 1 色のみ) / 検索表示形式 (モバイル 3 カラム compact) / PC サイドバー / BottomNav / z-index / モーダル / glass 方針 (backdrop-blur 全廃)。 | 2026-08-31 |
-| [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。 | 2026-08-31 |
+| [testing.md](./testing.md) | vitest+msw+fake-indexeddb・browserApi stub 基盤・per-module カバレッジ・E2E（CI のみ）。COV-90 計画で exclude 整理済み。 | 2026-09-01 |
 | [sandbox-constraints.md](./sandbox-constraints.md) | Sandbox/Vercel Hobby/GitHub App の制約と迂回策 (webpack キャッシュ条件含む、AGENT.md §6 の実態版)。 | 2026-08-31 |
 
 ## 運用ルール

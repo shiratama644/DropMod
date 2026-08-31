@@ -30,7 +30,7 @@
 |---|---|---|
 | P12-B | 実環境検証待ち (実装 90%) | 実機 Chromium で Direct Write + Transaction/Backup/Rollback |
 | P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
-| P12-E2E | 再検証待ち (90%) | CI `workflow_dispatch` で成功/失敗/復帰の再実行 |
+| P12-E2E | 完了 | run `33421439818` (2026-09-01) で CI 全 green (成功/失敗/復帰) |
 | P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
 | P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
 | UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
@@ -41,9 +41,9 @@
 | ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
 | ARCH-2 | 完了（2A〜2D） | — |
 
-進行中の AI 実装タスク: **実環境バグ修正 27 件 + E2E 潜在失敗 3 件は完了**（下記
-「実環境バグ修正 + E2E 潜在失敗の修正 (2026-09-01)」参照）。残る AI 側の作業は
-**E2E 全 green の CI 最終確認のみ**（workflow_dispatch はユーザー手動実行）。
+進行中の AI 実装タスク: **なし**。実環境バグ修正 27 件 + E2E 潜在失敗 3 件は完了し、
+run `33421439818` (2026-09-01) で **CI 全ジョブ green (E2E 初の全 PASS)** を確認済み。
+残るはユーザー側の実機検証 (P12-B / P12-C / UIP-5 / VER-2 等) のみ。
 
 ---
 
@@ -147,7 +147,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | `lib/env/diff.ts` / `managed.ts` / Dexie v3 (`managedFiles`/`dirHandles`)。5 分類 + fingerprint unchanged。**2026-08-30 ソース確認済** |
 | P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | **実装はソース上完了** (2026-08-30): Dexie v4 `syncTransactions` / `executeSync` / `backup.ts` (UNDO_KEEP_COUNT=3) / `applySync` / `recovery` / `undo` / `SyncPreviewModal` / `InterruptedSyncDialog` (D-4) / `SyncHistorySection` / `environmentCheck` (D-1) / `FileSystemSink`。`4886245` ほか。**未完了は実機確認のみ** |
-| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | **再検証待ち** (手動 run で 成功系 PASS 済み) | 90% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts` 存在確認 (2026-08-30)。run `33245015014` DIAG → 修正 `ab5fd0b3` → 手動 `33246962952` 成功系 PASS / 失敗系パス修正 `926c279f`・**要 CI 再実行 (workflow_dispatch)** |
+| P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | 完了 | 100% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts`。失敗系は sink の空ファイル掃除修正 `16d8124` で解決し、**run `33421439818` (2026-09-01) で CI 全 green 確認済み** |
 | P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30): `lib/env/sink/zip.ts` / `mrpack.ts` / `modpack.ts` (CF 検出のみ) / `modpackUpdate.ts` / `lib/providers/modrinth.ts` / `ModpackHubClient` (`promoteModpackRecords` = D-6) / `useZipSync`。`db648c2`〜`b462bfa`。**未完了は実機 Firefox/Safari 確認のみ** |
 
 ※ **Phase 12 の設計論点は 2026-08-27 / 08-29 に確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-10）。着手を妨げる未確定事項は無い。
@@ -285,7 +285,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 実環境検証待ち | 95% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | `67f03f2a` ほか 9 コミット / typecheck + biome + 1244 tests + build。**E2E の CI green 確認は下記 E2E-FIX 系列に切り出し** |
+| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 完了 | 100% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | `67f03f2a` ほか 9 コミット / typecheck + biome + 1244 tests + build。**E2E の CI green は run `33421439818` (2026-09-01, HEAD `16d8124`) で確認済み → 完了** |
 | ORG-2 | src/ 移行 (app/components/features/hooks/lib/types/styles → src/) | 完了 | 100% | ORG-1 | src/app 有効化・`@/*` が `./src/*` を指す・coverage/@source パス整合・ルートが「設定 + docs + public」に整理 | `2d22083` / typecheck + biome + 1244 tests + build / Route (app) 全 20 認識 / coverage 総計 87.67/77.97/92.58/89.34 (移動前と同一) |
 | ORG-3 | ドキュメント更新 (AGENT.md / skills / README / docs / task-list) | 完了 | 100% | ORG-2 | パス表記が src/ と新ファイル名に一致・既存 stale を実在パスへ修正・4 検証 pass | `37b303c` 追従コミット / typecheck + biome + 1244 tests + build / skills 11 ファイル・AGENT.md・README.md・docs/README.md・hooks・DEPLOY.md |
 | ORG-4 | NewProfileModal の責務分割 (637 行 → フォルダ化 + 分割) | 完了 | 100% | ORG-1〜3 | `NewProfileModal/` フォルダ化 (`index.tsx` + FolderImportSection / AnalysisSection 等)。`@/features/profiles/components/NewProfileModal` の import パス維持・4 検証 pass・既存テスト green | `c08d583` 追従 / typecheck + biome + 1244 tests + build / index 399・AnalysisSection 139・FolderImportSection 72・ProfileFormFields 133 行 |
@@ -302,9 +302,9 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 証拠 |
 |---|---|---|---|
-| E2E-FIX-1 | modDetailModal.spec.ts:81 のブレッドクラム検証を実装実態 (Home / 型リンク /discover/mods) に修正。「Mod 一覧に戻る」リンクは実装に存在しない | CI で PASS 確認済み | `00479cd` / 最新 CI run (2026-08-31 手動) で desktop + mobile 両 PASS |
-| E2E-FIX-2 | folderPickerMock の fullPath 組み立てバグ修正 (root.path='' 上書き後も path===name 判定が残り `mods/` が落ちて障害注入が不発) | CI で PASS 相当 (注入が効くようになった) | `00479cd` |
-| E2E-FIX-3 | FileSystemSink.writeFile が書込失敗時に新規作成の空ファイルを掃除。rollbackSync は done===true のみ巻き戻すため、write 失敗 op の部分ファイルが残る実装バグ (実 OPFS でも発生し得る) | ローカル検証済み・**CI 再実行待ち** | `16d8124` + filesystem.test.ts 2 件追加 / typecheck + biome + 1266 tests + build |
+| E2E-FIX-1 | modDetailModal.spec.ts:81 のブレッドクラム検証を実装実態 (Home / 型リンク /discover/mods) に修正。「Mod 一覧に戻る」リンクは実装に存在しない | 完了 | `00479cd` / run `33421439818` で desktop + mobile 両 PASS |
+| E2E-FIX-2 | folderPickerMock の fullPath 組み立てバグ修正 (root.path='' 上書き後も path===name 判定が残り `mods/` が落ちて障害注入が不発) | 完了 | `00479cd` / 注入が効くようになり失敗系が実機の失敗を再現 |
+| E2E-FIX-3 | FileSystemSink.writeFile が書込失敗時に新規作成の空ファイルを掃除。rollbackSync は done===true のみ巻き戻すため、write 失敗 op の部分ファイルが残る実装バグ (実 OPFS でも発生し得る) | 完了 | `16d8124` + filesystem.test.ts 2 件追加 / **run `33421439818` で sync 失敗系 (Rollback 検証) が PASS** |
 
 ### 実環境バグ / 機能改善 (2026-09-01 ユーザー報告 27 件)
 
@@ -324,5 +324,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 **検証**: typecheck / biome / 1266 tests / build すべて green (HEAD `16d8124`)。
 
-**残作業**: CI `workflow_dispatch` で E2E 全 green の最終確認（E2E-FIX-3 が通れば
-E2E 初の全 PASS。Actions タブから手動実行が必要。bot トークンでは 403 のため）。
+**CI 最終確認**: run `33421439818` (2026-09-01, HEAD `16d8124`) で
+Type/Lint/Unit ✓・Build ✓・E2E ✓ の**全ジョブ green**。E2E は
+**このリポジトリで初の全 PASS**（65 passed / 14 skipped / 0 failed）。
+これで ORG-1 と P12-E2E も完了に確定。

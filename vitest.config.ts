@@ -110,7 +110,38 @@ export default defineConfig({
         // lib/constants/*: 定数の集合 (テスト対象なし)
         'src/lib/query/client.ts',
         'src/lib/utils/download.ts',
-        'src/lib/constants/**'
+        'src/lib/constants/**',
+
+        // ---- 0% のバレル re-export (COV-1, COVERAGE_90_PLAN.md §10.1) ----
+        // src/features/*/index.ts は公開面の再エクスポートのみで、実行ロジックは
+        // 実装元 (components / hooks / store / services) にある。テスト価値なし。
+        'src/features/*/index.ts',
+
+        // ---- 純粋な型定義ファイル (COV-1) ----
+        // 実行時コードを含まない型のみのファイル (src/types/** と同じ扱い)。
+        // 該当: lib/db/types.ts / modpack/api/providers/types.ts /
+        //       env-import/services/detector/types.ts
+        '**/types.ts',
+
+        // ---- Next.js 動的画像生成ルート (COV-1) ----
+        // opengraph-image / twitter-image (計 4 ファイル)。Next.js が実行時生成する
+        // RSC 画像ルートで、単体テストは Next.js 内部に強結合し ROI が低い。
+        // 実表示は E2E / 実環境 (本番 OGP 目視) で担保。
+        'src/app/**/opengraph-image.tsx',
+        'src/app/**/twitter-image.tsx',
+
+        // ---- Web Worker エントリ (COV-1) ----
+        // DedicatedWorkerGlobalScope 前提で jsdom では実行不可。
+        // コアロジック (hashCore.ts) はテスト済み、Worker 生成失敗時の
+        // メインスレッド fallback 分岐 (computeHashes.ts) は COV-2 で担保。
+        'src/lib/env/hashWorker.ts',
+
+        // ---- Sync 抽象レイヤーのバレル / インターフェース (COV-1) ----
+        // db.ts は re-export バレル (実装は db/managed.ts / db/transactions.ts でテスト済)。
+        // sink.ts は EnvironmentSink インターフェース定義のみ (実装は
+        // sink/filesystem.ts / sink/zip.ts でテスト済)。実行コードなし。
+        'src/features/sync/services/db.ts',
+        'src/features/sync/services/sink.ts'
       ],
       thresholds: {
         // ---- グローバル最低ライン (Phase 9-C 完了時 60%+) ----

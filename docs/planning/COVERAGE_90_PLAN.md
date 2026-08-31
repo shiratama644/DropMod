@@ -236,7 +236,7 @@ page.route) を踏襲する。CI (workflow_dispatch) で検証。ローカルは
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
-| COV-1 | | | |
+| COV-1 | `6abdddf` | 117 files / 1266 tests pass + `test:coverage` exit 0 | exclude 21 件追加 (barrel 11 / types.ts 3 / Next.js 生成画像 4 / hashWorker・sync db・sync sink 3。理由コメント付き)。0% ファイル 24→4 件 (残り = loadDiscoverSearch / projectDetail / JsonLd / siteUrl → COV-2/3)。全体 **88.56 / 78.55 / 92.64 / 90.41** (st/br/fn/ln、lines 90% 達成)。branches は COV-2/3 で 90% へ |
 | COV-2 | | | |
 | COV-3 | | | |
 | COV-4 | | | |

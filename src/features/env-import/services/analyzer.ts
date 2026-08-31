@@ -126,14 +126,11 @@ export async function analyzeEnvironmentSource(
   // ③ ファイル読み込み (進捗: read)
   // 1 ファイルの読み取り失敗で解析全体を落とさない (2026-08-27 バグ修正)。
   // 権限エラー・破損 ZIP エントリ等はそのファイルをスキップして継続。
-  const contents = new Map<string, Uint8Array>();
-  const readableScanned: ScannedFile[] = [];
-  for (let i = 0; i < scanned.length; i++) {
-    const file = scanned[i];
-    if (!file) continue;
+  // 読み取りに成功した内容は file と一緒に保持する (後続処理はこれだけを使う)。
+  const readableScanned: Array<ScannedFile & { data: Uint8Array }> = [];
+  for (const [i, file] of scanned.entries()) {
     try {
-      contents.set(file.path, await source.readFile(file.path));
-      readableScanned.push(file);
+      readableScanned.push({ ...file, data: await source.readFile(file.path) });
     } catch {
       // 読み取り失敗: 該当ファイルを解析対象から除外
       continue;
@@ -143,7 +140,7 @@ export async function analyzeEnvironmentSource(
   // 読み取り成功したファイルのみ後続処理の対象とする
   const hashInputs = readableScanned.map((file) => ({
     path: file.path,
-    data: contents.get(file.path) ?? new Uint8Array(0)
+    data: file.data
   }));
 
   // ④ SHA-1 計算 (Worker / fallback)
@@ -191,9 +188,10 @@ export async function analyzeEnvironmentSource(
     analysis.scannedCounts[
       file.category === 'mod' ? 'mods' : file.category === 'resourcepack' ? 'resourcepacks' : 'shaderpacks'
     ]++;
-    const sha1 = sha1ByPath.get(file.path);
-    const size = contents.get(file.path)?.byteLength ?? 0;
-    if (!sha1) continue;
+    // computeHashes は hashInputs (= readableScanned) の全パスに対して sha1 を返すため必ず存在する
+    // biome-ignore lint/style/noNonNullAssertion: hashInputs と readableScanned は 1:1 対応
+    const sha1 = sha1ByPath.get(file.path)!;
+    const size = file.data.byteLength;
 
     const version = versionBySha1[sha1];
     if (!version || typeof version.project_id !== 'string') {

@@ -147,12 +147,7 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     addModToProfile: (profileId, mod) => {
       let result: boolean | null = null;
       set((s) => {
-        const idx = s.profiles.findIndex((p) => p.id === profileId);
-        if (idx < 0) {
-          result = null;
-          return s;
-        }
-        const target = s.profiles[idx];
+        const target = s.profiles.find((p) => p.id === profileId);
         if (!target) {
           result = null;
           return s;
@@ -164,10 +159,12 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
           result = false;
           return s;
         }
-        const nextProfiles = [...s.profiles];
-        nextProfiles[idx] = { ...target, mods: [...target.mods, mod] };
         result = true;
-        return { profiles: nextProfiles };
+        return {
+          profiles: s.profiles.map((p) =>
+            p.id === profileId ? { ...p, mods: [...p.mods, mod] } : p
+          )
+        };
       });
       return result;
     },
@@ -175,21 +172,21 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     removeModFromProfile: (profileId, modIdOrSlug) => {
       let removed: ProjectItem | null = null;
       set((s) => {
-        const idx = s.profiles.findIndex((p) => p.id === profileId);
-        if (idx < 0) return s;
-        const target = s.profiles[idx];
+        const target = s.profiles.find((p) => p.id === profileId);
         if (!target) return s;
         const modIdx = target.mods.findIndex(
           (m) => m.projectId === modIdOrSlug || m.slug === modIdOrSlug
         );
         if (modIdx < 0) return s;
-        removed = target.mods[modIdx] ?? null;
-        const nextProfiles = [...s.profiles];
-        nextProfiles[idx] = {
-          ...target,
-          mods: target.mods.filter((_, i) => i !== modIdx)
+        // biome-ignore lint/style/noNonNullAssertion: modIdx >= 0 なら mods[modIdx] は必ず存在する
+        removed = target.mods[modIdx]!;
+        return {
+          profiles: s.profiles.map((p) =>
+            p.id === profileId
+              ? { ...p, mods: p.mods.filter((_, i) => i !== modIdx) }
+              : p
+          )
         };
-        return { profiles: nextProfiles };
       });
       return removed;
     },
@@ -197,20 +194,20 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     updateModVersionInProfile: (profileId, modId, updates) => {
       let ok = false;
       set((s) => {
-        const idx = s.profiles.findIndex((p) => p.id === profileId);
-        if (idx < 0) return s;
-        const target = s.profiles[idx];
+        const target = s.profiles.find((p) => p.id === profileId);
         if (!target) return s;
         const modIdx = target.mods.findIndex((m) => m.projectId === modId);
         if (modIdx < 0) return s;
-        const existingMod = target.mods[modIdx];
-        if (!existingMod) return s;
+        // biome-ignore lint/style/noNonNullAssertion: modIdx >= 0 なら mods[modIdx] は必ず存在する
+        const existingMod = target.mods[modIdx]!;
         const nextMods = [...target.mods];
         nextMods[modIdx] = { ...existingMod, ...updates };
-        const nextProfiles = [...s.profiles];
-        nextProfiles[idx] = { ...target, mods: nextMods };
         ok = true;
-        return { profiles: nextProfiles };
+        return {
+          profiles: s.profiles.map((p) =>
+            p.id === profileId ? { ...p, mods: nextMods } : p
+          )
+        };
       });
       return ok;
     },
@@ -218,18 +215,16 @@ const stateCreator: import('zustand').StateCreator<ProfilesState, [], []> = (set
     clearProfileMods: (profileId) => {
       let ok = false;
       set((s) => {
-        const idx = s.profiles.findIndex((p) => p.id === profileId);
-        if (idx < 0) return s;
-        const target = s.profiles[idx];
+        const target = s.profiles.find((p) => p.id === profileId);
         if (!target) return s;
         if (target.mods.length === 0) {
           ok = true;
           return s;
         }
-        const nextProfiles = [...s.profiles];
-        nextProfiles[idx] = { ...target, mods: [] };
         ok = true;
-        return { profiles: nextProfiles };
+        return {
+          profiles: s.profiles.map((p) => (p.id === profileId ? { ...p, mods: [] } : p))
+        };
       });
       return ok;
     }

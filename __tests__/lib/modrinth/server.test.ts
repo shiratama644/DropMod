@@ -20,6 +20,11 @@ import {
 } from '@/lib/modrinth/server';
 import type { ModrinthVersion } from '@/types';
 
+// 本番パス (unstable_cache 経由) のテストで使う。テスト時は raw fetch を直接呼ぶ。
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: () => unknown) => fn
+}));
+
 describe('lib/modrinth/server', () => {
   describe('REVALIDATE 定数', () => {
     it('主要 TTL が定義されている', () => {
@@ -118,6 +123,55 @@ describe('lib/modrinth/server', () => {
       const url = new URL(captured);
       expect(url.searchParams.get('limit')).toBe('24');
       expect(url.searchParams.get('offset')).toBe('0');
+    });
+
+    it('sortBy: updated → index=updated', async () => {
+      let captured = '';
+      server.use(
+        http.get('https://api.modrinth.com/v2/search', ({ request }) => {
+          captured = request.url;
+          return HttpResponse.json({ hits: [], total_hits: 0, offset: 0, limit: 24 });
+        })
+      );
+      await fetchModrinthSearch({ sortBy: 'updated' });
+      expect(new URL(captured).searchParams.get('index')).toBe('updated');
+    });
+
+    it('sortBy: newest → index=newest', async () => {
+      let captured = '';
+      server.use(
+        http.get('https://api.modrinth.com/v2/search', ({ request }) => {
+          captured = request.url;
+          return HttpResponse.json({ hits: [], total_hits: 0, offset: 0, limit: 24 });
+        })
+      );
+      await fetchModrinthSearch({ sortBy: 'newest' });
+      expect(new URL(captured).searchParams.get('index')).toBe('newest');
+    });
+
+    it('category を指定すると facets に categories:xxx を追加する', async () => {
+      let captured = '';
+      server.use(
+        http.get('https://api.modrinth.com/v2/search', ({ request }) => {
+          captured = request.url;
+          return HttpResponse.json({ hits: [], total_hits: 0, offset: 0, limit: 24 });
+        })
+      );
+      await fetchModrinthSearch({ query: 'x', category: 'shader' });
+      const facets = JSON.parse(new URL(captured).searchParams.get('facets') ?? '[]');
+      expect(facets).toContainEqual(['categories:shader']);
+    });
+
+    it('外部 AbortSignal で abort されたら throw する', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/search', () => {
+          return new HttpResponse('never resolves', { status: 500 });
+        })
+      );
+      const controller = new AbortController();
+      const promise = fetchModrinthSearch({ query: 'x' }, controller.signal);
+      controller.abort();
+      await expect(promise).rejects.toThrow();
     });
   });
 
@@ -489,6 +543,264 @@ describe('lib/modrinth/server', () => {
       await expect(fetchModrinthProject('fail5')).rejects.toThrow('429');
       // open 後は fail-fast
       await expect(fetchModrinthProject('fail6')).rejects.toThrow('circuit breaker');
+    });
+  });
+
+  describe('fetchModrinthProjectAuthor (追加分岐)', () => {
+    it('members が空配列なら null', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          HttpResponse.json([])
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBeNull();
+    });
+
+    it('role が無いメンバーでも判定できる (?? の右辺)', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          HttpResponse.json([
+            { user: { name: 'Roleless Dev', username: 'roleless' } }
+          ])
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBe('Roleless Dev');
+    });
+
+    it('owner が居なければ先頭メンバーの名前を使う', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          HttpResponse.json([
+            { role: 'member', user: { name: 'First Dev', username: 'first' } }
+          ])
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBe('First Dev');
+    });
+
+    it('name が無ければ username を使う', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          HttpResponse.json([
+            { role: 'owner', user: { username: 'anonymous-dev' } }
+          ])
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBe('anonymous-dev');
+    });
+
+    it('名前が空なら null', async () => {
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug/members', () =>
+          HttpResponse.json([
+            { role: 'owner', user: { name: '   ', username: '  ' } }
+          ])
+        )
+      );
+      await expect(fetchModrinthProjectAuthor('sodium')).resolves.toBeNull();
+    });
+  });
+
+  describe('fetchModrinthProjectVersions (本番パス・環境変数)', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.useRealTimers();
+    });
+
+    it('VITEST 無しなら unstable_cache 経由で取得する (loader/mcVersion あり)', async () => {
+      vi.stubEnv('VITEST', '');
+      vi.stubEnv('NODE_ENV', 'production');
+      const versions = await fetchModrinthProjectVersions('sodium', {
+        loader: 'Fabric',
+        mcVersion: '1.20.1'
+      });
+      expect(Array.isArray(versions)).toBe(true);
+      expect(versions.length).toBeGreaterThan(0);
+    });
+
+    it('VITEST 無しなら unstable_cache 経由で取得する (filter 無し)', async () => {
+      vi.stubEnv('VITEST', '');
+      vi.stubEnv('NODE_ENV', 'production');
+      const versions = await fetchModrinthProjectVersions('sodium');
+      expect(Array.isArray(versions)).toBe(true);
+    });
+
+    it('MODRINTH_FETCH_TIMEOUT_MS が有効な値なら採用する', async () => {
+      vi.resetModules();
+      vi.stubEnv('MODRINTH_FETCH_TIMEOUT_MS', '5000');
+      const mod = await import('@/lib/modrinth/server');
+      const project = await mod.fetchModrinthProject('sodium');
+      expect(project.slug).toBe('sodium');
+    });
+
+    it('MODRINTH_FETCH_TIMEOUT_MS が無効な値なら既定値にフォールバックする', async () => {
+      vi.resetModules();
+      vi.stubEnv('MODRINTH_FETCH_TIMEOUT_MS', 'abc');
+      const mod = await import('@/lib/modrinth/server');
+      const project = await mod.fetchModrinthProject('sodium');
+      expect(project.slug).toBe('sodium');
+    });
+
+    it('MODRINTH_MAX_RETRY_WAIT_MS が有効な値なら採用する', async () => {
+      vi.resetModules();
+      vi.stubEnv('MODRINTH_MAX_RETRY_WAIT_MS', '5000');
+      const mod = await import('@/lib/modrinth/server');
+      const project = await mod.fetchModrinthProject('sodium');
+      expect(project.slug).toBe('sodium');
+    });
+
+    it('MODRINTH_MAX_RETRY_WAIT_MS が無効な値なら既定値にフォールバックする', async () => {
+      vi.resetModules();
+      vi.stubEnv('MODRINTH_MAX_RETRY_WAIT_MS', 'abc');
+      const mod = await import('@/lib/modrinth/server');
+      const project = await mod.fetchModrinthProject('sodium');
+      expect(project.slug).toBe('sodium');
+    });
+
+    it('429 で MIN_WAIT 未設定なら既定の最小ウェイトで再試行する', async () => {
+      vi.useFakeTimers();
+      _resetRateLimitStateForTesting();
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts === 1) {
+            return new HttpResponse('rl', {
+              status: 429,
+              headers: { 'Retry-After': '0' }
+            });
+          }
+          return HttpResponse.json({ id: 'ok', slug: 'ok', title: 'OK' });
+        })
+      );
+      const p = fetchModrinthProject('ok').then(
+        (v) => v,
+        (e: Error) => {
+          throw e;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      const project = await p;
+      expect(attempts).toBe(2);
+      expect(project.title).toBe('OK');
+    });
+
+    it('429 で MIN_WAIT が無効値なら既定の最小ウェイトで再試行する', async () => {
+      vi.useFakeTimers();
+      _resetRateLimitStateForTesting();
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', 'abc');
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts === 1) {
+            return new HttpResponse('rl', {
+              status: 429,
+              headers: { 'Retry-After': '0' }
+            });
+          }
+          return HttpResponse.json({ id: 'ok2', slug: 'ok2', title: 'OK2' });
+        })
+      );
+      const p = fetchModrinthProject('ok2').then(
+        (v) => v,
+        (e: Error) => {
+          throw e;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      const project = await p;
+      expect(attempts).toBe(2);
+      expect(project.title).toBe('OK2');
+    });
+
+    it('429 の Retry-After が無効値なら指数バックオフで再試行する', async () => {
+      vi.useFakeTimers();
+      _resetRateLimitStateForTesting();
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', '1');
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts === 1) {
+            return new HttpResponse('rl', {
+              status: 429,
+              headers: { 'Retry-After': 'abc' }
+            });
+          }
+          return HttpResponse.json({ id: 'ok3', slug: 'ok3', title: 'OK3' });
+        })
+      );
+      const p = fetchModrinthProject('ok3').then(
+        (v) => v,
+        (e: Error) => {
+          throw e;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      const project = await p;
+      expect(attempts).toBe(2);
+      expect(project.title).toBe('OK3');
+    });
+
+    it('429 の Retry-After が未来の HTTP-date ならその時刻まで待つ', async () => {
+      vi.useFakeTimers();
+      _resetRateLimitStateForTesting();
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', '1');
+      const future = new Date(Date.now() + 60_000).toUTCString();
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts === 1) {
+            return new HttpResponse('rl', {
+              status: 429,
+              headers: { 'Retry-After': future }
+            });
+          }
+          return HttpResponse.json({ id: 'ok4', slug: 'ok4', title: 'OK4' });
+        })
+      );
+      const p = fetchModrinthProject('ok4').then(
+        (v) => v,
+        (e: Error) => {
+          throw e;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(120_000);
+      const project = await p;
+      expect(attempts).toBe(2);
+      expect(project.title).toBe('OK4');
+    });
+
+    it('429 の Retry-After が過去の HTTP-date なら指数バックオフで再試行する', async () => {
+      vi.useFakeTimers();
+      _resetRateLimitStateForTesting();
+      vi.stubEnv('MODRINTH_429_MIN_WAIT_MS', '1');
+      const past = new Date(Date.now() - 60_000).toUTCString();
+      let attempts = 0;
+      server.use(
+        http.get('https://api.modrinth.com/v2/project/:slug', () => {
+          attempts++;
+          if (attempts === 1) {
+            return new HttpResponse('rl', {
+              status: 429,
+              headers: { 'Retry-After': past }
+            });
+          }
+          return HttpResponse.json({ id: 'ok5', slug: 'ok5', title: 'OK5' });
+        })
+      );
+      const p = fetchModrinthProject('ok5').then(
+        (v) => v,
+        (e: Error) => {
+          throw e;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      const project = await p;
+      expect(attempts).toBe(2);
+      expect(project.title).toBe('OK5');
     });
   });
 });

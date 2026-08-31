@@ -250,6 +250,26 @@ describe('useProfilesStore', () => {
       expect(ok).toBe(false);
     });
 
+    it('対象外プロファイルは変更しない (map の else 側)', () => {
+      act(() => {
+        useProfilesStore.setState({
+          profiles: [
+            { ...P1, id: 'p1', mods: [M1] },
+            { ...P1, id: 'p2', mods: [M2] }
+          ],
+          currentProfileId: 'p1',
+          hasHydrated: true,
+          theme: 'dark'
+        });
+      });
+      act(() => {
+        useProfilesStore.getState().clearProfileMods('p1');
+      });
+      const profiles = useProfilesStore.getState().profiles;
+      expect(profiles.find((p) => p.id === 'p1')?.mods).toEqual([]);
+      expect(profiles.find((p) => p.id === 'p2')?.mods).toHaveLength(1);
+    });
+
     it('returns true even when mods is already empty (no state change)', () => {
       act(() => {
         useProfilesStore.setState({

@@ -6,7 +6,7 @@
  * - `OpfsBackupStore`             … Fake ファイルシステムを OPFS ルートとして注入して検証
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   BACKUP_ROOT_DIR,
   OpfsBackupStore,
@@ -212,6 +212,104 @@ describe('OpfsBackupStore', () => {
       throw new Error('このブラウザは OPFS (Origin Private File System) に対応していません。');
     });
     await expect(store.save('tx-1', 'mods/a.jar', encode('x'))).rejects.toThrow('OPFS');
+  });
+
+  it('getRoot 未指定 (既定) は OPFS 非対応環境で OPFS エラーを投げる', async () => {
+    // jsdom には navigator.storage.getDirectory が無い → 既定 getRoot が throw
+    const store = new OpfsBackupStore();
+    await expect(store.save('tx-1', 'mods/a.jar', encode('x'))).rejects.toThrow('OPFS');
+    await expect(store.listTransactions()).rejects.toThrow('OPFS');
+  });
+
+  it('キーが / だけの場合は "root" にフォールバックする (sanitizeKey の || 側)', async () => {
+    const { store } = makeStore();
+    const backupId = await store.save('tx-1', '/', encode('root-file'));
+    expect(backupId).toBe('tx-1/root');
+    expect(decode(await store.load('tx-1/root'))).toBe('root-file');
+  });
+
+  it('load: 形式は正しいが実在しないファイルは null (NotFoundError を握る)', async () => {
+    const { store } = makeStore({ [`${BACKUP_ROOT_DIR}/tx-1/exists.jar`]: 'x' });
+    expect(await store.load('tx-1/not-found.jar')).toBeNull();
+  });
+
+  it('load: パスにファイルが被っていると TypeMismatchError も null として扱う', async () => {
+    // txId がファイルとして存在 → getDirectoryHandle(txId) が TypeMismatchError
+    const { store } = makeStore({ [`${BACKUP_ROOT_DIR}/tx-1`]: 'i am a file' });
+    expect(await store.load('tx-1/whatever.jar')).toBeNull();
+  });
+
+  it('removeTransaction: NotFoundError 以外のエラーは握らず rethrow する', async () => {
+    const { store, root } = makeStore();
+    vi.spyOn(asFakeDirectory(root), 'getDirectoryHandle').mockRejectedValue(
+      new Error('permission denied')
+    );
+    await expect(store.removeTransaction('tx-1')).rejects.toThrow('permission denied');
+  });
+
+  it('listTransactions: ルート解決の NotFoundError 以外は rethrow する', async () => {
+    const { store, root } = makeStore();
+    vi.spyOn(asFakeDirectory(root), 'getDirectoryHandle').mockRejectedValue(
+      new Error('permission denied')
+    );
+    await expect(store.listTransactions()).rejects.toThrow('permission denied');
+  });
+
+  it('listTransactions: バックアップルート直下のファイルは tx として数えない', async () => {
+    const { store } = makeStore({
+      [`${BACKUP_ROOT_DIR}/loose.txt`]: 'not a tx',
+      [`${BACKUP_ROOT_DIR}/tx-a/a.jar`]: 'a',
+      [`${BACKUP_ROOT_DIR}/tx-b/b.jar`]: 'bb'
+    });
+    const list = await store.listTransactions();
+    expect(list.map((t) => t.txId).sort()).toEqual(['tx-a', 'tx-b']);
+  });
+
+  it('listTransactions: tx 内のサブディレクトリはファイルとして数えない', async () => {
+    const { store } = makeStore({
+      [`${BACKUP_ROOT_DIR}/tx-a/a.jar`]: 'a',
+      [`${BACKUP_ROOT_DIR}/tx-a/nested/deep.txt`]: 'ignored'
+    });
+    const list = await store.listTransactions();
+    const txA = list.find((t) => t.txId === 'tx-a');
+    expect(txA).toBeDefined();
+    expect(txA!.bytes).toBe(1);
+  });
+
+  it('load: NotFoundError 以外のエラーは握らず rethrow する', async () => {
+    const { store, root } = makeStore();
+    vi.spyOn(asFakeDirectory(root), 'getDirectoryHandle').mockRejectedValue(
+      new Error('permission denied')
+    );
+    await expect(store.load('tx-1/a.jar')).rejects.toThrow('permission denied');
+  });
+
+  it('getRoot 既定でも navigator.storage.getDirectory があれば使える', async () => {
+    const root = createFakeFileSystem({});
+    const getDirectory = vi.fn().mockResolvedValue(root);
+    Object.defineProperty(navigator, 'storage', {
+      value: { getDirectory },
+      configurable: true
+    });
+    try {
+      const store = new OpfsBackupStore(); // getRoot は既定 (navigator.storage 経由)
+      const backupId = await store.save('tx-1', 'a.jar', encode('x'));
+      expect(backupId).toBe('tx-1/a.jar');
+      expect(decode(await store.load(backupId))).toBe('x');
+    } finally {
+      delete (navigator as { storage?: unknown }).storage;
+    }
+  });
+
+  it('save: バッファ途中の view はコピーして書き込む (toArrayBuffer の slice 側)', async () => {
+    const { store, root } = makeStore();
+    const source = new Uint8Array([9, 1, 2, 3, 9]);
+    const view = source.subarray(1, 4); // byteOffset=1 → コピー分岐
+    const backupId = await store.save('tx-1', 'sub.bin', view);
+    const stored = readFakeFile(root, `${BACKUP_ROOT_DIR}/tx-1/sub.bin`);
+    expect(stored).not.toBeNull();
+    expect([...stored!]).toEqual([1, 2, 3]);
+    expect(backupId).toBe('tx-1/sub.bin');
   });
 });
 

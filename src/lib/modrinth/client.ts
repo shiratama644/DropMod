@@ -45,11 +45,11 @@ function cacheGet(key: string): unknown | undefined {
 
 function cacheSet(key: string, value: unknown): void {
   apiCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
-  // 上限超過時は最古 (先頭) を削除
+  // 上限超過時は最古 (先頭) を削除。
+  // ループ条件で size > CACHE_MAX_ENTRIES が保証されるためキーは必ず取得できる。
   while (apiCache.size > CACHE_MAX_ENTRIES) {
-    const oldestKey = apiCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    apiCache.delete(oldestKey);
+    // biome-ignore lint/style/noNonNullAssertion: ループ条件で size > CACHE_MAX_ENTRIES のため必ず存在
+    apiCache.delete(apiCache.keys().next().value!);
   }
 }
 
@@ -207,8 +207,9 @@ export async function fetchModrinth<T = unknown>(
   }
 
   if (!response) {
-    if (lastErrorMsg) console.warn('[DropMod] fetchModrinth error:', lastErrorMsg);
-    throw new Error(`Failed to fetch from Modrinth: ${lastErrorMsg || 'unknown error'}`);
+    // ここに到達する時点で lastErrorMsg は必ず設定済み (全失敗経路で代入される)
+    console.warn('[DropMod] fetchModrinth error:', lastErrorMsg);
+    throw new Error(`Failed to fetch from Modrinth: ${lastErrorMsg}`);
   }
 
   const data = await response.json();
@@ -254,8 +255,9 @@ export async function fetchStableModVersion(
   if (!versions || versions.length === 0) return null;
 
   // versions[0] は T | undefined
-  const stableVersion = versions.find((v) => v.version_type === 'release') || versions[0];
-  if (!stableVersion) return null;
+  // versions[0] は直上の length チェックで必ず存在する
+  // biome-ignore lint/style/noNonNullAssertion: versions.length > 0 を確認済みのため必ず存在
+  const stableVersion = (versions.find((v) => v.version_type === 'release') || versions[0])!;
   return { targetVersion: stableVersion, allVersions: versions };
 }
 

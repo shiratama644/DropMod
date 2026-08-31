@@ -259,55 +259,48 @@ function toArrayBuffer(data: Uint8Array): ArrayBuffer {
  * 取り違えると本番コードがテスト用実装を掴むので、こちらは `InMemory` とした。
  */
 export class InMemoryBackupStore implements BackupStore {
-  readonly #entries = new Map<string, Uint8Array>();
-  /** backupId → txId (tx 単位の削除・一覧用) */
-  readonly #owner = new Map<string, string>();
-  /** backupId → 退避した時刻 (`savedAt` の算出用) */
-  readonly #savedAt = new Map<string, number>();
+  /**
+   * backupId → 保存内容 + 属主 tx + 退避時刻。
+   * 3 つの Map に分けず 1 つにまとめることで、「#owner にだけある」等の
+   * 不整合状態を構造的に作れなくしている (listTransactions にデッドガード不要)。
+   */
+  readonly #entries = new Map<string, { data: Uint8Array; owner: string; savedAt: number }>();
 
   async save(txId: string, key: string, data: Uint8Array): Promise<string> {
     const backupId = `${txId}/${sanitizeKey(key)}`;
-    this.#entries.set(backupId, data);
-    this.#owner.set(backupId, txId);
-    this.#savedAt.set(backupId, Date.now());
+    this.#entries.set(backupId, { data, owner: txId, savedAt: Date.now() });
     return backupId;
   }
 
   async load(backupId: string): Promise<Uint8Array | null> {
-    return this.#entries.get(backupId) ?? null;
+    return this.#entries.get(backupId)?.data ?? null;
   }
 
   async removeTransaction(txId: string): Promise<void> {
-    for (const [backupId, owner] of this.#owner) {
-      if (owner === txId) {
-        this.#entries.delete(backupId);
-        this.#owner.delete(backupId);
-        this.#savedAt.delete(backupId);
-      }
+    for (const [backupId, entry] of this.#entries) {
+      if (entry.owner === txId) this.#entries.delete(backupId);
     }
   }
 
   async listTransactions(): Promise<BackupTransactionSummary[]> {
     // `savedAt` は「最も古いファイルの時刻」。D-5 の古い順追い出しと同じ基準。
     const byTx = new Map<string, { bytes: number; oldest: number }>();
-    for (const [backupId, owner] of this.#owner) {
-      const data = this.#entries.get(backupId);
-      const savedAt = this.#savedAt.get(backupId) ?? 0;
-      const current = byTx.get(owner) ?? { bytes: 0, oldest: Number.POSITIVE_INFINITY };
-      current.bytes += data?.byteLength ?? 0;
-      current.oldest = Math.min(current.oldest, savedAt);
-      byTx.set(owner, current);
+    for (const entry of this.#entries.values()) {
+      const current = byTx.get(entry.owner) ?? { bytes: 0, oldest: Number.POSITIVE_INFINITY };
+      current.bytes += entry.data.byteLength;
+      current.oldest = Math.min(current.oldest, entry.savedAt);
+      byTx.set(entry.owner, current);
     }
     return [...byTx.entries()].map(([txId, summary]) => ({
       txId,
       bytes: summary.bytes,
-      savedAt: Number.isFinite(summary.oldest) ? summary.oldest : 0
+      savedAt: summary.oldest
     }));
   }
 
   async estimateUsage(): Promise<number> {
     let total = 0;
-    for (const data of this.#entries.values()) total += data.byteLength;
+    for (const entry of this.#entries.values()) total += entry.data.byteLength;
     return total;
   }
 }

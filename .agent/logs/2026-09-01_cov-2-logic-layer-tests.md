@@ -43,13 +43,16 @@ COV-1〜5）の **COV-2（ロジック層 unit test、branches 優先）**。計
 - L311: debounce cleanup の「タイマー未セット」分岐 — ref を null に戻す箇所が無く到達不能
 - L637: 削除時 `remaining[0]` フォールバック — `length <= 1` ガードで必ず残る
 
-## 5. 残事項 (COV-2 第 2 弾)
+## 5. 残事項 (COV-2 第 2 弾) — 完了 (commit `1a38bf4`)
 
-- features/sync/services/backup.ts (br 67.3)
-- features/env-import/services/analyzer.ts (br 72.2)
-- lib/modrinth/client.ts (br 73.3) / server.ts (br 77.2)
-- features/sync/hooks/useSync.ts ほか sync hooks (br 78.7)
-- features/profiles/store/store.ts (br 84.3 → 90 へ)
+- features/sync/services/backup.ts → **100** (InMemoryBackupStore を単一 Map に統合、デッドガード除去)
+- features/env-import/services/analyzer.ts → **100** (contents Map 廃止・readableScanned に data 保持)
+- lib/modrinth/server.ts → **100** (Retry-After 無効値/HTTP-date・role なし member・VITEST なし本番パス)
+- lib/modrinth/client.ts → **95.53** (到達不能ガード 3 箇所除去 + ネットワークエラー/429 詳細/キャッシュ上限テスト)
+- features/sync/hooks/useSync.ts → **97.87** / useSyncHistory.ts → **90.9** (失敗系・既定文言・対象外プロファイル保持)
+- features/profiles/store/store.ts → **95.74** (find+map パターン化。残りは slug 重複判定の右辺)
+
+全体 (1481 tests): **93.41 / 86.47 / 95.42 / 94.9** (st/br/fn/ln)。COV-2 完了。
 
 ## 6. 備考
 

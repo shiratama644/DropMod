@@ -41,7 +41,9 @@
 | ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
 | ARCH-2 | 完了（2A〜2D） | — |
 
-進行中の AI 実装タスクは**なし**（ARCH-2 系列は 2A〜2D すべて完了。次はユーザー指示待ち）。
+進行中の AI 実装タスク: **実環境バグ修正 27 件 + E2E 潜在失敗 3 件は完了**（下記
+「実環境バグ修正 + E2E 潜在失敗の修正 (2026-09-01)」参照）。残る AI 側の作業は
+**E2E 全 green の CI 最終確認のみ**（workflow_dispatch はユーザー手動実行）。
 
 ---
 
@@ -283,8 +285,44 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 実環境検証待ち | 95% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | `67f03f2a` ほか 9 コミット / typecheck + biome + 1244 tests + build。**残: E2E spec の CI green 確認 (workflow_dispatch)** |
+| ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 実環境検証待ち | 95% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | `67f03f2a` ほか 9 コミット / typecheck + biome + 1244 tests + build。**E2E の CI green 確認は下記 E2E-FIX 系列に切り出し** |
 | ORG-2 | src/ 移行 (app/components/features/hooks/lib/types/styles → src/) | 完了 | 100% | ORG-1 | src/app 有効化・`@/*` が `./src/*` を指す・coverage/@source パス整合・ルートが「設定 + docs + public」に整理 | `2d22083` / typecheck + biome + 1244 tests + build / Route (app) 全 20 認識 / coverage 総計 87.67/77.97/92.58/89.34 (移動前と同一) |
 | ORG-3 | ドキュメント更新 (AGENT.md / skills / README / docs / task-list) | 完了 | 100% | ORG-2 | パス表記が src/ と新ファイル名に一致・既存 stale を実在パスへ修正・4 検証 pass | `37b303c` 追従コミット / typecheck + biome + 1244 tests + build / skills 11 ファイル・AGENT.md・README.md・docs/README.md・hooks・DEPLOY.md |
 | ORG-4 | NewProfileModal の責務分割 (637 行 → フォルダ化 + 分割) | 完了 | 100% | ORG-1〜3 | `NewProfileModal/` フォルダ化 (`index.tsx` + FolderImportSection / AnalysisSection 等)。`@/features/profiles/components/NewProfileModal` の import パス維持・4 検証 pass・既存テスト green | `c08d583` 追従 / typecheck + biome + 1244 tests + build / index 399・AnalysisSection 139・FolderImportSection 72・ProfileFormFields 133 行 |
 | ORG-5 | coverage threshold 未達の回復 (store.ts branches 76.47%<80% / hooks 59.15%<60%) | 完了 | 100% | ORG-2 | `pnpm test:coverage` exit 0 (threshold 全 pass)。対象: `src/features/profiles/store/store.ts` (branches 80%)・`src/hooks/**/*.ts` (branches 60%) | `389130d` 追従 / test:coverage exit 0 / store.ts branches 76.47→84.31%・hooks 59.15→87.32% / 4 検証 green (1264 tests) / `.agent/logs/2026-09-01_codebase-org-5.md` |
+
+## 実環境バグ修正 + E2E 潜在失敗の修正 (2026-09-01)
+
+> ユーザーが実環境で発見・報告したバグ 19 件 + 機能追加 8 件（計 27 件、バグと
+> 機能が混在）。加えて、ブランチ CI で初めて E2E が実行された際に顕在化した
+> **ORG とは無関係の既存の潜在失敗 3 件**（E2E は過去 green 実績ゼロのため未発覚だった）。
+> いずれも「テスト改変・threshold 調整で green を作る」のではなく実体を修正。
+
+### E2E 潜在失敗の修正 (ORG 回帰ではない)
+
+| ID | タスク | 状態 | 証拠 |
+|---|---|---|---|
+| E2E-FIX-1 | modDetailModal.spec.ts:81 のブレッドクラム検証を実装実態 (Home / 型リンク /discover/mods) に修正。「Mod 一覧に戻る」リンクは実装に存在しない | CI で PASS 確認済み | `00479cd` / 最新 CI run (2026-08-31 手動) で desktop + mobile 両 PASS |
+| E2E-FIX-2 | folderPickerMock の fullPath 組み立てバグ修正 (root.path='' 上書き後も path===name 判定が残り `mods/` が落ちて障害注入が不発) | CI で PASS 相当 (注入が効くようになった) | `00479cd` |
+| E2E-FIX-3 | FileSystemSink.writeFile が書込失敗時に新規作成の空ファイルを掃除。rollbackSync は done===true のみ巻き戻すため、write 失敗 op の部分ファイルが残る実装バグ (実 OPFS でも発生し得る) | ローカル検証済み・**CI 再実行待ち** | `16d8124` + filesystem.test.ts 2 件追加 / typecheck + biome + 1266 tests + build |
+
+### 実環境バグ / 機能改善 (2026-09-01 ユーザー報告 27 件)
+
+> コミット: `139f6e8`（選択中一覧 / 詳細ページ / モーダル / ギャラリー）・
+> `5c7d5f4`（フォルダ選択 / 設定 / discover / アイコン subset）・`443926f`（スケルトン微修正）。
+
+| 区分 | 種別 | 対応内容 |
+|---|---|---|
+| 選択中一覧 | バグ×3 / 機能×4 | 3 配列 (mods/resourcepacks/shaderpacks) 横断の削除 (`profileContent.ts` 新設・handleToggleMod / handleRemoveMods / handleRemoveAllMods 修正)。「バージョン:」nowrap。タブを discover 風大型カードに。ボタン名 チェック/削除/同期。検索 × 2 重解消。検索バー左に「全削除」 |
+| 詳細ページ | バグ×3 / 機能×2 | CSP img-src を https: 全体に緩和 (本文画像表示)。CTA 3 ボタンを閾値付きグリッド (380px)。isAdded 判定を 3 配列横断に (追加→削除・重複防止)。ギャラリー閲覧ボタン廃止→画像タップでモーダル (a11y の button 化) |
+| Mods モーダル | 機能×2 | 画像タップでギャラリーモーダル。バージョン一覧をプロファイル環境 (MC/ローダー) 一致のみにフィルタ (`versionsForProfile` 新設) |
+| ギャラリーモーダル | バグ×1 / 機能×2 | スワイプ遷移 (ポインター + 閾値 40px)。前後画像の先読み + touch-manipulation で反応高速化。高さを全画像中最大の縦横比に固定 (max 58vh) |
+| discover | バグ×2 | カテゴリ右端のフェードを背景色依存オーバーレイ → CSS mask に変更。ヒーローの「依存・競合チェック」ボタン削除 |
+| フォルダ選択モーダル | バグ×4 / 機能×1 | Phase 11 読み取り専用の注記・文言 3 箇所を現行仕様に更新。**アイコン欠落の根本修正**: buildFontawesomeSubset.mjs の SCAN_DIRS が ORG 前の旧パス (app/components/hooks) のままで src/ 未スキャン → 修正 + subset 再生成 (fa-clipboard-check / fa-unlink / fa-link-slash 等が表示されるように)。scanLocalEnvironment の読み込みを並列化 (concurrency 8) |
+| 設定ページ | バグ×3 | 紐づけ解除アイコン (同上 subset 修正で解消)。セクション見出し (h3) を text-sm/base に拡大。環境との同期と同期履歴の間に縦間隔 |
+| ボトムナビ | 機能×1 | /discover/<type> を Suspense + スケルトンに (サーバ fetch 待ちで白画面にならず、結果領域にローディング表示) |
+
+**検証**: typecheck / biome / 1266 tests / build すべて green (HEAD `16d8124`)。
+
+**残作業**: CI `workflow_dispatch` で E2E 全 green の最終確認（E2E-FIX-3 が通れば
+E2E 初の全 PASS。Actions タブから手動実行が必要。bot トークンでは 403 のため）。

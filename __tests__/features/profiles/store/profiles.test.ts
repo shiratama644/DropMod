@@ -104,6 +104,23 @@ describe('useProfilesStore', () => {
       });
       expect(result).toBe(false);
     });
+
+    it('adds a mod without slug (projectId-only duplicate check)', () => {
+      // slug 未定義の mod: 重複判定は projectId 一致のみで行われる
+      const noSlugMod: ProjectItem = {
+        projectId: 'm3', name: 'NoSlug', type: 'mod'
+      };
+      let result: boolean | null = null;
+      act(() => {
+        result = useProfilesStore.getState().addModToProfile('p1', noSlugMod);
+      });
+      expect(result).toBe(true);
+      // 同じ projectId で再追加 → false (projectId 重複)
+      act(() => {
+        result = useProfilesStore.getState().addModToProfile('p1', noSlugMod);
+      });
+      expect(result).toBe(false);
+    });
   });
 
   describe('removeModFromProfile', () => {
@@ -193,6 +210,16 @@ describe('useProfilesStore', () => {
       });
       expect(ok).toBe(false);
     });
+
+    it('returns false when profile does not exist', () => {
+      let ok = true;
+      act(() => {
+        ok = useProfilesStore
+          .getState()
+          .updateModVersionInProfile('missing', 'm1', { versionId: 'x' });
+      });
+      expect(ok).toBe(false);
+    });
   });
 
   describe('clearProfileMods', () => {
@@ -213,6 +240,31 @@ describe('useProfilesStore', () => {
       expect(
         useProfilesStore.getState().profiles.find((p) => p.id === 'p1')?.mods
       ).toEqual([]);
+    });
+
+    it('returns false when profile does not exist', () => {
+      let ok = true;
+      act(() => {
+        ok = useProfilesStore.getState().clearProfileMods('missing');
+      });
+      expect(ok).toBe(false);
+    });
+
+    it('returns true even when mods is already empty (no state change)', () => {
+      act(() => {
+        useProfilesStore.setState({
+          profiles: [{ ...P1, mods: [] }],
+          currentProfileId: 'p1',
+          hasHydrated: true,
+          theme: 'dark'
+        });
+      });
+      let ok = false;
+      act(() => {
+        ok = useProfilesStore.getState().clearProfileMods('p1');
+      });
+      expect(ok).toBe(true);
+      expect(useProfilesStore.getState().profiles).toHaveLength(1);
     });
   });
 

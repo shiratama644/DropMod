@@ -27,10 +27,12 @@ const REPO_ROOT = resolve(new URL('..', import.meta.url).pathname);
 const FA_ROOT = join(REPO_ROOT, 'node_modules/@fortawesome/fontawesome-free');
 const FA_DIR = join(FA_ROOT, 'css');
 const FA_WEBFONTS = join(FA_ROOT, 'webfonts');
-const OUT_PATH = join(REPO_ROOT, 'styles/fontawesome-subset.css');
+// ORG-2 (src/ 移行) 以降、アプリコードは全て src/ 配下。
+// 旧パス (app / components / hooks) は存在しないため、実際のコードをスキャンする。
+const OUT_PATH = join(REPO_ROOT, 'src/styles/fontawesome-subset.css');
 const PUBLIC_WEBFONTS = join(REPO_ROOT, 'public/webfonts');
 
-const SCAN_DIRS = ['app', 'components', 'hooks'];
+const SCAN_DIRS = ['src/app', 'src/components', 'src/hooks', 'src/features', 'src/lib'];
 const SCAN_EXTS = ['.ts', '.tsx'];
 
 // ---- 動的 icon (テンプレートリテラルで生成されるため grep で拾えない) ----

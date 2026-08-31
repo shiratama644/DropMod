@@ -32,7 +32,7 @@ export function FolderImportSection({
   return (
     <div>
       <span className="block text-xs font-semibold theme-text-secondary mb-1">
-        Minecraft フォルダ (任意・読み取り専用)
+        Minecraft フォルダ (任意)
       </span>
       <button
         type="button"
@@ -50,7 +50,7 @@ export function FolderImportSection({
       </button>
       <p className="mt-1 text-[11px] theme-text-muted leading-relaxed">
         {canPickFolder
-          ? '.minecraft または Prism インスタンスを選ぶと、環境とファイルを自動解析します (読み取り専用)。'
+          ? '.minecraft または Prism インスタンス などを選ぶと、環境とファイルを自動解析します。'
           : 'Firefox / Safari / モバイルはフォルダ選択非対応です。「.minecraft を ZIP 化して読み込む」をご利用ください。'}
       </p>
       {analyzing && (

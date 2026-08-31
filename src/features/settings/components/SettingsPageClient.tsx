@@ -160,7 +160,7 @@ export const SettingsPageClient: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3">
-          <h3 className="text-xs sm:text-sm font-bold">外観テーマ設定 (Color Theme)</h3>
+          <h3 className="text-sm sm:text-base font-bold">外観テーマ設定 (Color Theme)</h3>
           <div className="grid grid-cols-2 gap-3 max-w-md">
             <button
               type="button"
@@ -190,7 +190,7 @@ export const SettingsPageClient: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3">
-          <h3 className="text-xs sm:text-sm font-bold">通知設定 (Toast Notifications)</h3>
+          <h3 className="text-sm sm:text-base font-bold">通知設定 (Toast Notifications)</h3>
           <p className="text-xs theme-text-muted">
             モバイルで通知が邪魔な場合はオフにできます (プロファイル作成・Mod 追加などの
             操作結果通知が表示されなくなります)。
@@ -226,7 +226,7 @@ export const SettingsPageClient: React.FC = () => {
         </div>
 
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3 sm:space-y-4">
-          <h3 className="text-xs sm:text-sm font-bold">
+          <h3 className="text-sm sm:text-base font-bold">
             ZIPファイルのインポート / エクスポート
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -273,8 +273,9 @@ export const SettingsPageClient: React.FC = () => {
           </div>
         </div>
 
-        {/* Phase 12-B / D-9: フォルダ紐付け + Sync の入口 */}
-        <div className="border-t border-slate-500/20 pt-4 sm:pt-6">
+        {/* Phase 12-B / D-9: フォルダ紐付け + Sync の入口
+            2 つの glass-panel が重なって見えないよう縦間隔を確保する (#26) */}
+        <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-4">
           <EnvironmentSyncSection />
           {/* D-9: 履歴と Undo も同じ「環境との同期」エリアに集約する */}
           <SyncHistorySection />
@@ -282,7 +283,7 @@ export const SettingsPageClient: React.FC = () => {
 
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs sm:text-sm font-bold">保持されているプロファイル</h3>
+            <h3 className="text-sm sm:text-base font-bold">保持されているプロファイル</h3>
             <button
               type="button"
               onClick={openNewProfileModal}
@@ -378,7 +379,7 @@ export const SettingsPageClient: React.FC = () => {
         ============================================================ */}
         <div className="border-t border-slate-500/20 pt-4 sm:pt-6 space-y-3">
           <div>
-            <h3 className="text-xs sm:text-sm font-bold flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-bold flex items-center gap-2">
               <i className="fa-solid fa-database theme-text-brand" aria-hidden />
               データベース状態
             </h3>

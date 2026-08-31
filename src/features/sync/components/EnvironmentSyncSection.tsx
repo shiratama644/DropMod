@@ -72,7 +72,7 @@ export const EnvironmentSyncSection: React.FC = () => {
   return (
     <section className="space-y-3" aria-labelledby="env-sync-heading">
       <div className="flex items-center justify-between">
-        <h3 id="env-sync-heading" className="text-xs sm:text-sm font-bold">
+        <h3 id="env-sync-heading" className="text-sm sm:text-base font-bold">
           環境との同期
         </h3>
         {linkedSource && (

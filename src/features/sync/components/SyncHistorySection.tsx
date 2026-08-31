@@ -47,7 +47,7 @@ export const SyncHistorySection: React.FC = () => {
   return (
     <section className="space-y-3" aria-labelledby="sync-history-heading">
       <div className="flex items-center justify-between">
-        <h3 id="sync-history-heading" className="text-xs sm:text-sm font-bold">
+        <h3 id="sync-history-heading" className="text-sm sm:text-base font-bold">
           同期履歴
         </h3>
         <span className="text-[10px] theme-text-muted">

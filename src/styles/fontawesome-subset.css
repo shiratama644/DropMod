@@ -1,12 +1,12 @@
 /* -----------------------------------------------------------------------------
  * DropMod Font Awesome subset (Phase 10-A で自動生成)
  *
- * 生成元: scripts/build-fontawesome-subset.mjs
+ * 生成元: scripts/buildFontawesomeSubset.mjs
  * 元 CSS: @fortawesome/fontawesome-free (Font Awesome Free 7.x)
  * License: https://fontawesome.com/license/free
  *
  * 使用 icon 数:
- *   - fa-solid:  69
+ *   - fa-solid:  80
  *   - fa-brands: 2
  *
  * 追加/削除時は本ファイルを直接編集せず、リポジトリの JSX で
@@ -14,7 +14,7 @@
  *   `pnpm build:fa-subset` を再実行してください。
  *
  * テンプレートリテラルで動的に組み立てる icon は
- *   scripts/build-fontawesome-subset.mjs の ALWAYS_INCLUDE_SOLID に手動追加。
+ *   scripts/buildFontawesomeSubset.mjs の ALWAYS_INCLUDE_SOLID に手動追加。
  * ----------------------------------------------------------------------------- */
 
 /* Font Awesome base (共通ルール、個別 icon rule は除去済み) */
@@ -35,7 +35,7 @@
  */
 :host,:root{--fa-family-classic:"Font Awesome 7 Free";--fa-font-solid:normal 900 1em/1 var(--fa-family-classic);--fa-style-family-classic:var(--fa-family-classic)}@font-face{font-family:"Font Awesome 7 Free";font-style:normal;font-weight:900;font-display:block;src:url(/webfonts/fa-solid-900.woff2)}.fas{--fa-style:900}.fa-classic,.fas{--fa-family:var(--fa-family-classic)}.fa-solid{--fa-style:900}
 
-/* Solid icon rules (67 個、DropMod で使用中のもののみ) */
+/* Solid icon rules (78 個、DropMod で使用中のもののみ) */
 .fa-magic-wand-sparkles,.fa-wand-magic-sparkles{--fa:"\e2ca"}
 .fa-cubes-stacked{--fa:"\e4e6"}
 .fa-plug-circle-xmark{--fa:"\e560"}
@@ -46,13 +46,16 @@
 .fa-close,.fa-multiply,.fa-remove,.fa-times,.fa-xmark{--fa:"\f00d"}
 .fa-cog,.fa-gear{--fa:"\f013"}
 .fa-home,.fa-home-alt,.fa-home-lg-alt,.fa-house{--fa:"\f015"}
+.fa-clock,.fa-clock-four{--fa:"\f017"}
 .fa-download{--fa:"\f019"}
 .fa-arrows-rotate,.fa-refresh,.fa-sync{--fa:"\f021"}
+.fa-lock{--fa:"\f023"}
 .fa-tag{--fa:"\f02b"}
 .fa-tags{--fa:"\f02c"}
 .fa-book{--fa:"\f02d"}
 .fa-image{--fa:"\f03e"}
 .fa-edit,.fa-pen-to-square{--fa:"\f044"}
+.fa-circle-plus,.fa-plus-circle{--fa:"\f055"}
 .fa-circle-xmark,.fa-times-circle,.fa-xmark-circle{--fa:"\f057"}
 .fa-check-circle,.fa-circle-check{--fa:"\f058"}
 .fa-circle-question,.fa-question-circle{--fa:"\f059"}
@@ -67,13 +70,16 @@
 .fa-folder-open{--fa:"\f07c"}
 .fa-arrow-up-right-from-square,.fa-external-link{--fa:"\f08e"}
 .fa-globe{--fa:"\f0ac"}
+.fa-list-check,.fa-tasks{--fa:"\f0ae"}
 .fa-chain,.fa-link{--fa:"\f0c1"}
 .fa-flask{--fa:"\f0c3"}
 .fa-copy{--fa:"\f0c5"}
 .fa-bars,.fa-navicon{--fa:"\f0c9"}
 .fa-cloud-arrow-up,.fa-cloud-upload,.fa-cloud-upload-alt{--fa:"\f0ee"}
+.fa-bell{--fa:"\f0f3"}
 .fa-spinner{--fa:"\f110"}
 .fa-code-branch{--fa:"\f126"}
+.fa-chain-broken,.fa-chain-slash,.fa-link-slash,.fa-unlink{--fa:"\f127"}
 .fa-ellipsis,.fa-ellipsis-h{--fa:"\f141"}
 .fa-compass{--fa:"\f14e"}
 .fa-file-alt,.fa-file-lines,.fa-file-text{--fa:"\f15c"}
@@ -86,20 +92,25 @@
 .fa-file-archive,.fa-file-zipper{--fa:"\f1c6"}
 .fa-sliders,.fa-sliders-h{--fa:"\f1de"}
 .fa-wifi,.fa-wifi-3,.fa-wifi-strong{--fa:"\f1eb"}
+.fa-bell-slash{--fa:"\f1f6"}
 .fa-balance-scale,.fa-scale-balanced{--fa:"\f24e"}
 .fa-calendar-plus{--fa:"\f271"}
+.fa-handshake,.fa-handshake-alt,.fa-handshake-simple{--fa:"\f2b5"}
+.fa-rotate-back,.fa-rotate-backward,.fa-rotate-left,.fa-undo-alt{--fa:"\f2ea"}
 .fa-trash-alt,.fa-trash-can{--fa:"\f2ed"}
 .fa-rotate,.fa-sync-alt{--fa:"\f2f1"}
 .fa-redo-alt,.fa-rotate-forward,.fa-rotate-right{--fa:"\f2f9"}
 .fa-images{--fa:"\f302"}
+.fa-pen{--fa:"\f304"}
 .fa-desktop,.fa-desktop-alt{--fa:"\f390"}
 .fa-shield-alt,.fa-shield-halved{--fa:"\f3ed"}
 .fa-boxes,.fa-boxes-alt,.fa-boxes-stacked{--fa:"\f468"}
+.fa-clipboard-check{--fa:"\f46c"}
 .fa-vial{--fa:"\f492"}
 .fa-box-open{--fa:"\f49e"}
 .fa-palette{--fa:"\f53f"}
+.fa-arrow-right-from-file,.fa-file-export{--fa:"\f56e"}
 .fa-arrow-right-to-file,.fa-file-import{--fa:"\f56f"}
-.fa-map-location-dot,.fa-map-marked-alt{--fa:"\f5a0"}
 .fa-layer-group{--fa:"\f5fd"}
 .fa-folder-plus{--fa:"\f65e"}
 .fa-wand-sparkles{--fa:"\f72b"}

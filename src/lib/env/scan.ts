@@ -20,6 +20,9 @@ import type { EnvironmentSource } from './source';
 
 export type ScanPhase = 'scan' | 'read' | 'hash';
 
+/** ファイル読み込みの並列数 (ブラウザの同時 I/O を考え 8 に制限) */
+const READ_CONCURRENCY = 8;
+
 export interface ScanProgress {
   phase: ScanPhase;
   done: number;
@@ -80,33 +83,56 @@ export async function scanLocalEnvironment(
     return { entries: [], skipped: [] };
   }
 
-  // ② 読み込み。1 ファイルの失敗で Sync 全体を落とさない
+  // ② 読み込み。1 ファイルの失敗で Sync 全体を落とさない。
+  // 直列だと 200+ ファイルで体感が重くなるため、concurrency 制限付きで並列化し、
+  // 結果は元の順序を保って返す (#23: フォルダ解析の並列化)。
   const readable: Array<{ category: ContentCategory; path: string; data: Uint8Array }> = [];
   const skipped: string[] = [];
-  for (let i = 0; i < scanned.length; i++) {
-    const file = scanned[i];
-    if (!file) continue;
-    try {
-      readable.push({ category: file.category, path: file.path, data: await source.readFile(file.path) });
-    } catch {
-      skipped.push(file.path);
-    }
-    onProgress?.({ phase: 'read', done: i + 1, total: scanned.length });
-  }
+  let doneCount = 0;
+  let nextIndex = 0;
 
-  if (readable.length === 0) {
+  const readWorker = async (): Promise<void> => {
+    while (nextIndex < scanned.length) {
+      const index = nextIndex;
+      nextIndex++;
+      const file = scanned[index];
+      if (!file) continue;
+      try {
+        const data = await source.readFile(file.path);
+        readable[index] = { category: file.category, path: file.path, data };
+      } catch {
+        skipped.push(file.path);
+      }
+      doneCount++;
+      onProgress?.({ phase: 'read', done: doneCount, total: scanned.length });
+    }
+  };
+
+  await Promise.all(
+    Array.from(
+      { length: Math.max(1, Math.min(READ_CONCURRENCY, scanned.length)) },
+      () => readWorker()
+    )
+  );
+
+  // 読み込み失敗分 (undefined) を詰めて、後続処理では「成功したファイルのみ」使う
+  const loaded = readable.filter(
+    (f): f is { category: ContentCategory; path: string; data: Uint8Array } => f != null
+  );
+
+  if (loaded.length === 0) {
     return { entries: [], skipped };
   }
 
   // ③ SHA-1 (Worker / メインスレッド自動 fallback)
   const hashes = await computeHashes(
-    readable.map((file) => ({ path: file.path, data: file.data })),
+    loaded.map((file) => ({ path: file.path, data: file.data })),
     (p) => onProgress?.({ phase: 'hash', done: p.done, total: p.total })
   );
   const sha1ByPath = new Map(hashes.map((h) => [h.path, h.sha1]));
 
   const entries: LocalFileEntry[] = [];
-  for (const file of readable) {
+  for (const file of loaded) {
     const sha1 = sha1ByPath.get(file.path);
     if (sha1 === undefined) {
       // ハッシュ化できなかったファイルは突き合わせ対象から外す

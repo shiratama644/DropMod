@@ -257,17 +257,12 @@ code, input, textarea {
 
 .scroll-fade-container {
     position: relative;
-}
-.scroll-fade-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 2rem;
-    background: linear-gradient(to right, transparent, var(--fade-grad-end));
-    pointer-events: none;
-    border-radius: 0 0.75rem 0.75rem 0;
+    /* 右端のフェードは「背景色に合わせたオーバーレイ」ではなく、
+       コンテンツ自体を CSS mask でフェードアウトさせる。背景色依存の
+       --fade-grad-end オーバーレイはパネル背景と色がズレて
+       「ぼかしがおかしい」見た目になるため (#17)。 */
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
 }
 /* -------------------------------------------------------------------
  * タブ切替フェードイン (GSAP を廃止した後の代替演出)

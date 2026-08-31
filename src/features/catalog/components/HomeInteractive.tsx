@@ -95,7 +95,7 @@ export const HomeInteractive: React.FC<Props> = ({
   const handleToggleMod = useAppAction('handleToggleMod');
   const handleDuplicateProfile = useAppAction('handleDuplicateProfile');
   const openEditProfileModal = useAppAction('openEditProfileModal');
-  const openDependencyCheckModal = useAppAction('openDependencyCheckModal');
+  // 依存・競合チェックは「選択中一覧」ページ上部からのみ起動する (#18)
 
   // ---------------------------------------------------------------------
   // Sub-Phase 8-B: useInfiniteQuery で検索を管理
@@ -384,14 +384,8 @@ export const HomeInteractive: React.FC<Props> = ({
                 <i className="fa-solid fa-copy theme-text-blue" aria-hidden />
                 複製
               </button>
-              <button
-                type="button"
-                onClick={openDependencyCheckModal}
-                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 theme-text-amber border border-amber-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-shield-halved" aria-hidden />
-                依存・競合チェック
-              </button>
+              {/* 依存・競合チェックは「選択中一覧」ページの上部から押せるため
+                  discover のプロファイル情報部には置かない (#18) */}
             </div>
           </div>
 

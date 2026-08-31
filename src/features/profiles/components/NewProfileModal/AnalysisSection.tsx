@@ -65,7 +65,7 @@ export function AnalysisSection({
     >
       <div className="text-xs font-bold theme-text-secondary flex items-center gap-1.5">
         <i className="fa-solid fa-clipboard-check theme-text-brand" aria-hidden />
-        解析結果 (Read-only)
+        解析結果
       </div>
       <div className="text-[11px] theme-text-muted space-y-0.5">
         <div>
@@ -130,10 +130,6 @@ export function AnalysisSection({
           </ul>
         </details>
       )}
-      <p className="text-[10px] theme-text-muted leading-relaxed">
-        ⓘ Phase 11 は読み取り専用です。ローカル環境への書き込み (同期) は Phase 12
-        で実装予定です。
-      </p>
     </div>
   );
 }

@@ -329,11 +329,25 @@ DropMod/
   実装バージョンではなく**内容の役割**を表す汎用名にする
   （v3→v4 upgrade テスト → `dexieUpgrade.test.ts`）。バージョン固有の情報は
   describe 名・コメントに書く。
+- **coverage threshold 未達は移動起因でないことを証明してから切り出す（2026-08-31）**:
+  ORG-2 で `pnpm test:coverage` が落ちた (`src/features/profiles/store/store.ts`
+  branches 76.47% < 80% / `src/hooks/**/*.ts` 59.15% < 60%)。調査の結果、
+  対象ファイルの内容・thresholds 設定が移動前後で同一であり、8/30 の CI run
+  (`4b53625` / `57708ca`) が既に failure だったことから**既存問題**と確定。
+  対処はユーザー判断で別タスク (ORG-5) に切り出し。移動の検証は「coverage 設定の
+  src/ 化が正しく機能し、数値が移動前と同一」であることの確認に留める。
+- **サンドボックス再構築に備える（2026-08-31 実体験）**: ORG-2 作業中に sandbox が
+  再構築され、`git log` が起点 `57708ca` に戻り、push 済みコミットのファイルが
+  未追跡として混在する状態になった (AGENT.md §4.1.1 の典型症状)。
+  `git fetch origin <branch>` → `git reset --hard FETCH_HEAD` で復旧し、
+  未コミットの src/ 移動は作業ツリーから消えた (記録済みのため再実行)。
+  **重要な変更の前には checkpoint コミットを必ず push しておくこと** (§4.2 の
+  通り。ORG-2a は push 前に消えたが、内容は全て記録されており再実行コストのみ)。
 
 ## 12. 実績と証拠 (実装後に記入)
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
 | ORG-1 | `67f03f2a` `5c4a7f40` `87762436` `b25fd0cf` `1e9cc622` `ee11a0cf` `6d4f8726` `9750e3c8` `097d3c3b` | 1244 passed | リネーム 25 件 + 付随移動 1 件・import/コメント参照 0 件残存。状態: 実環境検証待ち 95%（E2E spec の CI green 確認のみ残る） |
-| ORG-2 | （未実装） | | |
+| ORG-2 | `2d22083` | 1244 passed | src/ 移行 197 件 (rename 100% 類似度) + 設定 5 ファイル。build で Route (app) 全 20 認識・CSS 死クラス流出なし。coverage 総計 87.67/77.97/92.58/89.34 (移動前と同一)。**threshold 未達 2 件 (store.ts 76.47% / hooks 59.15%) は移動前から存在する既存問題 → ORG-5 に切り出し** |
 | ORG-3 | （未実装） | | |

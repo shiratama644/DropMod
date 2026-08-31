@@ -143,11 +143,9 @@ export function useModpackAdd(): UseModpackAddResult {
           return false;
         }
         const primaryFile =
-          targetVersion.files.find((f) => f.primary) || targetVersion.files[0];
-        if (!primaryFile) {
-          showToast('Modpack ファイルが見つかりませんでした', 'warning');
-          return false;
-        }
+          targetVersion.files.find((f) => f.primary) ||
+          // biome-ignore lint/style/noNonNullAssertion: files.length===0 は直上で return 済みのため files[0] は必ず存在する
+          targetVersion.files[0]!;
 
         // ② .mrpack 本体をダウンロードして解析
         showToast(`「${project.title}」を解析中...`, 'info');

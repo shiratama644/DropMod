@@ -148,17 +148,15 @@ export const useZipImport = (
       // CurseForge は Phase 13 まで未対応なので、**ここで止めて理由を伝える**。
       // 中途半端に Import すると `files[]` の projectID/fileID が Modrinth の ID 体系と
       // 別物なので、台帳に無効な projectId が混ざり Update 検知も Sync も壊れる。
-      if (!mrpackFile) {
-        // すでに loadAsync 済みの zip を渡す (**二度パースしない**)
-        const { format } = await detectModpackFormat(zip);
-        if (format === 'curseforge') {
-          // importInFlightRef の解除は finally 節で行う
-          showToast(CURSEFORGE_UNSUPPORTED_MESSAGE, 'error');
-          return;
-        }
+      // ここに到達する時点で mrpackFile は存在しない (.mrpack は上で return 済み)。
+      const { format } = await detectModpackFormat(zip);
+      if (format === 'curseforge') {
+        // importInFlightRef の解除は finally 節で行う
+        showToast(CURSEFORGE_UNSUPPORTED_MESSAGE, 'error');
+        return;
       }
 
-      if (!mrpackFile && isMinecraftFolderZip(zip)) {
+      if (isMinecraftFolderZip(zip)) {
         // ZIP が「.minecraft フォルダ自身」を含む場合はサブフォルダを root にする
         const hasDotMinecraftRoot = Object.keys(zip.files).some((path) =>
           path.startsWith('.minecraft/')
@@ -231,7 +229,7 @@ export const useZipImport = (
       const hashes: string[] = [];
       try {
         for (const entryName of jarEntries) {
-          // 配列インデックスは T | undefined 型なので明示ガード
+          // Object.keys 由来の key は必ず存在する (T | undefined 型の解決のみ)
           const zipEntry = zip.files[entryName];
           if (!zipEntry) continue;
           const fileBuffer = await zipEntry.async('arraybuffer');

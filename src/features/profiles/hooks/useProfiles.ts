@@ -735,15 +735,12 @@ export const useProfiles = (
         }
 
         const targetVersion = versionRes.targetVersion;
+        // files.length===0 は上で return 済みのため、find が undefined でも
+        // 先頭ファイル (files[0]) へフォールバックして必ず解決する。
         const primaryFile =
-          targetVersion.files.find((f) => f.primary) || targetVersion.files[0];
-
-        // 上で files.length===0 は既に return しているが
-        // 配列アクセスの戻り値は T | undefined 型なので明示ガード。
-        if (!primaryFile) {
-          if (!silent) showToast('利用可能なファイルが見つかりませんでした', 'warning');
-          return;
-        }
+          targetVersion.files.find((f) => f.primary) ||
+          // biome-ignore lint/style/noNonNullAssertion: files.length===0 は直上で return 済みのため files[0] は必ず存在する
+          targetVersion.files[0]!;
 
         const modObj: ProjectItem = {
           projectId: project.id,
@@ -797,9 +794,14 @@ export const useProfiles = (
 
   const applyModVersion = useCallback(
     (projectId: string, versionData: ModrinthVersion, title: string) => {
+      // 呼び出し元は files の空チェックを済ませているため
+      // find が undefined でも先頭ファイル (files[0]) へフォールバックして必ず解決する。
+      // 呼び出し元 (toggle / updateModVersion) は files の空チェックを済ませているため必ず 1 件以上ある
+      const files = versionData.files ?? [];
       const primaryFile =
-        versionData.files?.find((f) => f.primary) || versionData.files?.[0];
-      if (!primaryFile) return false;
+        files.find((f) => f.primary) ||
+        // biome-ignore lint/style/noNonNullAssertion: 呼び出し元で files.length>0 を確認済みのため files[0] は必ず存在する
+        files[0]!;
       setProfiles((prev) =>
         prev.map((p) =>
           p.id === currentProfileIdRef.current

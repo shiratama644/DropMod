@@ -24,7 +24,8 @@ docs/
 │   ├── PHASE13_PLAN.md                # Phase 13 (SEO。ローカル検証済み。本番目視は延期)
 │   ├── FEATURE_FOLDER_PLAN.md         # Feature フォルダ移行 (11 Feature。コード未着手)
 │   ├── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
-│   └── SEO_CANDIDATES.md              # SEO 候補レジストリ (2-1〜2-6 は SEO-2/SEO-1 で実施済み)
+│   ├── SEO_CANDIDATES.md              # SEO 候補レジストリ (2-1〜2-6 は SEO-2/SEO-1 で実施済み)
+│   └── COVERAGE_90_PLAN.md            # カバレッジ 90% 化 (COV-1〜5: テスト/E2E 強化, 2026-09-01)
 ├── complete/                          # 完了レポート
 │   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
 │   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ

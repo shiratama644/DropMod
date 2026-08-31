@@ -28,22 +28,23 @@
 
 | ID | 状態 | 残作業 |
 |---|---|---|
-| P12-B | 実環境検証待ち (実装 90%) | 実機 Chromium で Direct Write + Transaction/Backup/Rollback |
-| P12-C | 実環境検証待ち (実装 90%) | 実機 Firefox/Safari で ZipSink Sync |
+| P12-B | 完了 | 実機 Chrome (デスクトップ + モバイル) で Direct Write + Sync 確認済み (2026-09-01 ユーザー報告) |
+| P12-C | 実環境検証待ち (Chrome/モバイル動作確認済み) | 実機 Firefox/Safari で ZipSink Sync |
 | P12-E2E | 完了 | run `33421439818` (2026-09-01) で CI 全 green (成功/失敗/復帰) |
 | P12-D1 / D1B / D2 / D3 | ローカル検証済み | 実機でのフォルダ紐付け・Modpack 展開・Preview 競合はユーザー確認 (AI 実装はソース上完了) |
 | P13-A / P13-B | 対象外 | CurseForge 計画を `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避 (2026-08-30)。Phase 13 は SEO |
-| UIP-5 | 実環境検証待ち | Samsung Internet 実機でモーダル途切れないこと |
-| SEC-1 / VER-2 | 実環境検証待ち | 本番相当で YouTube / CDN 画像 / API |
+| UIP-5 | 完了 | Samsung Internet 実機でモーダル完璧 (2026-09-01 ユーザー報告) |
+| SEC-1 / VER-2 | 完了 | 本番 CSP 表示 OK (2026-09-01 ユーザー報告) |
 | SEO-2 | ローカル検証済み | 実装済み `080ede1`。本番 meta robots 目視はユーザー延期 |
 | SEO-1 | ローカル検証済み | 実装済み `52bf0b9`。本番 JSON-LD / OG 目視はユーザー延期 |
 | DEPLOY-1 | 未着手 | P12-C 完了後。CurseForge (旧 P13) はアーカイブ済み |
 | ARCH-1 | 完了（1A〜1O） | 第 1 波完了 |
 | ARCH-2 | 完了（2A〜2D） | — |
 
-進行中の AI 実装タスク: **なし**。実環境バグ修正 27 件 + E2E 潜在失敗 3 件は完了し、
-run `33421439818` (2026-09-01) で **CI 全ジョブ green (E2E 初の全 PASS)** を確認済み。
-残るはユーザー側の実機検証 (P12-B / P12-C / UIP-5 / VER-2 等) のみ。
+進行中の AI 実装タスク: **COV-1〜COV-5 (カバレッジ 90% 化 + テスト/E2E 強化)**。
+計画書 `docs/planning/COVERAGE_90_PLAN.md` (2026-09-01 作成)。実測ベースライン
+87.96 / 78.2 / 92.39 / 89.72 (st / br / fn / ln) を 4 指標すべて 90% 以上にする。
+実環境検証 (P12-B / UIP-5 / VER-2) はユーザー報告で 2026-09-01 に完了済み。
 
 ---
 
@@ -146,9 +147,9 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
 | P12-A | linkedSource + ManagedFile + Diff Engine | 完了 | 100% | P11-E2E | computeSyncPlan の unit test 全分類 | `lib/env/diff.ts` / `managed.ts` / Dexie v3 (`managedFiles`/`dirHandles`)。5 分類 + fingerprint unchanged。**2026-08-30 ソース確認済** |
-| P12-B | Preview UI + Transaction + Executor + Rollback | 実環境検証待ち | 90% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | **実装はソース上完了** (2026-08-30): Dexie v4 `syncTransactions` / `executeSync` / `backup.ts` (UNDO_KEEP_COUNT=3) / `applySync` / `recovery` / `undo` / `SyncPreviewModal` / `InterruptedSyncDialog` (D-4) / `SyncHistorySection` / `environmentCheck` (D-1) / `FileSystemSink`。`4886245` ほか。**未完了は実機確認のみ** |
+| P12-B | Preview UI + Transaction + Executor + Rollback | 完了 | 100% | P12-A | **実機 Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作** | **実機確認済み (2026-09-01 ユーザー報告)**: 実機 Chrome (デスクトップ + モバイル) で Direct Write + Sync 完璧に動作。Dexie v4 `syncTransactions` / `executeSync` / `backup.ts` / `FileSystemSink` 等の実装は `4886245` ほか |
 | P12-E2E | Sync の E2E spec (成功 / 失敗 / 復帰) | 完了 | 100% | P12-B | CI 上で mock handle 経由の Sync 成功/失敗/復帰が green | `e2e/sync.spec.ts`。失敗系は sink の空ファイル掃除修正 `16d8124` で解決し、**run `33421439818` (2026-09-01) で CI 全 green 確認済み** |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30): `lib/env/sink/zip.ts` / `mrpack.ts` / `modpack.ts` (CF 検出のみ) / `modpackUpdate.ts` / `lib/providers/modrinth.ts` / `ModpackHubClient` (`promoteModpackRecords` = D-6) / `useZipSync`。`db648c2`〜`b462bfa`。**未完了は実機 Firefox/Safari 確認のみ** |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30)。**Chrome (デスクトップ + モバイル) での動作はユーザー報告済み (2026-09-01)**。**未完了は実機 Firefox/Safari 確認のみ** (`lib/env/sink/zip.ts` / `mrpack.ts` / `useZipSync` 等、`db648c2`〜`b462bfa`) |
 
 ※ **Phase 12 の設計論点は 2026-08-27 / 08-29 に確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-10）。着手を妨げる未確定事項は無い。
 ※ `PHASE12_PLAN.md` §13 の「P12-B/C 未着手」は **陳腐化**。実装有無は本表とソースを正とする。
@@ -203,7 +204,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | UIP-2 | モーダル表示中の BottomNav 非表示 | 完了 | 100% | - | 7 モーダルで nav-modal-hidden | `6b98a72` |
 | UIP-3 | カード追加ボタンのトグル化 (追加⇄削除) | 完了 | 100% | - | 色・ラベル切替 + 同寸維持 | `3ec7b5f` |
 | UIP-4 | 全体アニメーション強化 | 完了 | 100% | - | modal-pop / hover / icon-swap 等 | `2d5b705` |
-| UIP-5 | Samsung Browser モーダル途切れ + 2 カラム作者省略 | 実環境検証待ち | 90% | - | **実機で途切れないこと** | `a8ea685` (実機確認はユーザー) |
+| UIP-5 | Samsung Browser モーダル途切れ + 2 カラム作者省略 | 完了 | 100% | - | **実機で途切れないこと** | `a8ea685`。**実機確認済み (2026-09-01 ユーザー報告): Samsung Internet で完璧** |
 
 ### セキュリティ
 
@@ -272,7 +273,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
 | VER-1 | E2E 全 spec の CI green 確認 | 完了 | 100% | P11-E2E | GitHub Actions で全 spec green | run `33071105483` (2026-08-27, 74 tests pass) |
-| VER-2 | CSP Enforce の実環境表示確認 | 実環境検証待ち | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | ユーザー実施 |
+| VER-2 | CSP Enforce の実環境表示確認 | 完了 | - | SEC-1 | YouTube 埋め込み・CDN 画像・API が本番で動作 | **実機確認済み (2026-09-01 ユーザー報告): 本番 CSP 表示 OK** |
 | DEPLOY-1 | Vercel 本番デプロイ | 未着手 | 0% | P12-C | 本番 URL で全機能動作 | PHASE10_CANDIDATES 方針。旧 P13-B (CF) 依存は解除 |
 | EXP-1 | Vite 版資産の .archive 保管維持 | 完了 (継続) | 100% | - | 全タスクで .archive/vite 無変更 | 各コミットの検証チェックリスト |
 
@@ -328,3 +329,19 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 Type/Lint/Unit ✓・Build ✓・E2E ✓ の**全ジョブ green**。E2E は
 **このリポジトリで初の全 PASS**（65 passed / 14 skipped / 0 failed）。
 これで ORG-1 と P12-E2E も完了に確定。
+
+## カバレッジ 90% 化 + テスト/E2E 強化 (2026-09-01 計画)
+
+> 計画書: `docs/planning/COVERAGE_90_PLAN.md`（_TEMPLATE.md 準拠）。
+> ユーザー要求: 「テストカバレッジ目標すべて 90% 以上にするためにテストと E2E を
+> より固める」。現状実測 (2026-09-01): 全体 **87.96 / 78.2 / 92.39 / 89.72**
+> (st / br / fn / ln)。90% 未満ファイル 94 / 150 (0% の barrel index.ts 11 件 +
+> 型定義・Next.js 生成ファイル等を含む)。
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---|---|---:|---|---|
+| COV-1 | coverage 境界の適正化 (barrel index.ts / 型定義 / Next.js 生成画像を exclude に整理) | 未着手 | 0% | - | テスト価値のない 0% ファイルが分母から外れ、`test:coverage` の全体数値が 90% 前後に | 計画 §10.1 |
+| COV-2 | ロジック層 (server API / lib/env / lib/platform / lib/modrinth / sync 系) の unit test 追加 | 未着手 | 0% | COV-1 | 90% 未満のロジックファイル各指標 90% 以上 (branches 優先) | 計画 §10.2 |
+| COV-3 | コンポーネント層 (BottomSheet / ModCard / ScreenshotGalleryModal / 大型 orchestrator を除く) の unit test 追加 | 未着手 | 0% | COV-1 | 90% 未満コンポーネント各指標 90% 以上 | 計画 §10.3 |
+| COV-4 | E2E 追加 (選択中一覧の削除/全削除・ギャラリータップ/スワイプ・バージョンフィルタ・discover スケルトン・フォルダ選択文言) | 未着手 | 0% | COV-2/3 | 新規 spec が CI で green (既存 65 passed を維持) | 計画 §10.4 |
+| COV-5 | thresholds 90% 化 + per-module 統一 + CI 最終確認 | 未着手 | 0% | COV-2/3/4 | `vitest.config.ts` のグローバル thresholds 4 指標すべて 90・`pnpm test:coverage` exit 0・CI 全 green | 計画 §5 |

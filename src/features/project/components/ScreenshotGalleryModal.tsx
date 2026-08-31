@@ -9,6 +9,11 @@ import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 
+/** スワイプと判定する水平移動量 (px)。これ未満はタップ扱い */
+const SWIPE_THRESHOLD_PX = 40;
+/** 画像領域の高さ上限。モーダル内の他の要素 (ヘッダ/サムネイル) を圧迫しない */
+const IMAGE_AREA_MAX_HEIGHT_VH = 58;
+
 interface ScreenshotGalleryModalProps {
   isOpen: boolean;
   images: ModrinthGalleryImage[];
@@ -25,6 +30,10 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const [index, setIndex] = useState(0);
+  // 全画像をプローブして「最も縦長な画像」のアスペクト比 (h/w) を保持し、
+  // モーダルの高さをどの画像でも同じ (= 一番高い画像) に合わせる (#16)
+  const [maxRatio, setMaxRatio] = useState<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   useModalA11y(isOpen, onClose, dialogRef);
   // モーダル open 中は BottomNav を隠す (2026-08-27)
@@ -36,6 +45,51 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
     const next = Number.isFinite(initialIndex) ? Math.trunc(initialIndex) : 0;
     setIndex(Math.min(Math.max(next, 0), last));
   }, [isOpen, initialIndex, images.length]);
+
+  // 一番高い画像の縦横比 (h/w) を算出。これがモーダルの画像領域の高さになる。
+  useEffect(() => {
+    if (!isOpen || images.length === 0) {
+      setMaxRatio(null);
+      return;
+    }
+    let cancelled = false;
+    let pending = images.length;
+    let max = 0;
+    const probe = (src: string) => {
+      const img = new window.Image();
+      img.onload = () => {
+        if (cancelled) return;
+        if (img.naturalHeight > 0 && img.naturalWidth > 0) {
+          max = Math.max(max, img.naturalHeight / img.naturalWidth);
+        }
+        pending -= 1;
+        if (pending === 0) setMaxRatio(max > 0 ? max : null);
+      };
+      img.onerror = () => {
+        if (cancelled) return;
+        pending -= 1;
+        if (pending === 0) setMaxRatio(max > 0 ? max : null);
+      };
+      img.src = src;
+    };
+    for (const img of images) probe(img.raw_url || img.url);
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, images]);
+
+  // 前後の画像を先読みして、切り替え時の体感を速くする (#15)
+  useEffect(() => {
+    if (!isOpen || images.length === 0) return;
+    const preload = (i: number) => {
+      const img = images[((i % images.length) + images.length) % images.length];
+      if (!img) return;
+      const p = new window.Image();
+      p.src = img.raw_url || img.url;
+    };
+    preload(index + 1);
+    preload(index - 1);
+  }, [isOpen, index, images]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -100,7 +154,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="modal-card glass-panel w-full max-w-6xl h-[min(92%,56rem)] rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden"
+        className="modal-card glass-panel w-full max-w-6xl max-h-[92%] rounded-3xl border shadow-2xl relative flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-500/20 px-4 sm:px-6 py-3 shrink-0">
           <div className="min-w-0">
@@ -123,7 +177,30 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
           </button>
         </div>
 
-        <div className="relative flex-1 min-h-0 bg-slate-950/40">
+        {/* 画像領域: 高さは「全画像のうち一番高いもの」のアスペクト比で固定し、
+            スワイプで前後の画像へ遷移できる (#14 / #16) */}
+        <div
+          className="relative w-full bg-slate-950/40 flex items-center justify-center select-none touch-pan-y"
+          style={{
+            aspectRatio: maxRatio ? `1 / ${maxRatio}` : undefined,
+            height: maxRatio ? undefined : 'min(60vh, 42rem)',
+            maxHeight: `${IMAGE_AREA_MAX_HEIGHT_VH}vh`
+          }}
+          onPointerDown={(e) => {
+            touchStartX.current = e.clientX;
+          }}
+          onPointerUp={(e) => {
+            if (touchStartX.current == null) return;
+            const dx = e.clientX - touchStartX.current;
+            touchStartX.current = null;
+            if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+            if (dx > 0) goPrev();
+            else goNext();
+          }}
+          onPointerCancel={() => {
+            touchStartX.current = null;
+          }}
+        >
           {current ? (
             <Image
               src={current.raw_url || current.url}
@@ -133,6 +210,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
               className="object-contain p-2 sm:p-4"
               unoptimized={shouldUnoptimizeImage(current.raw_url || current.url)}
               priority
+              draggable={false}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center theme-text-muted text-sm">
@@ -146,7 +224,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
                 type="button"
                 onClick={goPrev}
                 aria-label="前の画像"
-                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center focus-visible:ring-2 focus-visible:ring-emerald-500 touch-manipulation"
               >
                 <i className="fa-solid fa-arrow-left" aria-hidden />
               </button>
@@ -154,7 +232,7 @@ export const ScreenshotGalleryModal: React.FC<ScreenshotGalleryModalProps> = ({
                 type="button"
                 onClick={goNext}
                 aria-label="次の画像"
-                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-emerald-600 text-white shadow-lg flex items-center justify-center focus-visible:ring-2 focus-visible:ring-emerald-500 touch-manipulation"
               >
                 <i className="fa-solid fa-arrow-right" aria-hidden />
               </button>

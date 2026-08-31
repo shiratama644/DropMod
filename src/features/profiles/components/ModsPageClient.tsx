@@ -72,6 +72,7 @@ export const ModsPageClient: React.FC = () => {
   const handleToggleMod = useAppAction('handleToggleMod');
   const handleUpdateModVersion = useAppAction('handleUpdateModVersion');
   const handleRemoveMods = useAppAction('handleRemoveMods');
+  const handleRemoveAllMods = useAppAction('handleRemoveAllMods');
   const folderLinked = useFolderLinked();
   const handleDownloadZip = useAppAction('handleDownloadZip');
   const openDependencyCheckModal = useAppAction('openDependencyCheckModal');
@@ -300,7 +301,7 @@ export const ModsPageClient: React.FC = () => {
             className="btn-hover-effect flex-1 sm:flex-none justify-center px-3.5 py-2 text-xs font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/30 theme-text-amber border border-amber-500/40 transition flex items-center gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 md:hidden"
           >
             <i className="fa-solid fa-shield-halved" aria-hidden />
-            依存・競合チェック
+            チェック
           </button>
           <button
             type="button"
@@ -309,13 +310,13 @@ export const ModsPageClient: React.FC = () => {
             className="btn-hover-effect flex-1 sm:flex-none justify-center px-3.5 py-2 text-xs font-semibold rounded-xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 theme-text-red border border-red-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-40 disabled:pointer-events-none"
           >
             <i className="fa-solid fa-trash-can" aria-hidden />
-            {`選択を削除${selectedVisibleCount > 0 ? ` (${selectedVisibleCount})` : ''}`}
+            {`削除${selectedVisibleCount > 0 ? ` (${selectedVisibleCount})` : ''}`}
           </button>
           {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
           {folderLinked ? (
             <SyncButton
               variant="primary"
-              label="フォルダへ同期 (全.jar)"
+              label="同期"
               className="flex-1 sm:flex-none md:hidden"
             />
           ) : (
@@ -333,7 +334,14 @@ export const ModsPageClient: React.FC = () => {
 
       <div className="glass-panel rounded-2xl border overflow-hidden">
         <div className="p-3 sm:p-4 space-y-3 border-b border-slate-500/15">
-          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar -mx-1 px-1" role="tablist" aria-label="コンテンツ種別">
+          {/* discover ページ (BrowseBottomSheet) と同じ見た目・押しやすさに統一:
+              min-h 52px のカード型ボタン + アイコン枠。モバイルは横スクロール、
+              sm 以上は 3 等分グリッド。 */}
+          <div
+            className="flex items-stretch gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible"
+            role="tablist"
+            aria-label="コンテンツ種別"
+          >
             {PROFILE_TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -343,41 +351,57 @@ export const ModsPageClient: React.FC = () => {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`btn-hover-effect px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl min-h-[52px] whitespace-nowrap transition flex-1 sm:flex-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                     isActive
-                      ? 'bg-emerald-600 text-slate-950 font-bold shadow'
+                      ? 'glass-card border-emerald-500/50 theme-text-brand'
                       : 'theme-sub-box theme-text-secondary hover:text-emerald-500'
                   }`}
                 >
-                  <i className={tab.icon} aria-hidden />
-                  <span>{tab.label}</span>
-                  <span className="font-mono opacity-80">{tabCounts[tab.id]}</span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 theme-text-brand flex items-center justify-center text-sm shrink-0">
+                    <i className={tab.icon} aria-hidden />
+                  </div>
+                  <span className="font-semibold text-xs sm:text-sm leading-tight truncate">
+                    {tab.label}
+                  </span>
+                  <span className="font-mono text-xs opacity-80">{tabCounts[tab.id]}</span>
                 </button>
               );
             })}
           </div>
-          <div className="relative">
-            <i
-              className="fa-solid fa-magnifying-glass theme-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={listQuery}
-              onChange={(e) => setListQuery(e.target.value)}
-              placeholder="選択中の名前・作者で検索..."
-              className="w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            />
-            {listQuery && (
-              <button
-                type="button"
-                onClick={() => setListQuery('')}
-                aria-label="検索内容をクリア"
-                className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:text-emerald-500 text-xs p-1"
-              >
-                <i className="fa-solid fa-xmark" aria-hidden />
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleRemoveAllMods(activeTab)}
+              disabled={tabCounts[activeTab] === 0}
+              className="btn-hover-effect shrink-0 px-3 py-2 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 theme-text-red border border-red-500/30 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-40 disabled:pointer-events-none"
+              title={`表示中の ${PROFILE_TABS.find((t) => t.id === activeTab)?.label ?? ''} をすべて削除`}
+            >
+              <i className="fa-solid fa-trash-can" aria-hidden />
+              全削除
+            </button>
+            <div className="relative flex-1">
+              <i
+                className="fa-solid fa-magnifying-glass theme-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={listQuery}
+                onChange={(e) => setListQuery(e.target.value)}
+                placeholder="選択中の名前・作者で検索..."
+                className="w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 [&::-webkit-search-cancel-button]:hidden"
+              />
+              {listQuery && (
+                <button
+                  type="button"
+                  onClick={() => setListQuery('')}
+                  aria-label="検索内容をクリア"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:text-emerald-500 text-xs p-1"
+                >
+                  <i className="fa-solid fa-xmark" aria-hidden />
+                </button>
+              )}
+            </div>
           </div>
         </div>
         {visibleMods.length === 0 ? (
@@ -707,7 +731,7 @@ function MobileList({
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-500/10">
-              <span className="text-xs theme-text-muted font-medium">
+              <span className="text-xs theme-text-muted font-medium whitespace-nowrap">
                 バージョン:
               </span>
               <CustomDropdown

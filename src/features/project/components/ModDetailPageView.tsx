@@ -49,6 +49,8 @@ import { ScreenshotGalleryModal } from './ScreenshotGalleryModal';
 import { downloadAsBlob } from '@/lib/utils/download';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useCurrentProfileWithFallback } from '@/features/profiles';
+import { findContentItem } from '@/features/profiles/utils/profileContent';
+import { versionsForProfile } from '../utils/versionFilter';
 import { useAppAction } from '@/components/layout/appActions';
 import { useToastStore } from '@/components/feedback/toastStore';
 import { useModpackAdd } from '@/features/modpack';
@@ -172,6 +174,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
 
   const handleJarDownload = useCallback(
     async (file: ModrinthVersionFile) => {
@@ -190,11 +193,9 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   );
 
   // P12-D2: Modpack は mods[] に入らないため、modpackSource でも導入済み判定する
+  // (RP / Shader は resourcepacks[] / shaderpacks[] に入るため 3 配列横断で判定)
   const isAddedByMods =
-    !!project &&
-    (currentProfile.mods ?? []).some(
-      (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
-    );
+    !!project && findContentItem(currentProfile, project.id, project.slug) != null;
   const modpackAdded =
     !!project && currentProfile.modpackSource?.projectId === project.id;
 
@@ -249,6 +250,8 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
   // で落ちたため、全ての配列アクセスを defensive にする。
   const safeVersions = versions ?? [];
   const latestVersion = safeVersions[0] ?? null;
+  // 対応バージョン一覧は現在のプロファイル環境に一致するものだけ表示する
+  const profileVersions = versionsForProfile(safeVersions, currentProfile.environment);
   const latestFile = pickPrimaryFile(latestVersion);
   const isAdded = isAddedByMods || modpackAdded;
   const externalLinks = collectExternalLinks(project);
@@ -381,17 +384,19 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
             {/* CTA 行 — デザインルール (skills/ui-layout.md):
                 主操作 (追加) を右端に配置。緑の塗りつぶしは主操作のみで、
                 ダウンロード / Modrinth は枠線 or ダークグレーに統一。
-                全ボタン高さ 48px (h-12)・等幅 (flex-1) で均等に並べる。 */}
-            <div className="mt-5 flex flex-wrap sm:flex-nowrap items-stretch gap-2">
+                全ボタン高さ 48px (h-12)。
+                幅は grid 3 等分 (閾値 380px 未満は縦積み) で、小さな画面でも
+                ボタンが均等・可読に収まるように自動調節する。 */}
+            <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2">
               <a
                 href={modrinthProjectUrl(project.slug, project.project_type)}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Modrinth で見る"
-                className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="btn-hover-effect min-w-0 h-12 rounded-xl theme-sub-box theme-text-secondary text-sm font-semibold hover:bg-slate-700/40 transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
-                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
-                Modrinth
+                <i className="fa-solid fa-arrow-up-right-from-square shrink-0" aria-hidden />
+                <span className="truncate">Modrinth</span>
               </a>
               {latestFile && (
                 <button
@@ -399,17 +404,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   onClick={() => handleJarDownload(latestFile)}
                   disabled={isJarDownloading}
                   aria-label=".jar ファイルをダウンロード"
-                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-hover-effect min-w-0 h-12 rounded-xl glass-card border border-transparent hover:border-emerald-500/50 theme-text-secondary hover:theme-text-brand text-sm font-bold transition inline-flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isJarDownloading ? (
                     <>
-                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                      <i className="fa-solid fa-spinner fa-spin shrink-0" aria-hidden />
                       DL中
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-download" aria-hidden />
-                      ダウンロード
+                      <i className="fa-solid fa-download shrink-0" aria-hidden />
+                      <span className="truncate">ダウンロード</span>
                     </>
                   )}
                 </button>
@@ -421,10 +426,10 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   disabled
                   aria-label="導入済み"
                   title="Modpack ハブから管理できます"
-                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-sm font-bold transition inline-flex items-center justify-center gap-2 opacity-70 cursor-default"
+                  className="btn-hover-effect min-w-0 h-12 rounded-xl bg-emerald-500/20 theme-text-brand border border-emerald-500/40 text-sm font-bold transition inline-flex items-center justify-center gap-2 opacity-70 cursor-default"
                 >
-                  <i className="fa-solid fa-circle-check" aria-hidden />
-                  導入済み
+                  <i className="fa-solid fa-circle-check shrink-0" aria-hidden />
+                  <span className="truncate">導入済み</span>
                 </button>
               ) : isAdded ? (
                 <button
@@ -432,17 +437,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
                   aria-label="プロファイルから削除"
-                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="btn-hover-effect min-w-0 h-12 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 text-sm font-bold hover:bg-red-500/30 transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending ? (
                     <>
-                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                      <i className="fa-solid fa-spinner fa-spin shrink-0" aria-hidden />
                       処理中
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-trash-can" aria-hidden />
-                      削除
+                      <i className="fa-solid fa-trash-can shrink-0" aria-hidden />
+                      <span className="truncate">削除</span>
                     </>
                   )}
                 </button>
@@ -452,17 +457,17 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                   onClick={(e) => handleProfileToggle(project.id, e)}
                   disabled={isTogglePending}
                   aria-label="プロファイルに追加"
-                  className="btn-hover-effect flex-1 min-w-0 max-w-56 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  className="btn-hover-effect min-w-0 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-sm font-bold shadow-lg transition focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {isTogglePending || modpackPreparing ? (
                     <>
-                      <i className="fa-solid fa-spinner fa-spin" aria-hidden />
+                      <i className="fa-solid fa-spinner fa-spin shrink-0" aria-hidden />
                       {modpackPreparing ? '解析中' : '追加中'}
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-plus" aria-hidden />
-                      追加
+                      <i className="fa-solid fa-plus shrink-0" aria-hidden />
+                      <span className="truncate">追加</span>
                     </>
                   )}
                 </button>
@@ -513,36 +518,36 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
                     {`(${galleryList.length})`}
                   </span>
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => setIsGalleryOpen(true)}
-                  className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-                >
-                  <i className="fa-solid fa-images" aria-hidden />
-                  ギャラリー・スクリーンショットを閲覧
-                </button>
+                {/* 閲覧ボタンは廃止: 画像タップでギャラリーモーダルを開く */}
               </div>
-              {/* ギャラリー: 1 行の横スクロール (折り返さない、モーダルと統一) */}
+              {/* ギャラリー: 1 行の横スクロール (折り返さない、モーダルと統一)。
+                  画像タップでギャラリーモーダルをその画像から開く。 */}
               <div className="flex items-center gap-2.5 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                {galleryList.map((img) => (
-                  <figure
+                {galleryList.map((img, i) => (
+                  <button
                     key={img.url}
-                    className="relative w-48 sm:w-64 aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 m-0"
+                    type="button"
+                    aria-label={`${img.title || 'ギャラリー画像'} を拡大表示`}
+                    onClick={() => {
+                      setIsGalleryOpen(true);
+                      setGalleryInitialIndex(i);
+                    }}
+                    className="group relative w-48 sm:w-64 aspect-video rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-zoom-in transition hover:border-emerald-500/60 focus-visible:ring-2 focus-visible:ring-emerald-500 p-0"
                   >
                     <Image
                       src={img.url}
-                      alt={img.title || 'Gallery image'}
+                      alt=""
                       fill
                       sizes="(min-width: 640px) 256px, 192px"
                       className="object-cover"
                       unoptimized={shouldUnoptimizeImage(img.url)}
                     />
                     {img.title && (
-                      <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10">
+                      <span className="pointer-events-none absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-2 text-[11px] truncate text-white z-10 block text-left">
                         {img.title}
-                      </figcaption>
+                      </span>
                     )}
-                  </figure>
+                  </button>
                 ))}
               </div>
             </section>
@@ -568,15 +573,15 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
 
         {/* ---- 右カラム: サイドバー ---- */}
         <aside className="space-y-4 min-w-0">
-          {/* 対応バージョン */}
+          {/* 対応バージョン (プロファイル環境に一致するもののみ) */}
           <SidebarCard title="対応バージョン" icon="fa-solid fa-code-branch">
-            {safeVersions.length === 0 ? (
+            {profileVersions.length === 0 ? (
               <p className="text-xs theme-text-muted">
                 このプロファイル向けの対応バージョンは見つかりませんでした。
               </p>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-72 overflow-y-auto overscroll-contain pr-1">
-                {safeVersions.map((v) => (
+                {profileVersions.map((v) => (
                   <span
                     key={v.id}
                     className="px-2 py-1 rounded-lg theme-badge text-[11px] font-mono flex items-center gap-1 shadow-sm"
@@ -681,6 +686,7 @@ export const ModDetailPageView: React.FC<Props> = ({ project, versions, slug }) 
       <ScreenshotGalleryModal
         isOpen={isGalleryOpen}
         images={galleryList}
+        initialIndex={galleryInitialIndex}
         onClose={() => setIsGalleryOpen(false)}
       />
       <ModpackImportModal

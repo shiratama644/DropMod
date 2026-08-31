@@ -13,6 +13,8 @@ import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { useCurrentProfileWithFallback } from '@/features/profiles';
+import { findContentItem } from '@/features/profiles/utils/profileContent';
+import { versionsForProfile } from '../utils/versionFilter';
 import { useAppAction } from '@/components/layout/appActions';
 import { useToastStore } from '@/components/feedback/toastStore';
 import { useModpackAdd } from '@/features/modpack';
@@ -149,6 +151,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
   const isModal = variant === 'modal';
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [isJarDownloading, setIsJarDownloading] = useState(false);
   const [isTogglePending, setIsTogglePending] = useState(false);
 
@@ -248,11 +251,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
   );
 
   // P12-D2: Modpack は mods[] に入らないため、modpackSource でも導入済み判定する
+  // (RP / Shader は resourcepacks[] / shaderpacks[] に入るため 3 配列横断で判定)
   const isAddedByMods =
-    !!project &&
-    currentProfile.mods.some(
-      (m) => m.projectId === project.id || (project.slug && m.slug === project.slug)
-    );
+    !!project && findContentItem(currentProfile, project.id, project.slug) != null;
   const modpackAdded =
     !!project && currentProfile.modpackSource?.projectId === project.id;
 
@@ -322,6 +323,8 @@ export const ModDetailModalShell: React.FC<Props> = ({
   }
 
   const latestVersion = versions[0] ?? null;
+  // 対応バージョン一覧は現在のプロファイル環境に一致するものだけ表示する
+  const profileVersions = versionsForProfile(versions, currentProfile.environment);
   const latestFile = pickPrimaryFile(latestVersion);
 
   const isAdded = isAddedByMods || modpackAdded;
@@ -446,7 +449,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* ギャラリー画像 (タッププレビューはしない。閲覧は専用モーダル) */}
+        {/* ギャラリー画像 (タップでギャラリーモーダルを開く。閲覧ボタンは廃止) */}
         {project.gallery && project.gallery.length > 0 && (
           <div className="space-y-2 pt-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -454,35 +457,33 @@ export const ModDetailModalShell: React.FC<Props> = ({
                 <i className="fa-solid fa-images theme-text-brand" aria-hidden />
                 {`ギャラリー・スクリーンショット (${project.gallery.length})`}
               </span>
-              <button
-                type="button"
-                onClick={() => setIsGalleryOpen(true)}
-                className="btn-hover-effect px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold shadow flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-images" aria-hidden />
-                ギャラリー・スクリーンショットを閲覧
-              </button>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 touch-pan-x hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {project.gallery.map((img) => (
-                <figure
+              {project.gallery.map((img, i) => (
+                <button
                   key={img.url}
-                  className="w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 relative m-0"
+                  type="button"
+                  aria-label={`${img.title || 'ギャラリー画像'} を拡大表示`}
+                  onClick={() => {
+                    setIsGalleryOpen(true);
+                    setGalleryInitialIndex(i);
+                  }}
+                  className="group relative w-32 sm:w-44 h-20 sm:h-28 rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900 shrink-0 cursor-zoom-in transition hover:border-emerald-500/60 focus-visible:ring-2 focus-visible:ring-emerald-500 p-0"
                 >
                   <Image
                     src={img.url}
-                    alt={img.title || 'Gallery image'}
+                    alt=""
                     fill
                     sizes="(min-width: 640px) 176px, 128px"
                     className="object-cover"
                     unoptimized={shouldUnoptimizeImage(img.url)}
                   />
                   {img.title && (
-                    <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10">
+                    <span className="pointer-events-none absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 to-transparent p-1 text-[10px] truncate text-white z-10 block text-left">
                       {img.title}
-                    </figcaption>
+                    </span>
                   )}
-                </figure>
+                </button>
               ))}
             </div>
           </div>
@@ -510,12 +511,13 @@ export const ModDetailModalShell: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* 対応バージョン一覧 (モバイル。PC モーダルは右ペイン) */}
+        {/* 対応バージョン一覧 (モバイル。PC モーダルは右ペイン)。
+            プロファイル環境に一致するもののみ表示する */}
         <div className={`space-y-2 pt-2 border-t border-slate-500/10 ${isModal ? 'md:hidden' : ''}`}>
           <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
-            {`対応バージョン一覧 (${versions.length})`}
+            {`対応バージョン一覧 (${profileVersions.length})`}
           </span>
-          <VersionList versions={versions} />
+          <VersionList versions={profileVersions} />
         </div>
         </div>
 
@@ -524,9 +526,9 @@ export const ModDetailModalShell: React.FC<Props> = ({
             <ModalStats project={project} />
             <div className="space-y-2 pt-1 border-t border-slate-500/10">
               <span className="text-xs font-bold uppercase tracking-wider theme-text-muted">
-                {`対応バージョン (${versions.length})`}
+                {`対応バージョン (${profileVersions.length})`}
               </span>
-              <VersionList versions={versions} />
+              <VersionList versions={profileVersions} />
             </div>
           </aside>
         )}
@@ -666,6 +668,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
         <ScreenshotGalleryModal
           isOpen={isGalleryOpen}
           images={project.gallery ?? []}
+          initialIndex={galleryInitialIndex}
           onClose={() => setIsGalleryOpen(false)}
         />
         <ModpackImportModal
@@ -703,6 +706,7 @@ export const ModDetailModalShell: React.FC<Props> = ({
       <ScreenshotGalleryModal
         isOpen={isGalleryOpen}
         images={project.gallery ?? []}
+        initialIndex={galleryInitialIndex}
         onClose={() => setIsGalleryOpen(false)}
       />
       <ModpackImportModal

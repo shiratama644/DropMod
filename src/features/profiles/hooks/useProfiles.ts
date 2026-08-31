@@ -16,6 +16,12 @@ import { fetchModrinth, fetchStableModVersion } from '@/lib/modrinth/client';
 import type { ConfirmDialogOptions } from '@/components/feedback/ConfirmDialog';
 import { generateId } from '@/lib/utils/id';
 import { contentCategoryFromProject, contentCategoryOf } from '../utils/contentCategory';
+import {
+  allContentItemsOf,
+  findContentItem,
+  removeCategoryItems,
+  removeContentItems
+} from '../utils/profileContent';
 import { primaryCategoryId } from '@/features/catalog';
 import {
   syncProfiles as dexieSyncProfiles,
@@ -665,27 +671,23 @@ export const useProfiles = (
         return;
       }
 
-      const existsIndex = latestProfile.mods.findIndex(
-        (m) => m.projectId === projectId || m.slug === projectId
-      );
+      // Phase 11 以降、resourcepacks / shaderpacks は別配列に格納されるため、
+      // 3 配列 (mods / resourcepacks / shaderpacks) 横断で存在判定する。
+      // 従来 mods[] のみ参照していたため RP / Shader の削除が追加分岐に入り、
+      // 重複追加される不具合があった。
+      const existing = findContentItem(latestProfile, projectId, projectId);
+      const removed = existing ?? null;
 
-    if (existsIndex >= 0) {
+    if (removed) {
       // --- 削除 ---
-      // 配列アクセスの結果を optional chaining で扱う
-      const removed = latestProfile.mods[existsIndex];
       setProfiles((prev) =>
         prev.map((p) =>
           p.id === latestProfileId
-            ? {
-                ...p,
-                mods: p.mods.filter(
-                  (m) => m.projectId !== projectId && m.slug !== projectId
-                )
-              }
+            ? removeContentItems(p, new Set([projectId]))
             : p
         )
       );
-      if (!silent) showToast(`「${removed?.name || 'Mod'}」を削除しました`, 'info');
+      if (!silent) showToast(`「${removed.name || 'Mod'}」を削除しました`, 'info');
       // B10 修正: 削除フローは microtask 経由で unlock、race 回避
       releaseLock();
       return;
@@ -761,14 +763,12 @@ export const useProfiles = (
 
         // --- functional updater 内で「まだ追加されていないか」を再チェック ---
         // API 呼び出し中に別経路で追加されていた場合は二重追加しない。
+        // (mods / resourcepacks / shaderpacks 横断で判定)
         let alreadyAdded = false;
         setProfiles((prev) =>
           prev.map((p) => {
             if (p.id !== currentProfileIdRef.current) return p;
-            const dup = p.mods.some(
-              (m) =>
-                m.projectId === project.id || (project.slug && m.slug === project.slug)
-            );
+            const dup = findContentItem(p, project.id, project.slug);
             if (dup) {
               alreadyAdded = true;
               return p;
@@ -873,8 +873,8 @@ export const useProfiles = (
       profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
     if (!latest) return;
     const targets = category
-      ? latest.mods.filter((m) => contentCategoryOf(m) === category)
-      : latest.mods;
+      ? allContentItemsOf(latest).filter((m) => contentCategoryOf(m) === category)
+      : allContentItemsOf(latest);
     if (targets.length === 0) return;
     const label =
       category === 'resourcepack'
@@ -893,12 +893,12 @@ export const useProfiles = (
     setProfiles((prev) =>
       prev.map((p) =>
         p.id === currentProfileIdRef.current
-          ? {
-              ...p,
-              mods: category
-                ? p.mods.filter((m) => contentCategoryOf(m) !== category)
-                : []
-            }
+          ? category
+            ? removeCategoryItems(p, category)
+            : removeContentItems(
+                p,
+                new Set(allContentItemsOf(p).map((m) => m.projectId))
+              )
           : p
       )
     );
@@ -913,7 +913,8 @@ export const useProfiles = (
         profilesRef.current.find((p) => p.id === latestId) || profilesRef.current[0];
       if (!latest) return;
       const idSet = new Set(ids);
-      const targets = latest.mods.filter(
+      // resourcepacks / shaderpacks も含めて対象を数える (3 配列横断)
+      const targets = allContentItemsOf(latest).filter(
         (m) => idSet.has(m.projectId) || (m.slug != null && idSet.has(m.slug))
       );
       if (targets.length === 0) return;
@@ -927,15 +928,7 @@ export const useProfiles = (
       if (!ok) return;
       setProfiles((prev) =>
         prev.map((p) =>
-          p.id === currentProfileIdRef.current
-            ? {
-                ...p,
-                mods: p.mods.filter(
-                  (m) =>
-                    !idSet.has(m.projectId) && !(m.slug != null && idSet.has(m.slug))
-                )
-              }
-            : p
+          p.id === currentProfileIdRef.current ? removeContentItems(p, idSet) : p
         )
       );
       showToast(`${targets.length} 個を削除しました`, 'info');

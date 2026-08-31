@@ -237,7 +237,7 @@ page.route) を踏襲する。CI (workflow_dispatch) で検証。ローカルは
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
 | COV-1 | `6abdddf` | 117 files / 1266 tests pass + `test:coverage` exit 0 | exclude 21 件追加 (barrel 11 / types.ts 3 / Next.js 生成画像 4 / hashWorker・sync db・sync sink 3。理由コメント付き)。0% ファイル 24→4 件 (残り = loadDiscoverSearch / projectDetail / JsonLd / siteUrl → COV-2/3)。全体 **88.56 / 78.55 / 92.64 / 90.41** (st/br/fn/ln、lines 90% 達成)。branches は COV-2/3 で 90% へ |
-| COV-2 | | | |
+| COV-2 | `015c6d1` + `e561f72` | 1413 tests pass + `test:coverage` exit 0 | 優先度上位 4 件 + 0% ロジック 3 件を完了: siteUrl / loadDiscoverSearch / projectDetail / computeHashes / hashCore は **100/100/100/100**。useModpackAdd **100/100/100/100** (26 tests)。useZipImport **99.18/98.66/100/100** (31 tests)。useProfiles **99.69/96.74/98.64/100** (95 tests、残り分岐は sanitize 正規化・SSR ガード・削除ガード等の到達不能コード)。全体 **92.24 / 83.72 / 95.12 / 94.01** (st/br/fn/ln、COV-1 比 br +5.2pt)。残り = backup / analyzer / client / server / useSync 系 / store (§10.2 下位 6 件) |
 | COV-3 | | | |
 | COV-4 | | | |
 | COV-5 | | | |

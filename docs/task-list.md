@@ -341,7 +341,7 @@ Type/Lint/Unit ✓・Build ✓・E2E ✓ の**全ジョブ green**。E2E は
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---|---|---:|---|---|
 | COV-1 | coverage 境界の適正化 (barrel index.ts / 型定義 / Next.js 生成画像を exclude に整理) | 完了 | 100% | - | テスト価値のない 0% ファイルが分母から外れ、`test:coverage` の全体数値が 90% 前後に | `6abdddf` / 0% ファイル 24→**4 件** (残 4 件は COV-2/3 のテスト対象) / 実測 **88.56 / 78.55 / 92.64 / 90.41** (st/br/fn/ln。lines 90% 達成) / test:coverage exit 0 |
-| COV-2 | ロジック層 (server API / lib/env / lib/platform / lib/modrinth / sync 系) の unit test 追加 | 未着手 | 0% | COV-1 | 90% 未満のロジックファイル各指標 90% 以上 (branches 優先) | 計画 §10.2 |
+| COV-2 | ロジック層 (server API / lib/env / lib/platform / lib/modrinth / sync 系) の unit test 追加 | 進行中 | 60% | COV-1 | 90% 未満のロジックファイル各指標 90% 以上 (branches 優先) | 計画 §10.2 上位 4 件 + 0% 3 件完了: `015c6d1` (siteUrl/loadDiscoverSearch/projectDetail/computeHashes/hashCore 100%)・`e561f72` (useModpackAdd 100 / useZipImport br 98.66 / useProfiles br 96.74、計 152 tests)。全体 **92.24 / 83.72 / 95.12 / 94.01** (st/br/fn/ln) / 1413 tests pass / test:coverage exit 0。残り: backup / analyzer / client / server / useSync 系 / store |
 | COV-3 | コンポーネント層 (BottomSheet / ModCard / ScreenshotGalleryModal / 大型 orchestrator を除く) の unit test 追加 | 未着手 | 0% | COV-1 | 90% 未満コンポーネント各指標 90% 以上 | 計画 §10.3 |
 | COV-4 | E2E 追加 (選択中一覧の削除/全削除・ギャラリータップ/スワイプ・バージョンフィルタ・discover スケルトン・フォルダ選択文言) | 未着手 | 0% | COV-2/3 | 新規 spec が CI で green (既存 65 passed を維持) | 計画 §10.4 |
 | COV-5 | thresholds 90% 化 + per-module 統一 + CI 最終確認 | 未着手 | 0% | COV-2/3/4 | `vitest.config.ts` のグローバル thresholds 4 指標すべて 90・`pnpm test:coverage` exit 0・CI 全 green | 計画 §5 |

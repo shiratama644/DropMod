@@ -110,14 +110,28 @@ export class FileSystemSink implements EnvironmentSink {
       throw new Error(`FileSystemSink.writeFile: 不正なパス '${path}'`);
     }
     const dir = await this.getDirectoryHandle(segments.join('/'), true);
+    // 既存ファイルへの上書きかどうかを記録する (書込失敗時の掃除判定用)
+    const existed = await dir
+      .getFileHandle(filename)
+      .then(() => true)
+      .catch(() => false);
     const fileHandle = await dir.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();
     try {
       await writable.write(toArrayBuffer(data));
-    } finally {
-      // close() はトランザクションのコミット相当。失敗時も必ず呼ぶ
-      await writable.close();
+    } catch (e) {
+      // 書込失敗時は、新規作成した部分ファイル (空ファイル) を残さない。
+      // rollbackSync は `done === true` の操作のみを巻き戻すため、ここで
+      // 掃除しないと「失敗したのに空ファイルが残る」状態になる。
+      // (既存ファイルへの上書き失敗時は元のファイルを消さない)
+      if (!existed) {
+        await writable.close().catch(() => {});
+        await dir.removeEntry(filename).catch(() => {});
+      }
+      throw e;
     }
+    // close() はトランザクションのコミット相当。失敗時はエラーを伝播する
+    await writable.close();
   }
 
   async removeFile(path: string): Promise<void> {

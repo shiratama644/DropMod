@@ -29,22 +29,22 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: [
       '__tests__/**/*.test.{ts,tsx}',
-      'app/**/*.test.{ts,tsx}',
-      'components/**/*.test.{ts,tsx}',
-      'hooks/**/*.test.{ts,tsx}',
-      'lib/**/*.test.{ts,tsx}'
+      'src/app/**/*.test.{ts,tsx}',
+      'src/components/**/*.test.{ts,tsx}',
+      'src/hooks/**/*.test.{ts,tsx}',
+      'src/lib/**/*.test.{ts,tsx}'
     ],
     exclude: ['node_modules/**', '.next/**', '.archive/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
       include: [
-        'app/**/*.{ts,tsx}',
-        'components/**/*.{ts,tsx}',
-        'features/**/*.{ts,tsx}',
-        'hooks/**/*.{ts,tsx}',
-        'lib/**/*.{ts,tsx}',
-        'types/**/*.ts'
+        'src/app/**/*.{ts,tsx}',
+        'src/components/**/*.{ts,tsx}',
+        'src/features/**/*.{ts,tsx}',
+        'src/hooks/**/*.{ts,tsx}',
+        'src/lib/**/*.{ts,tsx}',
+        'src/types/**/*.ts'
       ],
       exclude: [
         '**/*.test.{ts,tsx}',
@@ -54,53 +54,53 @@ export default defineConfig({
         'node_modules/**',
 
         // ---- Server / route / generated (E2E で担保) ----
-        'app/**/route.ts',
-        'app/sitemap.ts',
-        'app/robots.ts',
-        'app/manifest.ts',
-        'app/error.tsx',
-        'app/global-error.tsx',
-        'app/**/loading.tsx',
-        'app/**/not-found.tsx',
-        'app/**/default.tsx',
-        'app/**/page.tsx',            // Server Components: RSC 統合は E2E で
-        'app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
-        'app/**/layout.tsx',          // nested layout も同様 (RSC wrapper = E2E 担保。Phase 10.5-A)
-        'types/**',                    // 純粋な型定義 (JS 実体なし)
+        'src/app/**/route.ts',
+        'src/app/sitemap.ts',
+        'src/app/robots.ts',
+        'src/app/manifest.ts',
+        'src/app/error.tsx',
+        'src/app/global-error.tsx',
+        'src/app/**/loading.tsx',
+        'src/app/**/not-found.tsx',
+        'src/app/**/default.tsx',
+        'src/app/**/page.tsx',            // Server Components: RSC 統合は E2E で
+        'src/app/layout.tsx',             // 全 route の root wrapper、E2E 各テストが起動時に自動通過
+        'src/app/**/layout.tsx',          // nested layout も同様 (RSC wrapper = E2E 担保。Phase 10.5-A)
+        'src/types/**',                    // 純粋な型定義 (JS 実体なし)
 
         // ---- Large orchestrator Client Components (E2E で担保) ----
         // これらは msw + jsdom + provider ツリー全部揃えないと render できず、
         // 単体テストの ROI が低い。実挙動は Playwright で smoke / mod-detail /
         // mods-page / offline / theme-persistence spec で担保している。
-        'components/layout/AppShell.tsx',
-        'features/catalog/components/HomeInteractive.tsx',
-        'features/profiles/components/ModsPageClient.tsx',
-        'features/project/components/ModDetailModalShell.tsx',
-        'features/project/components/ModDetailPageView.tsx',
-        'features/settings/components/SettingsPageClient.tsx',
+        'src/components/layout/AppShell.tsx',
+        'src/features/catalog/components/HomeInteractive.tsx',
+        'src/features/profiles/components/ModsPageClient.tsx',
+        'src/features/project/components/ModDetailModalShell.tsx',
+        'src/features/project/components/ModDetailPageView.tsx',
+        'src/features/settings/components/SettingsPageClient.tsx',
 
         // ---- Presentational-only Client Components (単体テスト ROI 低) ----
         // BottomNav は現状 aria-current ロジックのみ、EditProfile は NewProfile と同型
         // DependencyCheckModal は結果表示のみ、ZipProgressModal は progress bar 表示のみ
         // ToastContainer は Zustand subscribe で表示するだけ (Zustand store 側でテスト済)
         // MarkdownRenderer は react-markdown をラップして h1→h2 降格するだけ
-        'components/layout/BottomNav.tsx',
-        'features/profiles/components/EditProfileModal.tsx',
-        'features/dep-check/components/DependencyCheckModal.tsx',
-        'features/zip/components/ZipProgressModal.tsx',
-        'components/feedback/ToastContainer.tsx',
-        'components/ui/MarkdownRenderer.tsx',
+        'src/components/layout/BottomNav.tsx',
+        'src/features/profiles/components/EditProfileModal.tsx',
+        'src/features/dep-check/components/DependencyCheckModal.tsx',
+        'src/features/zip/components/ZipProgressModal.tsx',
+        'src/components/feedback/ToastContainer.tsx',
+        'src/components/ui/MarkdownRenderer.tsx',
 
         // ---- Providers / metrics wrapper (SSR 境界跨ぐ / 副作用のみ) ----
         // Providers は PersistQueryClientProvider を返すだけ、
         // WebVitalsReporter は web-vitals ライブラリを attach するだけ。
         // (AppContext.tsx は Phase 10-B で完全削除済みのため exclude からも除去)
-        'components/layout/Providers.tsx',
-        'components/layout/WebVitalsReporter.tsx',
+        'src/components/layout/Providers.tsx',
+        'src/components/layout/WebVitalsReporter.tsx',
 
         // ---- Shim-only hooks (実体は Zustand store 側でテスト済) ----
-        'hooks/useConfirm.ts',
-        'hooks/useToasts.ts',
+        'src/hooks/useConfirm.ts',
+        'src/hooks/useToasts.ts',
 
         // ---- SSR-only / DOM-heavy utilities (E2E で担保) ----
         // lib/query/client.ts: persister setup + IndexedDB async storage adapter
@@ -108,9 +108,9 @@ export default defineConfig({
         // lib/utils/download.ts: <a> click + Blob URL 経由の Native ダウンロード
         //   → jsdom で navigation を強制する形になり単体テスト不可能に近い
         // lib/constants/*: 定数の集合 (テスト対象なし)
-        'lib/query/client.ts',
-        'lib/utils/download.ts',
-        'lib/constants/**'
+        'src/lib/query/client.ts',
+        'src/lib/utils/download.ts',
+        'src/lib/constants/**'
       ],
       thresholds: {
         // ---- グローバル最低ライン (Phase 9-C 完了時 60%+) ----
@@ -121,85 +121,85 @@ export default defineConfig({
 
         // ---- per-module thresholds (計画書 §7.5) ----
         // Vitest 3 の per-file thresholds は glob key で指定
-        'lib/state/**/*.ts': {
+        'src/lib/state/**/*.ts': {
           statements: 95,
           branches: 90,
           functions: 95,
           lines: 95
         },
-        'features/profiles/store/store.ts': {
+        'src/features/profiles/store/store.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'features/zip/store/zipExport.ts': {
+        'src/features/zip/store/zipExport.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'features/zip/store/zipImport.ts': {
+        'src/features/zip/store/zipImport.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'features/dep-check/store/store.ts': {
+        'src/features/dep-check/store/store.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'components/feedback/*Store.ts': {
+        'src/components/feedback/*Store.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'components/layout/uiState.ts': {
+        'src/components/layout/uiState.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'components/layout/appActions.ts': {
+        'src/components/layout/appActions.ts': {
           statements: 85,
           branches: 80,
           functions: 90,
           lines: 85
         },
-        'lib/db/**/*.ts': {
+        'src/lib/db/**/*.ts': {
           statements: 75,
           branches: 70,
           functions: 75,
           lines: 75
         },
-        'lib/query/**/*.ts': {
+        'src/lib/query/**/*.ts': {
           statements: 70,
           branches: 60,
           functions: 70,
           lines: 70
         },
-        'lib/modrinth/**/*.ts': {
+        'src/lib/modrinth/**/*.ts': {
           statements: 65,
           branches: 55,
           functions: 65,
           lines: 65
         },
-        'lib/utils/**/*.ts': {
+        'src/lib/utils/**/*.ts': {
           statements: 60,
           branches: 60,
           functions: 60,
           lines: 60
         },
-        'hooks/**/*.ts': {
+        'src/hooks/**/*.ts': {
           statements: 70,
           branches: 60,
           functions: 70,
           lines: 70
         },
-        'components/**/*.tsx': {
+        'src/components/**/*.tsx': {
           statements: 50,
           branches: 45,
           functions: 50,
@@ -210,7 +210,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(import.meta.dirname, '.')
+      '@/__tests__': path.resolve(import.meta.dirname, '__tests__'),
+      '@/scripts': path.resolve(import.meta.dirname, 'scripts'),
+      '@': path.resolve(import.meta.dirname, 'src')
     }
   }
 });

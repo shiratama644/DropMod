@@ -2,8 +2,8 @@
 /* .archive (旧 Vite 版ソース) / .agent (エージェント記憶) は描画されない
    ファイル群のため Tailwind v4 の自動コンテンツ走査から除外する
    (旧実装のクラス名が dead CSS として流出するのを防ぐ。2026-08-27) */
-@source not "../.archive";
-@source not "../.agent";
+@source not "../../.archive";
+@source not "../../.agent";
 
 @theme {
   --font-mono: "JetBrains Mono", monospace;

@@ -2,23 +2,25 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useId } from 'react';
-import { CustomDropdown } from '@/components/ui/CustomDropdown';
-import type { ProjectItem, ProfileContentExtras, UnknownFile } from '@/types';
+import type { ProjectItem, ProfileContentExtras } from '@/types';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import { useModalRegistration } from '@/hooks/useModalUi';
 import { supportsDirectoryPicker } from '@/lib/env/capabilities';
-import { pickMinecraftDirectory, type PickedDirectory } from '@/features/env-import';
-import { rootTypeLabel, type DetectedEnvironment } from '@/features/env-import';
 import {
   analyzeEnvironmentSource,
+  generateProfileName,
+  pickMinecraftDirectory,
   type AnalyzeProgress,
-  type ImportAnalysis
+  type DetectedEnvironment,
+  type ImportAnalysis,
+  type PickedDirectory
 } from '@/features/env-import';
-import { analyzeImportHealth, type AnalysisIssue } from '@/lib/env/analysis';
-import { generateProfileName } from '@/features/env-import';
-import { LOADER_DROPDOWN_OPTIONS } from '../constants/loaderVersionTables';
-import { useLoaderVersionOptions } from '../hooks/useLoaderVersionOptions';
+import { analyzeImportHealth } from '@/lib/env/analysis';
+import { useLoaderVersionOptions } from '../../hooks/useLoaderVersionOptions';
 import type { PendingImportData } from '@/features/zip';
+import { AnalysisSection, countImportedContents } from './AnalysisSection';
+import { FolderImportSection } from './FolderImportSection';
+import { ProfileFormFields } from './ProfileFormFields';
 
 interface NewProfileModalProps {
   isOpen: boolean;
@@ -38,149 +40,14 @@ interface NewProfileModalProps {
   ) => void | Promise<void>;
 }
 
-
 // ---------------------------------------------------------------------------
-// Phase 11: 解析結果の表示 (Analysis View、計画書 §6.1 / §6.2 相当)
-// フォルダ解析 (folderAnalysis) と ZIP 環境取り込み (initialImportData) の
-// 両経路で使う。Phase 11 は Read-only。
+// プロファイル作成モーダル (フォーム本体 + フォルダ選択 → 解析 → 自動紐付け)。
+// 責務ごとに分割した子コンポーネントを組み立てる:
+//   - FolderImportSection: フォルダ選択 UI (解析進捗・エラー表示)
+//   - AnalysisSection:    解析結果の Read-only 表示 (Phase 11)
+//   - ProfileFormFields:  名前 / MC バージョン / ローダー / 説明の入力フィールド
+// 状態管理とフロー制御 (pick/submit) は本コンポーネントが担う。
 // ---------------------------------------------------------------------------
-
-/**
- * ZIP 環境取り込み (pendingImportData) の表示件数。
- * フォルダ解析の scannedCounts (照合成功 + 未識別の合計) と同じ意味にするため、
- * 未識別ファイルは location からカテゴリ別に加算する。
- */
-function countImportedContents(data: PendingImportData | null | undefined): {
-  mods: number;
-  resourcepacks: number;
-  shaderpacks: number;
-} {
-  const unknown = data?.unknownFiles ?? [];
-  return {
-    mods: (data?.mods.length ?? 0) + unknown.filter((f) => f.location === 'mods').length,
-    resourcepacks:
-      (data?.resourcepacks?.length ?? 0) +
-      unknown.filter((f) => f.location === 'resourcepacks').length,
-    shaderpacks:
-      (data?.shaderpacks?.length ?? 0) +
-      unknown.filter((f) => f.location === 'shaderpacks').length
-  };
-}
-
-const ANALYSIS_PHASE_LABELS: Record<AnalyzeProgress['phase'], string> = {
-  detect: '環境検出',
-  scan: 'ファイル走査',
-  read: 'ファイル読み込み',
-  hash: 'ハッシュ計算',
-  resolve: 'Modrinth 照合'
-};
-
-function AnalysisSection({
-  issues,
-  counts,
-  environment,
-  unknownFiles
-}: {
-  issues: AnalysisIssue[];
-  counts: { mods: number; resourcepacks: number; shaderpacks: number };
-  environment: {
-    mcVersion?: string;
-    loader?: string;
-    loaderVersion?: string;
-    rootType?: string;
-  };
-  unknownFiles: UnknownFile[];
-}) {
-  const envText =
-    [
-      environment.mcVersion ? `Minecraft ${environment.mcVersion}` : undefined,
-      environment.loader,
-      environment.loaderVersion
-    ]
-      .filter(Boolean)
-      .join(' / ') || '未検出 (下で手動設定してください)';
-
-  return (
-    <div
-      className="rounded-xl theme-sub-box border border-slate-500/20 p-3 space-y-2"
-      role="status"
-      aria-label="解析結果"
-    >
-      <div className="text-xs font-bold theme-text-secondary flex items-center gap-1.5">
-        <i className="fa-solid fa-clipboard-check theme-text-brand" aria-hidden />
-        解析結果 (Read-only)
-      </div>
-      <div className="text-[11px] theme-text-muted space-y-0.5">
-        <div>
-          <span className="font-semibold">環境: </span>
-          {envText}
-        </div>
-        {environment.rootType && (
-          <div>
-            <span className="font-semibold">構造: </span>
-            {rootTypeLabel(environment.rootType)}
-          </div>
-        )}
-        <div>
-          <span className="font-semibold">内容: </span>
-          {counts.mods} 個のMod / {counts.resourcepacks} 個のリソースパック /{' '}
-          {counts.shaderpacks} 個のシェーダー
-          {unknownFiles.length > 0 && ` / 未識別 ${unknownFiles.length} 個`}
-        </div>
-      </div>
-      <ul className="space-y-1">
-        {issues.map((issue) => (
-          <li key={issue.id} className="text-[11px] flex gap-1.5 items-start">
-            <span
-              aria-hidden
-              className={
-                issue.status === 'ok'
-                  ? 'text-emerald-500 shrink-0'
-                  : issue.status === 'warning'
-                    ? 'text-amber-500 shrink-0'
-                    : 'text-red-500 shrink-0'
-              }
-            >
-              {issue.status === 'ok' ? '✓' : issue.status === 'warning' ? '⚠' : '✗'}
-            </span>
-            <span className="min-w-0">
-              <span className="theme-text-secondary">{issue.message}</span>
-              {issue.details.length > 0 && (
-                <details className="theme-text-muted mt-0.5">
-                  <summary className="cursor-pointer list-none underline decoration-dotted">
-                    詳細 ({issue.details.length})
-                  </summary>
-                  <ul className="list-disc pl-4 mt-0.5 space-y-0.5 break-all">
-                    {issue.details.map((detail) => (
-                      <li key={detail}>{detail}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {unknownFiles.length > 0 && (
-        <details className="text-[11px] theme-text-muted">
-          <summary className="cursor-pointer list-none underline decoration-dotted">
-            未識別ファイル一覧 ({unknownFiles.length})
-          </summary>
-          <ul className="list-disc pl-4 mt-0.5 space-y-0.5 break-all">
-            {unknownFiles.map((file) => (
-              <li key={file.id}>{file.path}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <p className="text-[10px] theme-text-muted leading-relaxed">
-        ⓘ Phase 11 は読み取り専用です。ローカル環境への書き込み (同期) は Phase 12
-        で実装予定です。
-      </p>
-    </div>
-  );
-}
-
 export const NewProfileModal: React.FC<NewProfileModalProps> = ({
   isOpen,
   onClose,
@@ -275,11 +142,6 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const nameInputId = useId();
-  const versionSelectId = useId();
-  const loaderSelectId = useId();
-  const loaderVersionSelectId = useId();
-  const descInputId = useId();
   useModalA11y(isOpen, onClose, dialogRef);
   // モーダル open 中は BottomNav を隠す (2026-08-27)
   useModalRegistration(isOpen);
@@ -456,64 +318,14 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          <div>
-            <label
-              htmlFor={nameInputId}
-              className="block text-xs font-semibold theme-text-secondary mb-1"
-            >
-              プロファイル名
-            </label>
-            <input
-              id={nameInputId}
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="例: 最新 1.21.4 冒険パック"
-              className="w-full rounded-xl px-3 py-2 text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            />
-          </div>
-
-          <div>
-            <span className="block text-xs font-semibold theme-text-secondary mb-1">
-              Minecraft フォルダ (任意・読み取り専用)
-            </span>
-            <button
-              type="button"
-              onClick={() => void handlePickFolder()}
-              disabled={!canPickFolder || analyzing}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl theme-sub-box text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <i className="fa-solid fa-folder-open theme-text-brand" aria-hidden />
-                <span className="truncate">
-                  {folderName ? folderName : canPickFolder ? 'フォルダを選択' : 'このブラウザでは非対応'}
-                </span>
-              </span>
-              <i className="fa-solid fa-ellipsis theme-text-muted" aria-hidden />
-            </button>
-            <p className="mt-1 text-[11px] theme-text-muted leading-relaxed">
-              {canPickFolder
-                ? '.minecraft または Prism インスタンスを選ぶと、環境とファイルを自動解析します (読み取り専用)。'
-                : 'Firefox / Safari / モバイルはフォルダ選択非対応です。「.minecraft を ZIP 化して読み込む」をご利用ください。'}
-            </p>
-            {analyzing && (
-              <p className="mt-1 text-[11px] theme-text-muted" role="status">
-                <i className="fa-solid fa-spinner fa-spin mr-1" aria-hidden />
-                解析中...{' '}
-                {analysisProgress
-                  ? `${ANALYSIS_PHASE_LABELS[analysisProgress.phase]}${
-                      analysisProgress.total > 1
-                        ? ` (${analysisProgress.done}/${analysisProgress.total})`
-                        : ''
-                    }`
-                  : '準備中'}
-              </p>
-            )}
-            {folderError && (
-              <p className="mt-1 text-[11px] theme-text-amber">{folderError}</p>
-            )}
-          </div>
+          <FolderImportSection
+            canPickFolder={canPickFolder}
+            analyzing={analyzing}
+            folderName={folderName}
+            analysisProgress={analysisProgress}
+            folderError={folderError}
+            onPickFolder={() => void handlePickFolder()}
+          />
 
           {(folderAnalysis || initialImportData?.analysisIssues) && (
             <AnalysisSection
@@ -543,70 +355,20 @@ export const NewProfileModal: React.FC<NewProfileModalProps> = ({
             />
           )}
 
-          <div>
-            <label
-              htmlFor={versionSelectId}
-              className="block text-xs font-semibold theme-text-secondary mb-1"
-            >
-              Minecraft バージョン
-            </label>
-            <CustomDropdown
-              id={versionSelectId}
-              options={versionOptions}
-              selectedValue={version}
-              onChange={setVersion}
-              customClass="w-full"
-              label="Minecraftバージョン"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor={loaderSelectId}
-              className="block text-xs font-semibold theme-text-secondary mb-1"
-            >
-              Modローダー
-            </label>
-            <CustomDropdown
-              id={loaderSelectId}
-              options={LOADER_DROPDOWN_OPTIONS}
-              selectedValue={loader}
-              onChange={setLoader}
-              customClass="w-full"
-              label="Modローダー"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor={loaderVersionSelectId}
-              className="block text-xs font-semibold theme-text-secondary mb-1"
-            >
-              ローダーバージョン
-            </label>
-            <CustomDropdown
-              id={loaderVersionSelectId}
-              options={loaderVersionOptions}
-              selectedValue={loaderVersion}
-              onChange={setLoaderVersion}
-              customClass="w-full"
-              label="ローダーバージョン"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor={descInputId}
-              className="block text-xs font-semibold theme-text-secondary mb-1"
-            >
-              説明 (任意)
-            </label>
-            <input
-              id={descInputId}
-              type="text"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="プロファイルの目的など"
-              className="w-full rounded-xl px-3 py-2 text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            />
-          </div>
+          <ProfileFormFields
+            name={name}
+            onNameChange={setName}
+            version={version}
+            versionOptions={versionOptions}
+            onVersionChange={setVersion}
+            loader={loader}
+            onLoaderChange={setLoader}
+            loaderVersion={loaderVersion}
+            loaderVersionOptions={loaderVersionOptions}
+            onLoaderVersionChange={setLoaderVersion}
+            desc={desc}
+            onDescChange={setDesc}
+          />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-500/20">
             <button

@@ -84,10 +84,16 @@ test.describe('Project preview modal & detail page flow', () => {
     // 直接 URL アクセス → フル詳細ページ (ModDetailPageView)
     await page.goto('/mod/sodium');
 
-    // ブレッドクラム「Mod 一覧に戻る」
-    await expect(page.getByRole('link', { name: /Mod 一覧に戻る|検索に戻る/ })).toBeVisible({
+    // ブレッドクラム = Home / 型リンク (/discover/mods) / タイトル
+    // (「Mod 一覧に戻る」等のリンクは実装に無い。型別一覧へのリンクが相当)
+    const breadcrumb = page.getByRole('navigation', { name: 'パンくず' });
+    await expect(breadcrumb.getByRole('link', { name: 'Mods' })).toBeVisible({
       timeout: 15_000
     });
+    await expect(breadcrumb.getByRole('link', { name: 'Mods' })).toHaveAttribute(
+      'href',
+      '/discover/mods'
+    );
     // モバイル Header / PC DesktopSidebar は表示されたまま
     await expect(page.locator('#desktop-sidebar:visible, #app-header:visible').first()).toBeVisible();
     // dialog は無い (フルページ)

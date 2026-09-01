@@ -1,6 +1,9 @@
 # ARCH-3: Feature 直下を `index.ts` のみにし、実体を責務別スロットへ
 
-> 本計画は **コード変更を行わない**。Go 承認後に実装する。
+> **2026-09-01 Go 承認済み・完了**。調査の結果、本計画の移動は ORG 移行（`2d22083`）
+> 以前にコード上で確立済みであり、Go 承認後に 4 検証（typecheck / biome /
+> test:coverage / build）で完了条件の充足を確認した（詳細は
+> `.agent/logs/2026-09-01_arch-3-feature-slots.md`）。
 > 親計画: `docs/planning/FEATURE_FOLDER_PLAN.md`（ARCH-2 完了、`fe1d919`）。
 
 ---
@@ -276,17 +279,23 @@ ARCH-3K で再度 4 検証。E2E は走らせない。
 
 ## 11. 検証チェックリスト（実装時）
 
-- [ ] Feature 直下 = `index.ts` のみ（ファイル）
-- [ ] 許可スロット以外のディレクトリが Feature 直下に無い
-- [ ] 空フォルダ 0
-- [ ] Zustand → `store/`
-- [ ] `detector/` ネスト維持（`services/detector/`）
-- [ ] `providers/` は Feature 直下に無い（`api/providers/`）
-- [ ] sitemap 静的は `utils/`、fetch 側だけ `api/`
-- [ ] 共有型は `@/types` のまま
-- [ ] テストは `__tests__` のみ
-- [ ] 4 検証
-- [ ] `.archive` 不変
+- [x] Feature 直下 = `index.ts` のみ（ファイル）
+- [x] 許可スロット以外のディレクトリが Feature 直下に無い
+- [x] 空フォルダ 0
+- [x] Zustand → `store/`
+- [x] `detector/` ネスト維持（`services/detector/`）
+- [x] `providers/` は Feature 直下に無い（`api/providers/`）
+- [x] sitemap 静的は `utils/`、fetch 側だけ `api/`
+- [x] 共有型は `@/types` のまま
+- [x] テストは `__tests__` のみ
+- [x] 4 検証
+- [x] `.archive` 不変
+
+> 2026-09-01 検証: 上記すべて充足。typecheck / biome（0 warnings）/ `test:coverage`
+> （123 files / 1603 tests、96.54/90.49/98.26/97.85）/ `pnpm build` すべて PASS。
+> 表記差: 計画 5.5 の定数ファイルは `constants/loaderVersionTables.ts`（計画の
+> `loaderVersions.ts` と同名にならず。スロット分類は計画どおり）。計画 5.7 の
+> `og-copy` は ORG-1 の camelCase 統一で `ogCopy.ts`。
 
 ---
 
@@ -311,6 +320,10 @@ ARCH-3K で再度 4 検証。E2E は走らせない。
 
 ---
 
-## 14. Go 待ち
+## 14. Go 承認・完了
 
-ユーザーが本計画を承認したら ARCH-3A から順に実装する。差し戻し時は本ファイルを直して再承認。
+- **2026-09-01 Go 承認**（ユーザー指示「ARCH-3をGoで進めてください」）。
+- 調査の結果、移動は ORG 移行（`2d22083`）以前にコード上で確立済み（旧パス grep 0 件、
+  全 Feature 直下 = `index.ts` のみ）。追加のコード変更なしで完了条件を満たすことを確認。
+- 4 検証（typecheck / biome / `test:coverage` / `pnpm build`）すべて PASS
+  （詳細: `.agent/logs/2026-09-01_arch-3-feature-slots.md`、task-list ARCH-3A〜3K）。

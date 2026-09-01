@@ -50,6 +50,11 @@
 97.85** (st/br/fn/ln)、123 files / 1603 tests、`pnpm test:coverage` exit 0
 (thresholds 90/90/90/90)、E2E は dispatch で全 green。PR #7 にて CI green。
 
+**2026-09-01 完了**: **ARCH-3**（Feature 直下を `index.ts` のみにし実体を責務別
+スロットへ）。Go 承認を受けて検証した結果、移動は ORG 移行以前にコード上で確立済み
+（旧パス grep 0 件・全 Feature 直下 = index.ts のみ・Zustand は store/ のみ）。
+4 検証（typecheck / biome / test:coverage / build）すべて PASS、回帰なし。
+
 ---
 
 ## フェーズタスク
@@ -259,6 +264,17 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | ARCH-2B | store slice を Feature | 完了 | 100% | ARCH-2A | profiles/zip/dep-check。toast/confirm/ui/appActions は layout/feedback。lib/store 削除 | 計画 §10.13.F |
 | ARCH-2C | lib/server → lib/platform | 完了 | 100% | ARCH-2A | logger / rate-limit / APP_PROFILE / site-url | `a8fe85b` / 計画 §10.13.F |
 | ARCH-2D | Dexie sync ヘルパを features/sync | 完了 | 100% | ARCH-2B | スキーマ宣言は lib/db 残置。操作は features/sync/db.ts | 計画 §10.13.F |
+| ARCH-3A | catalog（search/ → api/） | 完了 | 100% | Go | `loadDiscoverSearch` を `catalog/api/` へ（cookie + fetch のため api/） | 既存構造（ORG-2a `2d22083` 以前に確立）/ 旧パス grep 0 件 |
+| ARCH-3B | dep-check（store.ts → store/） | 完了 | 100% | Go | Zustand を `dep-check/store/store.ts` へ・テストもミラー | 同上 |
+| ARCH-3C | env-import（analyzer/picker/detector/profileName） | 完了 | 100% | Go | analyzer・picker→`services/`、profileName→`utils/`、detector ネスト→`services/detector/` | 同上 |
+| ARCH-3D | modpack（providers/modpack/mrpack/update/add） | 完了 | 100% | Go | providers→`api/providers/`、modpack/mrpack/update→`services/`、modpackAdd→`utils/`（pure 確認済み） | 同上 |
+| ARCH-3E | profiles（store/contentCategory/loaders） | 完了 | 100% | Go | store→`store/`、contentCategory→`utils/`、loaders → `api/fetchLoaderVersions` + `constants/loaderVersionTables` + `utils/loaderVersions` | 同上（定数ファイル名は loaderVersionTables。スロット分類は計画どおり） |
+| ARCH-3F | project（server.ts → api/projectDetail + utils） | 完了 | 100% | Go | fetch 群→`api/projectDetail.ts`、buildDiscoverModalMetadata→`utils/` | 同上 |
+| ARCH-3G | seo（JsonLd/jsonld/og-copy/sitemap） | 完了 | 100% | Go | JsonLd→`components/`、jsonld/og-copy/static→`utils/`、popularDetail→`api/` | 同上（og-copy は ORG-1 で ogCopy） |
+| ARCH-3H | sync（直下 .ts + sink/） | 完了 | 100% | Go | 副作用系→`services/`（applySync/backup/executor/link/recovery/syncPrep/undo/zipSync/db/sink）、純粋系→`utils/`（diff/managed/format/environmentCheck） | 同上 / `lib/env` の import は新パスでロジック不変 |
+| ARCH-3I | zip（zipExport/zipImport → store/） | 完了 | 100% | Go | Zustand を `zip/store/` へ | 同上 |
+| ARCH-3J | landing / settings 確認 | 完了 | 100% | 3A〜I | 直下は既に index.ts のみ（スロット追加不要） | 構造確認済み |
+| ARCH-3K | 掃除・coverage/biome・4 検証 | 完了 | 100% | 3J | 全 Feature 直下 = index.ts のみ・空フォルダ 0・旧パス grep 0 件・4 検証 | **2026-09-01**: typecheck / biome（0 warnings）/ test:coverage（123 files / 1603 tests、96.54/90.49/98.26/97.85）/ build すべて PASS。ログ `.agent/logs/2026-09-01_arch-3-feature-slots.md` |
 
 ---
 

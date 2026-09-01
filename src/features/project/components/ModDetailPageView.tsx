@@ -40,7 +40,7 @@
 // -----------------------------------------------------------------------------
 
 import { useCallback, useState } from 'react';
-import Link from 'next/link';
+import { MuiLink as Link } from '@/components/ui/MuiLink';
 import Image from 'next/image';
 
 import type { ModrinthProject, ModrinthVersion, ModrinthVersionFile } from '@/types';

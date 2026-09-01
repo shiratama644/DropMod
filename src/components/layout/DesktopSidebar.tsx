@@ -1,6 +1,6 @@
 'use client';
 import type React from 'react';
-import Link from 'next/link';
+import { MuiLink as Link } from '@/components/ui/MuiLink';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';

@@ -1,6 +1,6 @@
 'use client';
 import type React from 'react';
-import Link from 'next/link';
+import { MuiLink as Link } from '@/components/ui/MuiLink';
 import Paper from '@mui/material/Paper';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';

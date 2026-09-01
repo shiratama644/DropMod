@@ -373,7 +373,7 @@ Type/Lint/Unit ✓・Build ✓・E2E ✓ の**全ジョブ green**。E2E は
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---|---|---:|---|---|
 | M3E-1 | インフラ整備 (MUI v9, GSAP, フォント導入・旧資産撤去) | 完了 | 100% | - | `package.json` 更新 / `AppRouterCacheProvider` 導入 | `30a2104` |
-| M3E-2 | GSAP 移行 (既存 animejs の置換) | 未着手 | 0% | M3E-1 | `useGSAP` 化完了 / FOUCなし / 動作確認 | - |
+| M3E-2 | GSAP 移行 (既存 animejs の置換) | 完了 | 100% | M3E-1 | `useGSAP` 化完了 / FOUCなし / 動作確認 | `553d727` |
 | M3E-3 | M3E テーマエンジン構築 | 未着手 | 0% | M3E-1 | Zustand連携の動的テーマ / M3E仕様の高彩度パレット生成 | - |
 | M3E-4 | グローバルレイアウト M3E 化 | 未着手 | 0% | M3E-3 | Sidebar, Header, BottomNav が MUI に置換・Material Icons 化 | - |
 | M3E-5 | 各ページの M3E 化 | 未着手 | 0% | M3E-4 | Landing, Discover, Detail, Settings が MUI 化 | - |

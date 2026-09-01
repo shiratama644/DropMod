@@ -365,3 +365,16 @@ Type/Lint/Unit ✓・Build ✓・E2E ✓ の**全ジョブ green**。E2E は
 | COV-3 | コンポーネント層 (BottomSheet / ModCard / ScreenshotGalleryModal / 大型 orchestrator を除く) の unit test 追加 | 完了 | 100% | COV-1 | 90% 未満コンポーネント各指標 90% 以上 | `667d25a` / §10.3 対象 9 件: br 100 (ModCard / FolderImportSection)・96.55 (ScreenshotGalleryModal)・96.33 (NewProfileModal index)・96.42 (AnalysisSection)・93.75 (CustomDropdown)・fn 100 (JsonLd / ProfileFormFields)。BottomSheet は br 86.51 に留まるが残り 12 分岐は到達不能ガード (fn 32/32)。全体 **96.5 / 90.27 / 98.16 / 97.85** (branches 90% 到達) / 1590 tests pass / test:coverage exit 0 / ログ `.agent/logs/2026-09-01_cov-3-component-tests.md` |
 | COV-4 | E2E 追加 (選択中一覧の削除/全削除・ギャラリータップ/スワイプ・バージョンフィルタ・discover スケルトン・フォルダ選択文言) | 完了 | 100% | COV-2/3 | 新規 spec が CI で green (既存 65 passed を維持) | `44a90c4`+`9527e46` / §10.4 の 5 spec 追加 (profileMods / modDetailGallery / versionFilter / discoverSkeleton / folderImportCopy)。初回 CI の失敗 3 件を修正後、workflow_dispatch `33469737443` で **E2E 含め全 green** (既存 65 維持) / ログ `.agent/logs/2026-09-01_cov-4-e2e.md` |
 | COV-5 | thresholds 90% 化 + per-module 統一 + CI 最終確認 | 完了 | 100% | COV-2/3/4 | `vitest.config.ts` のグローバル thresholds 4 指標すべて 90・`pnpm test:coverage` exit 0・CI 全 green | `95e2c4a` / グローバル 90/90/90/90 + per-module 統一 (lib/state 95/90/95/95 維持)。lib/query・hooks はテスト追加 + `?? 0` 除去で 90% 達成。全体 **96.56 / 90.52 / 98.26 / 97.85** / 123 files / 1603 tests / test:coverage exit 0 / CI は PR #7 で green / ログ `.agent/logs/2026-09-01_cov-5-thresholds.md` |
+
+## Material 3 Expressive (M3E) 移行 + GSAP 導入 (Phase 14)
+
+> 計画書: `docs/planning/M3E_MIGRATION_PLAN.md`
+
+| ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
+|---|---|---|---|---|---:|---|---|
+| M3E-1 | インフラ整備 (MUI v9, GSAP, フォント導入・旧資産撤去) | 完了 | 100% | - | `package.json` 更新 / `AppRouterCacheProvider` 導入 | `30a2104` |
+| M3E-2 | GSAP 移行 (既存 animejs の置換) | 未着手 | 0% | M3E-1 | `useGSAP` 化完了 / FOUCなし / 動作確認 | - |
+| M3E-3 | M3E テーマエンジン構築 | 未着手 | 0% | M3E-1 | Zustand連携の動的テーマ / M3E仕様の高彩度パレット生成 | - |
+| M3E-4 | グローバルレイアウト M3E 化 | 未着手 | 0% | M3E-3 | Sidebar, Header, BottomNav が MUI に置換・Material Icons 化 | - |
+| M3E-5 | 各ページの M3E 化 | 未着手 | 0% | M3E-4 | Landing, Discover, Detail, Settings が MUI 化 | - |
+| M3E-6 | テスト/E2E 追従・クリーンアップ | 未着手 | 0% | M3E-5 | UI変更によるテスト落ちを修正 / `pnpm test:unit` と CI green | - |

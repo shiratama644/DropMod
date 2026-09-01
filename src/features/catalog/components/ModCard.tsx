@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { MuiLink as Link } from '@/components/ui/MuiLink';
 import Image from 'next/image';
 import type { ModrinthHit, Profile } from '@/types';
 import { modalPathFromProject, type SearchLayout } from '@/lib/constants/search';

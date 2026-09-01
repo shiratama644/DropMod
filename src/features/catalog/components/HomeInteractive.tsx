@@ -24,6 +24,17 @@ import { ModCard } from './ModCard';
 import { CacheStatusBadge } from '@/components/feedback/CacheStatusBadge';
 import { useCurrentProfileWithFallback } from '@/features/profiles';
 import { useAppAction } from '@/components/layout/appActions';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import SortIcon from '@mui/icons-material/Sort';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import CircularProgress from '@mui/material/CircularProgress';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ReplayIcon from '@mui/icons-material/Replay';
+import { useScrollSentinel } from '@/hooks/useScrollSentinel';
 
 // ============================================================================
 // HomeInteractive
@@ -77,38 +88,18 @@ interface Props {
   /** LP / Browse から渡された project_type (`?type=`) */
   initialProjectType?: ProjectType;
 }
-// initialMcVersions prop 削除。AppShell 側で fetchLatestMinecraftVersions を
-// Client fetch しており実質未使用 (隠しコメントでしか使われていなかった) だったため。
 
 export const HomeInteractive: React.FC<Props> = ({
   initialHits,
-  // Phase 10-P5: initialHasMore は Props 型に残しつつ destructure だけ削除。
-  //   将来のページネーション「initial は hasMore かどうか」実装で
-  //   復活させやすくするため型シグネチャは維持 (呼び出し側 app/mods/page.tsx も
-  //   引き続き渡している)。
+  initialHasMore,
   initialQuery = '',
   initialProjectType = 'mod'
 }) => {
-  // Phase 9-A.3: useAppContext 撤去、Zustand + appActions 直接参照
-  // B33 修正: 3 コンポーネントで重複していた fallback パターンを共通 hook に集約
   const profile = useCurrentProfileWithFallback();
   const handleToggleMod = useAppAction('handleToggleMod');
   const handleDuplicateProfile = useAppAction('handleDuplicateProfile');
   const openEditProfileModal = useAppAction('openEditProfileModal');
-  // 依存・競合チェックは「選択中一覧」ページ上部からのみ起動する (#18)
 
-  // ---------------------------------------------------------------------
-  // Sub-Phase 8-B: useInfiniteQuery で検索を管理
-  //
-  //   - queryKey にフィルタ条件をすべて含めるため、フィルタ変更 = 別クエリ扱い
-  //     → TanStack Query が自動キャッシュ・自動 abort・重複 dedupe
-  //   - initialData で SSR 由来の initialHits を最初のページとして提供
-  //     (これにより初回描画時は fetch を発火せず、キャッシュヒット動作)
-  //   - Dexie persister が apiCache テーブルに 24h キャッシュを永続化
-  //     → オフライン再訪でも既読結果が表示される
-  // ---------------------------------------------------------------------
-
-  // 絞り込み state
   const router = useRouter();
   const urlSearchParams = useSearchParams();
 
@@ -162,13 +153,11 @@ export const HomeInteractive: React.FC<Props> = ({
     }
   }, []);
 
-  // debounce (350ms)
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchInput), 350);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // 現在のフィルタから canonical query params を組み立て
   const searchParams: SearchQueryParams = useMemo(
     () => ({
       query: debouncedQuery,
@@ -188,8 +177,6 @@ export const HomeInteractive: React.FC<Props> = ({
     ]
   );
 
-  // "初期フィルタ" (SSR の initialHits に対応する canonical params)
-  // 初期フィルタと一致する場合のみ initialData を使う
   const initialSearchParams: SearchQueryParams = useMemo(
     () => ({
       query: initialQuery,
@@ -199,8 +186,6 @@ export const HomeInteractive: React.FC<Props> = ({
       sort: 'popular',
       projectType: initialProjectType
     }),
-    // profile を意図的に依存に含めず、SSR 時点のスナップショット固定にしたい所だが
-    // profile が hydration 完了で変わるとキーが変わるので依存に含める
     [profile.environment.mcVersion, profile.environment.loader, initialQuery, initialProjectType]
   );
   const initialMatches =
@@ -211,17 +196,7 @@ export const HomeInteractive: React.FC<Props> = ({
     searchParams.loader === initialSearchParams.loader &&
     (searchParams.projectType ?? 'mod') === (initialSearchParams.projectType ?? 'mod');
 
-  // B31 補助: SSR fetch 時刻を client mount 時に固定して initialDataUpdatedAt に使う。
-  //   Date.now() は React 19 rule で render/useMemo 中に呼べないため、
-  //   useState + useEffect で mount 時に 1 回だけ計算してセット。
-  //   初回 render (SSR + client 1st) は 0 → CacheStatusBadge は非表示、
-  //   client mount 完了で Date.now() をセット → 「今取得」表示に切り替わる。
   const [initialDataUpdatedAt, setInitialDataUpdatedAt] = useState<number>(0);
-  // Phase 10-P5 (useExhaustiveDependencies): 意図的に mount 時 1 回のみ実行。
-  //   initialMatches / initialHits.length は「SSR fetch 時点」のスナップショット
-  //   なので、client 側で変わっても再評価しない。deps に含めると client mount 後
-  //   の状態変化で誤って現在時刻に更新されてしまう。
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount 時 1 回のみ実行 (SSR スナップショット固定)
   useEffect(() => {
     if (initialMatches && initialHits.length > 0) {
       setInitialDataUpdatedAt(Date.now());
@@ -272,377 +247,201 @@ export const HomeInteractive: React.FC<Props> = ({
           pageParams: [0]
         }
       : undefined,
-    // B31 修正: initialDataUpdatedAt を SSR fetch 時刻としてセット。
-    //   (Date.now() は impure なので useMemo で初回のみ、上で計算)
-    initialDataUpdatedAt,
-    // SSR で initialHits が空だった (Modrinth 到達不可) 場合は
-    // すぐ再取得を試みたい。initialData が無ければ通常フロー。
-    staleTime: initialMatches ? 5 * 60 * 1000 : 0
+    initialDataUpdatedAt: initialDataUpdatedAt,
+    staleTime: 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
   });
 
-  // Flatten pages → hits[] with dedup (paranoid、Modrinth API は offset ベースなので基本不要)
-  const safeHits = useMemo<ModrinthHit[]>(() => {
-    const pages = query.data?.pages;
-    if (!pages) return [];
-    const seen = new Set<string>();
-    const out: ModrinthHit[] = [];
-    for (const page of pages) {
-      for (const h of page.hits) {
-        if (!h || typeof h.project_id !== 'string') continue;
-        if (seen.has(h.project_id)) continue;
-        seen.add(h.project_id);
-        out.push(h);
+  const sentinelRef = useScrollSentinel(query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage);
+
+  const isLoading = query.isLoading || query.isFetchingNextPage;
+  const safeHits = useMemo(() => {
+    const hits: ModrinthHit[] = [];
+    if (!query.data?.pages) return hits;
+    for (const p of query.data.pages) {
+      if (p && Array.isArray(p.hits)) {
+        for (const hit of p.hits) hits.push(hit);
       }
     }
-    return out;
+    return hits;
   }, [query.data]);
-
-  const hasMore = query.hasNextPage;
-  const isLoading = query.isFetching;
-  const searchError =
-    query.isError && !query.data
-      ? (query.error instanceof Error
-          ? query.error.message
-          : 'Modrinthからのデータ取得に失敗しました')
-      : null;
-
-  // 無限スクロール
-  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
-  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
-    setSentinelEl(node);
-  }, []);
-
-  // fetchNextPage は Query インスタンスの中で stable なので useEffect deps に入れて OK
-  const fetchNextPage = query.fetchNextPage;
-  const isFetchingNextPage = query.isFetchingNextPage;
-
-  useEffect(() => {
-    if (!sentinelEl) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (first?.isIntersecting && hasMore && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: '800px 0px', threshold: 0.01 }
-    );
-    observer.observe(sentinelEl);
-    return () => observer.disconnect();
-  }, [sentinelEl, hasMore, isFetchingNextPage, fetchNextPage]);
-
-  // ModCard に <Link> を直接持たせたため onOpenDetail は不要。
-
-  // Vite 版 HomeTab.tsx にあった「登録 MOD 数」大パネルを復元。
-  // Home 画面右側に emerald gradient で目立つ Mod カウント表示 + モバイル用
-  // 「確認」ボタン (Home → Mods タブへのショートカット)。
-  const modCount = profile?.mods?.length || 0;
+  const hasMore = !!query.hasNextPage;
+  const searchError = query.isError ? (query.error as Error).message : null;
 
   return (
-    <section id="tab-home" className="space-y-4 sm:space-y-6">
-      {/* Hero Banner */}
-      <div
-        id="hero-banner"
-        className="glass-panel rounded-3xl p-4 sm:p-6 relative overflow-hidden border border-emerald-500/20 shadow-xl"
-      >
-        <div className="hero-bg-cube absolute -right-10 -bottom-10 opacity-10 theme-text-brand pointer-events-none hidden sm:block">
-          <i className="fa-solid fa-cubes text-[180px]" aria-hidden />
-        </div>
+    <Box component="section" sx={{ pb: 8, display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 4 } }}>
+      <Box sx={{ bgcolor: 'background.paper', borderRadius: 4, p: { xs: 3, sm: 4 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 3, border: '1px solid var(--mui-palette-divider)' }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box component="span" sx={{ color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+              <SearchIcon />
+            </Box>
+            絞り込み条件
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'action.hover', px: 2, py: 1, borderRadius: 2 }}>
+              <Typography variant="body2" color="text.secondary">対象:</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{profile.name}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'action.hover', px: 2, py: 1, borderRadius: 2 }}>
+              <Typography variant="body2" color="text.secondary">環境:</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{profile.environment.mcVersion} / {profile.environment.loader}</Typography>
+            </Box>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', md: 'auto' } }}>
+          <Button variant="outlined" color="inherit" onClick={openEditProfileModal} sx={{ flex: 1, borderRadius: 3, fontWeight: 'bold' }}>
+            環境を変更
+          </Button>
+          <Button component={Link} href="/profile" variant="contained" sx={{ flex: 1, borderRadius: 3, fontWeight: 'bold', display: { xs: 'flex', sm: 'none' } }}>
+            確認
+          </Button>
+        </Box>
+      </Box>
 
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* profile?.mcVersion || '未設定' 等のフォールバック (Vite 版と同挙動) */}
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 theme-text-brand border border-emerald-500/30 shrink-0">
-                Minecraft {profile?.environment.mcVersion || '未設定'}
-              </span>
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 theme-text-blue border border-blue-500/30 shrink-0">
-                {profile?.environment.loader || '未設定'}
-              </span>
-            </div>
-            <h2 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight break-all leading-tight">
-              {profile?.name || '名称未設定プロファイル'}
-            </h2>
-            <p className="text-xs sm:text-sm theme-text-muted break-all leading-relaxed">
-              {profile?.description ||
-                'ModrinthからリアルタイムでModを検索してカスタマイズできます。'}
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5 pt-2">
-              <button
-                type="button"
-                onClick={openEditProfileModal}
-                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-pen-to-square theme-text-brand" aria-hidden />
-                プロファイルを編集
-              </button>
-              <button
-                type="button"
-                onClick={handleDuplicateProfile}
-                className="btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl theme-sub-box border transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-copy theme-text-blue" aria-hidden />
-                複製
-              </button>
-              {/* 依存・競合チェックは「選択中一覧」ページの上部から押せるため
-                  discover のプロファイル情報部には置かない (#18) */}
-            </div>
-          </div>
-
-          {/* 登録 MOD 数パネル (Vite 版と同構造) */}
-          <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-3.5 px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-slate-950 font-extrabold text-lg sm:text-xl shadow-md ring-1 ring-white/20 shrink-0">
-                <i className="fa-solid fa-cubes" aria-hidden />
-              </div>
-              <div>
-                <div className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
-                  登録 MOD 数
-                </div>
-                <div className="text-2xl sm:text-3xl font-black theme-text-brand font-mono tracking-tight leading-none mt-0.5">
-                  {modCount}
-                </div>
-              </div>
-            </div>
-            {/* モバイル用ショートカット (Phase 9-F: /mods → /profile URL 再設計) */}
-            <Link
-              href="/profile"
-              className="sm:hidden px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-lg transition"
-            >
-              確認
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Search / Sort / Category */}
-      <div id="search-bar-panel" className="glass-panel rounded-2xl p-3 sm:p-4 space-y-3">
-        {/* 種別タブは PC のみ。検索バーより上。モバイルは BottomNav「探す」 */}
-        <nav
-          aria-label="プロジェクト種別"
-          className="hidden md:grid grid-cols-4 gap-2"
-        >
+      <Box sx={{ bgcolor: 'background.paper', borderRadius: 4, p: { xs: 2, sm: 3 }, border: '1px solid var(--mui-palette-divider)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
           {PROJECT_TYPE_TABS.map((tab) => {
             const isActive = projectType === tab.id;
             return (
-              <button
+              <Button
                 key={tab.id}
-                type="button"
+                variant={isActive ? 'contained' : 'text'}
+                color={isActive ? 'primary' : 'inherit'}
                 onClick={() => handleProjectTypeChange(tab.id)}
-                aria-pressed={isActive}
-                className={`btn-hover-effect flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-0 ${
-                  isActive
-                    ? 'bg-emerald-600 text-slate-950 font-bold shadow-md shadow-emerald-600/20'
-                    : 'theme-sub-box theme-text-secondary hover:text-emerald-500 hover:border-emerald-500/40'
-                }`}
+                sx={{ borderRadius: 3, fontWeight: 'bold', px: 3, py: 1 }}
               >
-                <span
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base ${
-                    isActive
-                      ? 'bg-slate-950/15 text-slate-950'
-                      : 'bg-emerald-500/15 theme-text-brand'
-                  }`}
-                >
-                  <i className={tab.icon} aria-hidden />
-                </span>
-                <span className="truncate">{tab.label}</span>
-              </button>
+                {tab.label}
+              </Button>
             );
           })}
-        </nav>
+        </Box>
 
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <i
-              className={`fa-solid ${
-                isLoading && safeHits.length === 0
-                  ? 'fa-spinner fa-spin theme-text-brand'
-                  : 'fa-magnifying-glass theme-text-muted'
-              } absolute left-3.5 top-1/2 -translate-y-1/2 text-xs sm:text-sm pointer-events-none`}
-              aria-hidden
-            />
-            <input
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+          <Box sx={{ position: 'relative', flex: 1 }}>
+            <Box sx={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', color: 'text.secondary' }}>
+              {isLoading && safeHits.length === 0 ? <CircularProgress size={20} /> : <SearchIcon fontSize="small" />}
+            </Box>
+            <Box
+              component="input"
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="ModrinthのMod名・説明で検索..."
-              className="w-full pl-9 pr-8 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm dynamic-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition"
+              sx={{ width: '100%', pl: 5, pr: 5, py: 1.5, borderRadius: 3, border: '1px solid var(--mui-palette-divider)', bgcolor: 'action.hover', color: 'text.primary', '&:focus': { outline: 'none', borderColor: 'primary.main', bgcolor: 'background.paper' } }}
             />
             {searchInput && (
-              <button
-                type="button"
+              <Box
+                component="button"
                 onClick={() => setSearchInput('')}
-                aria-label="検索内容をクリア"
-                className="absolute right-3 top-1/2 -translate-y-1/2 theme-text-muted hover:text-emerald-500 text-xs p-1"
+                sx={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', color: 'text.secondary', bgcolor: 'transparent', border: 'none', cursor: 'pointer', p: 0.5, borderRadius: '50%', '&:hover': { color: 'text.primary', bgcolor: 'action.selected' } }}
               >
-                <i className="fa-solid fa-xmark" aria-hidden />
-              </button>
+                <CloseIcon fontSize="small" />
+              </Box>
             )}
-          </div>
-          <div className="flex items-center justify-between sm:justify-start gap-2">
-            <span className="text-xs font-medium theme-text-muted whitespace-nowrap shrink-0 flex items-center gap-1">
-              <i className="fa-solid fa-arrow-down-wide-short" aria-hidden />
-              <span>並び順:</span>
-            </span>
-            <div className="w-full sm:w-auto">
-              <CustomDropdown
-                options={SORT_OPTIONS}
-                selectedValue={sortBy}
-                onChange={setSortBy}
-                label="並び順"
-              />
-            </div>
-            <span className="text-xs font-medium theme-text-muted whitespace-nowrap shrink-0 flex items-center gap-1">
-              <i className="fa-solid fa-table-cells-large" aria-hidden />
-              <span>表示:</span>
-            </span>
-            <div className="w-full sm:w-auto min-w-[10rem]">
-              <CustomDropdown
-                options={[...SEARCH_LAYOUT_OPTIONS]}
-                selectedValue={layout}
-                onChange={handleLayoutChange}
-                label="表示形式"
-              />
-            </div>
-          </div>
-        </div>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: { xs: 'space-between', sm: 'flex-start' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SortIcon fontSize="small" color="action" />
+              <CustomDropdown options={SORT_OPTIONS} selectedValue={sortBy} onChange={setSortBy} label="並び順" />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ViewModuleIcon fontSize="small" color="action" />
+              <CustomDropdown options={[...SEARCH_LAYOUT_OPTIONS]} selectedValue={layout} onChange={handleLayoutChange} label="表示形式" />
+            </Box>
+          </Box>
+        </Box>
 
-        {/* Category Filter */}
-        <div className="scroll-fade-container">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 hide-scrollbar -mx-1 px-1 touch-pan-x">
+        <Box sx={{ overflowX: 'auto', pb: 1, '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
             {typeCategories.map((cat) => {
               const isActive = selectedCategory === cat.id;
               return (
-                <button
+                <Button
                   key={cat.id}
-                  type="button"
+                  variant={isActive ? 'contained' : 'outlined'}
+                  color={isActive ? 'primary' : 'inherit'}
                   onClick={() => setSelectedCategory(cat.id)}
-                  aria-pressed={isActive}
-                  className={`btn-hover-effect px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                    isActive
-                      ? 'bg-emerald-500 text-slate-950 font-bold shadow'
-                      : 'theme-sub-box theme-text-secondary hover:text-emerald-500'
-                  }`}
+                  size="small"
+                  sx={{ borderRadius: 3, fontWeight: 'bold', whiteSpace: 'nowrap', minWidth: 'auto', border: isActive ? undefined : '1px solid var(--mui-palette-divider)' }}
                 >
                   {cat.label}
-                </button>
+                </Button>
               );
             })}
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
 
-      {/* Search メタ (件数 + キャッシュ状態バッジ) - Phase 9-E.1 (E-2) */}
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs theme-text-muted">
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1 }}>
+        <Typography variant="caption" color="text.secondary">
           {safeHits.length > 0 && `${safeHits.length} 件${hasMore ? '+' : ''}`}
-        </span>
-        <CacheStatusBadge
-          dataUpdatedAt={query.dataUpdatedAt}
-          isFetching={query.isFetching}
-        />
-      </div>
+        </Typography>
+        <CacheStatusBadge dataUpdatedAt={query.dataUpdatedAt} isFetching={query.isFetching} />
+      </Box>
 
-      {/* Mod Grid */}
-      <div id="mod-grid" className={searchGridClass(layout)}>
+      <Box className={searchGridClass(layout)} sx={{ minHeight: '50vh' }}>
         {isLoading && safeHits.length === 0 ? (
           INITIAL_SKELETON_KEYS.map((k) => (
-            <div
-              key={k}
-              className="glass-card rounded-2xl p-4 space-y-3 skeleton-shimmer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-700/50 shrink-0" />
-                <div className="space-y-1.5 flex-1">
-                  <div className="h-4 bg-slate-700/50 rounded w-3/4" />
-                  <div className="h-3 bg-slate-700/30 rounded w-1/2" />
-                </div>
-              </div>
-              <div className="h-8 bg-slate-700/30 rounded w-full" />
-            </div>
+            <Box key={k} sx={{ bgcolor: 'background.paper', borderRadius: 4, p: 2, border: '1px solid var(--mui-palette-divider)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: 'action.hover' }} className="skeleton-shimmer" />
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ height: 16, width: '75%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+                  <Box sx={{ height: 12, width: '50%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+                </Box>
+              </Box>
+              <Box sx={{ height: 32, width: '100%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+            </Box>
           ))
         ) : safeHits.length === 0 ? (
           searchError ? (
-            <div className="col-span-full py-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 theme-text-amber flex items-center justify-center mx-auto text-2xl mb-3">
-                <i className="fa-solid fa-triangle-exclamation" aria-hidden />
-              </div>
-              <p className="text-sm font-bold mb-1">Modrinthから取得できませんでした</p>
-              <p className="text-xs theme-text-muted mb-4 max-w-sm mx-auto break-words">
-                {searchError}
-              </p>
-              <button
-                type="button"
-                onClick={() => void query.refetch()}
-                className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl transition shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-rotate-right mr-1.5" aria-hidden />
-                再試行
-              </button>
-            </div>
+            <Box sx={{ gridColumn: '1 / -1', py: 8, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <WarningAmberIcon color="warning" sx={{ fontSize: 48 }} />
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Modrinthから取得できませんでした</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>{searchError}</Typography>
+              <Button variant="contained" onClick={() => void query.refetch()} startIcon={<ReplayIcon />} sx={{ borderRadius: 3, mt: 2 }}>再試行</Button>
+            </Box>
           ) : (
-            <div className="col-span-full py-12 text-center theme-text-muted">
-              <i
-                className="fa-solid fa-magnifying-glass text-2xl mb-2 block"
-                aria-hidden
-              />
-              <p className="text-xs sm:text-sm">
-                Modrinthに条件に一致するModが見つかりませんでした。
-              </p>
-            </div>
+            <Box sx={{ gridColumn: '1 / -1', py: 8, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <SearchIcon color="action" sx={{ fontSize: 48 }} />
+              <Typography variant="body2" color="text.secondary">Modrinthに条件に一致するModが見つかりませんでした。</Typography>
+            </Box>
           )
         ) : (
           <>
             {safeHits.map((hit) => (
-              <ModCard
-                key={hit.project_id}
-                hit={hit}
-                profile={profile}
-                onToggleMod={handleToggleMod}
-                layout={layout}
-              />
+              <ModCard key={hit.project_id} hit={hit} profile={profile} onToggleMod={handleToggleMod} layout={layout} />
             ))}
-            {isLoading &&
-              PAGINATION_SKELETON_KEYS.map((k) => (
-                <div
-                  key={k}
-                  className="glass-card rounded-2xl p-4 space-y-3 skeleton-shimmer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-700/50 shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="h-4 bg-slate-700/50 rounded w-3/4" />
-                      <div className="h-3 bg-slate-700/30 rounded w-1/2" />
-                    </div>
-                  </div>
-                  <div className="h-8 bg-slate-700/30 rounded w-full" />
-                </div>
-              ))}
+            {isLoading && PAGINATION_SKELETON_KEYS.map((k) => (
+              <Box key={k} sx={{ bgcolor: 'background.paper', borderRadius: 4, p: 2, border: '1px solid var(--mui-palette-divider)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: 'action.hover' }} className="skeleton-shimmer" />
+                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ height: 16, width: '75%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+                    <Box sx={{ height: 12, width: '50%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+                  </Box>
+                </Box>
+                <Box sx={{ height: 32, width: '100%', bgcolor: 'action.hover', borderRadius: 1 }} className="skeleton-shimmer" />
+              </Box>
+            ))}
           </>
         )}
-      </div>
+      </Box>
 
-      {/* Infinite Scroll Sentinel */}
-      <div
-        ref={sentinelRef}
-        id="infinite-scroll-sentinel"
-        className="py-6 text-center text-xs theme-text-muted"
-      >
+      <Box ref={sentinelRef} sx={{ py: 4, textAlign: 'center' }}>
         {isLoading && safeHits.length > 0 && (
-          <div className="flex items-center justify-center gap-2 py-4 text-xs font-semibold theme-text-muted">
-            <i
-              className="fa-solid fa-spinner fa-spin theme-text-brand text-sm"
-              aria-hidden
-            />
-            <span>追加のModを滑らかにロード中...</span>
-          </div>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, color: 'text.secondary' }}>
+            <CircularProgress size={16} color="inherit" />
+            <Typography variant="caption" sx={{ fontWeight: 'bold' }}>追加のModを滑らかにロード中...</Typography>
+          </Box>
         )}
         {!hasMore && safeHits.length > 0 && (
-          <div className="py-4 text-xs theme-text-muted font-medium">
-            これ以上検索結果はありません
-          </div>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>これ以上検索結果はありません</Typography>
         )}
-      </div>
-    </section>
+      </Box>
+    </Box>
   );
 };

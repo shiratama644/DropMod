@@ -9,15 +9,24 @@ import { modalPathFromProject, type SearchLayout } from '@/lib/constants/search'
 import { categoryLabel, primaryCategoryId } from '../constants/categories';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Skeleton from "@mui/material/Skeleton";
+import CircularProgress from "@mui/material/CircularProgress";
+import DownloadIcon from '@mui/icons-material/Download';
+import UpdateIcon from '@mui/icons-material/Update';
+import CategoryIcon from '@mui/icons-material/Category';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 interface ModCardProps {
   hit: ModrinthHit;
   profile: Profile;
-  /**
-   * 追加/削除トグル。AppShell 側の handleToggleMod は Promise を返すため
-   * 戻り値は緩めに unknown で受ける (React イベントは戻り値を無視するため
-   * ランタイム上は問題なし)。
-   */
   onToggleMod: (id: string, e?: React.MouseEvent, silent?: boolean) => unknown;
   layout?: SearchLayout;
 }
@@ -29,260 +38,108 @@ function formatDownloads(num: number): string {
   return num.toString();
 }
 
-function clampClass(hit: ModrinthHit, layout: SearchLayout): string {
-  if (layout === 'max') return 'line-clamp-3';
-  void hit;
-  return 'line-clamp-2';
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
 }
 
-export const ModCard: React.FC<ModCardProps> = ({
-  hit,
-  profile,
-  onToggleMod,
-  layout = '3'
-}) => {
-  const isAdded = profile.mods.some(
-    (m) => m.projectId === hit.project_id || m.slug === hit.slug
-  );
-  const displayCategory = categoryLabel(
-    primaryCategoryId(hit.display_categories, hit.categories)
-  );
-
-  const [iconFailed, setIconFailed] = useState<boolean>(false);
-  const [bannerFailed, setBannerFailed] = useState<boolean>(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: icon_url 変更検知トリガーとして意図的
-  useEffect(() => {
-    setIconFailed(false);
-  }, [hit.icon_url]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: featured_gallery 変更検知トリガーとして意図的
-  useEffect(() => {
-    setBannerFailed(false);
-  }, [hit.featured_gallery]);
-  const showIcon = hit.icon_url && !iconFailed;
-  const showBanner =
-    layout === 'max' && Boolean(hit.featured_gallery) && !bannerFailed;
-
-  // モバイルの 3 カラムは独自の compact カード (Modrinth のグリッド卡片風)。
-  // スマホでも 3 カラム表示するため、PC 版カードを縮小しただけでは
-  // 情報が潰れる → アイコン + タイトル + 追加ボタンのみの最小構成にする。
+export const ModCard: React.FC<ModCardProps> = ({ hit, profile, onToggleMod, layout = '3' }) => {
   const isMobile = useIsMobile();
-  const compact = layout === '3' && isMobile;
+  const actualLayout = isMobile ? '1' : layout;
 
-  // モバイルの 2 カラムはカード幅が狭く作者名が圧縮・折り返しで潰れるため、
-  // ダウンロード数のみ表示する (2026-08-27 ユーザー指定)。
-  // PC の 2 カラム・モバイルの max/1 カラムは幅に余裕があるので作者も出す。
-  // (compact 3 カラムは元々 DL 数のみのため対象外)
-  const showAuthor = !(layout === '2' && isMobile);
+  const isAdded = profile.mods.some((m) => m.projectId === hit.project_id) || 
+                  (profile.resourcepacks || []).some((m) => m.projectId === hit.project_id) ||
+                  (profile.shaderpacks || []).some((m) => m.projectId === hit.project_id);
+                  
+  const [isPending, setIsPending] = useState(false);
+  const detailPath = modalPathFromProject(hit.project_type, hit.slug);
 
-  // 検索一覧のカード → プレビューモーダル (/discover/<複数>/<slug>)。
-  // 一覧 (children) は Intercept で破棄されず、戻るで状態保持される。
-  const detailPath = modalPathFromProject(
-    hit.project_type,
-    hit.slug || hit.project_id
-  );
-
-  const stopLinkNav = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (isPending) return;
+    setIsPending(true);
+    try {
+      await onToggleMod(hit.project_id, e);
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  const handleToggle = (e: React.MouseEvent) => {
-    stopLinkNav(e);
-    onToggleMod(hit.project_id, e);
-  };
+  const hasIcon = Boolean(hit.icon_url);
+  const unoptimized = hasIcon && hit.icon_url ? shouldUnoptimizeImage(hit.icon_url) : false;
 
-  // -----------------------------------------------------------------
-  // モバイル 3 カラム compact カード
-  // -----------------------------------------------------------------
-  if (compact) {
-    return (
-      <Link
-        href={detailPath}
-        className="mod-card-item glass-card rounded-xl p-1.5 flex flex-col gap-1.5 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-      >
-        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-800/80 shrink-0">
-          {showIcon && hit.icon_url ? (
-            <Image
-              src={hit.icon_url}
-              alt={hit.title}
-              fill
-              sizes="(max-width: 767px) 33vw, 120px"
-              className="object-contain p-1"
-              onError={() => setIconFailed(true)}
-              unoptimized={shouldUnoptimizeImage(hit.icon_url)}
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center theme-text-brand">
-              <i className="fa-solid fa-cube text-2xl opacity-50" aria-hidden />
-            </div>
-          )}
-        </div>
-        <h3
-          className="text-[11px] font-bold leading-snug line-clamp-2 min-h-[2.6em]"
-          title={hit.title}
-        >
-          {hit.title}
-        </h3>
-        <div className="text-[10px] theme-text-muted flex items-center gap-1">
-          <i className="fa-solid fa-download text-[9px]" aria-hidden />
-          <span className="truncate">{formatDownloads(hit.downloads)}</span>
-        </div>
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: <Link> バブル遮断 */}
-        {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
-        <div onClick={stopLinkNav}>
-          {isAdded ? (
-            <button
-              type="button"
-              onClick={handleToggle}
-              title="プロファイルから削除"
-              aria-label="プロファイルから削除"
-              className="w-full h-7 rounded-lg bg-red-500/20 theme-text-red border border-red-500/40 hover:bg-red-500/30 text-[10px] font-bold transition inline-flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
-            >
-              <i key="on" className="fa-solid fa-trash-can icon-swap" aria-hidden />
-              削除
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleToggle}
-              aria-label="プロファイルに追加"
-              className="w-full h-7 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-bold shadow transition inline-flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
-            >
-              <i key="off" className="fa-solid fa-plus icon-swap" aria-hidden />
-              追加
-            </button>
-          )}
-        </div>
-      </Link>
-    );
-  }
-
-  // -----------------------------------------------------------------
-  // 標準カード (PC 全レイアウト / モバイルの max・1・2 カラム)
-  // -----------------------------------------------------------------
   return (
-    <Link
-      href={detailPath}
-      className="mod-card-item glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3 cursor-pointer hover:border-emerald-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+    <Card 
+      component={Link} 
+      href={detailPath} 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        textDecoration: 'none', 
+        height: '100%', 
+        transition: 'all 0.2s', 
+        '&:hover': { transform: 'translateY(-4px)', boxShadow: 6, borderColor: 'primary.main' },
+        borderRadius: 4,
+        border: '1px solid var(--mui-palette-divider)',
+        bgcolor: 'background.paper'
+      }}
     >
-      {layout === 'max' && (
-        // 「最大」: ヘッダー画像を大きく表示 (2026-08-27: h-28/sm:h-36 →
-        // h-44/sm:h-60 に拡大。Card 全体がヘッダー主導のレイアウトになる)
-        <div className="relative -mx-3.5 -mt-3.5 sm:-mx-4 sm:-mt-4 h-44 sm:h-60 rounded-t-2xl overflow-hidden bg-gradient-to-br from-emerald-500/20 via-slate-800 to-slate-900">
-          {showBanner && hit.featured_gallery ? (
-            <Image
-              src={hit.featured_gallery}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover"
-              unoptimized={shouldUnoptimizeImage(hit.featured_gallery)}
-              onError={() => setBannerFailed(true)}
-            />
-          ) : showIcon && hit.icon_url ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Image
-                src={hit.icon_url}
-                alt=""
-                width={96}
-                height={96}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-contain bg-slate-900/50 p-1 shadow-lg"
-                onError={() => setIconFailed(true)}
-                unoptimized={shouldUnoptimizeImage(hit.icon_url)}
-              />
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center theme-text-brand">
-              <i className="fa-solid fa-image text-3xl opacity-40" aria-hidden />
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            {showIcon && hit.icon_url ? (
-              <Image
-                src={hit.icon_url}
-                alt={hit.title}
-                width={40}
-                height={40}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-slate-800/80 p-0.5 shadow-md shrink-0"
-                onError={() => setIconFailed(true)}
-                unoptimized={shouldUnoptimizeImage(hit.icon_url)}
-              />
+      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', flex: 1, gap: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: 2, overflow: 'hidden', flexShrink: 0, bgcolor: 'action.hover', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {hasIcon && hit.icon_url ? (
+              <Image src={hit.icon_url} alt="" width={48} height={48} className="object-cover" unoptimized={unoptimized} />
             ) : (
-              <div
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-bold text-base sm:text-lg shadow-md shrink-0"
-                aria-hidden="true"
-              >
-                <i className="fa-solid fa-cube"></i>
-              </div>
+              <ExtensionIcon color="action" />
             )}
-            <div className="min-w-0">
-              <h3 className="font-bold text-xs sm:text-sm truncate" title={hit.title}>
-                {hit.title}
-              </h3>
-              <div className="flex items-center gap-1.5 text-xs theme-text-muted">
-                {showAuthor && (
-                  <>
-                    <span className="truncate">{hit.author || 'Modrinth'}</span>
-                    <span>•</span>
-                  </>
-                )}
-                <span>
-                  <i className="fa-solid fa-download text-[10px] mr-0.5"></i>
-                  {formatDownloads(hit.downloads)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <p className={`text-xs theme-text-muted leading-relaxed ${clampClass(hit, layout)}`}>
-          {hit.description || '説明はありません。'}
-        </p>
-      </div>
-
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: <Link> バブル遮断 */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
-      <div
-        className="pt-2 border-t border-slate-500/10 flex items-center justify-between gap-2"
-        onClick={stopLinkNav}
-      >
-        {/* バッジは狭いカード (モバイル 2 カラム等) で途切れる余地を持たせる。
-            追加ボタンを優先して全体を表示し、右寄せで配置する。 */}
-        <span className="min-w-0 truncate px-2 py-0.5 rounded-lg text-[10px] font-semibold theme-badge capitalize">
-          {displayCategory}
-        </span>
-
-        {/* 追加状態でカード寸法が変わらないよう、両ボタンを同寸 (h-9・min-w) に統一。
-            2026-08-27: 追加済みは「追加済み」表示から削除操作のトグルボタン
-            (赤枠 + 削除) に変更。詳細モーダル / 詳細ページの 削除 ボタンと
-            同じ色・アイコンで統一 (緑の塗りは主操作=追加のみ)。 */}
-        {isAdded ? (
-          <button
-            type="button"
-            onClick={handleToggle}
-            title="プロファイルから削除"
-            aria-label="プロファイルから削除"
-            className="btn-hover-effect shrink-0 h-8 sm:h-9 min-w-0 sm:min-w-[7rem] px-2 sm:px-3 rounded-xl bg-red-500/20 theme-text-red border border-red-500/40 hover:bg-red-500/30 text-[10px] sm:text-xs font-bold transition inline-flex items-center justify-center gap-1 sm:gap-1.5 focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
-          >
-            <i key="on" className="fa-solid fa-trash-can icon-swap" aria-hidden />
-            <span>削除</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleToggle}
-            aria-label="プロファイルに追加"
-            className="btn-hover-effect shrink-0 h-8 sm:h-9 min-w-0 sm:min-w-[7rem] px-2 sm:px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-[10px] sm:text-xs font-bold transition inline-flex items-center justify-center gap-1 sm:gap-1.5 shadow focus-visible:ring-2 focus-visible:ring-emerald-500 active:scale-95"
-          >
-            <i key="off" className="fa-solid fa-plus icon-swap" aria-hidden />
-            <span>追加</span>
-          </button>
-        )}
-      </div>
-    </Link>
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1.2, mb: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {hit.title}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              by {hit.author}
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {hit.categories && hit.categories.length > 0 && (
+                <Chip size="small" label={categoryLabel(hit.categories[0])} sx={{ borderRadius: 1, fontSize: '0.65rem', height: 20 }} />
+              )}
+            </Box>
+          </Box>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', flex: 1, fontSize: '0.8rem' }}>
+          {hit.description}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 'auto', pt: 1, borderTop: '1px solid var(--mui-palette-divider)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+            <DownloadIcon sx={{ fontSize: 14 }} />
+            <Typography variant="caption">{formatDownloads(hit.downloads)}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+            <UpdateIcon sx={{ fontSize: 14 }} />
+            <Typography variant="caption">{formatDate(hit.date_modified)}</Typography>
+          </Box>
+        </Box>
+      </Box>
+      <Box sx={{ p: 1, borderTop: '1px solid var(--mui-palette-divider)', bgcolor: isAdded ? 'success.main' : 'transparent', color: isAdded ? 'success.contrastText' : 'inherit', transition: 'background-color 0.2s' }}>
+        <Button 
+          fullWidth 
+          variant={isAdded ? 'text' : 'contained'} 
+          color={isAdded ? 'inherit' : 'primary'}
+          onClick={handleToggle} 
+          disabled={isPending}
+          startIcon={isPending ? <CircularProgress size={16} color="inherit" /> : (isAdded ? <DeleteIcon /> : <AddIcon />)}
+          sx={{ borderRadius: 3, fontWeight: 'bold', py: 1, color: isAdded ? 'inherit' : undefined }}
+        >
+          {isPending ? '処理中' : (isAdded ? '削除' : '追加')}
+        </Button>
+      </Box>
+    </Card>
   );
 };

@@ -68,6 +68,33 @@ function ComboboxHarness({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
   );
 }
 
+/** ref がどの要素にも割り当てられない (コンテナ未マウント) モーダル */
+function UnmountedContainerHarness({
+  isOpen,
+  onClose
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useModalA11y(isOpen, onClose, ref);
+  return <div data-testid="unmounted-container-harness">ref は未割り当て</div>;
+}
+
+/** フォーカス可能要素が無いが、コンテナに tabindex が既に付いているモーダル */
+function PreTabindexHarness({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useModalA11y(isOpen, onClose, ref);
+  if (!isOpen) return null;
+  return (
+    // tabIndex=-1: フォーカス可能要素が無い場合のフォールバック (L163 の
+    // 「既に tabindex が付いている」分岐を検証するための事前付与)
+    <div ref={ref} role="dialog" aria-modal="true" tabIndex={-1}>
+      テキストのみ
+    </div>
+  );
+}
+
 describe('useModalA11y', () => {
   it('isOpen=false の間は Escape を処理しない', () => {
     const onClose = vi.fn();
@@ -223,6 +250,52 @@ describe('useModalA11y', () => {
     // 例外なく Tab が無視される
     fireEvent.keyDown(window, { key: 'Tab' });
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('Tab: コンテナ ref が未割り当てでも例外なく無視される (ガード)', () => {
+    const onClose = vi.fn();
+    render(<UnmountedContainerHarness isOpen onClose={onClose} />);
+    // containerRef.current が null のまま keydown → ガードが return して例外なし
+    fireEvent.keyDown(window, { key: 'Tab' });
+    expect(onClose).not.toHaveBeenCalled();
+    // Escape は引き続き機能する (スタックには載っている)
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('オープン時: コンテナ ref が未割り当てなら自動フォーカスをスキップする (ガード)', async () => {
+    const onClose = vi.fn();
+    render(<UnmountedContainerHarness isOpen onClose={onClose} />);
+    // rAF が走っても container が null のため何も起きない (クラッシュしない)
+    await waitFor(() => expect(onClose).not.toHaveBeenCalled());
+  });
+
+  it('Tab: 内部の非末尾要素で Tab するとフォーカスを移動しない', () => {
+    const onClose = vi.fn();
+    render(<Harness isOpen onClose={onClose} />);
+    const dialog = screenGetDialog();
+    const first = dialog.querySelector<HTMLElement>('input')!;
+    first.focus();
+    fireEvent.keyDown(window, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('Shift+Tab: 内部の非先頭要素で Shift+Tab するとフォーカスを移動しない', () => {
+    const onClose = vi.fn();
+    render(<Harness isOpen onClose={onClose} />);
+    const dialog = screenGetDialog();
+    const last = dialog.querySelector<HTMLElement>('button')!;
+    last.focus();
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('オープン時: コンテナに tabindex が既にあれば付与せずにフォーカスする', async () => {
+    const onClose = vi.fn();
+    render(<PreTabindexHarness isOpen onClose={onClose} />);
+    const dialog = screenGetDialog();
+    await waitFor(() => expect(document.activeElement).toBe(dialog));
+    expect(dialog.getAttribute('tabindex')).toBe('-1');
   });
 });
 

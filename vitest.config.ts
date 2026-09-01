@@ -144,13 +144,14 @@ export default defineConfig({
         'src/features/sync/services/sink.ts'
       ],
       thresholds: {
-        // ---- グローバル最低ライン (Phase 9-C 完了時 60%+) ----
-        statements: 60,
-        branches: 60,
-        functions: 60,
-        lines: 60,
+        // ---- グローバル最低ライン (COV-5: 全指標 90% 化。COV-1〜4 完了時点で
+        //      全体実測 96.5 / 90.3 / 98.17 / 97.86 を確認済み) ----
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
 
-        // ---- per-module thresholds (計画書 §7.5) ----
+        // ---- per-module thresholds (計画書 §7.5 / §10.5) ----
         // Vitest 3 の per-file thresholds は glob key で指定
         'src/lib/state/**/*.ts': {
           statements: 95,
@@ -159,82 +160,82 @@ export default defineConfig({
           lines: 95
         },
         'src/features/profiles/store/store.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/features/zip/store/zipExport.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/features/zip/store/zipImport.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/features/dep-check/store/store.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/components/feedback/*Store.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/components/layout/uiState.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/components/layout/appActions.ts': {
-          statements: 85,
-          branches: 80,
+          statements: 90,
+          branches: 90,
           functions: 90,
-          lines: 85
+          lines: 90
         },
         'src/lib/db/**/*.ts': {
-          statements: 75,
-          branches: 70,
-          functions: 75,
-          lines: 75
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         },
         'src/lib/query/**/*.ts': {
-          statements: 70,
-          branches: 60,
-          functions: 70,
-          lines: 70
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         },
         'src/lib/modrinth/**/*.ts': {
-          statements: 65,
-          branches: 55,
-          functions: 65,
-          lines: 65
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         },
         'src/lib/utils/**/*.ts': {
-          statements: 60,
-          branches: 60,
-          functions: 60,
-          lines: 60
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         },
         'src/hooks/**/*.ts': {
-          statements: 70,
-          branches: 60,
-          functions: 70,
-          lines: 70
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         },
         'src/components/**/*.tsx': {
-          statements: 50,
-          branches: 45,
-          functions: 50,
-          lines: 50
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         }
       }
     }

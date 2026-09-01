@@ -98,7 +98,10 @@ export function useProjectsBatchQuery(
       // signal 対応は Sub-Phase 8-B の範囲外 (別 PR 検討)。
       return fetchModrinthBatch<ModrinthProject>('/projects', stableIds);
     },
-    enabled: (stableIds.length ?? 0) > 0 && options.enabled !== false,
+    // 2026-09-01 (COV-5): `?? 0` を除去。stableIds は
+    // `ids ? [...ids].sort() : []` の結果で常に配列 (length は常に number) のため、
+    // 右オペランドは実行時に到達不能 (v8 が分岐として計上するデッドガードだった)。
+    enabled: stableIds.length > 0 && options.enabled !== false,
     staleTime: 10 * 60 * 1000
   });
 }

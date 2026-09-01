@@ -46,6 +46,10 @@
 87.96 / 78.2 / 92.39 / 89.72 (st / br / fn / ln) を 4 指標すべて 90% 以上にする。
 実環境検証 (P12-B / UIP-5 / VER-2) はユーザー報告で 2026-09-01 に完了済み。
 
+**2026-09-01 完了**: COV-1〜COV-5 すべて完了。最終実測 **96.56 / 90.52 / 98.26 /
+97.85** (st/br/fn/ln)、123 files / 1603 tests、`pnpm test:coverage` exit 0
+(thresholds 90/90/90/90)、E2E は dispatch で全 green。PR #7 にて CI green。
+
 ---
 
 ## フェーズタスク

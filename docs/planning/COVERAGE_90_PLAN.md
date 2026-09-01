@@ -180,6 +180,14 @@ branches が 90% 未満のロジックファイル (実測 2026-09-01) のうち
 ※ 大型 orchestrator (AppShell 等 6 件) は現行 exclude 維持。ただし E2E で
 モーダル操作・Sync フローを追加して補完する (COV-4)。
 
+**実績 (commit `667d25a`)**: フルスイート計測で 8 対象中 7 つが br 90% 以上
+(ModCard 100 / FolderImportSection 100 / ScreenshotGalleryModal 96.55 / index 96.33 /
+AnalysisSection 96.42 / CustomDropdown 93.75 / JsonLd・ProfileFormFields fn 100)。
+**BottomSheet のみ 86.51%** — 残り 12 分岐はすべて到達不能な防御ガード
+(ref null・`typeof window/document`・stopPropagation 後方・cancelled 先行 return 等。
+fn は 32/32 = 100%) のため打ち切り。全体 **96.5 / 90.27 / 98.16 / 97.85** で
+**branches 90% 到達**。詳細は `.agent/logs/2026-09-01_cov-3-component-tests.md`。
+
 ### 10.4 COV-4: E2E 追加
 
 2026-09-01 の UI 変更に対する動作保証 (既存 65 passed を維持した上で追加):
@@ -238,6 +246,6 @@ page.route) を踏襲する。CI (workflow_dispatch) で検証。ローカルは
 |---|---|---|---|
 | COV-1 | `6abdddf` | 117 files / 1266 tests pass + `test:coverage` exit 0 | exclude 21 件追加 (barrel 11 / types.ts 3 / Next.js 生成画像 4 / hashWorker・sync db・sync sink 3。理由コメント付き)。0% ファイル 24→4 件 (残り = loadDiscoverSearch / projectDetail / JsonLd / siteUrl → COV-2/3)。全体 **88.56 / 78.55 / 92.64 / 90.41** (st/br/fn/ln、lines 90% 達成)。branches は COV-2/3 で 90% へ |
 | COV-2 | `015c6d1` + `e561f72` + `1a38bf4` | 1481 tests pass + `test:coverage` exit 0 | **完了**。§10.2 の全 10 対象が branches 90% 以上: 上位 4 件 + 0% ロジック 3 件 (siteUrl / loadDiscoverSearch / projectDetail / computeHashes / hashCore / useModpackAdd / useZipImport / useProfiles) に加え、backup / analyzer / server **100/100/100/100**、client **100/95.53/100/100**、useSync **100/97.87/100/100**、useSyncHistory **98/90.9/100/97.87**、profiles store **100/95.74/100/100** (残り分岐は到達不能ガード: client の `err.message` falsy・direct 429 の proxy 側・`?? new Map()` 等)。全体 **93.41 / 86.47 / 95.42 / 94.9** (st/br/fn/ln、COV-1 比 br +7.9pt)。branches 86.47% は COV-3/4/5 で 90% へ |
-| COV-3 | | | |
+| COV-3 | `667d25a` | 122 files / 1590 tests pass + `test:coverage` exit 0 | **完了**。§10.3 の対象 9 件にテスト追加 (ログ: `.agent/logs/2026-09-01_cov-3-component-tests.md`)。フルスイート計測で ModCard・FolderImportSection br **100**、ScreenshotGalleryModal **96.55** / NewProfileModal index **96.33** / AnalysisSection **96.42** / CustomDropdown **93.75** (fn 25/26、残 1 は ref null guard)、JsonLd・ProfileFormFields fn **100**。**BottomSheet のみ br 86.51** (残 12 分岐はすべて到達不能ガード: ref null・SSR `typeof window/document`・stopPropagation 後方・cancelled 先行 return。fn 32/32)。全体 **96.5 / 90.27 / 98.16 / 97.85** → **branches 90% 到達** |
 | COV-4 | | | |
 | COV-5 | | | |

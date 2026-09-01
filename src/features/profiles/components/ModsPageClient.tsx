@@ -4,7 +4,7 @@ import { SyncButton } from '@/features/sync';
 import { useFolderLinked } from '@/features/sync';
 import type React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Link from 'next/link';
+import { MuiLink as Link } from '@/components/ui/MuiLink';
 import Image from 'next/image';
 import { shouldUnoptimizeImage } from '@/lib/utils/image';
 import { useRouter } from 'next/navigation';

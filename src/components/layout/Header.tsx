@@ -10,8 +10,8 @@
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
+// Remove unused Toolbar import
 import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';

@@ -30,7 +30,7 @@ pnpm build                    # next build (turbopack)。ECONNRESET でも exit 
 ```bash
 bash .agent/hooks/restore-sandbox-env.sh
 ```
-（スクリプトが node を `.nvmrc` の LTS に置換し、corepack + pnpm + 依存を再構築する。Sandbox 再構築時の復旧は `hooks/sandbox-rebuild-recovery.md` + AGENT.md §4.1.1 参照）
+（スクリプトが node を `.nvmrc` の LTS に置換し、corepack + pnpm + 依存を再構築する。Sandbox 再構築時の復旧は `src/hooks/sandbox-rebuild-recovery.md` + AGENT.md §4.1.1 参照）
 
 > ⚠️ **nodejs.org は Sandbox から到達不可**（SSL 接続エラー、§6.2 と同種）。Node バイナリは npm registry の `node-linux-x64` パッケージから取得する（`registry.npmjs.org` は到達可能）。
 

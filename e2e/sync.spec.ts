@@ -27,7 +27,7 @@
  * タイムアウト時はセクションの表示文言をエラーメッセージに含める。
  *
  * ※ File System Access API は Desktop Chromium のみなので、モバイル viewport では
- *   skip する (既存の folder-import.spec.ts と同じ方針)。
+ *   skip する (既存の folderImport.spec.ts と同じ方針)。
  */
 
 import { test, expect, type Page } from '@playwright/test';
@@ -63,7 +63,7 @@ const DOWNLOADED_JAR = 'e2e-downloaded-jar-bytes';
 /**
  * ページ内の JS 例外を収集する。
  *
- * `annotation-reporter.ts` はエラーメッセージを**先頭 200 字に切り詰め、改行を
+ * `annotationReporter.ts` はエラーメッセージを**先頭 200 字に切り詰め、改行を
  * スペース化する**。Playwright の定型文 (`Error: expect(locator)… Call log:`) が
  * 先頭に来ると肝心の情報が消えるため、失敗時は必ず短い診断を先頭に置いて投げる。
  */

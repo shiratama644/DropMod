@@ -18,11 +18,11 @@
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
 - 現状: **637 tests / 73 files pass**（2026-08-27 実測）。内訳の中心は Phase 11-A〜C
   （Dexie v2 migration / env 基盤: source・detector・analyzer・analysis・zipSource・profileName）
-  と Phase 10.5 の hooks / 軽量 components、および `next-config.security` /
-  `lib/server/{profile,logger,rate-limit}` / `scripts/build-env` / `readInitialTheme` ほか。
+  と Phase 10.5 の hooks / 軽量 components、および `nextConfigSecurity` /
+  `src/lib/platform/{profile,logger,rateLimit}` / `scripts/build-env` / `readInitialTheme` ほか。
 - **coverage threshold 全 green**: `pnpm test:coverage` exit 0。総計 stmt **84.65** /
   br **73.74** / fn **90.55** / lines **86.69**（2026-08-27 実測）。
-  - ⚠️ **branches % は `hooks/` 等のコメント・行編集でも ±0.2 程度ぶれる**（v8 の
+  - ⚠️ **branches % は `src/hooks/` 等のコメント・行編集でも ±0.2 程度ぶれる**（v8 の
     ブランチ位置マッピングが行数依存のため。2026-08-27 にコメント修正のみで
     73.92 → 73.74 に変動）。ドキュメントへ書く数値は必ず **その時点で再実行した結果**を
     使い、他セッションの記録を流用しない。stmt / fn / lines は安定していた。
@@ -80,7 +80,14 @@
 | features | 50 | `__tests__/features/<name>/` ミラー（colocation なし） |
 | **全体** | **60** | |
 
-`coverage.exclude`: `app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。
+`coverage.exclude`: `src/app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`src/lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`src/lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。
+
+- **COV-90 計画（2026-09-01〜）**: カバレッジ 4 指標 90% 化を `docs/planning/COVERAGE_90_PLAN.md`
+  で進行中（COV-1〜5）。COV-1 で barrel re-export / 純粋な型定義（`**/types.ts`）/
+  Next.js 生成画像（opengraph/twitter-image）/ Web Worker エントリ（hashWorker）/
+  interface 定義のみ（sink.ts）/ re-export barrel（sync db.ts）を exclude に整理済み
+  （`6abdddf`）。実測 88.56 / 78.55 / 92.64 / 90.41（st/br/fn/ln、129 files）。
+  0% ファイルは COV-2/3 のテスト対象 4 件のみに縮小。
 
 ## テストヘルパ
 

@@ -114,6 +114,23 @@ describe('lib/query/hooks', () => {
       await new Promise((r) => setTimeout(r, 50));
       expect(hits).toBe(0);
     });
+
+    it('mcVersion / loader 未指定なら params 無しで fetch する', async () => {
+      let captured = '';
+      server.use(
+        http.get('/api/modrinth/project/:slug/version', ({ request }) => {
+          captured = request.url;
+          return HttpResponse.json([]);
+        })
+      );
+      const { result } = renderHook(() => useVersionsQuery('sodium'), {
+        wrapper: createQueryWrapper()
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      const url = new URL(captured);
+      expect(url.searchParams.has('game_versions')).toBe(false);
+      expect(url.searchParams.has('loaders')).toBe(false);
+    });
   });
 
   describe('useProjectsBatchQuery', () => {
@@ -126,6 +143,37 @@ describe('lib/query/hooks', () => {
         })
       );
       renderHook(() => useProjectsBatchQuery([]), { wrapper: createQueryWrapper() });
+      await new Promise((r) => setTimeout(r, 50));
+      expect(hits).toBe(0);
+    });
+
+    it('ids=null なら empty queryKey で enabled=false', async () => {
+      let hits = 0;
+      server.use(
+        http.get('/api/modrinth/projects', () => {
+          hits++;
+          return HttpResponse.json([]);
+        })
+      );
+      const { result } = renderHook(() => useProjectsBatchQuery(null), {
+        wrapper: createQueryWrapper()
+      });
+      await new Promise((r) => setTimeout(r, 50));
+      expect(result.current.isFetching).toBe(false);
+      expect(hits).toBe(0);
+    });
+
+    it('enabled=false を明示すると fetch しない', async () => {
+      let hits = 0;
+      server.use(
+        http.get('/api/modrinth/projects', () => {
+          hits++;
+          return HttpResponse.json([]);
+        })
+      );
+      renderHook(() => useProjectsBatchQuery(['sodium'], { enabled: false }), {
+        wrapper: createQueryWrapper()
+      });
       await new Promise((r) => setTimeout(r, 50));
       expect(hits).toBe(0);
     });

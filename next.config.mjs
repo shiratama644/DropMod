@@ -118,16 +118,21 @@ if (!process.env.VITEST && process.env[BANNER_GUARD_KEY] !== appProfile) {
 // upgrade-insecure-requests のみ)。
 //   - script-src 'unsafe-inline' は theme init script (1 箇所) のみに必要。
 //   - style-src 'unsafe-inline' は Tailwind CSS v4 / React style={} 用。
-//   - worker-src は Phase 11 の SHA-1 Web Worker 用。
-//   - manifest-src は PWA manifest 用。
-//   - object-src 'none' + base-uri + form-action + frame-ancestors で
-//     主要攻撃ベクトル (object embed / base hijack / form hijack /
-//     clickjacking) を封じる。
+  //   - worker-src は Phase 11 の SHA-1 Web Worker 用。
+  //   - manifest-src は PWA manifest 用。
+  //   - object-src 'none' + base-uri + form-action + frame-ancestors で
+  //     主要攻撃ベクトル (object embed / base hijack / form hijack /
+  //     clickjacking) を封じる。
+  //   - img-src は https: 全体を許可: Mod 本文 (Markdown) の画像は作者が任意の
+  //     ホスト (imgur / CurseForge CDN / 自前 CDN 等) に置いており、ホワイト
+  //     リスト方式だと「詳細ページの画像が表示されない」不具合になる。
+  //     MarkdownRenderer が rehype-sanitize で img の URL を http(s) に制限済み
+  //     のため、https: 許可は表示上の必要範囲に留まる。
 const cspDirectives = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://cdn.modrinth.com https://raw.githubusercontent.com https://avatars.githubusercontent.com",
+  "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // development のみ HMR websocket (ws://localhost:3000 等) を明示許可。
   // CSP3 の 'self' は同一 origin の ws: も包含するはずだが、ブラウザ間の

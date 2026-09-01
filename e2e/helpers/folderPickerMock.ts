@@ -137,14 +137,15 @@ export async function installFolderPickerMock(
     directory(name) {
       const existing = this.children.get(name);
       if (existing && existing.kind === 'directory') return existing;
-      const created = new MockDirHandle(name, this.path === this.name ? '' : this.path);
+      const created = new MockDirHandle(
+        name,
+        this.path === '' ? '' : this.path + '/' + name
+      );
       this.children.set(name, created);
       return created;
     }
     addFile(name, content) {
-      const fullPath = (this.path === this.name ? '' : this.path)
-        ? this.path + '/' + name
-        : name;
+      const fullPath = this.path === '' ? name : this.path + '/' + name;
       this.children.set(name, new MockFileHandle(name, content, fullPath));
     }
     async getDirectoryHandle(name, opts) {
@@ -161,9 +162,7 @@ export async function installFolderPickerMock(
       if (child || !(opts && opts.create)) {
         throw new DOMException('Not found: ' + name, 'NotFoundError');
       }
-      const fullPath = (this.path === this.name ? '' : this.path)
-        ? this.path + '/' + name
-        : name;
+      const fullPath = this.path === '' ? name : this.path + '/' + name;
       const created = new MockFileHandle(name, new Uint8Array(0), fullPath);
       this.children.set(name, created);
       return created;

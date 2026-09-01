@@ -215,4 +215,142 @@ describe('analyzeEnvironmentSource', () => {
     const reads = onProgress.mock.calls.filter((c) => c[0].phase === 'read');
     expect(reads.at(-1)?.[0]).toEqual({ phase: 'read', done: 5, total: 5 });
   });
+
+  it('照合成功でも project メタデータが無ければ title の代わりにファイル名を使う', async () => {
+    // /projects を空応答にして、メタデータ解決をスキップさせる
+    server.use(
+      http.get('/api/modrinth/projects', () => HttpResponse.json([]))
+    );
+    const analysis = await analyzeEnvironmentSource(sourceOf());
+    const sodium = analysis.mods.find((m) => m.projectId === 'proj-sodium')!;
+    expect(sodium).toBeDefined();
+    // project?.title が無い → stripExtension('sodium.jar') = 'sodium'
+    expect(sodium.name).toBe('sodium');
+    expect(sodium.slug).toBeUndefined();
+    expect(sodium.description).toBeUndefined();
+    expect(sodium.icon_url).toBeUndefined();
+    expect(sodium.author).toBeUndefined();
+    // それでもバージョン情報とファイル名は解決できる
+    expect(sodium.versionId).toBe('ver-a');
+    expect(sodium.filename).toBe('proj-sodium-ver-a.jar');
+    // unknown は従来通り
+    expect(analysis.unknownFiles).toHaveLength(1);
+  });
+
+  it('version.files が空でも照合成功したらファイル名フォールバックで ProjectItem を作る', async () => {
+    const modAHash = await sha1Of(MOD_A);
+    server.use(
+      http.post('/api/modrinth/version_files', async ({ request }) => {
+        const body = (await request.json()) as { hashes: string[] };
+        const result: Record<string, ModrinthVersion> = {};
+        if (body.hashes.includes(modAHash)) {
+          result[modAHash] = makeVersion('proj-sodium', 'ver-a', { files: [] });
+        }
+        return HttpResponse.json(result);
+      }),
+      http.get('/api/modrinth/projects', () => HttpResponse.json([]))
+    );
+    const analysis = await analyzeEnvironmentSource(sourceOf());
+    const mod = analysis.mods.find((m) => m.projectId === 'proj-sodium')!;
+    // files が空 → primaryFile は無い → fileUrl は undefined、filename は元ファイル名
+    expect(mod.fileUrl).toBeUndefined();
+    expect(mod.filename).toBe('sodium.jar');
+    // project 無し → stripExtension('sodium.jar') = 'sodium' (dot > 0 側)
+    expect(mod.name).toBe('sodium');
+    expect(mod.artifact?.sha1).toBe(modAHash);
+    // files 空でも照合自体は成功扱い (unknown にはしない)。このテストでは sodium 以外は
+    // version_files が返らないため unknown になる (lithium / rp / shader / custom)
+    expect(analysis.unknownFiles.map((u) => u.filename).sort()).toEqual([
+      'ComplementaryReimagined.zip',
+      'Fresh Animations.zip',
+      'lithium.jar',
+      'my-custom-mod.jar'
+    ]);
+  });
+
+  it('primary フラグの無いファイルは先頭ファイルを primaryFile として使う', async () => {
+    const modAHash = await sha1Of(MOD_A);
+    server.use(
+      http.post('/api/modrinth/version_files', async ({ request }) => {
+        const body = (await request.json()) as { hashes: string[] };
+        const result: Record<string, ModrinthVersion> = {};
+        if (body.hashes.includes(modAHash)) {
+          result[modAHash] = makeVersion('proj-sodium', 'ver-a', {
+            files: [
+              {
+                url: 'https://cdn.modrinth.com/data/proj-sodium/versions/ver-a-2.jar',
+                filename: 'sodium-extra-file.jar',
+                primary: false,
+                size: 999
+              }
+            ]
+          });
+        }
+        return HttpResponse.json(result);
+      })
+    );
+    const analysis = await analyzeEnvironmentSource(sourceOf());
+    const sodium = analysis.mods.find((m) => m.projectId === 'proj-sodium')!;
+    // find(primary) が undefined → files[0] へフォールバック
+    expect(sodium.fileUrl).toBe('https://cdn.modrinth.com/data/proj-sodium/versions/ver-a-2.jar');
+    expect(sodium.filename).toBe('sodium-extra-file.jar');
+  });
+
+  it('対象ディレクトリ内の対象外拡張子はスキャンに含めない', async () => {
+    const source = new FileSystemSource(
+      createFakeFileSystem({
+        'mods/sodium.jar': MOD_A,
+        'mods/readme.txt': 'not a mod', // .jar/.zip 以外 → スキップ
+        'resourcepacks/note.md': 'not a pack'
+      }),
+      '.minecraft'
+    );
+    const analysis = await analyzeEnvironmentSource(source);
+    expect(analysis.scannedCounts).toEqual({ mods: 1, resourcepacks: 0, shaderpacks: 0 });
+    expect(analysis.mods).toHaveLength(1);
+    expect(analysis.mods[0]?.projectId).toBe('proj-sodium');
+  });
+
+  it('ドット始まりのファイル名は拡張子を落とさない (stripExtension の fallback 側)', async () => {
+    const dotHash = await sha1Of(MOD_A);
+    server.use(
+      http.post('/api/modrinth/version_files', async ({ request }) => {
+        const body = (await request.json()) as { hashes: string[] };
+        const result: Record<string, ModrinthVersion> = {};
+        if (body.hashes.includes(dotHash)) result[dotHash] = makeVersion('proj-dot', 'ver-dot');
+        return HttpResponse.json(result);
+      }),
+      http.get('/api/modrinth/projects', () => HttpResponse.json([]))
+    );
+    // '.jar' のようなドット始まりのファイル名は lastIndexOf('.') === 0 なので除去しない
+    const source = new FileSystemSource(
+      createFakeFileSystem({ 'mods/.jar': MOD_A }),
+      '.minecraft'
+    );
+    const analysis = await analyzeEnvironmentSource(source);
+    const mod = analysis.mods.find((m) => m.projectId === 'proj-dot')!;
+    expect(mod.name).toBe('.jar');
+    expect(mod.filename).toBe('proj-dot-ver-dot.jar');
+  });
+
+  it('読み取りに失敗したファイルはスキップして解析を継続する', async () => {
+    const source = new FileSystemSource(
+      createFakeFileSystem({
+        'mods/good.jar': MOD_A,
+        'mods/broken.jar': 'x'
+      }),
+      '.minecraft'
+    );
+    // good.jar だけ読み取り成功させ、broken.jar は失敗させる
+    const originalRead = source.readFile.bind(source);
+    vi.spyOn(source, 'readFile').mockImplementation(async (path) => {
+      if (path.endsWith('broken.jar')) throw new Error('permission denied');
+      return originalRead(path);
+    });
+    const analysis = await analyzeEnvironmentSource(source);
+    expect(analysis.scannedCounts).toEqual({ mods: 1, resourcepacks: 0, shaderpacks: 0 });
+    expect(analysis.mods).toHaveLength(1);
+    expect(analysis.mods[0]?.projectId).toBe('proj-sodium');
+    expect(analysis.unknownFiles).toHaveLength(0);
+  });
 });

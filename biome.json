@@ -21,7 +21,7 @@
       "!next-env.d.ts",
       "!*.tsbuildinfo",
       "!public",
-      "!styles/fontawesome-subset.css"
+      "!src/styles/fontawesome-subset.css"
     ]
   },
   "formatter": {

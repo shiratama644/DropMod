@@ -1,0 +1,570 @@
+@import "tailwindcss";
+/* .archive (旧 Vite 版ソース) / .agent (エージェント記憶) は描画されない
+   ファイル群のため Tailwind v4 の自動コンテンツ走査から除外する
+   (旧実装のクラス名が dead CSS として流出するのを防ぐ。2026-08-27) */
+@source not "../../.archive";
+@source not "../../.agent";
+
+@theme {
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Tailwind v4: dark: variant を media query ではなく .dark class ベースに変更。
+   端末のシステム設定 (prefers-color-scheme) ではなく、サイト内のテーマ切替に追従させる。 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+    /* color-scheme: light — このページはライト配色を自前管理していることを
+       ブラウザに宣言する。宣言がないと Chrome (Android) の「Web コンテンツの
+       自動ダークモード」がライトページを強制反転し、ライトに切り替えても
+       見た目がダークのままになる (端末ダークモード時)。
+       html.dark 側は color-scheme: dark で上書きされる。 */
+    color-scheme: light;
+    --bg-base: #f1f5f9;
+    --bg-panel: rgba(255, 255, 255, 0.96);
+    --bg-card: rgba(255, 255, 255, 0.85);
+    --bg-card-hover: rgba(255, 255, 255, 0.98);
+    --bg-input: #e2e8f0;
+    --border-main: rgba(0, 0, 0, 0.10);
+    --border-card: rgba(0, 0, 0, 0.08);
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --sub-box-bg: rgba(226, 232, 240, 0.85);
+    --modal-overlay: rgba(15, 23, 42, 0.6);
+    --badge-bg: #e2e8f0;
+    --dropdown-bg: rgba(255, 255, 255, 0.98);
+    --dropdown-border: rgba(0, 0, 0, 0.12);
+    --dropdown-hover: rgba(5, 150, 105, 0.12);
+
+    --color-text-brand: #047857;
+    --color-text-amber: #b45309;
+    --color-text-blue: #1d4ed8;
+    --color-text-red: #b91c1c;
+    --fade-grad-end: rgba(241, 245, 249, 1);
+}
+
+html.dark {
+    color-scheme: dark;
+    --bg-base: #090d14;
+    --bg-panel: rgba(15, 23, 42, 0.92);
+    --bg-card: rgba(30, 41, 59, 0.65);
+    --bg-card-hover: rgba(30, 41, 59, 0.90);
+    --bg-input: #0f172a;
+    --border-main: rgba(255, 255, 255, 0.10);
+    --border-card: rgba(255, 255, 255, 0.08);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #a9b7c9;
+    --sub-box-bg: rgba(15, 23, 42, 0.85);
+    --modal-overlay: rgba(0, 0, 0, 0.80);
+    --badge-bg: #1e293b;
+    --dropdown-bg: rgba(15, 23, 42, 0.98);
+    --dropdown-border: rgba(255, 255, 255, 0.15);
+    --dropdown-hover: rgba(16, 185, 129, 0.22);
+
+    --color-text-brand: #34d399;
+    --color-text-amber: #fbbf24;
+    --color-text-blue: #60a5fa;
+    --color-text-red: #f87171;
+    --fade-grad-end: rgba(9, 13, 20, 1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    /* テキスト全体の選択を禁止していた `user-select: none` は廃止。
+       Mod タイトルや説明文をコピー可能にするため。
+       クリック要素側 (button/.tab-btn/.custom-dropdown-*) で個別に無効化する。 */
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
+}
+
+/* インタラクティブ要素はダブルタップでの範囲選択を無効化 */
+button,
+[role="button"],
+.tab-btn,
+label {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+code, input, textarea {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.theme-text-brand { color: var(--color-text-brand); }
+.theme-text-amber { color: var(--color-text-amber); }
+.theme-text-blue { color: var(--color-text-blue); }
+.theme-text-red { color: var(--color-text-red); }
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 4px;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.glass-panel {
+    background: var(--bg-panel);
+    /* backdrop-filter は意図的に使わない (2026-08-27):
+       GPU のない環境 (PRoot / software rendering・低スペック端末) では
+       背面の再合成が発生するたび (ボタン押下・ページ遷移・スクロール) に
+       blur レイヤーの再ラスタライズで「白く一瞬光る」フラッシュが起きる。
+       パネル背景は 0.9 程度の不透明度があり、背面がフラットなページ背景
+       であるケースが大半のため、視覚差はほぼ無い。*/
+    border: 1px solid var(--border-main);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.active-tab-btn {
+    color: var(--color-text-brand);
+    border-top: 2px solid #10b981;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 100%);
+}
+
+.tab-btn {
+    transition: all 0.2s ease;
+}
+
+.touch-target {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.dynamic-input {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+}
+
+.theme-sub-box {
+    background-color: var(--sub-box-bg);
+    border: 1px solid var(--border-main);
+}
+
+.theme-text-secondary {
+    color: var(--text-secondary);
+}
+
+.theme-text-muted {
+    color: var(--text-muted);
+}
+
+.theme-badge {
+    background-color: var(--badge-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-card);
+}
+
+.custom-dropdown-container {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.custom-dropdown-trigger {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    user-select: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+.custom-dropdown-trigger .trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.custom-dropdown-trigger .chevron-icon {
+    flex-shrink: 0;
+}
+.custom-dropdown-trigger:hover, .custom-dropdown-trigger:focus-visible {
+    border-color: #10b981;
+}
+
+.custom-dropdown-menu-portal {
+    position: fixed;
+    z-index: 99999;
+    /* bg が 0.98 不透明のため backdrop-filter の blur はほぼ視覚効果がなく、
+       software rendering での白フラッシュの原因にしかならないため削除。 */
+    background: var(--dropdown-bg);
+    border: 1px solid var(--dropdown-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    user-select: none;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.custom-dropdown-item {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.custom-dropdown-item:hover, .custom-dropdown-item.is-focused {
+    background-color: var(--dropdown-hover);
+    color: var(--color-text-brand);
+}
+.custom-dropdown-item.is-selected {
+    color: var(--color-text-brand);
+    font-weight: 700;
+    background-color: var(--dropdown-hover);
+}
+
+.scroll-fade-container {
+    position: relative;
+    /* 右端のフェードは「背景色に合わせたオーバーレイ」ではなく、
+       コンテンツ自体を CSS mask でフェードアウトさせる。背景色依存の
+       --fade-grad-end オーバーレイはパネル背景と色がズレて
+       「ぼかしがおかしい」見た目になるため (#17)。 */
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+}
+/* -------------------------------------------------------------------
+ * タブ切替フェードイン (GSAP を廃止した後の代替演出)
+ * `#tab-home/#tab-mods/#tab-settings` がマウントされた瞬間に短くフェード。
+ * ----------------------------------------------------------------- */
+@keyframes tab-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+#tab-home, #tab-mods, #tab-settings {
+    animation: tab-fade-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    #tab-home, #tab-mods, #tab-settings {
+        animation: none;
+    }
+}
+
+/* Mod カード出現アニメーション (GSAP 廃止の代替)
+ * .mod-card-item に付与するだけで自動フェード。stagger を模した delay 用に
+ * :nth-child で少しずつずらして視覚的リズムを出す。
+ */
+@keyframes mod-card-appear {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+.mod-card-item {
+    /* fill-mode は backwards のみ: both だと最終キーフレーム (transform: none) が
+       永続適用され、下記 :hover の translateY が効かなくなるため */
+    animation: mod-card-appear 0.28s ease-out backwards;
+}
+.mod-card-item:nth-child(2)  { animation-delay: 0.03s; }
+.mod-card-item:nth-child(3)  { animation-delay: 0.06s; }
+.mod-card-item:nth-child(4)  { animation-delay: 0.09s; }
+.mod-card-item:nth-child(5)  { animation-delay: 0.12s; }
+.mod-card-item:nth-child(6)  { animation-delay: 0.15s; }
+.mod-card-item:nth-child(7)  { animation-delay: 0.18s; }
+.mod-card-item:nth-child(8)  { animation-delay: 0.21s; }
+.mod-card-item:nth-child(9)  { animation-delay: 0.24s; }
+.mod-card-item:nth-child(n+10) { animation-delay: 0.27s; }
+@media (prefers-reduced-motion: reduce) {
+    .mod-card-item { animation: none; }
+}
+
+/* カードのホバー浮遊 (2026-08-27): Modrinth 風のリフト演出。
+   :hover は hover 対応デバイス (マウス等) のみで発火 = タッチ端末では無効。
+   .mod-card-item は <Link>。上記アニメを backwards fill にしたことで
+   アニメ終了後に transform が解放され、hover 移動が効く。 */
+@media (hover: hover) {
+    .mod-card-item {
+        transition:
+            transform 180ms ease-out,
+            box-shadow 180ms ease-out,
+            border-color 180ms ease-out;
+    }
+    .mod-card-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px -14px rgba(0, 0, 0, 0.45);
+    }
+    .mod-card-item:active {
+        transform: translateY(-1px);
+    }
+}
+/* 追加⇄削除トグルボタンのアイコン入れ替え演出 (2026-08-27)。
+   ボタンは再マウントせず <i> だけ key={isAdded} で再マウントするため、
+   focus はボタンに残ったまま (a11y 維持) アイコンだけ弾む。 */
+@keyframes icon-swap-in {
+    from { transform: scale(0.4) rotate(-90deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.icon-swap {
+    display: inline-block;
+    animation: icon-swap-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .icon-swap { animation: none; }
+}
+
+/* モーダル表示中は BottomNav を画面外へスライドして隠す (2026-08-27)。
+   モーダル側 (NewProfile / EditProfile / DepCheck / Zip / Confirm /
+   ModDetailModalShell / ScreenshotGallery) が useModalRegistration で
+   lib/store/uiState の openModalCount に登録し、BottomNav が
+   .nav-modal-hidden クラスを付与する。
+
+   - transform で 110% (自高の 1.1 倍 = safe-area 分も含めて) 下へ移動
+   - visibility は transform 完了後 (280ms) に hidden へ遷移
+     → アニメ中は見えたままスライドし、完了で完全に非表示 + タブ順序から除去
+   - クラス除去 (モーダル close) 時は visibility が即時 visible に戻り
+     スライドアップして復帰
+   - pointer-events: none は transition 対象外のため、クラス付与の瞬間から
+     タップ不能 (アニメ中にナビを誤タップしてページ遷移するのを防ぐ)
+   - body.mod-detail-modal 方式 (display: none) から置き換え。
+     E2E (mod-detail-modal.spec.ts) の toBeHidden は visibility:hidden で成立。 */
+#bottom-nav {
+    transition:
+        transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0s;
+}
+#bottom-nav.nav-modal-hidden {
+    transform: translateY(110%);
+    visibility: hidden;
+    pointer-events: none;
+    /* visibility の遷移だけ 280ms 遅らせる = スライド完了後に完全非表示。
+       base 側の transition 宣言は (1,0,0) < (1,1,0) で上書きされないため、
+       transition-delay のみ上書きする方式 (Biome noDescendingSpecificity 対策) */
+    transition-delay: 0s, 280ms;
+}
+@media (prefers-reduced-motion: reduce) {
+    #bottom-nav.nav-modal-hidden {
+        /* 即時 hidden (スライド演出なし) */
+        transition-delay: 0s, 0s;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * モーダル出現演出 (2026-08-27)
+ *
+ *   - .modal-overlay: 背景オーバーレイのフェードイン (0.2s)
+ *   - .modal-card:    カードのポップイン (translateY + scale、0.26s)
+ *
+ * 全モーダル (NewProfile / EditProfile / DependencyCheck / ZipProgress /
+ * ConfirmDialog / ModDetailModalShell / ScreenshotGallery) が同じクラスを
+ * 使うため、ここを定義するだけで一括適用される。
+ * (BottomSheet は独自のスライド演出を持つため対象外)
+ * ----------------------------------------------------------------- */
+/* -----------------------------------------------------------------
+ * モーダルの高さ制限 — 全ブラウザ対応 (2026-08-27、Samsung Browser 修正)
+ *
+ * 問題: 90vh 等の viewport 単位 (max-h の任意値) はアドレスバーを含む
+ * 基準。アドレスバーが常時表示される Samsung Internet 等では 90vh が可視領域
+ * を超え、中央寄せモーダルの上下端 (特にフッターのボタン) が画面外に切れる。
+ *
+ * 対策: モーダルカードの親は fixed inset-0 の overlay (= 可視領域に正確に一致)
+ * なので、その割合 (% ) で max-height を制限する。vh と異なりどのブラウザ
+ * (旧 Samsung Internet 含む) でも画面内に必ず収まる。dvh 非対応環境でも
+ * 追加フォールバックが不要になる方式。
+ * ----------------------------------------------------------------- */
+.modal-max-h {
+    max-height: 92%;
+}
+
+@keyframes modal-pop {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-card {
+    animation: modal-pop 0.26s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes modal-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.modal-overlay {
+    animation: modal-overlay-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .modal-card,
+    .modal-overlay {
+        animation: none;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * .btn-hover-effect: アプリ全体のボタン押し込み演出 (2026-08-27)
+ *
+ * 旧 Vite 版由来のクラス名で、これまで CSS 定義が無かった (機能しない空クラス)。
+ * 多数の主要ボタン (Header / DesktopSidebar / HomeInteractive / ModCard /
+ * 詳細 CTA 等) が既に付与しているため、ここで active 時の縮小を定義すると
+ * アプリ全体に一律のタップフィードバックが有効になる。
+ * transition は各ボタンの Tailwind transition クラスに任せる。
+ * ----------------------------------------------------------------- */
+.btn-hover-effect:active {
+    transform: scale(0.97);
+}
+
+/* ---------------------------------------------------------------
+ * /mods/[slug] のフルページ表示時は (Phase 9-F: 旧 /mod/[slug])
+ *   グローバル Header と BottomNav を非表示にし、モーダルアプリ風の
+ *   詳細画面 UX を提供する。
+ *
+ *   ・variant="page" の ModDetailModalShell がマウントされている間だけ
+ *     body に `mod-fullpage` クラスが付与される (アンマウントで剥がれる)
+ *   ・Home 上のモーダル (variant="modal") では付与されないので、
+ *     グローバル Header はそのまま残る (背景の Home で操作可能)
+ *
+ *   ページ側は独自の「ホームに戻る」リンクを提供済み。
+ * --------------------------------------------------------------- */
+body.mod-fullpage #app-header,
+body.mod-fullpage #bottom-nav {
+    display: none;
+}
+/* Header/BottomNav が消える分、body の pb-28 パディングを緩和して
+   詳細カードが画面下部に無駄なスペースを作らないようにする */
+body.mod-fullpage {
+    padding-bottom: 0;
+}
+
+/* -----------------------------------------------------------------
+ * 404 ページ (app/not-found.tsx) — 2026-08-27 リニューアル
+ *
+ *   - nf-rise:   カード要素のフェードイン上昇 (0.08s 刻みの 3 段 stagger)
+ *   - nf-float:  「missing texture」ブロックのゆったり浮遊 (infinite alternate)
+ *
+ * missing texture ブロックは conic-gradient の 2×2 チェッカーで描く
+ * (Minecraft の「存在しないテクスチャ」表現。div 1 つで完結)。
+ * ----------------------------------------------------------------- */
+@keyframes nf-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.not-found-rise   { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.not-found-rise-2 { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) 0.08s both; }
+.not-found-rise-3 { animation: nf-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) 0.16s both; }
+
+@keyframes nf-float {
+    from { transform: translateY(-4px) rotate(-2deg); }
+    to   { transform: translateY(5px) rotate(2deg); }
+}
+.not-found-block {
+    background: conic-gradient(
+        #f800f8 25%,
+        #000 0 50%,
+        #f800f8 0 75%,
+        #000 0
+    );
+    background-size: 50% 50%;
+    animation: nf-float 2.8s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+    .not-found-rise,
+    .not-found-rise-2,
+    .not-found-rise-3,
+    .not-found-block {
+        animation: none;
+    }
+}
+
+/* -----------------------------------------------------------------
+ * Phase 9.5-F: LP の人気 Mod 横スクロール marquee 用 keyframes
+ *   - CSS animation で GPU 加速、JS で毎フレーム更新しない
+ *   - 同じリストを 2 回連続 render し、-50% までスクロールで初期位置に
+ *     リセット (継ぎ目のない無限スクロール)
+ *   - hover で pause (視認性)
+ *   - Reduced Motion で完全停止 (WCAG 2.1 SC 2.3.3)
+ * ----------------------------------------------------------------- */
+@keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.marquee-track:hover {
+    animation-play-state: paused;
+}
+/*
+ * Reduced Motion 停止は JS 側 (PopularMarquee.tsx) で
+ * matchMedia('prefers-reduced-motion: reduce') を判定し、
+ * animation inline style 自体を付けない形にしている。
+ * (inline style を CSS で上書きするには !important が必要になるため回避。)
+ */
+
+/* -----------------------------------------------------------------
+ * Phase 10-E: Loading skeleton shimmer アニメーション
+ *
+ *   従来 (animate-pulse) はグレー全体の opacity を pulse させるだけで、
+ *   モダンな shimmer (左→右への光沢 sweep) より視認性が低い。
+ *
+ * 実装方針:
+ *   - .skeleton-shimmer を付けた要素の背景として linear-gradient を敷き、
+ *     background-position を無限にスライドさせる
+ *   - 元の背景色は透けさせず、gradient の色は theme に合わせて透明白 (light) /
+ *     半透明白 (dark) の 2 段階で色を持たせる (var で theme 切替)
+ *   - Reduced Motion 環境では sweep を停止 (WCAG 2.1 SC 2.3.3)
+ *   - 既存の animate-pulse とは併用しない (置換用)
+ * ----------------------------------------------------------------- */
+@keyframes dropmod-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-image: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.06) 0%,
+        rgba(148, 163, 184, 0.18) 50%,
+        rgba(148, 163, 184, 0.06) 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: dropmod-shimmer 1.6s ease-in-out infinite;
+}
+:root.dark .skeleton-shimmer {
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.09) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+    );
+}
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+        animation: none;
+        background-image: none;
+        background-color: rgba(148, 163, 184, 0.12);
+    }
+}

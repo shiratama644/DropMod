@@ -113,6 +113,54 @@ describe('FileSystemSink — 読み書き', () => {
     expect(decode(readFakeFile(root, 'mods/part.bin'))).toBe('world');
   });
 
+  it('書込が失敗したら、作成済みの部分ファイル (空) を残さない', async () => {
+    // シナリオ: 新規ファイルへ書込 → write() が失敗 (quota / 権限等)。
+    // rollbackSync は done === true の操作のみを巻き戻すため、sink 側で
+    // 部分ファイルを掃除しないと「失敗したのに空ファイルが残る」。
+    const root = createFakeFileSystem({});
+    const sink = new FileSystemSink(root, '.minecraft');
+
+    // mods ディレクトリ配下のファイルへの書込だけ失敗させる
+    const modsDir = await asFakeDirectory(root).getDirectoryHandle('mods', { create: true });
+    const origGetFileHandle = modsDir.getFileHandle.bind(modsDir);
+    modsDir.getFileHandle = async (name, options) => {
+      const handle = await origGetFileHandle(name, options);
+      const origCreateWritable = handle.createWritable.bind(handle);
+      handle.createWritable = async () => {
+        const stream = await origCreateWritable();
+        stream.write = async () => {
+          throw new DOMException('書込注入: 失敗', 'NotAllowedError');
+        };
+        return stream;
+      };
+      return handle;
+    };
+
+    await expect(sink.writeFile('mods/a.jar', encode('x'))).rejects.toThrow('書込注入');
+    // getFileHandle({create:true}) で作られた空ファイルが残っていない
+    expect(readFakeFile(root, 'mods/a.jar')).toBeNull();
+  });
+
+  it('書込失敗時の掃除が既存ファイルを消さない (上書き失敗)', async () => {
+    // 既存ファイルへの上書きが失敗した場合、元の内容は維持される
+    const root = createFakeFileSystem({ 'mods/a.jar': 'old' });
+    const sink = new FileSystemSink(root, '.minecraft');
+
+    const modsDir = await asFakeDirectory(root).getDirectoryHandle('mods');
+    const handle = await modsDir.getFileHandle('a.jar');
+    const origCreateWritable = handle.createWritable.bind(handle);
+    handle.createWritable = async () => {
+      const stream = await origCreateWritable();
+      stream.write = async () => {
+        throw new DOMException('書込注入: 失敗', 'NotAllowedError');
+      };
+      return stream;
+    };
+
+    await expect(sink.writeFile('mods/a.jar', encode('new'))).rejects.toThrow('書込注入');
+    expect(decode(readFakeFile(root, 'mods/a.jar'))).toBe('old');
+  });
+
   it('削除する。無ければ何もしない (冪等 — Rollback の再実行に必要)', async () => {
     const root = createFakeFileSystem({ 'mods/a.jar': 'x' });
     const sink = new FileSystemSink(root, '.minecraft');

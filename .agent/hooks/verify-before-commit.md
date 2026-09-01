@@ -15,7 +15,7 @@ pnpm build                    # Next.js production build (turbopack)
 ### 各コマンドの注意
 
 - **typecheck**: `tsc --noEmit && tsc --noEmit -p tsconfig.test.json`。`noUncheckedIndexedAccess` 有効なので配列アクセスに注意。
-- **biome lint**: `0 error / 0 warning` まで。`biome-ignore` は対象コードの**直前の行**に置く（1 行以上離れると unused 判定で逆に警告になる, §6.5）。自動生成 CSS（`styles/fontawesome-subset.css`）は biome.json で除外済。
+- **biome lint**: `0 error / 0 warning` まで。`biome-ignore` は対象コードの**直前の行**に置く（1 行以上離れると unused 判定で逆に警告になる, §6.5）。自動生成 CSS（`src/styles/fontawesome-subset.css`）は biome.json で除外済。
 - **test:unit**: `pnpm test`（watch）**ではない**。必ず `test:unit`（vitest run）。
 - **build**: Modrinth `ECONNRESET`/`TypeError: fetch failed` は **Sandbox 制約で無視**（§6.2）。**exit code 0 なら成功**。
   - bundle サイズは turbopack が出力しない → `find .next/static -name "*.css" -exec ls -lh {} \;` 等で直接確認。

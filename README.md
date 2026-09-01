@@ -186,38 +186,39 @@ pnpm build              # 本番ビルド
 ## ディレクトリ構成
 
 ```
-app/                          # Next.js App Router
-├── page.tsx                  # Home (LP + Dynamic SSR 検索)
-├── [projectType]/[slug]/     # 型別詳細フルページ (mod/modpack/..., SSG + ISR + OGP)
-├── discover/[type]/          # 検索一覧 (page + layout)
-│   ├── [slug]/               # 詳細 (直接 URL アクセス用)
-│   └── @modal/(.)[slug]/     # Intercepting Modal (ソフトナビ時)
-├── profile/                  # 選択中プロファイルの Mod 管理 (Client)
-├── settings/                 # 設定 (テーマ / 通知 ON-OFF / データ管理)
-├── modpack/ resourcepack/ shader/   # 予約カテゴリページ
-├── api/
-│   ├── health/route.ts       # ヘルスチェック (profile 確認可)
-│   ├── modrinth/[...path]/route.ts  # Modrinth プロキシ (traversal 対策 / UA 付与 / レート制限)
-│   └── loaders/versions/route.ts     # ローダーバージョン (公式メタ API + フォールバック)
-├── manifest.ts robots.ts sitemap.ts not-found.tsx error.tsx global-error.tsx
-└── globals.css               # Tailwind v4 + テーマ変数 + アニメーション
-
-components/                   # React Components (カード / モーダル / BottomNav / BottomSheet 等)
-hooks/                        # 13 hooks (useProfiles / useZip* / useModalA11y / useModalUi 等)
-lib/
-├── env/                      # Phase 11 取り込み基盤 (EnvironmentSource / Detector chain /
-│                             #   Analyzer + SHA-1 Web Worker / .minecraft ZIP 対応 / 能力判定)
-├── modrinth/                 # Modrinth ラッパ (server: fetch cache + 429 backoff / client: LRU+TTL)
-├── server/                   # サーバ専用 (APP_PROFILE 解決 / logger / rate-limit / 詳細取得)
-├── store/                    # Zustand 8 slice (profiles / toast / confirm / zip* / depCheck / uiState)
-├── db/                       # Dexie 定義 + LocalStorage → IndexedDB 自動移行
-├── query/                    # TanStack Query (hooks / keys / Dexie persister)
-├── loaders/                  # Fabric/Quilt/Forge/NeoForge バージョン取得・パース
-├── search/ constants/ state/ utils/   # 検索 SSR / 定数 / sanitizer / ユーティリティ
-scripts/                      # build.ts (環境判定ビルド) / build-env.ts / FontAwesome subset
-e2e/                          # Playwright E2E (10 spec + helpers)
-__tests__/                    # 単体テスト (73 files: components / hooks / lib / config)
-types.ts                      # 全 TypeScript 型
+src/                          # アプリコード
+├── app/                      # Next.js App Router
+│   ├── page.tsx              # Home (LP + Dynamic SSR 検索)
+│   ├── [projectType]/[slug]/ # 型別詳細フルページ (mod/modpack/..., SSG + ISR + OGP)
+│   ├── discover/[type]/      # 検索一覧 (page + layout)
+│   │   ├── [slug]/           # 詳細 (直接 URL アクセス用)
+│   │   └── @modal/(.)[slug]/ # Intercepting Modal (ソフトナビ時)
+│   ├── profile/              # 選択中プロファイルの Mod 管理 (Client)
+│   ├── settings/             # 設定 (テーマ / 通知 ON-OFF / データ管理)
+│   ├── modpack/ resourcepack/ shader/   # 予約カテゴリページ
+│   ├── api/
+│   │   ├── health/route.ts   # ヘルスチェック (profile 確認可)
+│   │   ├── modrinth/[...path]/route.ts  # Modrinth プロキシ (traversal 対策 / UA 付与 / レート制限)
+│   │   └── loaders/versions/route.ts    # ローダーバージョン (公式メタ API + フォールバック)
+│   ├── manifest.ts robots.ts sitemap.ts not-found.tsx error.tsx global-error.tsx
+│   └── globals.css           # Tailwind v4 + テーマ変数 + アニメーション
+├── components/               # 共通 UI (ui / layout / feedback)
+├── features/                 # 11 ドメイン (catalog / profiles / sync / env-import / ...)
+├── hooks/                    # 共通カスタムフック (useModalA11y / useMediaQuery 等)
+├── lib/
+│   ├── env/                  # Phase 11 取り込み基盤 (EnvironmentSource / Detector chain /
+│   │                         #   Analyzer + SHA-1 Web Worker / .minecraft ZIP 対応 / 能力判定)
+│   ├── modrinth/             # Modrinth ラッパ (server: fetch cache + 429 backoff / client: LRU+TTL)
+│   ├── platform/             # サーバ基盤 (APP_PROFILE 解決 / logger / rateLimit / siteUrl)
+│   ├── db/                   # Dexie 定義 + LocalStorage → IndexedDB 自動移行
+│   ├── query/                # TanStack Query (hooks / keys / Dexie persister)
+│   └── constants/ state/ utils/   # 定数 / sanitizer / ユーティリティ
+├── types/                    # TypeScript 型 (profile / modrinth / sync / modpack / ui)
+└── styles/                   # fontawesome-subset.css (自動生成)
+scripts/                      # build.ts (環境判定ビルド) / buildEnv.ts / buildFontawesomeSubset.mjs
+e2e/                          # Playwright E2E (11 spec + helpers)
+__tests__/                    # 単体テスト (115 files: components / features / hooks / lib / scripts)
+public/                       # 静的アセット (icon / webfonts)
 ```
 
 ## Vercel デプロイ
@@ -226,9 +227,9 @@ Phase 7 以降、Vercel 本番デプロイ用の設定が入っています:
 
 - `vercel.json` — 東京リージョン (`hnd1`) 固定
 - `next.config.mjs` — セキュリティヘッダ (CSP / HSTS 等、`APP_PROFILE` 連動) + 画像最適化設定 + 308 リダイレクト
-- `app/sitemap.ts` — 静的ルート + 人気プロジェクトを動的出力 (ISR)
-- `app/robots.ts` — 全ページ許可、`/api/*` を disallow、sitemap を明示
-- `app/layout.tsx` — `metadataBase` を `NEXT_PUBLIC_SITE_URL` / `VERCEL_URL` から解決、OGP / Twitter Card を設定
+- `src/app/sitemap.ts` — 静的ルート + 人気プロジェクトを動的出力 (ISR)
+- `src/app/robots.ts` — 全ページ許可、`/api/*` を disallow、sitemap を明示
+- `src/app/layout.tsx` — `metadataBase` を `NEXT_PUBLIC_SITE_URL` / `VERCEL_URL` から解決、OGP / Twitter Card を設定
 
 セットアップ手順・検証チェックリストは [`docs/ops/DEPLOY.md`](./docs/ops/DEPLOY.md) を参照してください。全ドキュメントの一覧は [`docs/README.md`](./docs/README.md) を参照してください。
 

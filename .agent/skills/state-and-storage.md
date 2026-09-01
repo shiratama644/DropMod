@@ -2,17 +2,17 @@
 
 > プロファイル/Toast/Confirm/ZIP/依存チェック/テーマ の状態と永続化を触る時に読む。
 
-## Zustand 7 store（`lib/store/`）
+## Zustand 7 store（`src/features/*/store/` と `src/components/{feedback,layout}/` に分散）
 
 | store | ファイル | 役割 |
 | :--- | :--- | :--- |
-| profiles | `profiles.ts` | profiles / currentProfileId / hasHydrated / **theme** + 純粋 updater（addModToProfile 等） |
-| toast | `toast.ts` | toasts + showToast/dismissToast（MAX_VISIBLE 上限あり） |
-| confirm | `confirm.ts` | confirm dialog + Promise resolver + owner ID（直前 pending を false で上書きする仕様） |
-| zipExport | `zipExport.ts` | ZIP 進捪 state + cancel（注: cancel 系は dead code の懸念あり issues-phase9 B7） |
-| zipImport | `zipImport.ts` | pendingImportData のみ（Modal open state は AppShell 局所 useState） |
-| depCheck | `depCheck.ts` | hasDepWarning / lastCheckAt / isChecking + markChecked/reset |
-| appActions | `appActions.ts` | **Server→Client 境界越えの action 登録/購読** |
+| profiles | `src/features/profiles/store/store.ts` | profiles / currentProfileId / hasHydrated / **theme** + 純粋 updater（addModToProfile 等） |
+| toast | `src/components/feedback/toastStore.ts` | toasts + showToast/dismissToast（MAX_VISIBLE 上限あり） |
+| confirm | `src/components/feedback/confirmStore.ts` | confirm dialog + Promise resolver + owner ID（直前 pending を false で上書きする仕様） |
+| zipExport | `src/features/zip/store/zipExport.ts` | ZIP 進捪 state + cancel（注: cancel 系は dead code の懸念あり issues-phase9 B7） |
+| zipImport | `src/features/zip/store/zipImport.ts` | pendingImportData のみ（Modal open state は AppShell 局所 useState） |
+| depCheck | `src/features/dep-check/store/store.ts` | hasDepWarning / lastCheckAt / isChecking + markChecked/reset |
+| appActions | `src/components/layout/appActions.ts` | **Server→Client 境界越えの action 登録/購読** |
 
 - ミドルウェア: `subscribeWithSelector`（全 store）+ `devtools`（dev のみ, production は zero-cost）。
 - **store は副作用を持たない**（API/cookie/Toast は hooks 側）。テストしやすさ優先。
@@ -26,9 +26,9 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 
 ### 共通 fallback hook
 
-`useCurrentProfileWithFallback`（`lib/store/useCurrentProfileWithFallback.ts`）: currentProfile 取得の DRY 化（B33）。3 コンポーネント（Home/Mods/ModDetail）で使用。
+`useCurrentProfileWithFallback`（`src/features/profiles/hooks/useCurrentProfileWithFallback.ts`）: currentProfile 取得の DRY 化（B33）。3 コンポーネント（Home/Mods/ModDetail）で使用。
 
-## hooks（業務ロジック層, `hooks/`）
+## hooks（業務ロジック層, `src/hooks/`）
 
 - `useProfiles(theme, setThemeState, showToast, confirm)` — 最大(818行)。hydrate(Dexie)→save 効果・CRUD・toggleMod・updateModVersion 等。
 - `useZipExport` / `useZipImport` / `useDependencyCheck` — 内部 state は各 store の shim。
@@ -44,9 +44,9 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 - **`Profile.environment`** に mcVersion / loader（`ProfileLoader` 5 値 union, 不正値は 'Fabric' 正規化）/ loaderVersion を集約。旧 flat フィールドは廃止。
 - `Profile.resourcepacks?` / `shaderpacks?` / `unknownFiles?`（`UnknownFile`: location/filename/path/sha1/size/discoveredAt）追加。linkedSource/modpackSource は Phase 12。
 - **ContentCategory (3値) と ProjectType (4値, lib/constants/search.ts) は意図的に分離**（modpack は Profile を構成する上位概念）。
-- 変換ロジックは `lib/state/sanitize.ts` の **`normalizeProfileForV2` / `normalizeProjectItem` / `normalizeLoader`**（pure, Dexie v2 upgrade と LocalStorage 経路で共用）。
+- 変換ロジックは `src/lib/state/sanitize.ts` の **`normalizeProfileForV2` / `normalizeProjectItem` / `normalizeLoader`**（pure, Dexie v2 upgrade と LocalStorage 経路で共用）。
 
-## Dexie（IndexedDB, `lib/db/dexie.ts`）
+## Dexie（IndexedDB, `src/lib/db/dexie.ts`）
 
 5 テーブル（DB 名 `DropModDB`, **schema v3**）:
 
@@ -66,22 +66,22 @@ AppShell（Client 側の唯一の親）が hook 由来 action を `registerAppAc
 
 **schema v2 migration（Phase 11-A）**: v1 DB を開いた時点で upgrade が走り、
 保存済み row を `normalizeProfileForV2` で新形状に一括変換（flat→environment、ModItem→ProjectItem、loader 正規化、updatedAt 保持）。
-テストは `__tests__/lib/db/dexie.migration.test.ts`（v1 DB を作ってから app db を開く手法）。
+テストは `__tests__/lib/db/dexieMigration.test.ts`（v1 DB を作ってから app db を開く手法）。
 
 **schema v3 migration（Phase 12-A）**: `managedFiles` / `dirHandles` の**新規テーブル追加のみ**。
 既存テーブルの index は不変・**upgrade 関数なし**なので既存データは無変換。旧 DB を開いたユーザーは
 「空の台帳」から始まる = 紐付け直後の初回 Sync では deletion が 1 件も出ない
 （§10.2 の「台帳に存在する」条件を満たさないため）。**安全側の意図した挙動**。
-テストは `__tests__/lib/db/dexie.managed.test.ts`。
+テストは `__tests__/features/sync/services/db/managed.test.ts`。
 ※ `SyncTransaction` テーブルは P12-B（Executor / Rollback）で **v4** として追加する。
 
-## LocalStorage → Dexie 移行（`lib/db/migrate.ts`）
+## LocalStorage → Dexie 移行（`src/lib/db/migrate.ts`）
 
 - 初回起動で `migrateFromLocalStorage()`（`meta.migratedAt` 無ければ 1 回だけ, 冪等）。
 - 元キー: `dropmod_state_v2` / 旧 `craftforge_state_v2`（自動吸収）。
 - **LocalStorage は 7 日間バックアップ保持**（`localStorageBackupExpiresAt`）→ 期限後 `cleanupExpiredBackup` で削除。
 - `restoreFromLocalStorageBackup()` あり（緊急復旧用, UI ボタンは未実装 = diff-phase8 D4）。
-- 破損データ防御: `lib/state/sanitize.ts`（pure function。旧 flat 形状の入力も新形状に変換して返す）→ LocalStorage 旧バックアップ流入も v2 形状で書き込まれる。
+- 破損データ防御: `src/lib/state/sanitize.ts`（pure function。旧 flat 形状の入力も新形状に変換して返す）→ LocalStorage 旧バックアップ流入も v2 形状で書き込まれる。
 
 ## cookie（SSR 用）
 

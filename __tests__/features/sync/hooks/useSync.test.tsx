@@ -269,6 +269,123 @@ describe('useSync', () => {
     expect(result.current.error).toBe('OPFS が使えません');
   });
 
+  it('prepare: Error 以外を throw したら String() で error に出す', async () => {
+    mockPrepare.mockRejectedValue('plain-string-error');
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+    });
+
+    expect(result.current.error).toBe('plain-string-error');
+    expect(useToastStore.getState().toasts[0]).toMatchObject({ type: 'error' });
+  });
+
+  it('D-1: 環境不一致で理由が無ければ既定メッセージを出す', async () => {
+    mockPrepare.mockResolvedValue({
+      status: 'blocked-environment',
+      rootName: '.minecraft',
+      check: { ok: false, mismatches: [], unverified: [] }
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+    });
+
+    expect(result.current.error).toBe('環境が一致しないため Sync できません。');
+  });
+
+  it('apply: prepare 後にプロファイルが消えたら error にして実行しない', async () => {
+    mockPrepare.mockResolvedValue(readyOutcome());
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+    });
+    // prepare の outcome は残したまま、プロファイルだけ消す
+    act(() => useProfilesStore.setState({ profiles: [], currentProfileId: 'ghost' }));
+
+    await act(async () => {
+      await result.current.apply();
+    });
+
+    expect(mockApply).not.toHaveBeenCalled();
+    expect(result.current.error).toBe('プロファイルが選択されていません。');
+  });
+
+  it('apply: failed アウトカムは default 分岐で error トースト', async () => {
+    mockPrepare.mockResolvedValue(readyOutcome());
+    mockApply.mockResolvedValue({
+      result: execResult({ outcome: 'failed', applied: 0, error: '不明な失敗' }),
+      ledgerUpdated: false
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[0]?.type).toBe('error');
+    expect(toasts[0]?.message).toContain('不明な失敗');
+  });
+
+  it('apply: failed で error が無ければ既定文言で error にする', async () => {
+    mockPrepare.mockResolvedValue(readyOutcome());
+    mockApply.mockResolvedValue({
+      result: execResult({ outcome: 'failed', applied: 0 }),
+      ledgerUpdated: false
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[0]?.type).toBe('error');
+    expect(toasts[0]?.message).toBe('Sync に失敗しました。');
+  });
+
+  it('apply: rolled-back でエラー詳細が無ければ既定文言でエラーにする', async () => {
+    mockPrepare.mockResolvedValue(readyOutcome());
+    mockApply.mockResolvedValue({
+      result: execResult({ outcome: 'rolled-back', applied: 0 }),
+      ledgerUpdated: false
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[0]?.type).toBe('error');
+    expect(toasts[0]?.message).toContain('巻き戻しました');
+  });
+
+  it('apply: aborted-quota でエラー詳細が無ければ既定文言で warning にする', async () => {
+    mockPrepare.mockResolvedValue(readyOutcome());
+    mockApply.mockResolvedValue({
+      result: execResult({ outcome: 'aborted-quota', applied: 0 }),
+      ledgerUpdated: false
+    });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply();
+    });
+
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[0]?.type).toBe('warning');
+    expect(toasts[0]?.message).toContain('空きが足りず');
+  });
+
   it('reset で初期状態に戻る', async () => {
     mockPrepare.mockResolvedValue(readyOutcome());
     const { result } = renderHook(() => useSync());
@@ -450,5 +567,27 @@ describe('useSync: P12-D3 (競合の replace フロー)', () => {
     expect(useProfilesStore.getState().profiles[0]?.mods[0]).toMatchObject({
       versionId: 'v-user'
     });
+  });
+
+  it('replace 反映時、対象外のプロファイルは変更されない', async () => {
+    const otherProfile = makeProfile({ id: 'p2', name: 'Other' });
+    useProfilesStore.setState({
+      profiles: [sodiumProfile, otherProfile],
+      currentProfileId: 'p1'
+    });
+    mockPrepare.mockResolvedValue(conflictOutcome());
+    mockApply.mockResolvedValue({ result: execResult(), ledgerUpdated: true });
+    const { result } = renderHook(() => useSync());
+
+    await act(async () => {
+      await result.current.prepare();
+      await result.current.apply([], new Map([['sodium', 'replace']]));
+    });
+
+    const profiles = useProfilesStore.getState().profiles;
+    expect(profiles.map((p) => p.id)).toEqual(['p1', 'p2']);
+    // 対象外プロファイル (p2) は元のまま残る
+    expect(profiles[1]).toMatchObject({ id: 'p2', name: 'Other' });
+    expect(profiles[1]).toEqual(otherProfile);
   });
 });

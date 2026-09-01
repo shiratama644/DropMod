@@ -287,4 +287,40 @@ describe('useSyncHistory', () => {
     rerender({ id: 'p2' });
     await waitFor(() => expect(result.current.items.map((i) => i.id)).toEqual(['b']));
   });
+
+  it('finishedAt が有れば item に載せる (省略時は出さない)', async () => {
+    await db.syncTransactions.put(row({ id: 'fx', finishedAt: 2_000 }));
+    const { result } = renderHook(() => useSyncHistory('p1'));
+    await waitFor(() => expect(result.current.items[0]?.id).toBe('fx'));
+    expect(result.current.items[0]?.finishedAt).toBe(2_000);
+  });
+
+  it('undo 失敗で理由が無ければ既定メッセージでエラーにする', async () => {
+    mockUndo.mockResolvedValue({
+      ok: false,
+      restored: 0,
+      removed: 0,
+      errors: [],
+      ledgerUpdated: false
+    }); // message 無し
+    const { result } = renderHook(() => useSyncHistory('p1'));
+
+    await act(async () => {
+      await result.current.undo('tx-1');
+    });
+
+    expect(useToastStore.getState().toasts[0]?.message).toBe('Sync を取り消せませんでした。');
+  });
+
+  it('undo が Error 以外を throw したら String() でトーストに出す', async () => {
+    mockUndo.mockRejectedValue('plain-string');
+    const { result } = renderHook(() => useSyncHistory('p1'));
+
+    await act(async () => {
+      await result.current.undo('tx-1');
+    });
+
+    expect(useToastStore.getState().toasts[0]?.message).toContain('plain-string');
+    expect(result.current.undoingId).toBeNull();
+  });
 });

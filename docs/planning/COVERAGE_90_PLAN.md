@@ -230,6 +230,14 @@ violation → `:visible` で絞る / folderImportCopy は環境行を既存 spec
 
 - CI の Type / Lint / Unit ジョブで `pnpm test:coverage` を実行するかは現行ワークフローを確認して判断
 
+**実績 (commit `95e2c4a`)**: グローバル thresholds を 90/90/90/90 に引き上げ、
+per-module も 90 未満を 90/90/90/90 に統一 (lib/state は 95/90/95/95 維持)。
+90% 化に失敗していた 2 glob (lib/query br 86.21 / hooks br 87.32) はテスト追加 +
+デッドコード除去 (hooks.ts の `?? 0`) で解消。フルスイート **96.56 / 90.52 / 98.26 /
+97.85** (st/br/fn/ln)、123 files / 1603 tests、`pnpm test:coverage` **exit 0**。
+残存の未カバー分岐はすべて到達不能ガード (useModalA11y の 5 分岐等)。詳細は
+`.agent/logs/2026-09-01_cov-5-thresholds.md`。
+
 ## 11. リスク・Gotchas
 
 - **branches が最も遠い** (+11.8pt)。分岐の多い hooks (useProfiles / useModpackAdd /
@@ -255,5 +263,6 @@ violation → `:visible` で絞る / folderImportCopy は環境行を既存 spec
 | COV-2 | `015c6d1` + `e561f72` + `1a38bf4` | 1481 tests pass + `test:coverage` exit 0 | **完了**。§10.2 の全 10 対象が branches 90% 以上: 上位 4 件 + 0% ロジック 3 件 (siteUrl / loadDiscoverSearch / projectDetail / computeHashes / hashCore / useModpackAdd / useZipImport / useProfiles) に加え、backup / analyzer / server **100/100/100/100**、client **100/95.53/100/100**、useSync **100/97.87/100/100**、useSyncHistory **98/90.9/100/97.87**、profiles store **100/95.74/100/100** (残り分岐は到達不能ガード: client の `err.message` falsy・direct 429 の proxy 側・`?? new Map()` 等)。全体 **93.41 / 86.47 / 95.42 / 94.9** (st/br/fn/ln、COV-1 比 br +7.9pt)。branches 86.47% は COV-3/4/5 で 90% へ |
 | COV-3 | `667d25a` | 122 files / 1590 tests pass + `test:coverage` exit 0 | **完了**。§10.3 の対象 9 件にテスト追加 (ログ: `.agent/logs/2026-09-01_cov-3-component-tests.md`)。フルスイート計測で ModCard・FolderImportSection br **100**、ScreenshotGalleryModal **96.55** / NewProfileModal index **96.33** / AnalysisSection **96.42** / CustomDropdown **93.75** (fn 25/26、残 1 は ref null guard)、JsonLd・ProfileFormFields fn **100**。**BottomSheet のみ br 86.51** (残 12 分岐はすべて到達不能ガード: ref null・SSR `typeof window/document`・stopPropagation 後方・cancelled 先行 return。fn 32/32)。全体 **96.5 / 90.27 / 98.16 / 97.85** → **branches 90% 到達** |
 | COV-4 | `44a90c4` + `9527e46` | CI (workflow_dispatch `33469737443`) で Type/Lint/Unit・Build・**E2E 全 green** | **完了**。§10.4 の 5 spec 追加 (profileMods / modDetailGallery / versionFilter / discoverSkeleton / folderImportCopy。ログ: `.agent/logs/2026-09-01_cov-4-e2e.md`)。初回 run の失敗 3 件を修正 (profileMods: DesktopTable/MobileList 同名 aria-label → `:visible` で絞る。folderImportCopy: 環境行を既存 spec と同一の文字列一致 + DIAG 出力)。既存 65 passed を維持し E2E green |
+| COV-5 | `95e2c4a` | 123 files / 1603 tests pass + `test:coverage` exit 0 (thresholds 90%) | **完了**。グローバル thresholds 90/90/90/90 + per-module 統一 (lib/state 95/90/95/95 維持)。90% 未達だった lib/query (br 86.21)・hooks (br 87.32) はテスト追加 (hooks 3 / useModalA11y 5 / useMediaQuery 5) + `?? 0` デッドコード除去で解消。全体 **96.56 / 90.52 / 98.26 / 97.85**。残存分岐は到達不能ガード (ログ: `.agent/logs/2026-09-01_cov-5-thresholds.md`) |
 | COV-4 | | | |
 | COV-5 | | | |

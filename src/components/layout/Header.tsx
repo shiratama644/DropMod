@@ -1,25 +1,40 @@
 'use client';
 
 // -----------------------------------------------------------------------------
-// Header (モバイル専用)
+// Header (モバイル専用) - M3E 移行版
 //
 // - モバイル (< md): ロゴ + テーマ切替 + 各種ボタン + プロファイル切替
 // - PC (md 以上): 非表示。ナビ・プロファイル・アクションは DesktopSidebar に集約
-// - AppShell 側で `pathname !== '/'` のみ mount (LP は Header なし)
-// - スクロール hide はしない (常時表示)
 // -----------------------------------------------------------------------------
 
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import type { Profile, TabName, ThemeMode } from '@/types';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Badge from '@mui/material/Badge';
+import type { Profile, TabName } from '@/types';
 import { SyncButton } from '@/features/sync';
 import { useFolderLinked } from '@/features/sync';
 import { CustomDropdown } from '../ui/CustomDropdown';
+import { useTheme } from '@mui/material/styles';
+import { useColorScheme } from '@mui/material/styles';
+
+// Material Icons
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import ShieldIcon from '@mui/icons-material/Shield';
+import DownloadIcon from '@mui/icons-material/Download';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import AddIcon from '@mui/icons-material/Add';
 
 interface HeaderProps {
-  theme: ThemeMode;
-  onToggleTheme: () => void;
+  theme?: string; // M3E-3: We no longer need manually passed theme. We use useColorScheme
+  onToggleTheme?: () => void;
   profiles: Profile[];
   currentProfileId: string;
   onSwitchProfile: (id: string) => void;
@@ -32,8 +47,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  theme,
-  onToggleTheme,
   profiles = [],
   currentProfileId,
   onSwitchProfile,
@@ -45,6 +58,12 @@ export const Header: React.FC<HeaderProps> = ({
   hasDepWarning,
 }) => {
   const folderLinked = useFolderLinked();
+  const muiTheme = useTheme();
+  const { mode, setMode } = useColorScheme();
+
+  const handleToggleTheme = useCallback(() => {
+    setMode(mode === 'dark' ? 'light' : 'dark');
+  }, [mode, setMode]);
 
   const profileOptions = useMemo(() => {
     const safeProfiles = Array.isArray(profiles) ? profiles : [];
@@ -61,157 +80,125 @@ export const Header: React.FC<HeaderProps> = ({
   );
 
   return (
-    <header
-      id="app-header"
-      className="sticky top-0 z-30 glass-panel md:hidden"
+    <AppBar 
+      position="sticky" 
+      elevation={0}
+      sx={{ 
+        display: { xs: 'block', md: 'none' },
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid var(--mui-palette-divider)',
+        color: 'text.primary',
+      }}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="flex items-center justify-between">
-          <Link
+      <Box sx={{ px: 2, py: 1.5 }}>
+        {/* Top Row: Logo & Actions */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box
+            component={Link}
             href="/"
             onClick={() => onSwitchTab('home')}
-            aria-label="ホーム画面へ移動"
-            className="flex items-center gap-2.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-xl p-0.5"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, textDecoration: 'none', color: 'inherit' }}
           >
-            <div className="logo-icon w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-emerald-500/20 ring-1 ring-white/30">
-              <i className="fa-solid font-bold fa-cube text-lg sm:text-xl" aria-hidden="true" />
-            </div>
-            <div>
-              <h1 className="font-extrabold text-base sm:text-lg tracking-wider flex items-center gap-1.5 leading-none">
-                DropMod
-              </h1>
-              <p className="text-xs theme-text-muted mt-0.5">Minecraft Mod Profile Manager</p>
-            </div>
-          </Link>
+            <Box sx={{ width: 36, height: 36, borderRadius: '12px', bgcolor: 'primary.main', color: 'primary.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>D</Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1 }}>DropMod</Typography>
+              <Typography variant="caption" color="text.secondary">Profile Manager</Typography>
+            </Box>
+          </Box>
 
-          {/* テーマ切替 + モバイルアクション (PC では非表示) */}
-          <div className="flex items-center gap-1.5 md:hidden">
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              id="header-theme-toggle"
-              title="テーマ切り替え"
-              aria-label="テーマ切り替え"
-              className="p-2 rounded-xl theme-sub-box theme-text-brand hover:opacity-80 transition flex items-center justify-center touch-target focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <i
-                id="header-theme-icon"
-                className={`fa-solid ${theme === 'dark' ? 'fa-moon' : 'fa-sun'} text-sm`}
-                aria-hidden="true"
-              />
-            </button>
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            <IconButton onClick={handleToggleTheme} color="primary" size="small">
+              {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            </IconButton>
 
-            {/* Mobile actions (sm 未満のみ) */}
-            <div className="flex sm:hidden items-center gap-1.5">
-              <button
-                type="button"
-                onClick={onRunDependencyCheck}
-                title="依存・競合チェック"
-                aria-label="依存・競合チェック"
-                className="relative p-2 text-xs font-semibold rounded-xl bg-amber-500/20 theme-text-amber border border-amber-500/30 active:bg-amber-500/30 transition flex items-center justify-center touch-target shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-shield-halved text-sm" aria-hidden="true" />
-                {hasDepWarning && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
-                )}
-              </button>
+            {/* Mobile Actions (<sm) */}
+            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5 }}>
+              <IconButton onClick={onRunDependencyCheck} size="small" sx={{ color: 'warning.main', bgcolor: 'warning.main', opacity: 0.8, '&:hover': { opacity: 1 } }}>
+                <Badge color="error" variant="dot" invisible={!hasDepWarning}>
+                  <ShieldIcon fontSize="small" sx={{ color: muiTheme.palette.warning.dark }} />
+                </Badge>
+              </IconButton>
 
-              {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
               {folderLinked ? (
-                <SyncButton variant="icon" label="フォルダへ同期" className="touch-target" />
+                <Box sx={{ transform: 'scale(0.8)', transformOrigin: 'center' }}>
+                  <SyncButton variant="icon" label="同期" />
+                </Box>
               ) : (
-                <button
-                  type="button"
-                  onClick={onDownloadZip}
-                  title="ZIP保存"
-                  aria-label="ZIP保存"
-                  className="p-2 text-xs font-semibold rounded-xl bg-emerald-600 active:bg-emerald-500 text-slate-950 transition flex items-center justify-center touch-target shadow focus-visible:ring-2 focus-visible:ring-emerald-500"
-                >
-                  <i className="fa-solid fa-download text-sm" aria-hidden="true" />
-                </button>
+                <IconButton onClick={onDownloadZip} size="small" sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } }}>
+                  <DownloadIcon fontSize="small" />
+                </IconButton>
               )}
 
-              <label
-                title="ZIP読込"
-                aria-label="ZIP読込"
-                className="p-2 text-xs font-semibold rounded-xl theme-sub-box theme-text-brand transition flex items-center justify-center cursor-pointer touch-target focus-visible:ring-2 focus-visible:ring-emerald-500"
-              >
-                <i className="fa-solid fa-file-import text-sm" aria-hidden="true" />
-                <input
-                  type="file"
-                  accept=".zip,.mrpack,application/zip"
-                  className="hidden"
-                  onChange={handleFileImport}
-                />
-              </label>
-            </div>
-          </div>
-        </div>
+              <IconButton component="label" size="small" sx={{ bgcolor: 'action.selected' }}>
+                <FileUploadIcon fontSize="small" color="primary" />
+                <input type="file" accept=".zip,.mrpack,application/zip" hidden onChange={handleFileImport} />
+              </IconButton>
+            </Box>
+          </Box>
+        </Box>
 
-        {/* Profile dropdown and Desktop actions (PC では全て非表示 → Sidebar へ) */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto md:hidden">
-          <div className="flex items-center rounded-xl p-1 theme-sub-box flex-1 sm:flex-none">
-            <i className="fa-solid fa-layer-group theme-text-brand text-xs ml-2 mr-1" aria-hidden="true" />
-            <div className="w-full sm:w-[190px]">
+        {/* Bottom Row: Profile Dropdown & Tablet Actions */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', bgcolor: 'action.hover', borderRadius: '12px', p: 0.5 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               <CustomDropdown
                 options={profileOptions}
                 selectedValue={currentProfileId}
                 onChange={onSwitchProfile}
-                label="プロファイル切り替え"
+                label="プロファイル"
               />
-            </div>
-            <button
-              type="button"
-              onClick={onOpenNewProfileModal}
-              title="新規プロファイル作成"
-              aria-label="新規プロファイル作成"
-              className="p-1.5 theme-text-secondary hover:text-emerald-500 rounded-lg transition shrink-0 focus-visible:ring-2 focus-visible:ring-emerald-500"
-            >
-              <i className="fa-solid fa-plus text-xs" aria-hidden="true" />
-            </button>
-          </div>
+            </Box>
+            <IconButton onClick={onOpenNewProfileModal} size="small" color="primary">
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
 
-          {/* Desktop actions (sm 以上 かつ md 未満のみ、= タブレット横向き) */}
-          <div className="hidden sm:flex items-center gap-1.5">
-            <button
-              type="button"
+          {/* Tablet Actions (>=sm && <md) */}
+          <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1 }}>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
               onClick={onRunDependencyCheck}
-              className="relative btn-hover-effect px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 theme-text-amber border border-amber-500/40 transition flex items-center gap-1.5 shadow-md shadow-amber-500/10 font-mono focus-visible:ring-2 focus-visible:ring-emerald-500"
+              startIcon={
+                <Badge color="error" variant="dot" invisible={!hasDepWarning}>
+                  <ShieldIcon />
+                </Badge>
+              }
+              sx={{ borderRadius: '12px' }}
             >
-              <i className="fa-solid fa-shield-halved" aria-hidden="true" />
-              <span>依存・競合チェック</span>
-              {hasDepWarning && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
-              )}
-            </button>
+              依存チェック
+            </Button>
 
-            {/* D-8: フォルダ紐付け済みなら Sync に置き換える (プロファイルごと) */}
             {folderLinked ? (
-              <SyncButton variant="primary" label="フォルダへ同期 (全.jar)" />
+              <SyncButton variant="primary" label="フォルダへ同期" />
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="contained"
+                size="small"
                 onClick={onDownloadZip}
-                className="btn-hover-effect px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20 font-mono focus-visible:ring-2 focus-visible:ring-emerald-500"
+                startIcon={<DownloadIcon />}
+                sx={{ borderRadius: '12px' }}
               >
-                <i className="fa-solid fa-file-zipper" aria-hidden="true" />
-                <span>ZIP保存 (全.jar)</span>
-              </button>
+                ZIP保存
+              </Button>
             )}
 
-            <label className="btn-hover-effect px-3 py-1.5 text-xs font-semibold rounded-xl theme-sub-box transition flex items-center gap-1.5 cursor-pointer font-mono focus-visible:ring-2 focus-visible:ring-emerald-500">
-              <i className="fa-solid fa-file-import theme-text-brand" aria-hidden="true" />
-              <span>ZIP読込</span>
-              <input
-                type="file"
-                accept=".zip,.mrpack,application/zip"
-                className="hidden"
-                onChange={handleFileImport}
-              />
-            </label>
-          </div>
-        </div>
-      </div>
-    </header>
+            <Button
+              component="label"
+              variant="outlined"
+              size="small"
+              startIcon={<FileUploadIcon />}
+              sx={{ borderRadius: '12px' }}
+            >
+              ZIP読込
+              <input type="file" accept=".zip,.mrpack,application/zip" hidden onChange={handleFileImport} />
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    </AppBar>
   );
 };

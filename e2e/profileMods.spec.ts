@@ -71,6 +71,11 @@ async function openMobileFileInput(page: Page) {
   return fileInput;
 }
 
+/** 選択中一覧の行チェックボックス (DesktopTable / MobileList の両方が DOM に存在するため :visible で絞る) */
+function rowCheckbox(page: Page, label: string) {
+  return page.locator(`input[aria-label="${label}"]:visible`);
+}
+
 test.describe('選択中一覧の削除 / 全削除 (COV-4)', () => {
   test('Desktop: チェック → 削除 → 全削除で Mods / RP / Shaders タブが更新される', async ({
     page,
@@ -92,7 +97,8 @@ test.describe('選択中一覧の削除 / 全削除 (COV-4)', () => {
     await expect(page.getByRole('tab', { name: /Shaders/ })).toContainText('0');
 
     // 行が 1 件表示されている
-    await expect(page.getByLabel('E2E Sodium を選択')).toBeVisible();
+    const sodiumCheckbox = rowCheckbox(page, 'E2E Sodium を選択');
+    await expect(sodiumCheckbox).toBeVisible();
 
     // --- チェックボックスで選択 → 削除 (1) ---
     await page.getByLabel('表示中をすべて選択').check();
@@ -112,12 +118,12 @@ test.describe('選択中一覧の削除 / 全削除 (COV-4)', () => {
     });
     await expect(page.locator('#empty-mods-state')).toBeVisible();
     await expect(modsTab).toContainText('0');
-    await expect(page.getByLabel('E2E Sodium を選択')).toHaveCount(0);
+    await expect(sodiumCheckbox).toHaveCount(0);
 
     // --- 2 回目: Import → 全削除 ---
     await importEnvProfile(page, viewport);
     await expect(page.getByRole('tab', { name: /Mods/ })).toContainText('1');
-    await expect(page.getByLabel('E2E Sodium を選択')).toBeVisible();
+    await expect(sodiumCheckbox).toBeVisible();
 
     await page.getByRole('button', { name: '全削除' }).click();
     const confirmAll = page.getByRole('alertdialog');
@@ -142,10 +148,11 @@ test.describe('選択中一覧の削除 / 全削除 (COV-4)', () => {
 
     const modsTab = page.getByRole('tab', { name: /Mods/ });
     await expect(modsTab).toContainText('1');
-    await expect(page.getByLabel('E2E Sodium を選択')).toBeVisible();
+    const sodiumCheckbox = rowCheckbox(page, 'E2E Sodium を選択');
+    await expect(sodiumCheckbox).toBeVisible();
 
     // 個別チェック → 削除 (1)
-    await page.getByLabel('E2E Sodium を選択').check();
+    await sodiumCheckbox.check();
     const deleteButton = page.getByRole('button', { name: /^削除 \(1\)$/ });
     await expect(deleteButton).toBeEnabled();
     await deleteButton.click();

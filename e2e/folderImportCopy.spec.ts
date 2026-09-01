@@ -15,6 +15,7 @@
 import { test, expect } from '@playwright/test';
 import {
   ENV_FILES,
+  ENV_FIXTURE,
   installModrinthApiMock
 } from './helpers/minecraftEnv';
 import { installFolderPickerMock } from './helpers/folderPickerMock';
@@ -54,7 +55,18 @@ test.describe('フォルダ選択モーダルの文言 (COV-4)', () => {
     const analysis = dialog.getByRole('status', { name: '解析結果' });
     await analysis.waitFor({ state: 'visible', timeout: 20_000 });
     await expect(analysis.getByText('解析結果')).toBeVisible();
-    await expect(analysis.getByText(/Minecraft 1\.21\.1/)).toBeVisible();
+
+    // 環境検出 (公式ランチャー + Fabric 1.21.1 / 0.16.0)。
+    // 失敗時は解析結果の実テキストを診断として先頭に含める (annotationReporter は先頭 200 字)
+    await expect(async () => {
+      const text = (await analysis.innerText()).replace(/\s+/g, ' ');
+      expect(
+        text,
+        `DIAG[analysis] ${text.slice(0, 200)}`
+      ).toContain(
+        `Minecraft ${ENV_FIXTURE.mcVersion} / ${ENV_FIXTURE.loader} / ${ENV_FIXTURE.loaderVersion}`
+      );
+    }).toPass({ timeout: 10_000 });
   });
 
   test('Mobile: showDirectoryPicker 非対応のフォールバック文言が表示される', async ({

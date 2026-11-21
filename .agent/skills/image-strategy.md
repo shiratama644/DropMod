@@ -5,7 +5,7 @@
 ## 背景：かつての問題（すべて解決済）
 
 1. **低画質** — `icon_url`/ギャラリー `url` は低解像度サムネイル（`_96.webp`=96px / `_350.webp`=350px）を使っていた。
-2. **表示遅延・もっさり** — `next/image` が `sharp` 未導入環境（Sandbox/dev）で再エンコード超重い。Modrinth は既に WebP 最適化済みなのに二重処理。
+2. **表示遅延・もっさり** — `next/image` が `sharp` 未導入環境で再エンコード超重い（2026-11-21 にローカル sharp は install・動作実測済みだが、方針維持）。Modrinth は既に WebP 最適化済みなのに二重処理。
 3. **Markdown 画像/GIF 不表示・遅い** — `next/image` の `remotePatterns` 制限で任意ホストを弾く＋プロキシ重い。
 
 ## Modrinth CDN の画像 URL 仕様（実 API で確認済）
@@ -23,7 +23,7 @@
 
 ### 1. Modrinth CDN 画像 = `unoptimized`（直接 CDN 取得）
 
-Modrinth CDN は既に最適化済み WebP をグローバル エッジキャッシュで配信。`next/image` の `/_next/image` プロキシ（sharp 未導入で超重い）を通すのは二重処理の無駄。**`unoptimized` でブラウザが CDN から直接取得** → 最速。
+Modrinth CDN は既に最適化済み WebP をグローバル エッジキャッシュで配信。`next/image` の `/_next/image` プロキシを通すのは二重処理の無駄（2026-11-21 時点でローカル sharp は動作可能になったが、方針維持）。**`unoptimized` でブラウザが CDN から直接取得** → 最速。
 
 判定ヘルパ `src/lib/utils/image.ts`:
 ```ts
@@ -64,4 +64,4 @@ shouldUnoptimizeImage(src) = isAnimatedImageUrl(src) || isModrinthCdnUrl(src)
 
 ## 関連
 
-- コミット `d41cee5`（実装）/ [modrinth-integration.md](./modrinth-integration.md) / [sandbox-constraints.md](./sandbox-constraints.md)（sharp:false の理由）
+- コミット `d41cee5`（実装）/ [modrinth-integration.md](./modrinth-integration.md) / [sandbox-constraints.md](./sandbox-constraints.md)（sharp:false の設計判断理由）

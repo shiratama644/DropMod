@@ -178,7 +178,7 @@ pnpm install --frozen-lockfile
 - Vitest 4 + jsdom 30 + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 8.x + `@vitejs/plugin-react` 6）
 - Playwright (Chromium 単独、`--disable-gpu` 必須)
 - 状態管理: **Zustand 5**（`src/features/*/store/`・`src/components/{feedback,layout}/*Store.ts` 等に分散）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
-- パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は Vercel 側で自動注入されるので false のままで OK）。
+- パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は「Vercel 側で自動注入」方針と、Modrinth 画像は既に最適化済み WebP で二重処理を避けるため false を維持する設計判断。2026-11-21 にローカル install・動作を実測確認した時点でも design 維持）。
 
 ### 6.2 サンドボックス制約（乗り越えず、迂回する）
 以下は Sandbox 環境の恒常的制約であり、修正対象ではない。
@@ -187,7 +187,7 @@ pnpm install --frozen-lockfile
 |---|---|
 | `api.modrinth.com:443` に `ECONNRESET` で到達不可 | `pnpm build` 時のログに `TypeError: fetch failed` が出るが exit 0 なら成功。ローカル動作確認では Modrinth 依存機能 (marquee / SSR search) が空表示になるが、ユーザー環境では正常表示される。 |
 | Chromium バイナリの install 不可 | E2E (`pnpm test:e2e`) は**書けるが実行できない**。CI (GitHub Actions) 上のみ実行。ローカルで実行を試みない。 |
-| `sharp` の native build 不可 | `pnpm-workspace.yaml` で `sharp: false`。next/image のローカル最適化は動かないが Vercel deploy 後に有効化される。 |
+| ~~`sharp` native build 不可~~ (2026-11-21 解消: install 可・png 変換 verified) | 設計判断として `pnpm-workspace.yaml` で `sharp: false` 維持。Modrinth 画像は既に最適化済み WebP で二重処理を避ける。Vercel 側で自動注入される方針。 |
 
 ### 6.3 GitHub App 権限制約（2026-11-21 更新）
 - **`.github/workflows/` は直接編集可能**。CI ワークフロー（`.github/workflows/ci.yml`）は

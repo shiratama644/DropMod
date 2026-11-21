@@ -1,14 +1,14 @@
 # Phase 8: パフォーマンス・オフライン化
 
-> 対応 task-list ID: `P8-A` 〜 `P8-E` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [docs/planning/complete/PHASE8_COMPLETE.md](../complete/PHASE8_COMPLETE.md))
+> 対応 task-list ID: `P8-A` 〜 `P8-E` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
+> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [docs/planning/complete/PHASE8_COMPLETE.md](./PHASE8_COMPLETE.md))
 
 ## 1. 開始前確認
 
 - ブランチ / HEAD / `git status` を確認 (未コミット変更があれば停止)
-- Phase 7 (Next.js 移行) 完了を確認 — 移行計画書 [NEXTJS_MIGRATION_PLAN.md](./NEXTJS_MIGRATION_PLAN.md)
-- AGENT.md §6 (React/Next 実装ルール) を読む
+- Phase 7 (Next.js 移行) 完了を確認 — 移行計画書 [NEXTJS_MIGRATION_PLAN.md](../NEXTJS_MIGRATION_PLAN.md)
+- AGENTS.md §6 (React/Next 実装ルール) を読む
 
 ## 2. 目的 (Why)
 

@@ -13,7 +13,8 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 - Fabric / Quilt / Forge / NeoForge のローダーバージョンを各公式メタ API から自動取得 (オフライン・失敗時は内蔵フォールバック)
 - 依存・競合チェック (背景 1.2 秒デバウンス実行 + 手動リフレッシュ、BottomNav / Header に警告バッジ)
 - ZIP エクスポート (プロファイル全 `.jar` を並列 DL → JSZip、`navigator.connection` 情報で並列数自動判定)、`.mrpack` / `.jar` ZIP インポート
-- **ローカル環境取り込み (Read-only)**: `.minecraft` フォルダや Prism インスタンスを選択すると、MC バージョン / ローダーを自動検出 (公式ランチャー `versions/*.json`・`mmc-pack.json`) し、Mods / リソースパック / シェーダーを SHA-1 で Modrinth と照合して新規プロファイルを作成。解析結果 (互換性・依存・未識別ファイル) は作成前に確認可能。Firefox / Safari / モバイルでは `.minecraft` を ZIP 化して取り込み。ローカル環境への書き込みは一切行いません (同期は Phase 12 で実装予定)
+- **ローカル環境取り込み (Read-only)**: `.minecraft` フォルダや Prism インスタンスを選択すると、MC バージョン / ローダーを自動検出 (公式ランチャー `versions/*.json`・`mmc-pack.json`・MojoLauncher `mojo_instance.json`) し、Mods / リソースパック / シェーダーを SHA-1 で Modrinth と照合して新規プロファイルを作成。解析結果 (互換性・依存・未識別ファイル) は作成前に確認可能。Firefox / Safari / モバイルでは `.minecraft` を ZIP 化して取り込み。
+- **ローカル環境 Sync (Phase 12 実装完了 / P12-C は実機 Firefox・Safari 検証待ち)**: Profile との差分検出 (Additions / Updates / Deletions / Unchanged / Unmanaged 5 分類 + fingerprint 検証) → Preview 確認 → Chromium では Direct Write (Transaction + Backup + Rollback)、Firefox / Safari では ZipSink 経由でローカル環境へ安全に反映。削除は fingerprint unchanged 検証必須・非変更は保持し、中断時は Journal で検出・Rollback 復旧。
 - ダーク / ライトテーマ切替、**IndexedDB (Dexie)** 永続化 (旧 `craftforge_state_v2` / `dropmod_state_v2` LocalStorage からの自動移行 + 7 日バックアップ)
 - **オフライン閲覧**: TanStack Query の Dexie persister により、既読の Mod 詳細・検索結果がオフラインでも表示可能 (24h TTL)
 - **キャッシュヒットバッジ**: Home 検索結果に「🌐 X 分前のキャッシュ / 🔄 取得中」の視覚化バッジ
@@ -179,9 +180,9 @@ pnpm test:unit          # vitest run (E2E は除外)
 pnpm build              # 本番ビルド
 ```
 
-- **単体テスト**: Vitest 4 + msw (Modrinth API mock) + fake-indexeddb + jsdom — **73 test files / 637 tests**、全体 statement coverage **84.65%** (branches 73.74% / functions 90.55% / lines 86.69%)。2026-08-27 実測。グローバル最低ライン 60% + per-module thresholds (state 95% / store 85% 等) を `vitest.config.ts` で強制
-- **E2E**: Playwright (chromium-desktop + chromium-mobile の 2 project)、10 spec (smoke / mod-detail / mods-page / theme / offline / zip import・export / dep-check / Phase 11 取り込み 2 種)。CI での実行を推奨 (ローカルは `pnpm exec playwright install chromium` が必要)
-- **CI**: GitHub Actions ワークフロー定義は [`docs/ops/CI_WORKFLOW.yml`](./docs/ops/CI_WORKFLOW.yml) (typecheck / lint / unit → build → E2E の 3 job)。導入手順は [`docs/ops/CI_SETUP.md`](./docs/ops/CI_SETUP.md)
+- **単体テスト**: Vitest 4 + msw (Modrinth API mock) + fake-indexeddb + jsdom — **123 test files / 1603 tests**、全体 statement coverage **96.56%** (branches 90.52% / functions 98.26% / lines 97.85%)。2026-09-01 実測。グローバル最低ライン 90% + per-module thresholds (lib/state 95% / 各 store・lib/db・lib/query・lib/modrinth・lib/utils・hooks・components 90% 等) を `vitest.config.ts` で強制
+- **E2E**: Playwright (chromium-desktop + chromium-mobile の 2 project)、16 spec (smoke / mod-detail / mods-page / theme / offline / zip import・export / dep-check / Phase 11 取り込み 2 種 / Sync / COV-4 追加 5 種)。CI での実行を推奨 (ローカルは `pnpm exec playwright install chromium` が必要)
+- **CI**: GitHub Actions ワークフロー定義は [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (typecheck / lint / unit → build → E2E の 3 job)。導入手順は [`docs/ops/CI_SETUP.md`](./docs/ops/CI_SETUP.md)
 
 ## ディレクトリ構成
 
@@ -216,8 +217,8 @@ src/                          # アプリコード
 ├── types/                    # TypeScript 型 (profile / modrinth / sync / modpack / ui)
 └── styles/                   # fontawesome-subset.css (自動生成)
 scripts/                      # build.ts (環境判定ビルド) / buildEnv.ts / buildFontawesomeSubset.mjs
-e2e/                          # Playwright E2E (11 spec + helpers)
-__tests__/                    # 単体テスト (115 files: components / features / hooks / lib / scripts)
+e2e/                          # Playwright E2E (16 spec + helpers)
+__tests__/                    # 単体テスト (123 files: components / features / hooks / lib / scripts)
 public/                       # 静的アセット (icon / webfonts)
 ```
 
@@ -235,7 +236,7 @@ Phase 7 以降、Vercel 本番デプロイ用の設定が入っています:
 
 ## 開発ドキュメント
 
-- [`AGENT.md`](./AGENT.md) — 開発規約 (コミット手順・検証・Git 運用・コミュニケーション規約)
+- [`AGENTS.md`](./AGENTS.md) — 開発規約 (コミット手順・検証・Git 運用・コミュニケーション規約)
 - [`docs/planning/`](./docs/planning/) — フェーズ別計画書 (Phase 8〜13)・ルーティング再設計・SEO 候補
 - [`docs/planning/complete/`](./docs/planning/complete/) — フェーズ完了報告
 - [`docs/ops/`](./docs/ops/) — CI / デプロイ運用

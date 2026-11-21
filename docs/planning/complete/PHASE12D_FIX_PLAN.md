@@ -2,12 +2,16 @@
 
 > 対応 task-list ID: `P12-D1` 〜 `P12-D3` (docs/task-list.md)
 > 計画書テンプレート: docs/planning/_TEMPLATE.md 準拠
-> 状態: 実装中 (2026-08-29 作成)
+> 状態: ローカル検証済み (2026-08-29 作成 / 2026-09 に D1〜D3・D1B 実装完了)
+>
+> > **正本**: 進捗・証拠は `docs/task-list.md` を優先する (§6.9.1)。計画書本体は
+> > task-list と突合済み。D3/D1B は実装済み (ソース上完了) で、当初のスコープ前提
+> > 「Sync 側は対象外」は 2026-09 に実装が完了したため後述 §12 の表を更新。
 
 ## 1. 開始前確認
 
 - ブランチ / HEAD / `git status` clean を確認 (未コミット変更があれば停止)
-- 関連仕様: `PHASE12_PLAN.md` §10.5・§12 (D-3, D-7, D-8) / AGENT.md §5〜§7
+- 関連仕様: `PHASE12_PLAN.md` §10.5・§12 (D-3, D-7, D-8) / AGENTS.md §5〜§7
 - 本計画書の §5 (完了条件) と §7 (停止条件) を再読
 
 ## 2. 目的 (Why)
@@ -104,23 +108,25 @@
 
 ## 5. 完了条件 (DoD)
 
-- [ ] P12-D1: フォルダ選択 → 作成した Profile に `linkedSource` が入り、
+- [x] P12-D1: フォルダ選択 → 作成した Profile に `linkedSource` が入り、
       `dirHandles` に handle が永続化される (mode:'read' のまま / 昇格は Sync 実行時)
-- [ ] P12-D1: 紐付け済み Profile では既存 D-8 ロジックにより Sync ボタンに置換される
+- [x] P12-D1: 紐付け済み Profile では既存 D-8 ロジックにより Sync ボタンに置換される
       (NewProfileModal 経由で作成しても `useFolderLinked()` が true)
-- [ ] P12-D1: 作成時に §10.5 の artifact 台帳 seed が走る (`expandProfileToManaged` +
+- [x] P12-D1: 作成時に §10.5 の artifact 台帳 seed が走る (`expandProfileToManaged` +
       既存レコードの source/managedAt は merge で引き継ぐ)
-- [ ] P12-D2: Discover から Modpack 追加で modrinth.index.json files[] が ProjectItem 展開され、
+- [x] P12-D2: Discover から Modpack 追加で modrinth.index.json files[] が ProjectItem 展開され、
       `profile.mods[]`(= 又は resourcepacks/shaderpacks) に入る (`.mrpack` 自体は入らない)
-- [ ] P12-D2: 同一 projectId・別バージョンの競合がある場合のみ競合解決モーダルが出て、
+- [x] P12-D2: 同一 projectId・別バージョンの競合がある場合のみ競合解決モーダルが出て、
       既定 = ユーザー版保持。競合なしなら即追加
-- [ ] P12-D2: `modpackSource` に provider/projectId/slug/versionId/versionNumber/
+- [x] P12-D2: `modpackSource` に provider/projectId/slug/versionId/versionNumber/
       lockedVersions が入る。overrides は台帳へ source:'modpack' でマージ
-- [ ] P12-D2: `.mrpack` (ZIP) Import にも `lockedVersions` が入る (構造の先行確保)
-- [ ] P12-D3 は**対象外**であることを task-list に明記 (Sync 側は未実装のまま)
-- [ ] 4 検証 (typecheck / biome lint / test:unit / build) 全 pass
-- [ ] `docs/task-list.md` の状態・進捗・証拠を更新
-- [ ] `.archive/vite/` 無変更
+- [x] P12-D2: `.mrpack` (ZIP) Import にも `lockedVersions` が入る (構造の先行確保)
+- [x] P12-D3（Sync 側競合）および P12-D1B（設定ページ紐付け台帳 seed）は実装済み
+      (当初「対象外」とされた P12-D3 は §10.4 で実装を完了。当初はローカル検証済みとして
+      task-list に明記済み）。実機での確認はユーザー待ち。
+- [x] 4 検証 (typecheck / biome lint / test:unit / build) 全 pass
+- [x] `docs/task-list.md` の状態・進捗・証拠を更新
+- [x] `.archive/vite/` 無変更
 
 ## 6. テスト方法
 
@@ -135,7 +141,7 @@
 ## 7. 停止条件
 
 次の場合は作業を停止し、変更せず報告する:
-- 仕様書 (計画書・AGENT.md・skills) 同士に矛盾がある
+- 仕様書 (計画書・AGENTS.md・skills) 同士に矛盾がある
 - task-list.md 記載の変更範囲を超える変更が必要
 - 破壊的変更 (既存データ・公開 API 互換性) が必要
 - ユーザー判断が必要な設計論点に到達した (例: Sync 側 D-3 の検出方式)
@@ -147,7 +153,7 @@
 2. 4 検証 (typecheck / lint / test:unit / build) を実行し出力を読む
 3. `docs/task-list.md` の状態・進捗・証拠を更新
 4. タスク ID を含むコミット (`fix(P12-D1): …` / `feat(P12-D2): …`)
-5. 証拠中心の完了報告 (結果 / テスト件数 / Git SHA / 残事項 = P12-D3)
+5. 証拠中心の完了報告 (結果 / テスト件数 / Git SHA / 残事項 = 実機確認 (P12-D1〜D3・D1B))
 
 ## 9. サブタスク分割
 
@@ -290,9 +296,11 @@ export interface ModpackSource {
 - FileSystemDirectoryHandle を React state に保持してよい (構造化クローン可能)。
   モーダル再オープン時は必ず null リセット。
 
-## 12. 実績と証拠 (実装後に記入)
+## 12. 実績と証拠
 
 | ID | コミット | テスト | 実測値・備考 |
 |---|---|---|---|
 | P12-D1 | `1709704` | 1176 passed (4 検証 pass) | linkPickedDirectory + handleCreateProfile 拡張 + NewProfileModal 連携 + §10.5 台帳 seed |
 | P12-D2 | `ac26e29` | 1196 passed (4 検証 pass) | expandMrpackFiles 抽出 (useZipImport 既存 16 tests 回帰なし) / 競合検出・適用 / モーダル / D-3 ロック情報 (lockedVersions) 先行 |
+| P12-D3 | `c7f8db8` | 1216 passed / 4 検証 pass | lockedVersions 拡張（fileUrl/sha1 等）/ diff.ts conflicts / syncPrep replan / applyLockedVersionsToProfile / useSync.apply 拡張 / SyncPreviewModal 競合セクション |
+| P12-D1B | `c7f8db8` | 1216 passed / 4 検証 pass | useEnvironmentLink.link() の §10.5 台帳 seed（expandProfileToManaged + mergeManagedRecords + syncManagedFiles） |

@@ -2,7 +2,7 @@
 
 > プロファイル/Toast/Confirm/ZIP/依存チェック/テーマ の状態と永続化を触る時に読む。
 
-## Zustand 7 store（`src/features/*/store/` と `src/components/{feedback,layout}/` に分散）
+## Zustand 8 store（`src/features/*/store/` と `src/components/{feedback,layout}/` に分散）
 
 | store | ファイル | 役割 |
 | :--- | :--- | :--- |

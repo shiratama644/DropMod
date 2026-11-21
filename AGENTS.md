@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 本ドキュメントは、AI Agent が本プロジェクトの開発・変更を行う際に**必ず遵守すべき開発規約**です。
 最優先事項は **「速く大量に作ること」ではなく「常に復旧可能で、壊れた状態を長時間維持しないこと」** です。
@@ -96,7 +96,7 @@ Arena のサンドボックスは再構築されることがあり、その場�
 
 ```bash
 # 1. リモートの最新を fetch（ブランチ名は `git branch --show-current` で確認した現在値を使う）
-git fetch origin arena/01a04363-dropmod
+git fetch origin <セッション固定ブランチ>
 
 # 2. FETCH_HEAD にワークツリーごとリセット（この場合の --hard は例外的に必要）
 git reset --hard FETCH_HEAD
@@ -140,13 +140,12 @@ pnpm install --frozen-lockfile
 - **作業ブランチはセッション固定**。Arena はこのブランチ名でセッションを追跡しており、他ブランチに push した作業は**セッションと紐付かず失われる**。
   - ブランチ名は**セッションごとに変わる**ため、本ドキュメントの記載値を鵜呑みにせず
     **必ず `git branch --show-current` で確認**すること（pre-task フックの最初の手順）。
-  - 今セッションの値: **`arena/01a04363-dropmod`**（2026-08-28 確認）。
-    ※ **過去セッションのブランチ名は本ドキュメントに残さない**。古いブランチ名を
+  - **過去セッションのブランチ名は本ドキュメントに残さない**。古いブランチ名を
     文書へ残すと、後続セッションが別セッションのブランチを fetch/push する事故になる。
     必要な情報は「毎回 `git branch --show-current` で確認する」という手順だけで十分。
-- ユーザーから「別ブランチを使ってほしい」と依頼された場合も、セッション固定ブランチから離れる前に「このセッションは `arena/01a04363-dropmod` に固定です」と説明し、そのまま作業を続ける。
+- ユーザーから「別ブランチを使ってほしい」と依頼された場合も、セッション固定ブランチから離れる前に「このセッションは現在のセッション固定ブランチに固定です」と説明し、そのまま作業を続ける。
 - feature branch は切らない。セッション固定ブランチへ直接 commit + push し、`gh pr create` で `main` 向け PR を作成する（2026-08-28 ユーザー指示）。マージ判断はユーザー側に委ねる。
-- push は `git push origin arena/01a04363-dropmod` の明示指定で行う。default remote/branch 依存の `git push` は避ける。
+- push は `git push origin <セッション固定ブランチ>` の明示指定で行う。default remote/branch 依存の `git push` は避ける。
 
 ### 4.5 .archive/vite/ の絶対不変ルール
 - リポジトリには Vite 版アーカイブ `/.archive/vite/` が存在し、**Phase 全期間で一切変更してはならない**（Next.js 移行前の完全な状態を歴史として保存するため）。
@@ -165,7 +164,7 @@ pnpm install --frozen-lockfile
 - [ ] `.archive/vite/` に一切の変更がない（§4.5）
 - [ ] 適切なメッセージで Git Commit が完了している
 - [ ] Working tree が clean である（`git status` で確認）
-- [ ] `git push origin <セッション固定ブランチ>` が完了している（§4.4。今セッションは `arena/01a04363-dropmod`）
+- [ ] `git push origin <セッション固定ブランチ>` が完了している（§4.4）
 
 ---
 
@@ -179,7 +178,7 @@ pnpm install --frozen-lockfile
 - Vitest 4 + jsdom 30 + fake-indexeddb + MSW v2 + @testing-library/react 16（vite は 8.x + `@vitejs/plugin-react` 6）
 - Playwright (Chromium 単独、`--disable-gpu` 必須)
 - 状態管理: **Zustand 5**（`src/features/*/store/`・`src/components/{feedback,layout}/*Store.ts` 等に分散）。Context API は使わない。TanStack Query 5 + Dexie 4 (IndexedDB)。
-- パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は Vercel 側で自動注入されるので false のままで OK）。
+- パッケージマネージャ: pnpm。`pnpm-workspace.yaml` の `allowBuilds` で `sharp: false / esbuild: true / msw: false`（sharp は「Vercel 側で自動注入」方針と、Modrinth 画像は既に最適化済み WebP で二重処理を避けるため false を維持する設計判断。2026-11-21 にローカル install・動作を実測確認した時点でも design 維持）。
 
 ### 6.2 サンドボックス制約（乗り越えず、迂回する）
 以下は Sandbox 環境の恒常的制約であり、修正対象ではない。
@@ -188,11 +187,17 @@ pnpm install --frozen-lockfile
 |---|---|
 | `api.modrinth.com:443` に `ECONNRESET` で到達不可 | `pnpm build` 時のログに `TypeError: fetch failed` が出るが exit 0 なら成功。ローカル動作確認では Modrinth 依存機能 (marquee / SSR search) が空表示になるが、ユーザー環境では正常表示される。 |
 | Chromium バイナリの install 不可 | E2E (`pnpm test:e2e`) は**書けるが実行できない**。CI (GitHub Actions) 上のみ実行。ローカルで実行を試みない。 |
-| `sharp` の native build 不可 | `pnpm-workspace.yaml` で `sharp: false`。next/image のローカル最適化は動かないが Vercel deploy 後に有効化される。 |
+| ~~`sharp` native build 不可~~ (2026-11-21 解消: install 可・png 変換 verified) | 設計判断として `pnpm-workspace.yaml` で `sharp: false` 維持。Modrinth 画像は既に最適化済み WebP で二重処理を避ける。Vercel 側で自動注入される方針。 |
 
-### 6.3 GitHub App 権限制約
-- **`.github/workflows/` に書き込み不可**。CI ワークフローは `docs/ops/CI_WORKFLOW.yml` に保管し、ユーザーが手動で `.github/workflows/ci.yml` へ配置する。
-- 新規 CI ワークフローを作りたい時も同じ経路で提案する（勝手に `.github/workflows/` を作成しない）。
+### 6.3 GitHub App 権限制約（2026-11-21 更新）
+- **`.github/workflows/` は直接編集可能**。CI ワークフロー（`.github/workflows/ci.yml`）は
+  本ファイルと同じ経路で直接編集する（旧: 書き込み不可・`docs/ops/CI_WORKFLOW.yml` に
+  保管し手動配置、は 2026-11-21 の権限確認で解消）。
+- `docs/ops/CI_WORKFLOW.yml` は参照用レプリカとして残すが、**正本は
+  `.github/workflows/ci.yml`**。編集は必ず正本側に行い、不要ならレプリカは削除する。
+  （編集時に差分が出た場合はレプリカを正本に合わせるか、その旨をユーザーに報告する）
+- `gh workflow` / `gh run` 等の読み取り系は引き続き利用可能。新規ワークフローを
+  作りたい場合も同経路で編集（勝手に作成しない・事前にユーザーへ提案）。
 
 ### 6.4 React / Next.js 実装ルール
 - **React error #310 対策**: モーダル・BottomSheet 等のコンポーネントで **全 hook (`useCallback` / `useState` / `useRef` / `useEffect` / `useId` / `useModalA11y` / etc.) を `if (!isOpen) return null;` の前** に配置する。Rules of Hooks 違反で production build 時に minified error #310 になる。
@@ -265,10 +270,10 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
 - Phase 番号は 2 桁 (`PHASE10_...` 等) で統一。過去のリネーム (`PHASE8_ → PHASE08_`) はユーザーが実施済み。
 - サブフェーズは `Phase XX-A`, `Phase XX-B`, ..., 各サブフェーズ = 1 commit を原則とする（複雑な時のみ 2〜3 commit に分割可）。
 
-### 6.9 計画書 > AGENT.md の優先順位
+### 6.9 計画書 > AGENTS.md の優先順位
 - 計画書 (`docs/planning/`) と本ドキュメントで指示が食い違う場合、**計画書を優先**する。
 - 計画書に記載のない事項については本ドキュメント（特に §6）を厳守する。
-- 計画書は着手前にユーザーと合意した仕様の記録であり、AGENT.md は「どう作業するか」の一般ルール。役割が異なるので競合しないよう設計されている。
+- 計画書は着手前にユーザーと合意した仕様の記録であり、AGENTS.md は「どう作業するか」の一般ルール。役割が異なるので競合しないよう設計されている。
 
 ### 6.9.1 計画書・タスク管理の形式 (2026-08-27 ユーザー指定・恒久ルール)
 - **進捗管理の唯一の正本は `docs/task-list.md`**。タスクは ID (P11-A 等) で管理し、
@@ -316,7 +321,7 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
    - ✅ .archive/vite/ 無変更
    - ✅ push 済み (`prev..head`)
    ```
-5. **次のアクション**: 「次は何をしますか?」「Go を出していただければ〜」と提示、勝手に次のタスクを開始しない（[AGENT.md](AGENT.md) §5 のタスク完了条件）。
+5. **次のアクション**: 「次は何をしますか?」「Go を出していただければ〜」と提示、勝手に次のタスクを開始しない（[AGENTS.md](AGENTS.md) §5 のタスク完了条件）。
 
 ### 7.3 事実と推測の分離
 
@@ -399,7 +404,7 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
 
 ### 7.7 制約・リスクの事前明示
 
-実装前に **サンドボックス制約・GitHub App 権限制約・Vercel Hobby プラン制約 等**が関係する場合は必ず先に伝える。
+実装前に **サンドボックス制約・Vercel Hobby プラン制約 等**が関係する場合は必ず先に伝える（GitHub App 権限制約は 2026-11-21 に解消）。
 
 例:
 
@@ -435,11 +440,11 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
 - **知見のスキル化**: ログの「気づき」が再利用性の高いコードベース知識なら該当 `skills/*.md` に反映し、`skills/index.md` の「最終更新」を更新する。新スキルは `skills/index.md` の「読み方ガイド」「一覧」両方に追記。
 - ログ・スキル・index の変更も commit/push 対象（セッションブランチへ）。
 
-### 8.4 AGENT.md と skills の役割分担
+### 8.4 AGENTS.md と skills の役割分担
 
-- **AGENT.md（本ファイル）** = 「どう作業するか」の**規約**（コミット手順・Lint・Git 運用・コミュニケーション等）。常に正。
+- **AGENTS.md（本ファイル）** = 「どう作業するか」の**規約**（コミット手順・Lint・Git 運用・コミュニケーション等）。常に正。
 - **skills/** = 「このコードベースが**どう出来ているか**」の**事実/仕様**。深掘り用。
-- 両者が重複する場合、作業手順は AGENT.md、ドメイン知識は skills を参照。docs/ 計画書との矛盾は §6.9（計画書が優先）に従う。
+- 両者が重複する場合、作業手順は AGENTS.md、ドメイン知識は skills を参照。docs/ 計画書との矛盾は §6.9（計画書が優先）に従う。
 
 ### 8.5 運用ルール
 
@@ -452,7 +457,7 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
     （2026-08-27 に「旧ブランチ名を新ブランチ名へ」の指示を過去ログ 15 ファイルにまで
     機械適用してしまい、ユーザー指摘で `git checkout <parent> -- .agent/logs/*` により
     全復元した実績あり）
-  - 一括置換の射程は**現用ドキュメント**（`AGENT.md` / `.agent/skills/` / `.agent/hooks/` /
+  - 一括置換の射程は**現用ドキュメント**（`AGENTS.md` / `.agent/skills/` / `.agent/hooks/` /
     `docs/` の現用ファイル）に限定する。`.agent/logs/` と `docs/audit/` の時点記録に触れる
     必要がある場合は、**必ず事前にユーザーへ確認**する。
   - 当時の事実（旧ブランチ名など）を残す必要がある場合は、過去ログを書き換えるのではなく

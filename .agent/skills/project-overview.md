@@ -26,7 +26,7 @@
 | :--- | :--- |
 | FW | Next.js **16.3.3** App Router (Turbopack) / React **19.2.8** / TS 7 (`strict` + `noUncheckedIndexedAccess`) |
 | Style | Tailwind **v4** (CSS-in-CSS, PostCSS) + CSS 変数テーマ |
-| State | **Zustand 5**（7 store, `subscribeWithSelector` + `devtools`） |
+| State | **Zustand 5**（8 slice, `subscribeWithSelector` + `devtools`） |
 | Server state | **TanStack Query 5** + Dexie persister |
 | Storage | **Dexie 4**（IndexedDB）＋ LocalStorage 7 日バックアップ |
 | UI 補助 | GSAP（Toast/Dropdown）・Anime.js v4（LP）・FontAwesome 7（**subset 化**） |
@@ -37,7 +37,7 @@
 | E2E | Playwright 1.62（Chromium 単独） |
 | Pkg | pnpm 11.24 (corepack), Node ≥20（`.nvmrc`=24, LTS） |
 
-## フェーズ進捗（現在 = Phase 11 完了・Phase 12 未着手）
+## フェーズ進捗（現在 = Phase 11 完了・Phase 12 実装中（COV-5 完了））
 
 > 進捗の正本は `docs/task-list.md`。下表は要点のみ（2026-08-27 時点）。
 
@@ -50,11 +50,11 @@
 | 10 | FontAwesome subset(-356KB) / AppContext 完全削除 / Markdown Image / E2E 拡張 / shimmer | ✅ |
 | **10.5** | **Emergency: カバレッジ回復**（A〜C 完了で全 threshold green。D/E は任意） | ✅ A〜C |
 | **11** | ローカル Minecraft 環境 Import & Analysis（**Read-only 絶対原則**） | ✅ 11-A/B/C + E2E 完了（CI run `33071105483` green / 74 E2E pass） |
-| 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | ⏳ 未着手（着手前に PHASE12_PLAN §12 の設計論点 6 件を確定） |
+| 12 | Sync（双方向書込）+ Modrinth Modpack（安全機構付き） | 🔄 実装中（P12-A/B/E2E 完了（実機確認済み）→ P12-C 実環境検証待ち・P12-D 系ローカル検証済み） |
 | 13 | SEO（2-1〜2-6。旧 CurseForge は `.archive/docs/planning/`） | ローカル検証済み（本番目視は延期） |
 | 最終 | Vercel 本番デプロイ（Hobby 制約のため全 Phase 後） | ⏳ |
 
-## 規模（2026-08-27 実測・`*.ts/*.tsx/*.mjs` の行数）
+## 規模（行数は 2026-08-27 実測値・ファイル数・テスト数は最新（2026-09-01 COV-5 実測））
 
 | ディレクトリ | 行数 |
 | :--- | ---: |
@@ -64,14 +64,14 @@
 | `src/lib/` | 3,711 |
 | `src/hooks/` | 406 |
 | `src/types/` | 477 |
-| `__tests__/` | 22,713（**115 files / 1,244 tests**） |
-| `e2e/` | 1,224（**11 spec**） |
+| `__tests__/` | 22,713+（**123 files / 1,603 tests**） |
+| `e2e/` | 1,224+（**16 spec**） |
 
 最大ファイル: `DependencyCheckModal.tsx`(907)・`useProfiles.ts`(894)・`ModsPageClient.tsx`(716)・
 `ModDetailPageView.tsx`(689)・`HomeInteractive.tsx`(653)。
 
 ## 関連
 
-- 作業規約・コミット手順・Lint 検証: `AGENT.md`
+- 作業規約・コミット手順・Lint 検証: `AGENTS.md`
 - ドキュメント: `docs/`（planning/complete/audit/ops）— 詳細仕様はそちらが正
 - 詳細アーキテクチャ: [architecture-and-data-flow.md](./architecture-and-data-flow.md)

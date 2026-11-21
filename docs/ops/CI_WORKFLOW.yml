@@ -1,3 +1,7 @@
+# ⚠ このファイルは参照用のレプリカです（2026-11-21 更新）
+# 正本は `.github/workflows/ci.yml`（AI が直接編集可能になったため）。
+# このファイルを編集した場合は正本にも反映してください。
+
 name: CI
 
 on:
@@ -7,19 +11,23 @@ on:
   push:
     branches: [main]
     # ドキュメント系の変更では CI を走らせない (2026-08-29 ユーザー指示):
-    # README.md / AGENT.md / .agent/** / docs/** のみのコミットはスキップ
+    # README.md / AGENTS.md / .agent/** / docs/** / CI ワークフロー自身のみの
+    # コミットはスキップ。ワークフロー自体を変更したときは workflow_dispatch で
+    # 手動実行する（CI は「自分自身の変更」を検証しない非対称性を避けるため）。
     paths-ignore:
       - 'README.md'
-      - 'AGENT.md'
+      - 'AGENTS.md'
       - '.agent/**'
       - 'docs/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths-ignore:
       - 'README.md'
-      - 'AGENT.md'
+      - 'AGENTS.md'
       - '.agent/**'
       - 'docs/**'
+      - '.github/workflows/**'
   # Actions タブから手動実行も可能 (初回配置後の動作確認に便利)
   workflow_dispatch:
 

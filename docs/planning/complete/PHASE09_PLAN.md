@@ -1,14 +1,14 @@
 # Phase 9: テスト・品質強化 + アーキテクチャ青写し
 
-> 対応 task-list ID: `P9-A` 〜 `P9-E` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [PHASE9_COMPLETE.md](../complete/PHASE9_COMPLETE.md) / [PHASE9_C_COMPLETE.md](../complete/PHASE9_C_COMPLETE.md) / [PHASE9_PROFILER.md](../complete/PHASE9_PROFILER.md))
+> 対応 task-list ID: `P9-A` 〜 `P9-E` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
+> **状態: 完了** (2026-08-23 計画・実施 / 証拠: [PHASE9_COMPLETE.md](./PHASE9_COMPLETE.md) / [PHASE9_C_COMPLETE.md](./PHASE9_C_COMPLETE.md) / [PHASE9_PROFILER.md](./PHASE9_PROFILER.md))
 
 ## 1. 開始前確認
 
 - Phase 8 完了 (Dexie / TanStack Query / Zustand 土台) を確認
 - `git status` が clean であること
-- AGENT.md §6 (React 実装ルール) を読む
+- AGENTS.md §6 (React 実装ルール) を読む
 
 ## 2. 目的 (Why)
 
@@ -95,7 +95,7 @@ Phase 8 の積み残し 2 点を解消する:
 
 - 9-A のロールバック: AppContext 復活 + Zustand 残存の並存状態に戻す手順を完了レポート §11 に記録
 - msw の path-only override 仕様 (`/api/modrinth/version_files`、`/v2` 無し) — skills/testing.md 参照
-- React error #310 対策 (hooks を早期 return の前に) — AGENT.md §6.4
+- React error #310 対策 (hooks を早期 return の前に) — AGENTS.md §6.4
 
 ## 12. 実績と証拠
 
@@ -104,4 +104,4 @@ Phase 8 の積み残し 2 点を解消する:
 | P9-A〜E | PR #1 内 (2026-08-20 マージ) | 275 tests / stmts 91.34% | PHASE9_COMPLETE.md に個別記録 |
 
 Phase 9 監査で 39 バグ発見・修正 (`docs/audit/issues-phase9.md`)。URL 再設計 (Phase 9-F) は
-[ROUTING_REDESIGN_PLAN.md](./ROUTING_REDESIGN_PLAN.md) として分離。
+[ROUTING_REDESIGN_PLAN.md](../ROUTING_REDESIGN_PLAN.md) として分離。

@@ -1,6 +1,6 @@
 # Hook: Sandbox Rebuild Recovery
 
-> **トリガー**: Sandbox 再構築を検知した時。AGENT.md §4.1.1 の手順実体版。
+> **トリガー**: Sandbox 再構築を検知した時。AGENTS.md §4.1.1 の手順実体版。
 > **検知ヒント**: `git log --oneline` が起点コミット 1 件のみ / `git status` が「大量の削除 + 大量の未追跡」/ `node_modules` が無い。
 
 ## 背景

@@ -4,7 +4,9 @@
 # Phase 10-P5 (Biome 移行) で `eslint-config-next` を削除したため、
 # `unrs-resolver` (旧: ESLint 16 の TypeScript path resolver) エントリも撤去。
 allowBuilds:
-  # next/image の image optimization に使うが Sandbox で不要 & ビルド失敗しやすい
+  # next/image の image optimization に使うが、設計判断として false 維持。
+  # 2026-11-21 にローカル install・png 変換を実測で確認済み (prebuilt binary 動作)。
+  # 維持理由: Modrinth 画像は既に最適化済み WebP (二重処理回避)。Vercel 側で自動注入される方針。
   sharp: false
   # vitest / @vitejs/plugin-react が使う JS bundler (Sub-Phase 8-D で追加)
   esbuild: true

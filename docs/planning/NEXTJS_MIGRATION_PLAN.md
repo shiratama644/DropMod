@@ -37,7 +37,7 @@ Vite + Hono 構成の構造的課題を解消する:
 
 - 並行構築期間中に Vite 側ソースを変更しない
 - UI/UX の変更を混ぜない (**現状 100% 再現** — デザインシステム・アニメ・Toast・Confirm 含む)
-- `.archive/vite/` 退避後は恒久不変 (§4.5 AGENT.md)
+- `.archive/vite/` 退避後は恒久不変 (§4.5 AGENTS.md)
 
 ## 5. 完了条件 (DoD)
 
@@ -134,6 +134,6 @@ Vite + Hono 構成の構造的課題を解消する:
 | P0〜P7 | PR #1 (2026-08-20 マージ) + 本書 §9 の Phase 別完了記録 | 個別 SHA は当時の完了報告参照 |
 | 統合後 | `docs/audit/diff-vite-vs-nextjs.md` | 全ファイル差分監査 |
 
-移行後の継続フェーズ: [PHASE08](./PHASE08_PLAN.md) → [09](./PHASE09_PLAN.md) →
-[09.5](./PHASE09_5_PLAN.md) → [10](./PHASE10_PLAN.md) → [10.5](./PHASE10_5_PLAN.md) →
-[11](./PHASE11_PLAN.md) → [12](./PHASE12_PLAN.md) → [13](./PHASE13_PLAN.md)
+移行後の継続フェーズ: [PHASE08](./complete/PHASE08_PLAN.md) → [09](./complete/PHASE09_PLAN.md) →
+[09.5](./complete/PHASE09_5_PLAN.md) → [10](./complete/PHASE10_PLAN.md) → [10.5](./complete/PHASE10_5_PLAN.md) →
+[11](./complete/PHASE11_PLAN.md) → [12](./complete/PHASE12_PLAN.md) → [13](./complete/PHASE13_PLAN.md)

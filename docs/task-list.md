@@ -4,7 +4,7 @@
 > (<https://qiita.com/Y-Y-dev/items/d526fb7cdbe35a3f9384>) に基づく運用 (2026-08-27 導入)。
 >
 > 1. **本ファイルが進捗管理の唯一の正本**。チャット・Issue・AI の完了報告と本ファイルが
->    矛盾する場合は本ファイルを正とする (§ AGENT.md 6.9)。
+>    矛盾する場合は本ファイルを正とする (§ AGENTS.md 6.9)。
 > 2. **進行中タスクは原則 1 件**。複数を同時に進めない (独立性の高い調査・テストを除く)。
 > 3. **タスク ID は再利用しない**。中止したタスクは行を消さず「対象外」にして理由を残す。
 > 4. **作業中に見つけた新問題は新タスクとして登録**し、現在のタスクへ混ぜない
@@ -21,10 +21,9 @@
 
 ## 未完了サマリー (2026-08-30 ソース + 計画書突合)
 
-> 計画書と task-list の食い違い: `PHASE12_PLAN.md` §13 は P12-B / P12-C を「未着手」と
-> 残しているが、**ソースでは実装済み**。正本は本ファイル。`PHASE12D_FIX_PLAN.md` §12
-> の実績表は D1/D2 までで、D3/D1B は未記入だがソース・本表ではローカル検証済み。
-> 「完了」誤記は見つからず。実装済みなのに「未着手」だったのは計画書側のみ。
+> 計画書と task-list の食い違いは 2026-11-21 に解消（PHASE12_PLAN.md §5/§9/§13・
+> PHASE12D_FIX_PLAN.md §12 を本表・ソースと突合済み）。手動参照の
+> 「正本は本ファイル」は維持。task-list が唯一の正本であることに変更はない。
 
 | ID | 状態 | 残作業 |
 |---|---|---|
@@ -161,7 +160,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | P12-C | ZipSink + ModrinthProvider + .mrpack | 実環境検証待ち | 90% | P12-B | **Firefox/Safari で ZipSink 経由の Sync が動作** | **実装はソース上完了** (2026-08-30)。**Chrome (デスクトップ + モバイル) での動作はユーザー報告済み (2026-09-01)**。**未完了は実機 Firefox/Safari 確認のみ** (`lib/env/sink/zip.ts` / `mrpack.ts` / `useZipSync` 等、`db648c2`〜`b462bfa`) |
 
 ※ **Phase 12 の設計論点は 2026-08-27 / 08-29 に確定済み**（`PHASE12_PLAN.md` §12 の D-1〜D-10）。着手を妨げる未確定事項は無い。
-※ `PHASE12_PLAN.md` §13 の「P12-B/C 未着手」は **陳腐化**。実装有無は本表とソースを正とする。
+※ `PHASE12_PLAN.md` §13 は 2026-11-21 に更新済み（P12-A/B 完了・P12-C 実環境検証待ち）。実装有無は本表とソースを正とする。
 
 ### Phase 12-D: ユーザー報告バグ 3 件修正 (2026-08-29)
 
@@ -192,8 +191,8 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| AGT-1 | .agent/ 自己知識管理システム初期構築 | 完了 | 100% | - | AGENT.md §8 + skills 10 種 | `ecdbb69` |
-| AGT-2 | §7 コミュニケーション規約 | 完了 | 100% | - | AGENT.md §7 | `7f579df` |
+| AGT-1 | .agent/ 自己知識管理システム初期構築 | 完了 | 100% | - | AGENTS.md §8 + skills 10 種 | `ecdbb69` |
+| AGT-2 | §7 コミュニケーション規約 | 完了 | 100% | - | AGENTS.md §7 | `7f579df` |
 | TOOL-1 | Node LTS 24 / pnpm 11 / vitest 4 統一 | 完了 | 100% | - | .nvmrc=24 + typecheck green | `49c74b6`〜`ccd5f98` |
 | DEP-1 | 依存関係を latest へ（パッチ + メジャー） | 完了 | 100% | - | 4 検証 pass。next 16.3.3 / TS 7 / vite 8 / jsdom 30 / web-vitals 6 / jest-dom 7 | 2026-08-30 本コミット |
 | PERF-1 | 画像表示の高速化・高画質化 (unoptimized 方針) | 完了 | 100% | - | LCP 改善 + 詳細レイアウト修正 | `d41cee5` |
@@ -219,7 +218,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 
 | ID | タスク | 状態 | 進捗 | 依存 | 完了条件 | 証拠 |
 |---|---|---|---:|---|---|---|
-| SEC-1 | セキュリティ全面強化 (CSP Enforce 等) | 実環境検証待ち | 90% | - | **実環境で YouTube/CDN 画像表示** | `7f3d4b1` |
+| SEC-1 | セキュリティ全面強化 (CSP Enforce 等) | 完了 | 100% | - | **実環境で YouTube/CDN 画像表示** | `7f3d4b1` / 実機確認済み (2026-09-01 ユーザー報告: 本番 CSP 表示 OK = VER-2 完了) |
 | SEC-2 | APP_PROFILE によるプロファイル切替 | 完了 | 100% | SEC-1 | ビルド/ランタイム両方で切替実測 | `9233e0b` |
 | SEC-3 | APP_PROFILE バナー重複出力の修正 | 完了 | 100% | SEC-2 | build 中 1 回のみ出力 | `4809d57` |
 | SEC-4 | .env.local の development による本番緩和封止 | 完了 | 100% | SEC-3 | build/start で常に production 実測 | `0ea5204` |
@@ -231,7 +230,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 | DOC-1 | README 全面更新 (ビルド/環境変数/未記載) | 完了 | 100% | - | セクション充実 + 実測値 | `ab273b1` |
 | DOC-2 | 計画書のタスク管理形式への再構成 | 完了 | 100% | - | 本ファイル + 12 計画書 + テンプレート | 本コミット |
 | DOC-3 | ドキュメント/設定ドリフトの是正 (実測値・ブランチ名・削除済み参照) | 完了 | 100% | - | 記載値が実測と一致・stale 参照 0 件・4 検証 pass | 本コミット / `.agent/logs/2026-08-27_doc-config-drift-fix.md` |
-| DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENT.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
+| DOC-4 | 旧セッションブランチ名の一括置換 + push 事前許可ルールの恒久化 | 完了 | 100% | - | 現用ドキュメント 8 ファイルを置換。**過去ログ 15 ファイルは §8.1 により対象外**（一度誤適用し全復元）。AGENTS.md §4.3.1 新設・§8.5 強化 | `.agent/logs/2026-08-27_doc-config-drift-fix.md` 追記 B/C |
 | DOC-5 | 旧ブランチ 3 本の main へのマージ状態調査 | 完了 | 100% | - | PR #1/#2/#3 すべて MERGED・`compare` の ahead_by=0 で**完全取込を確認**。削除はユーザー指示待ち | 同上 C 項 |
 | DOC-6 | 計画書・コード内コメントの節番号ドリフト是正 + SEO 2-1 の依存切り離し | 完了 | 100% | - | PHASE12_PLAN §9→§12・_TEMPLATE §9〜§11→§10〜§12・server.ts/docs/README §7→§10.5・PHASE11_PLAN 参照 15 ファイルを §10.x へ・PHASE11 状態行を実測に更新・SEO-2 新設 | `.agent/logs/2026-08-27_plan-doc-drift-fix.md` |
 | SEO-1 | SEO 改善 (JSON-LD 2-2 / パンくず 2-4 / 動的 OGP 2-3 / sitemap 2-5 / 見出し・内部リンク 2-6) | ローカル検証済み | 100% | SEO-2 | 実装済み。本番 JSON-LD / OG 目視はユーザー延期 (完了にしない) | `52bf0b9` / typecheck + biome + 1244 tests + build |
@@ -308,7 +307,7 @@ PR #1 (2026-08-20) マージ前に集約。**本番 Vercel デプロイは Phase
 |---|---|---|---:|---|---|---|
 | ORG-1 | ファイル命名規則統一 (camelCase 化 + 意味のないドット排除) | 完了 | 100% | - | リネーム対象 25 件 + 付随移動 1 件 + import 参照更新。非コンポーネント .ts が camelCase 統一・テスト名のドットは `.test.`/`.spec.` のみ | `67f03f2a` ほか 9 コミット / typecheck + biome + 1244 tests + build。**E2E の CI green は run `33421439818` (2026-09-01, HEAD `16d8124`) で確認済み → 完了** |
 | ORG-2 | src/ 移行 (app/components/features/hooks/lib/types/styles → src/) | 完了 | 100% | ORG-1 | src/app 有効化・`@/*` が `./src/*` を指す・coverage/@source パス整合・ルートが「設定 + docs + public」に整理 | `2d22083` / typecheck + biome + 1244 tests + build / Route (app) 全 20 認識 / coverage 総計 87.67/77.97/92.58/89.34 (移動前と同一) |
-| ORG-3 | ドキュメント更新 (AGENT.md / skills / README / docs / task-list) | 完了 | 100% | ORG-2 | パス表記が src/ と新ファイル名に一致・既存 stale を実在パスへ修正・4 検証 pass | `37b303c` 追従コミット / typecheck + biome + 1244 tests + build / skills 11 ファイル・AGENT.md・README.md・docs/README.md・hooks・DEPLOY.md |
+| ORG-3 | ドキュメント更新 (AGENTS.md / skills / README / docs / task-list) | 完了 | 100% | ORG-2 | パス表記が src/ と新ファイル名に一致・既存 stale を実在パスへ修正・4 検証 pass | `37b303c` 追従コミット / typecheck + biome + 1244 tests + build / skills 11 ファイル・AGENTS.md・README.md・docs/README.md・hooks・DEPLOY.md |
 | ORG-4 | NewProfileModal の責務分割 (637 行 → フォルダ化 + 分割) | 完了 | 100% | ORG-1〜3 | `NewProfileModal/` フォルダ化 (`index.tsx` + FolderImportSection / AnalysisSection 等)。`@/features/profiles/components/NewProfileModal` の import パス維持・4 検証 pass・既存テスト green | `c08d583` 追従 / typecheck + biome + 1244 tests + build / index 399・AnalysisSection 139・FolderImportSection 72・ProfileFormFields 133 行 |
 | ORG-5 | coverage threshold 未達の回復 (store.ts branches 76.47%<80% / hooks 59.15%<60%) | 完了 | 100% | ORG-2 | `pnpm test:coverage` exit 0 (threshold 全 pass)。対象: `src/features/profiles/store/store.ts` (branches 80%)・`src/hooks/**/*.ts` (branches 60%) | `389130d` 追従 / test:coverage exit 0 / store.ts branches 76.47→84.31%・hooks 59.15→87.32% / 4 検証 green (1264 tests) / `.agent/logs/2026-09-01_codebase-org-5.md` |
 

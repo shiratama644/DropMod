@@ -10,28 +10,31 @@ DropMod のドキュメント一式を種類別に整理したものです。ル
 docs/
 ├── README.md                          ← 本ファイル (全ドキュメントの目次)
 ├── task-list.md                       ★ タスク管理の唯一の正本 (進捗・証拠)
-├── planning/                          # 計画書 (Phase 単位・_TEMPLATE.md 形式)
+├── planning/                          # 計画書 (Phase 単位・_TEMPLATE.md 形式 / 実装計画は complete/ 配下)
 │   ├── _TEMPLATE.md                   # 計画書テンプレート (新規計画書は必ず本形式)
 │   ├── NEXTJS_MIGRATION_PLAN.md       # Vite → Next.js 16 段階的移行計画 (Phase 0-7)
-│   ├── PHASE8_PLAN.md                 # Phase 8 (Dexie/TSQ/Zustand + テスト土台)
-│   ├── PHASE9_PLAN.md                 # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)
-│   ├── PHASE09_5_PLAN.md              # Phase 9.5 (ランディングページ刷新 + BottomNav 再設計)
-│   ├── PHASE10_CANDIDATES.md          # Phase 10 実施候補と優先度
-│   ├── PHASE10_PLAN.md                 # Phase 10 実施計画書 (FontAwesome subset / AppContext 削除 / Image / E2E / shimmer)
-│   ├── PHASE10_5_PLAN.md               # Phase 10.5 (Emergency: カバレッジ回復 — vitest 4 対応)
-│   ├── PHASE11_PLAN.md                 # Phase 11 (Read-only Import & Analysis)
-│   ├── PHASE12_PLAN.md                # Phase 12 (Sync & Modrinth Modpack)
-│   ├── PHASE13_PLAN.md                # Phase 13 (SEO。ローカル検証済み。本番目視は延期)
-│   ├── FEATURE_FOLDER_PLAN.md         # Feature フォルダ移行 (11 Feature。コード未着手)
 │   ├── ROUTING_REDESIGN_PLAN.md       # URL ルーティング再設計 (型別URL + モーダル/詳細維持 + 詳細ページボタン)
+│   ├── FEATURE_FOLDER_PLAN.md         # Feature フォルダ移行 (11 Feature。コード未着手)
+│   ├── ARCH3_FEATURE_SLOTS_PLAN.md    # Feature 直下 index.ts 撤去 & 責務別スロット化 (ORG 移行)
+│   ├── CODEBASE_ORG_PLAN.md           # コードベース構成整理計画 (src/features 化)
 │   ├── SEO_CANDIDATES.md              # SEO 候補レジストリ (2-1〜2-6 は SEO-2/SEO-1 で実施済み)
-│   └── COVERAGE_90_PLAN.md            # カバレッジ 90% 化 (COV-1〜5: テスト/E2E 強化, 2026-09-01)
-├── complete/                          # 完了レポート
-│   ├── PHASE8_COMPLETE.md             # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
-│   ├── PHASE9_COMPLETE.md             # Phase 9 全体まとめ
-│   ├── PHASE9_C_COMPLETE.md           # Phase 9-C (テスト強化) 単独スナップショット
-│   ├── PHASE9_PROFILER.md             # Phase 9-D 再レンダー計測レポート
-│   └── PHASE10_COMPLETE.md            # Phase 10 全 5 サブフェーズ完了 (FA subset / AppContext 削除 / Image / E2E / shimmer)
+│   ├── COVERAGE_90_PLAN.md            # カバレッジ 90% 化 (COV-1〜5: テスト/E2E 強化, 2026-09-01)
+│   └── complete/                      # 実装された計画書 + 完了レポート (完了フェーズ)
+│       ├── PHASE08_PLAN.md            # Phase 8 (Dexie/TSQ/Zustand + テスト土台)
+│       ├── PHASE09_PLAN.md            # Phase 9 (AppContext 撤去 + テスト強化 + Profiler)
+│       ├── PHASE09_5_PLAN.md          # Phase 9.5 (ランディングページ刷新 + BottomNav 再設計)
+│       ├── PHASE10_PLAN.md            # Phase 10 実施計画書 (FontAwesome subset / AppContext 削除 / Image / E2E / shimmer)
+│       ├── PHASE10_5_PLAN.md          # Phase 10.5 (Emergency: カバレッジ回復 — vitest 4 対応)
+│       ├── PHASE10_CANDIDATES.md      # Phase 10 実施候補と優先度
+│       ├── PHASE10_COMPLETE.md        # Phase 10 全 5 サブフェーズ完了レポート
+│       ├── PHASE11_PLAN.md            # Phase 11 (Read-only Import & Analysis)
+│       ├── PHASE12_PLAN.md            # Phase 12 (Sync & Modrinth Modpack)
+│       ├── PHASE12D_FIX_PLAN.md       # Phase 12-D (フォルダ自動紐付け + Modpack 展開/競合解決)
+│       ├── PHASE13_PLAN.md            # Phase 13 (SEO。ローカル検証済み。本番目視は延期)
+│       ├── PHASE8_COMPLETE.md         # Phase 8 完了 (+ Phase 9 実施結果の追記あり)
+│       ├── PHASE9_COMPLETE.md         # Phase 9 全体まとめ
+│       ├── PHASE9_C_COMPLETE.md       # Phase 9-C (テスト強化) 単独スナップショット
+│       └── PHASE9_PROFILER.md         # Phase 9-D 再レンダー計測レポート
 ├── audit/                             # 差分・バグ監査
 │   ├── diff-vite-vs-nextjs.md         # Vite 版と Next.js 版の全ファイル差分
 │   ├── diff-phase8.md                 # Phase 8 実装と計画書との齟齬
@@ -41,7 +44,7 @@ docs/
 └── ops/                               # 運用ドキュメント (デプロイ・CI 実務)
     ├── DEPLOY.md                      # Vercel 本番デプロイ手順チェックリスト
     ├── CI_SETUP.md                    # GitHub Actions セットアップ + 動作確認手順
-    └── CI_WORKFLOW.yml                # GitHub Actions ワークフロー本体 (実配置は .github/)
+    └── CI_WORKFLOW.yml                # GitHub Actions ワークフロー (正本は .github/workflows/ci.yml のレプリカ)
 ```
 
 ---
@@ -54,7 +57,7 @@ docs/
 |---:|---|---|
 | 1 | [`../README.md`](../README.md) | アプリ概要、技術スタック、セットアップ |
 | 2 | [`task-list.md`](task-list.md) | **タスク管理の正本** (全フェーズの状態・証拠が一覧できる) |
-| 3 | [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) | 直近完了フェーズ (Read-only Import & Analysis) |
+| 3 | [`planning/complete/PHASE11_PLAN.md`](planning/complete/PHASE11_PLAN.md) | 直近完了フェーズ (Read-only Import & Analysis) |
 
 ### 「これから開発を継続したい」
 
@@ -62,8 +65,8 @@ docs/
 |---:|---|---|
 | 1 | [`task-list.md`](task-list.md) | 次に着手すべきタスクと依存・検証待ち項目の一覧 |
 | 2 | [`planning/_TEMPLATE.md`](planning/_TEMPLATE.md) | 計画書テンプレート (新規タスクはこの形式で計画) |
-| 3 | [`planning/PHASE12_PLAN.md`](planning/PHASE12_PLAN.md) | **次フェーズ**: Sync (双方向書き込み) & Modrinth Modpack。§12 の設計論点を確定してから着手 |
-| 4 | [`planning/PHASE13_PLAN.md`](planning/PHASE13_PLAN.md) | **Phase 13**: SEO（SEO-2/SEO-1 ローカル検証済み。本番目視は延期） |
+| 3 | [`planning/complete/PHASE12_PLAN.md`](planning/complete/PHASE12_PLAN.md) | **次フェーズ**: Sync (双方向書き込み) & Modrinth Modpack。§12 の設計論点を確定してから着手 |
+| 4 | [`planning/complete/PHASE13_PLAN.md`](planning/complete/PHASE13_PLAN.md) | **Phase 13**: SEO（SEO-2/SEO-1 ローカル検証済み。本番目視は延期） |
 | 5 | [`planning/SEO_CANDIDATES.md`](planning/SEO_CANDIDATES.md) | SEO 候補レジストリ（実施 DoD は PHASE13_PLAN） |
 | 2 | [`audit/issues-phase9.md`](audit/issues-phase9.md) | 未修正の Low 優先度バグ (17 件、実害なしで放置中) |
 | 3 | [`audit/diff-phase9.md`](audit/diff-phase9.md) | Phase 9 実装と計画書の意図的な齟齬 (背景理解に有用) |
@@ -74,14 +77,14 @@ docs/
 |---|---|
 | [`ops/DEPLOY.md`](ops/DEPLOY.md) | Vercel 本番デプロイ手順 (環境変数・DNS・OGP 検証) |
 | [`ops/CI_SETUP.md`](ops/CI_SETUP.md) | GitHub Actions 有効化手順 + 配置後の動作確認 |
-| [`ops/CI_WORKFLOW.yml`](ops/CI_WORKFLOW.yml) | 実際のワークフロー YAML (ユーザーが `.github/workflows/ci.yml` に配置) |
+| [`ops/CI_WORKFLOW.yml`](ops/CI_WORKFLOW.yml) | ワークフロー YAML の参照用レプリカ (正本は `.github/workflows/ci.yml`) |
 
 ### 「特定 Phase の詳細を調べたい」
 
 | Phase | 計画書 | 完了レポート | 監査 |
 |:---:|---|---|---|
-| **8** | [`planning/PHASE8_PLAN.md`](planning/PHASE8_PLAN.md) | [`complete/PHASE8_COMPLETE.md`](complete/PHASE8_COMPLETE.md) | [`audit/diff-phase8.md`](audit/diff-phase8.md) |
-| **9** | [`planning/PHASE9_PLAN.md`](planning/PHASE9_PLAN.md) | [`complete/PHASE9_COMPLETE.md`](complete/PHASE9_COMPLETE.md), [`complete/PHASE9_C_COMPLETE.md`](complete/PHASE9_C_COMPLETE.md), [`complete/PHASE9_PROFILER.md`](complete/PHASE9_PROFILER.md) | [`audit/diff-phase9.md`](audit/diff-phase9.md), [`audit/issues-phase9.md`](audit/issues-phase9.md) |
+| **8** | [`planning/complete/PHASE08_PLAN.md`](planning/complete/PHASE08_PLAN.md) | [`planning/complete/PHASE8_COMPLETE.md`](planning/complete/PHASE8_COMPLETE.md) | [`audit/diff-phase8.md`](audit/diff-phase8.md) |
+| **9** | [`planning/complete/PHASE09_PLAN.md`](planning/complete/PHASE09_PLAN.md) | [`planning/complete/PHASE9_COMPLETE.md`](planning/complete/PHASE9_COMPLETE.md), [`planning/complete/PHASE9_C_COMPLETE.md`](planning/complete/PHASE9_C_COMPLETE.md), [`planning/complete/PHASE9_PROFILER.md`](planning/complete/PHASE9_PROFILER.md) | [`audit/diff-phase9.md`](audit/diff-phase9.md), [`audit/issues-phase9.md`](audit/issues-phase9.md) |
 | **1-7** | [`planning/NEXTJS_MIGRATION_PLAN.md`](planning/NEXTJS_MIGRATION_PLAN.md) | (Phase 7 完了時点まで、計画書内に完了マーク) | [`audit/diff-vite-vs-nextjs.md`](audit/diff-vite-vs-nextjs.md), [`audit/issues-legacy.md`](audit/issues-legacy.md) |
 
 ---
@@ -153,7 +156,7 @@ docs/
 
 検索一覧は `/discover/mods` `/discover/resourcepack` `/discover/shader` `/discover/modpack`。
 予約 URL を検索へリダイレクトしないこと。
-詳細は [`planning/PHASE11_PLAN.md`](planning/PHASE11_PLAN.md) §1.2.1。
+詳細は [`planning/complete/PHASE11_PLAN.md`](planning/complete/PHASE11_PLAN.md) §10.1。
 
 ---
 

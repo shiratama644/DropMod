@@ -14,7 +14,7 @@ Modrinth から Mod を検索・追加・バージョン管理・ZIP エクス�
 - 依存・競合チェック (背景 1.2 秒デバウンス実行 + 手動リフレッシュ、BottomNav / Header に警告バッジ)
 - ZIP エクスポート (プロファイル全 `.jar` を並列 DL → JSZip、`navigator.connection` 情報で並列数自動判定)、`.mrpack` / `.jar` ZIP インポート
 - **ローカル環境取り込み (Read-only)**: `.minecraft` フォルダや Prism インスタンスを選択すると、MC バージョン / ローダーを自動検出 (公式ランチャー `versions/*.json`・`mmc-pack.json`・MojoLauncher `mojo_instance.json`) し、Mods / リソースパック / シェーダーを SHA-1 で Modrinth と照合して新規プロファイルを作成。解析結果 (互換性・依存・未識別ファイル) は作成前に確認可能。Firefox / Safari / モバイルでは `.minecraft` を ZIP 化して取り込み。
-- **ローカル環境 Sync (Phase 12 実装中)**: Profile との差分検出 (Additions / Updates / Deletions / Unchanged / Unmanaged 5 分類 + fingerprint 検証) → Preview 確認 → Chromium では Direct Write (Transaction + Backup + Rollback)、Firefox / Safari では ZipSink 経由でローカル環境へ安全に反映。削除は fingerprint unchanged 検証必須・非変更は保持し、中断時は Journal で検出・Rollback 復旧。
+- **ローカル環境 Sync (Phase 12 実装完了 / P12-C は実機 Firefox・Safari 検証待ち)**: Profile との差分検出 (Additions / Updates / Deletions / Unchanged / Unmanaged 5 分類 + fingerprint 検証) → Preview 確認 → Chromium では Direct Write (Transaction + Backup + Rollback)、Firefox / Safari では ZipSink 経由でローカル環境へ安全に反映。削除は fingerprint unchanged 検証必須・非変更は保持し、中断時は Journal で検出・Rollback 復旧。
 - ダーク / ライトテーマ切替、**IndexedDB (Dexie)** 永続化 (旧 `craftforge_state_v2` / `dropmod_state_v2` LocalStorage からの自動移行 + 7 日バックアップ)
 - **オフライン閲覧**: TanStack Query の Dexie persister により、既読の Mod 詳細・検索結果がオフラインでも表示可能 (24h TTL)
 - **キャッシュヒットバッジ**: Home 検索結果に「🌐 X 分前のキャッシュ / 🔄 取得中」の視覚化バッジ

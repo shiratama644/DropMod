@@ -182,7 +182,7 @@ pnpm build              # 本番ビルド
 
 - **単体テスト**: Vitest 4 + msw (Modrinth API mock) + fake-indexeddb + jsdom — **123 test files / 1603 tests**、全体 statement coverage **96.56%** (branches 90.52% / functions 98.26% / lines 97.85%)。2026-09-01 実測。グローバル最低ライン 90% + per-module thresholds (lib/state 95% / 各 store・lib/db・lib/query・lib/modrinth・lib/utils・hooks・components 90% 等) を `vitest.config.ts` で強制
 - **E2E**: Playwright (chromium-desktop + chromium-mobile の 2 project)、16 spec (smoke / mod-detail / mods-page / theme / offline / zip import・export / dep-check / Phase 11 取り込み 2 種 / Sync / COV-4 追加 5 種)。CI での実行を推奨 (ローカルは `pnpm exec playwright install chromium` が必要)
-- **CI**: GitHub Actions ワークフロー定義は [`docs/ops/CI_WORKFLOW.yml`](./docs/ops/CI_WORKFLOW.yml) (typecheck / lint / unit → build → E2E の 3 job)。導入手順は [`docs/ops/CI_SETUP.md`](./docs/ops/CI_SETUP.md)
+- **CI**: GitHub Actions ワークフロー定義は [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (typecheck / lint / unit → build → E2E の 3 job)。導入手順は [`docs/ops/CI_SETUP.md`](./docs/ops/CI_SETUP.md)
 
 ## ディレクトリ構成
 

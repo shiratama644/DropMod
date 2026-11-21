@@ -44,7 +44,7 @@ docs/
 └── ops/                               # 運用ドキュメント (デプロイ・CI 実務)
     ├── DEPLOY.md                      # Vercel 本番デプロイ手順チェックリスト
     ├── CI_SETUP.md                    # GitHub Actions セットアップ + 動作確認手順
-    └── CI_WORKFLOW.yml                # GitHub Actions ワークフロー本体 (実配置は .github/)
+    └── CI_WORKFLOW.yml                # GitHub Actions ワークフロー (正本は .github/workflows/ci.yml のレプリカ)
 ```
 
 ---
@@ -77,7 +77,7 @@ docs/
 |---|---|
 | [`ops/DEPLOY.md`](ops/DEPLOY.md) | Vercel 本番デプロイ手順 (環境変数・DNS・OGP 検証) |
 | [`ops/CI_SETUP.md`](ops/CI_SETUP.md) | GitHub Actions 有効化手順 + 配置後の動作確認 |
-| [`ops/CI_WORKFLOW.yml`](ops/CI_WORKFLOW.yml) | 実際のワークフロー YAML (ユーザーが `.github/workflows/ci.yml` に配置) |
+| [`ops/CI_WORKFLOW.yml`](ops/CI_WORKFLOW.yml) | ワークフロー YAML の参照用レプリカ (正本は `.github/workflows/ci.yml`) |
 
 ### 「特定 Phase の詳細を調べたい」
 

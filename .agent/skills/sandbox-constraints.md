@@ -10,7 +10,7 @@
 | Chromium バイナリ install 不可 | E2E（`pnpm test:e2e`）が実行できない | E2E は**書けるが実行不可**。CI（GitHub Actions）上のみ。ローカルで `playwright install` を試みない |
 | `sharp` native build 不可 | `next/image` の画像最適化プロキシ（`/_next/image`）が**非常に重い**（再エンコードが squoosh/slow fallback） | `pnpm-workspace.yaml` で `sharp: false`。→ Modrinth 画像は `unoptimized` で直接 CDN 取得（[image-strategy.md](./image-strategy.md)）。Vercel 本番では sharp 自動注入で最適化復活 |
 | PRoot (GPU 無し) で `backdrop-filter` が白フラッシュ | ボタン押下・ページ遷移のたびに blur レイヤー再合成で白く光る | **`backdrop-filter` / `backdrop-blur-*` は全コンポーネントで全廃済み** (2026-08-27。glass-panel / dropdown / モーダルオーバーレイ 9 ファイル / OfflineBanner) |
-| GitHub App が `.github/workflows/` に書き込み不可 | CI ワークフローを直接 commit できない | 本体は `docs/ops/CI_WORKFLOW.yml`、ユーザーが手動で `.github/workflows/ci.yml` へ配置（`docs/ops/CI_SETUP.md`） |
+| ~~GitHub App が `.github/workflows/` に書き込み不可~~ (2026-11-21 解消) | ~~CI ワークフローを直接 commit できない~~ → 直接編集可能 | 正本は `.github/workflows/ci.yml`。`docs/ops/CI_WORKFLOW.yml` は参照用レプリカ（`docs/ops/CI_SETUP.md`） |
 | Vercel Hobby プラン制約 | Function Invocations 100k/月・Bandwidth 100GB/月・Build 100/day 等。開発中の SSR/ISR で即枯渇リスク | **本番デプロイは Phase 10+11+12+13 全完了後の最終ステップ**（`docs/planning/complete/PHASE10_CANDIDATES.md` 【重要方針】）。開発中は local + CI のみ |
 
 ## 検証コマンド（commit 前, AGENTS.md §3.1）

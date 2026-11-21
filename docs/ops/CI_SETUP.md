@@ -1,21 +1,19 @@
 # GitHub Actions CI セットアップ手順 (Sub-Phase 8-D)
 
-Arena エージェント (GitHub App) には `.github/workflows/` を書き込む権限が無いため、
-以下の手順でユーザー側で有効化する必要があります。
+**2026-11-21 更新**: 旧構成 (エージェントは `.github/workflows/` 書き込み不可 →
+`docs/ops/CI_WORKFLOW.yml` に保管してユーザーが手動配置) は解消。
+**正本は `.github/workflows/ci.yml`** で、直接編集する。
+`docs/ops/CI_WORKFLOW.yml` は参照用レプリカとして残している。
 
 ## 手順
 
-1. リポジトリのルートに `.github/workflows/` ディレクトリを作成
-   ```bash
-   mkdir -p .github/workflows
-   ```
+1. **ワークフロー本体 = `.github/workflows/ci.yml`**
+   - 変更はこのファイルを直接編集する（旧: docs/ops/CI_WORKFLOW.yml に保管して cp
+     で配置する運用は廃止）。
+   - `docs/ops/CI_WORKFLOW.yml` は参照用レプリカ。正本側を編集したらレプリカも合わせるか、
+     ユーザーに報告する。
 
-2. 本リポジトリの `docs/ops/CI_WORKFLOW.yml` を `.github/workflows/ci.yml` にコピー
-   ```bash
-   cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
-   ```
-
-3. コミット & push (ユーザーのアカウントで実施)
+2. コミット & push (ユーザーのアカウントで実施)
    ```bash
    git add .github/workflows/ci.yml
    git commit -m "ci: enable GitHub Actions workflow"
@@ -60,7 +58,7 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
 
 ## 配置後の動作確認手順 (Phase 9-E.7 追加)
 
-`.github/workflows/ci.yml` を配置して初回 push した後、以下を確認してください。
+`.github/workflows/ci.yml` を push した後、以下を確認してください。
 
 ### 1. Actions タブで実行を確認
 
@@ -109,10 +107,10 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   ```bash
   pnpm add -D js-yaml && node -e "require('js-yaml').load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'),{json:true})"
   ```
-- **Arena エージェント (GitHub App) は `.github/workflows/` を push できない**
-  (`refusing to allow a GitHub App to create or update workflow`)。
-  ワークフロー修正は docs/ops/CI_WORKFLOW.yml (正本) にコミット →
-  ユーザーが `cp` で反映して push する運用 (本書の手順 2〜3)。
+- **(旧) Arena エージェントは `.github/workflows/` を push できない**
+  (`refusing to allow a GitHub App to create or update workflow`) という制約は
+  2026-11-21 時点で解消済み。ワークフロー修正は `.github/workflows/ci.yml` を直接編集して
+  commit → push する（`docs/ops/CI_SETUP.md` の手順 1〜2）。
 
 ### トリガー変更: 二重実行防止 + ドキュメント変更で CI スキップ (2026-08-29)
 
@@ -125,9 +123,8 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   - `paths-ignore` を push / pull_request の両方に追加:
     `README.md` / `AGENTS.md` / `.agent/**` / `docs/**`
     → ドキュメント系のみのコミットでは CI は走らない
-- **反映手順**: 正本を反映して push
+- **反映手順**: `.github/workflows/ci.yml` を直接編集して push
   ```bash
-  cp docs/ops/CI_WORKFLOW.yml .github/workflows/ci.yml
   git add .github/workflows/ci.yml
   git commit -m "ci: トリガー調整 (push=main のみ / docs 変更でスキップ)"
   git push origin "$(git branch --show-current)"
@@ -157,7 +154,7 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
   (内部の excludeHiddenFiles 挙動)。`.next/**` はパターンをどう変えても 0 件になる。
   (@actions/glob を excludeHiddenFiles: true で実行して再現・実証済み)
 - 対策: **tar でアーカイブして単一ファイルとしてアップロード**し、
-  取得側で展開する (正本 CI_WORKFLOW.yml は修正済み):
+  取得側で展開する (正本 `.github/workflows/ci.yml` は修正済み):
   ```yaml
   run: tar --exclude='.next/cache' -czf next-build.tgz .next   # build job
   run: tar -xzf next-build.tgz                                  # e2e job
@@ -170,7 +167,7 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
 - 原因: workflow の `version:` 入力と package.json の `packageManager` が重複指定。
   pnpm/action-setup はバージョン不整合 (ERR_PNPM_BAD_PM_VERSION) 防止のため失敗する。
 - 対策: **workflow 側に `version:` を書かない**。package.json の
-  `packageManager: pnpm@11.24.0` から自動解決される (正本 CI_WORKFLOW.yml は修正済み)。
+  `packageManager: pnpm@11.24.0` から自動解決される (正本 `.github/workflows/ci.yml` は修正済み)。
 
 ### `pnpm install` が失敗する
 

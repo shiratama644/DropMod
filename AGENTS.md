@@ -189,9 +189,15 @@ pnpm install --frozen-lockfile
 | Chromium バイナリの install 不可 | E2E (`pnpm test:e2e`) は**書けるが実行できない**。CI (GitHub Actions) 上のみ実行。ローカルで実行を試みない。 |
 | `sharp` の native build 不可 | `pnpm-workspace.yaml` で `sharp: false`。next/image のローカル最適化は動かないが Vercel deploy 後に有効化される。 |
 
-### 6.3 GitHub App 権限制約
-- **`.github/workflows/` に書き込み不可**。CI ワークフローは `docs/ops/CI_WORKFLOW.yml` に保管し、ユーザーが手動で `.github/workflows/ci.yml` へ配置する。
-- 新規 CI ワークフローを作りたい時も同じ経路で提案する（勝手に `.github/workflows/` を作成しない）。
+### 6.3 GitHub App 権限制約（2026-11-21 更新）
+- **`.github/workflows/` は直接編集可能**。CI ワークフロー（`.github/workflows/ci.yml`）は
+  本ファイルと同じ経路で直接編集する（旧: 書き込み不可・`docs/ops/CI_WORKFLOW.yml` に
+  保管し手動配置、は 2026-11-21 の権限確認で解消）。
+- `docs/ops/CI_WORKFLOW.yml` は参照用レプリカとして残すが、**正本は
+  `.github/workflows/ci.yml`**。編集は必ず正本側に行い、不要ならレプリカは削除する。
+  （編集時に差分が出た場合はレプリカを正本に合わせるか、その旨をユーザーに報告する）
+- `gh workflow` / `gh run` 等の読み取り系は引き続き利用可能。新規ワークフローを
+  作りたい場合も同経路で編集（勝手に作成しない・事前にユーザーへ提案）。
 
 ### 6.4 React / Next.js 実装ルール
 - **React error #310 対策**: モーダル・BottomSheet 等のコンポーネントで **全 hook (`useCallback` / `useState` / `useRef` / `useEffect` / `useId` / `useModalA11y` / etc.) を `if (!isOpen) return null;` の前** に配置する。Rules of Hooks 違反で production build 時に minified error #310 になる。
@@ -398,7 +404,7 @@ Header / BottomNav はスクロール方向に関わらず**常時表示**する
 
 ### 7.7 制約・リスクの事前明示
 
-実装前に **サンドボックス制約・GitHub App 権限制約・Vercel Hobby プラン制約 等**が関係する場合は必ず先に伝える。
+実装前に **サンドボックス制約・Vercel Hobby プラン制約 等**が関係する場合は必ず先に伝える（GitHub App 権限制約は 2026-11-21 に解消）。
 
 例:
 

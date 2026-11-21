@@ -104,7 +104,7 @@
 
 ## CI
 
-- ワークフロー本体 = `docs/ops/CI_WORKFLOW.yml`（GitHub App 権限で `.github/workflows/` に書けないため）。ユーザーが `cp` して配置。手順 = `docs/ops/CI_SETUP.md`。
+- ワークフロー本体 = `.github/workflows/ci.yml`（2026-11-21 から直接編集可能。`docs/ops/CI_WORKFLOW.yml` は参照用レプリカ）。手順 = `docs/ops/CI_SETUP.md`。
 - job: static-checks（tsc/biome/vitest+coverage）→ build → e2e（push のみ）。
 
 ## 関連

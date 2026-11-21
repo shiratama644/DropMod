@@ -60,7 +60,7 @@ shouldUnoptimizeImage(src) = isAnimatedImageUrl(src) || isModrinthCdnUrl(src)
 
 ## アイコン追加時（FontAwesome subset）
 
-`<i className="fa-solid fa-xxx">` 追加後は **必ず `pnpm build:fa-subset`** で `src/styles/fontawesome-subset.css` 再生成（AGENT.md §6.7）。
+`<i className="fa-solid fa-xxx">` 追加後は **必ず `pnpm build:fa-subset`** で `src/styles/fontawesome-subset.css` 再生成（AGENTS.md §6.7）。
 
 ## 関連
 

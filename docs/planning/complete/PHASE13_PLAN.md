@@ -1,11 +1,11 @@
 # Phase 13: SEO 改善（候補レジストリの実施）
 
-> 対応 task-list ID: `SEO-2` / `SEO-1` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> 対応 task-list ID: `SEO-2` / `SEO-1` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: ローカル検証済み** (2026-08-30)
 >
 > - 旧 CurseForge Phase 13 は `.archive/docs/planning/complete/PHASE13_PLAN.md` へ退避
-> - 候補表の正本は [SEO_CANDIDATES.md](./SEO_CANDIDATES.md)
+> - 候補表の正本は [SEO_CANDIDATES.md](../SEO_CANDIDATES.md)
 > - 本番 HTML（meta robots / JSON-LD / OG 画像）の目視は **ユーザー指示で未実施**
 >   （状態は「完了」にしない。DEPLOY-1 後に確認する）
 
@@ -13,7 +13,7 @@
 
 - CurseForge 計画が `.archive/docs/planning/complete/PHASE13_PLAN.md` にあること
 - SEO-2 (`080ede1`) → SEO-1 (`52bf0b9`) の順で実装済み
-- AGENT.md §6 / `.agent/skills/routing-and-pages.md`
+- AGENTS.md §6 / `.agent/skills/routing-and-pages.md`
 
 ## 2. 目的 (Why)
 

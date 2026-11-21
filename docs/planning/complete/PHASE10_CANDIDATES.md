@@ -1,12 +1,12 @@
 # Phase 10 候補リスト (候補レジストリ)
 
-> 対応 task-list ID: `P10-A`〜`P10-E` / `DEPLOY-1` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> 対応 task-list ID: `P10-A`〜`P10-E` / `DEPLOY-1` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: 確定済み** (2026-08-23 選定 / 2026-08-24 方針更新 / 全候補の採否が確定)
 
 本書は Phase 9 完了時点で Phase 10 に実施するかを検討した**候補の採否記録**。
 採択された 5 項目の実施詳細は [PHASE10_PLAN.md](./PHASE10_PLAN.md)、
-実績は [docs/planning/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md)。
+実績は [docs/planning/complete/PHASE10_COMPLETE.md](./PHASE10_COMPLETE.md)。
 
 ## 候補の採否一覧
 
@@ -33,7 +33,7 @@
 - 全機能揃った状態で Vercel Preview → Production の 2 段階 deploy
 - 意図せぬ消費で上限を使い切るリスクを最小化
 
-実施手順は [docs/ops/DEPLOY.md](../ops/DEPLOY.md)。
+実施手順は [docs/ops/DEPLOY.md](../../ops/DEPLOY.md)。
 
 ## 採択項目の推奨実施順 (当時)
 

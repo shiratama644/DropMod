@@ -1,9 +1,15 @@
 # Phase 12: ローカル Minecraft 環境 Sync & Modrinth Modpack (Read/Write)
 
-> 対応 task-list ID: `P12-A` 〜 `P12-C` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> 対応 task-list ID: `P12-A` 〜 `P12-C` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: 実装中** (2026-08-26 改定 / 2026-08-27 に §12 の設計論点 6 件を確定 /
-> **2026-08-27 P12-A 完了**。残: P12-B / P12-C)
+> **2026-08-27 P12-A 完了** /
+> **2026-09-01 P12-B・P12-E2E 完了** (実機 Chrome デスクトップ + モバイルで Direct Write +
+> Transaction + Backup + Rollback 確認済み / CI run `33421439818` 全 green) /
+> **P12-C は実環境検証待ち** (実機 Firefox / Safari 未確認。Chrome/モバイルは確認済み)。
+>
+> > **正本**: 進捗・証拠は `docs/task-list.md` を優先する（§6.9.1）。本計画書 §13 の表は
+> > task-list と突合済み。
 
 ## 1. 開始前確認
 
@@ -51,13 +57,14 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 
 ## 5. 完了条件 (DoD)
 
-- [ ] P12-A: `computeSyncPlan()` の unit test が Diff 全 5 分類 (Additions / Updates /
+- [x] P12-A: `computeSyncPlan()` の unit test が Diff 全 5 分類 (Additions / Updates /
       Deletions / Unchanged / Unmanaged) + fingerprint unchanged 検証を cover
-- [ ] P12-B: Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作
-- [ ] P12-C: Firefox / Safari で ZipSink 経由の Sync が動作
+- [x] P12-B: Chromium で Direct Write が Transaction + Backup + Rollback 付きで動作
+      (実機 Chrome デスクトップ + モバイルで確認済み 2026-09-01)
+- [ ] P12-C: Firefox / Safari で ZipSink 経由の Sync が動作 (Chrome/モバイルは確認済み。実環境検証待ち)
 - [ ] `.mrpack` Import → Profile 化 → Modpack 更新検知 → Preview → Sync が一貫して動作
 - [ ] Sync 実行中のクラッシュから Rollback で復旧できることをテストで証明
-- [ ] 4 検証全 pass・`.archive/vite/` 無変更・task-list 更新
+- [x] 4 検証全 pass・`.archive/vite/` 無変更・task-list 更新
 
 ## 6. テスト方法
 
@@ -84,8 +91,8 @@ Phase 11 は Read-only だったが、Phase 12 は**ユーザーの Minecraft �
 | ID | テーマ | 主要成果物 | 依存 |
 |---|---|---|---|
 | P12-A | 基盤 + Managed File + Diff Engine | linkedSource / dirHandles / ManagedFileRecord / computeSyncPlan | P11 完了 (**完了**) |
-| P12-B | Preview UI + Transaction + Executor + Rollback | SyncTransaction / executeSync / OPFS Backup / History UI | P12-A |
-| P12-C | ZipSink + ModrinthProvider + .mrpack | ZipSink / .mrpack パーサ / Modpack UI / CF 検出表示 | P12-B |
+| P12-B | Preview UI + Transaction + Executor + Rollback | SyncTransaction / executeSync / OPFS Backup / History UI | P12-A (**完了**) |
+| P12-C | ZipSink + ModrinthProvider + .mrpack | ZipSink / .mrpack パーサ / Modpack UI / CF 検出表示 | P12-B (**実環境検証待ち**) |
 
 ## 10. 設計詳細・仕様 (継承)
 
@@ -282,8 +289,11 @@ async function executeSync(tx: SyncTransaction, sink: EnvironmentSink) {
 | ID | 状態 | テスト | 成果物 |
 |---|---|---|---|
 | P12-A | **完了** (2026-08-27) | 47 tests / 3 ファイル新規<br>(`diff` 18・`managed` 19・`dexie.managed` 10)<br>全体 **76 files / 684 tests** pass・coverage 全 threshold green | `types.ts` (`LinkedSource` / `ManagedFileRecord` / `ManagedFileSource` / `Profile.linkedSource`)、`lib/db/dexie.ts` (**schema v3**: `managedFiles` / `dirHandles` + ヘルパ 6 種)、`lib/env/managed.ts`、`lib/env/diff.ts` (`computeSyncPlan` / `selectExternallyModified` / `selectDeletionsRequiringConfirm`) |
-| P12-B | 未着手 | - | Preview UI / `SyncTransaction` (Dexie **v4**) / `executeSync` / OPFS Backup / Rollback / History UI |
-| P12-C | 未着手 | - | `ZipSink` / `.mrpack` パーサ / `ModrinthProvider` / Modpack UI / CurseForge 検出表示 |
+| P12-B | 完了 (2026-09-01) | 実機 Chrome (デスクトップ + モバイル) で Direct Write が Transaction + Backup + Rollback 付きで動作。CI run `33421439818` (2026-09-01) で E2E 成功/失敗/復帰 green | `SyncTransaction` (Dexie v4) / `executeSync` / OPFS Backup / Rollback / History UI / `FileSystemSink` / `syncTransactions` |
+| P12-C | 実環境検証待ち | Chrome (デスクトップ + モバイル) で ZipSink Sync 動作確認済み。実機 Firefox/Safari は未確認 | `ZipSink` / `.mrpack` パーサ / `ModrinthProvider` / Modpack UI / CurseForge 検出表示 |
+
+> **注**: P12-E2E（Sync の E2E spec 成功/失敗/復帰）は P12-B と同時に完了（2026-09-01）。
+> 証拠: task-list.md の P12-E2E 行（run `33421439818`）。
 
 ### P12-A の実装上の決定 (実装時に確定した細目)
 

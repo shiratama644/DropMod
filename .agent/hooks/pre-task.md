@@ -5,14 +5,14 @@
 
 ## 手順
 
-### 1. 現状把握（AGENT.md §4.1）
+### 1. 現状把握（AGENTS.md §4.1）
 
 ```bash
 git status
 git branch --show-current
 git log -5 --oneline
 ```
-- ※ ブランチ名は**セッションごとに変わる**。AGENT.md §4.4 の記載値を鵜呑みにせず、必ず `git branch --show-current` で確認する（今セッションは `arena/01a04363-dropmod`）。過去セッションのブランチ名は文書に残さない方針（AGENT.md §4.4）。
+- ※ ブランチ名は**セッションごとに変わる**。AGENTS.md §4.4 の記載値を鵜呑みにせず、必ず `git branch --show-current` で確認する。過去セッションのブランチ名は文書に残さない方針（AGENTS.md §4.4）。
 - 未コミット変更があれば勝手に破棄・混入しない。
 - ログが起点 1 件のみ / `git status` が大量の削除+未追跡 / `node_modules` 無 → **Sandbox 再構築**。→ [`sandbox-rebuild-recovery.md`](./sandbox-rebuild-recovery.md)。
 
@@ -30,8 +30,8 @@ git log -5 --oneline
 
 ### 4. docs/ と実コードの優先順位（§6.9）
 
-- 計画書（`docs/planning/PHASE*_PLAN.md`）と AGENT.md/skills が矛盾 → **計画書が正**。
-- 計画書に無い事項 → AGENT.md（特に §6）→ skills の順。
+- 計画書（`docs/planning/complete/PHASE*_PLAN.md` 等）と AGENTS.md/skills が矛盾 → **計画書が正**。
+- 計画書に無い事項 → AGENTS.md（特に §6）→ skills の順。
 - ※ docs/README.md の目次は Phase 9-F 時点でやや古い（PC UI一新・`/profile` URL 等は実コードが先行）。実コードを最終確認。
 
 ### 5. タスク粒度の確認（§1.2）

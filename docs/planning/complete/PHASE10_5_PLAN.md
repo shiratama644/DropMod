@@ -1,7 +1,7 @@
 # Phase 10.5 (Emergency): カバレッジ回復 — vitest 4 アップグレード対応
 
-> 対応 task-list ID: `P105-T` / `P105-A` 〜 `P105-E` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> 対応 task-list ID: `P105-T` / `P105-A` 〜 `P105-E` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: 完了** (2026-08-26 実施 / A〜C 完了・D/E は対象外)
 
 ## 1. 開始前確認

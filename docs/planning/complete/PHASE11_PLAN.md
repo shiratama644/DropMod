@@ -1,15 +1,15 @@
 # Phase 11: ローカル Minecraft 環境 Import & Analysis (Read-only)
 
 > 対応 task-list ID: `P11-FIX` / `P11-A` / `P11-B1`〜`B3` / `P11-C1`〜`C2` / `P11-E2E`
-> ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: 完了** (2026-08-26 改定・実施 / P11-E2E の CI green は run `33071105483` で確認済み = `VER-1` 完了)
 
 ## 1. 開始前確認
 
 - Phase 10 / 10.5 完了・`git status` clean
 - 2026-08-26 セッション合意の確定事項 (本書 §10.1) を読む
-- AGENT.md §6.4 (React 実装ルール)・skills/env-import.md を読む
+- AGENTS.md §6.4 (React 実装ルール)・skills/env-import.md を読む
 
 ## 2. 目的 (Why)
 

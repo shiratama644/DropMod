@@ -14,7 +14,7 @@ import './globals.css';
 //   Font ファイル (fa-solid-900.woff2 / fa-brands-400.woff2) は public/webfonts/ に
 //   配置され、CSS 内の url(/webfonts/...) から絶対パス参照される。
 //   Icon 追加時は該当 JSX に <i className="fa-solid fa-xxx"> を追加した上で
-//   `pnpm build:fa-subset` を再実行して subset を再生成する (詳細は AGENT.md)。
+//   `pnpm build:fa-subset` を再実行して subset を再生成する (詳細は AGENTS.md)。
 import '@/styles/fontawesome-subset.css';
 
 // Inter フォント

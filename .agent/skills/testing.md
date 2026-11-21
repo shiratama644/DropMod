@@ -16,12 +16,12 @@
   - **vite は `^8.2.2` + `@vitejs/plugin-react@^6`**（plugin-react 6 は Vite 8 専用。vitest 4 の peer は `^6||^7||^8`）。
   - Node 24 (undici v7) の fetch が jsdom 由来 AbortSignal を拒否する問題 (vitest#8374) は **vitest 4 で上流解決済み**。旧 workaround（`vitest.environment.ts` カスタム環境）は 2026-08-26 に削除し `environment: 'jsdom'` に戻した。
   - **vitest 4 の型変更**: `vi.fn()` が constructor 呼び出し可能型を返すため、`ReturnType<typeof vi.fn>` は `(x: T) => void` 系パラメータと非互換。特定シグネチャの引数に渡す mock は `vi.fn<(id: string) => void>()` のように明示ジェネリクスで型付けする（`Mock<T>` 型を import して Harness 等に使う）。
-- 現状: **637 tests / 73 files pass**（2026-08-27 実測）。内訳の中心は Phase 11-A〜C
+- 現状: **1,603 tests / 123 files pass**（2026-09-01 実測）。内訳の中心は Phase 11-A〜C
   （Dexie v2 migration / env 基盤: source・detector・analyzer・analysis・zipSource・profileName）
   と Phase 10.5 の hooks / 軽量 components、および `nextConfigSecurity` /
   `src/lib/platform/{profile,logger,rateLimit}` / `scripts/build-env` / `readInitialTheme` ほか。
-- **coverage threshold 全 green**: `pnpm test:coverage` exit 0。総計 stmt **84.65** /
-  br **73.74** / fn **90.55** / lines **86.69**（2026-08-27 実測）。
+- **coverage threshold 全 green**: `pnpm test:coverage` exit 0。総計 stmt **96.56** /
+  br **90.52** / fn **98.26** / lines **97.85**（2026-09-01 実測）。
   - ⚠️ **branches % は `src/hooks/` 等のコメント・行編集でも ±0.2 程度ぶれる**（v8 の
     ブランチ位置マッピングが行数依存のため。2026-08-27 にコメント修正のみで
     73.92 → 73.74 に変動）。ドキュメントへ書く数値は必ず **その時点で再実行した結果**を
@@ -69,32 +69,31 @@
 
 | module | statements | 備考 |
 | :--- | :--- | :--- |
-| lib/state | 95 | sanitize（pure） |
-| lib/store | 85 | Zustand |
-| lib/db | 75 | Dexie |
-| lib/query | 70 | TSQ |
-| lib/modrinth | 65 | server/client |
-| lib/utils | 60 | |
-| hooks | 70 | |
-| components | 50 | ui / layout / feedback |
-| features | 50 | `__tests__/features/<name>/` ミラー（colocation なし） |
-| **全体** | **60** | |
+| lib/state | 95 | sanitize（pure）。br 90% / fn 95% / ln 95% 維持（COV-5）|
+| profiles / zip 各 store・dep-check store・feedback *Store・uiState・appActions（7 glob） | 90 | Zustand |
+| lib/db | 90 | Dexie |
+| lib/query | 90 | TSQ |
+| lib/modrinth | 90 | server/client |
+| lib/utils | 90 | |
+| hooks | 90 | |
+| components | 90 | ui / layout / feedback |
+| **全体** | **90** | COV-5 で 60→90 に引上げ（branch 90% 到達済）|
 
 `coverage.exclude`: `src/app/**/page.tsx`/`layout.tsx`（RSC）・大 orchestrator（AppShell/HomeInteractive/Mods/ModDetail/Settings 各 Client）・presentational（BottomNav/EditProfileModal 等）・`src/lib/query/client.ts`（SSR+IDB 依存で単体困難, E2E 担保）・`src/lib/utils/download.ts`・定数/型。→ 詳細は `vitest.config.ts`。
 
-- **COV-90 計画（2026-09-01〜）**: カバレッジ 4 指標 90% 化を `docs/planning/COVERAGE_90_PLAN.md`
-  で進行中（COV-1〜5）。COV-1 で barrel re-export / 純粋な型定義（`**/types.ts`）/
+- **COV-90 計画（2026-09-01 完了）**: カバレッジ 4 指標 90% 化を `docs/planning/COVERAGE_90_PLAN.md`
+  で完了（COV-1〜5）。COV-1 で barrel re-export / 純粋な型定義（`**/types.ts`）/
   Next.js 生成画像（opengraph/twitter-image）/ Web Worker エントリ（hashWorker）/
-  interface 定義のみ（sink.ts）/ re-export barrel（sync db.ts）を exclude に整理済み
-  （`6abdddf`）。実測 88.56 / 78.55 / 92.64 / 90.41（st/br/fn/ln、129 files）。
-  0% ファイルは COV-2/3 のテスト対象 4 件のみに縮小。
+  interface 定義のみ（sink.ts）/ re-export barrel（sync db.ts）を exclude に整理済み。
+  最終実測 **96.56 / 90.52 / 98.26 / 97.85**（st/br/fn/ln、123 files / 1,603 tests,
+  `pnpm test:coverage` exit 0）。0% ファイルは 0 件。
 
 ## テストヘルパ
 
 - `__tests__/test-utils/queryWrapper.tsx` — `createTestQueryClient` + `createQueryWrapper`（TSQ Provider 注入）。
 - `__tests__/test-utils/browserApi.ts` — jsdom 未実装 API の stub 群（matchMedia / IntersectionObserver / rAF / scrollY。Phase 10.5-A、詳細は上記セクション）。
 
-## E2E（Playwright, 10 spec）
+## E2E（Playwright, 16 spec）
 
 `e2e/`: smoke / mod-detail-modal / mods-page / offline / theme-persistence / **zip-export / zip-import / dep-check** / **folder-import / zip-env-import**（Phase 11）。
 - `e2e/helpers/mrpack.ts` — jszip で最小 `.mrpack` を動的生成（fixture 不要）。
@@ -110,4 +109,4 @@
 
 ## 関連
 
-- AGENT.md §3（検証ルール）/ [sandbox-constraints.md](./sandbox-constraints.md)
+- AGENTS.md §3（検証ルール）/ [sandbox-constraints.md](./sandbox-constraints.md)

@@ -1,8 +1,8 @@
 # Phase 10: 品質・パフォーマンス仕上げ
 
-> 対応 task-list ID: `P10-A` 〜 `P10-E` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
-> **状態: 完了** (2026-08-23〜24 実施 / 証拠: [docs/planning/complete/PHASE10_COMPLETE.md](../complete/PHASE10_COMPLETE.md))
+> 対応 task-list ID: `P10-A` 〜 `P10-E` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
+> **状態: 完了** (2026-08-23〜24 実施 / 証拠: [docs/planning/complete/PHASE10_COMPLETE.md](./PHASE10_COMPLETE.md))
 
 ## 1. 開始前確認
 

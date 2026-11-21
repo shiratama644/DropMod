@@ -1,7 +1,7 @@
 # Phase 9.5: ランディングページ全面刷新 + BottomNav 再設計 (Modrinth 風)
 
-> 対応 task-list ID: `P95-A` 〜 `P95-D` / `P95-X` ([docs/task-list.md](../task-list.md))
-> 計画書テンプレート: [docs/planning/_TEMPLATE.md](./_TEMPLATE.md) 準拠
+> 対応 task-list ID: `P95-A` 〜 `P95-D` / `P95-X` ([docs/task-list.md](../../task-list.md))
+> 計画書テンプレート: [docs/planning/_TEMPLATE.md](../_TEMPLATE.md) 準拠
 > **状態: 完了** (2026-08-24 実施 / 証拠: PR #2 `67e10b6`)
 
 ## 1. 開始前確認

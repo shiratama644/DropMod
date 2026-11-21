@@ -7,7 +7,7 @@
 
 - 現在のブランチ / HEAD / `git status` を確認する (未コミット変更があれば停止)
 - `docs/task-list.md` で依存タスクの完了を確認する
-- 関連仕様 (AGENT.md §6 / .agent/skills/testing.md / .agent/skills/sandbox-constraints.md) を読む
+- 関連仕様 (AGENTS.md §6 / .agent/skills/testing.md / .agent/skills/sandbox-constraints.md) を読む
 - 本計画書の §5 (完了条件) と §7 (停止条件) を再読する
 
 ## 2. 目的 (Why)
@@ -91,7 +91,7 @@ CI green になったため、**重要フローの E2E を追加して動作保�
 ## 7. 停止条件
 
 次の場合は作業を停止し、変更せず報告する:
-- 仕様書 (計画書・AGENT.md・skills) 同士に矛盾がある
+- 仕様書 (計画書・AGENTS.md・skills) 同士に矛盾がある
 - task-list.md 記載の変更範囲を超える変更が必要
 - 破壊的変更 (既存データ・公開 API 互換性) が必要
 - ユーザー判断が必要な設計論点に到達した (例: 「per-file 90%」を全ファイルに

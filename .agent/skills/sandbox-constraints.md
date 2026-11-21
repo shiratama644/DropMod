@@ -1,6 +1,6 @@
 # Sandbox / Environment Constraints
 
-> 「動かない / 重い / フォーマット効かない / CI 回らない」時に読む。AGENT.md §6.2/§6.3 の実体版。
+> 「動かない / 重い / フォーマット効かない / CI 回らない」時に読む。AGENTS.md §6.2/§6.3 の実体版。
 
 ## 恒常的制約（修正対象ではない、迂回する）
 
@@ -11,9 +11,9 @@
 | `sharp` native build 不可 | `next/image` の画像最適化プロキシ（`/_next/image`）が**非常に重い**（再エンコードが squoosh/slow fallback） | `pnpm-workspace.yaml` で `sharp: false`。→ Modrinth 画像は `unoptimized` で直接 CDN 取得（[image-strategy.md](./image-strategy.md)）。Vercel 本番では sharp 自動注入で最適化復活 |
 | PRoot (GPU 無し) で `backdrop-filter` が白フラッシュ | ボタン押下・ページ遷移のたびに blur レイヤー再合成で白く光る | **`backdrop-filter` / `backdrop-blur-*` は全コンポーネントで全廃済み** (2026-08-27。glass-panel / dropdown / モーダルオーバーレイ 9 ファイル / OfflineBanner) |
 | GitHub App が `.github/workflows/` に書き込み不可 | CI ワークフローを直接 commit できない | 本体は `docs/ops/CI_WORKFLOW.yml`、ユーザーが手動で `.github/workflows/ci.yml` へ配置（`docs/ops/CI_SETUP.md`） |
-| Vercel Hobby プラン制約 | Function Invocations 100k/月・Bandwidth 100GB/月・Build 100/day 等。開発中の SSR/ISR で即枯渇リスク | **本番デプロイは Phase 10+11+12+13 全完了後の最終ステップ**（`docs/planning/PHASE10_CANDIDATES.md` 【重要方針】）。開発中は local + CI のみ |
+| Vercel Hobby プラン制約 | Function Invocations 100k/月・Bandwidth 100GB/月・Build 100/day 等。開発中の SSR/ISR で即枯渇リスク | **本番デプロイは Phase 10+11+12+13 全完了後の最終ステップ**（`docs/planning/complete/PHASE10_CANDIDATES.md` 【重要方針】）。開発中は local + CI のみ |
 
-## 検証コマンド（commit 前, AGENT.md §3.1）
+## 検証コマンド（commit 前, AGENTS.md §3.1）
 
 ```bash
 pnpm typecheck                # tsc --noEmit (main + tsconfig.test.json 両方)
@@ -30,17 +30,17 @@ pnpm build                    # next build (turbopack)。ECONNRESET でも exit 
 ```bash
 bash .agent/hooks/restore-sandbox-env.sh
 ```
-（スクリプトが node を `.nvmrc` の LTS に置換し、corepack + pnpm + 依存を再構築する。Sandbox 再構築時の復旧は `src/hooks/sandbox-rebuild-recovery.md` + AGENT.md §4.1.1 参照）
+（スクリプトが node を `.nvmrc` の LTS に置換し、corepack + pnpm + 依存を再構築する。Sandbox 再構築時の復旧は `src/hooks/sandbox-rebuild-recovery.md` + AGENTS.md §4.1.1 参照）
 
 > ⚠️ **nodejs.org は Sandbox から到達不可**（SSL 接続エラー、§6.2 と同種）。Node バイナリは npm registry の `node-linux-x64` パッケージから取得する（`registry.npmjs.org` は到達可能）。
 
 ## 作業ブランチ（§4.4）
 
-- セッション固定ブランチ（今 = `arena/01a04363-dropmod`）。他ブランチに push しない。
-- ※ ブランチ名は**セッションごとに変わる**。AGENT.md §4.4 の記載値を鵜呑みにせず、
+- セッション固定ブランチ（必ず `git branch --show-current` で確認）。他ブランチに push しない。
+- ※ ブランチ名は**セッションごとに変わる**。AGENTS.md §4.4 の記載値を鵜呑みにせず、
   必ず `git branch --show-current` で確認すること（過去セッションのブランチ名は
-  文書に残さない方針。AGENT.md §4.4 参照）。
-- **push は事前許可済み**（AGENT.md §4.3.1）。§3.1 の検証が通ったら確認なしで
+  文書に残さない方針。AGENTS.md §4.4 参照）。
+- **push は事前許可済み**（AGENTS.md §4.3.1）。§3.1 の検証が通ったら確認なしで
   `git push origin <セッション固定ブランチ>` を実行する。
 
 ## その他環境メモ

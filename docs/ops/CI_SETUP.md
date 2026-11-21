@@ -80,8 +80,8 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
 
 - Actions summary > `static-checks` job > `coverage-report` artifact をダウンロード
 - `coverage/index.html` をブラウザで開くと per-file カバレッジが見える
-- 現状目標: **All files 60%+, per-module thresholds (計画書 §7.5) 全 pass**
-  (2026-08-27 実測: 637 tests / 73 files / statements 84.65%)
+- 現状目標: **All files 90%+, per-module thresholds (2026-09-01 COV-5 統一) 全 pass**
+  (2026-09-01 実測: 1,603 tests / 123 files / statements 96.56% / branches 90.52%)
 
 ### 4. 依存の verify
 
@@ -123,7 +123,7 @@ Android (PRoot-Distro) では Playwright の並列 worker × Chromium でメモ�
     `pull_request` イベントが担う。PR の無いブランチは Actions タブから
     `workflow_dispatch` で手動実行)
   - `paths-ignore` を push / pull_request の両方に追加:
-    `README.md` / `AGENT.md` / `.agent/**` / `docs/**`
+    `README.md` / `AGENTS.md` / `.agent/**` / `docs/**`
     → ドキュメント系のみのコミットでは CI は走らない
 - **反映手順**: 正本を反映して push
   ```bash

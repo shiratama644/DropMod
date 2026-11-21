@@ -84,7 +84,7 @@
 - **Mobile（<md）**: `<Header>`（sticky z-30, ロゴ+ボタン群）+ `<BottomNav>`（fixed bottom z-[60]）。
 - **LP（`/`）のみ**: Header 非表示（`pathname !== '/'` で Header を出す）。DesktopSidebar と BottomNav は表示継続。
 
-> §6.6（AGENT.md）の PC/モバイル分離・z-index 序列・BottomSheet 仕様が正。ここは実体メモ。
+> §6.6（AGENTS.md）の PC/モバイル分離・z-index 序列・BottomSheet 仕様が正。ここは実体メモ。
 
 ## body と全体余白（`src/app/layout.tsx`）
 

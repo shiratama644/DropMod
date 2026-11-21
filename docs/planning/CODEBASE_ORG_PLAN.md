@@ -8,7 +8,7 @@
 
 - 現在のブランチ / HEAD / `git status` を確認する（未コミット変更があれば停止）
 - `docs/task-list.md` の ORG-1〜ORG-3 行と依存を確認する
-- 関連仕様 (AGENT.md §6.5/§6.8 / .agent/skills/) を読む
+- 関連仕様 (AGENTS.md §6.5/§6.8 / .agent/skills/) を読む
 - 本計画書の §5 (完了条件) と §7 (停止条件) を再読する
 
 ## 2. 目的 (Why)
@@ -43,7 +43,7 @@
     （`../.archive` → `../../.archive`、`../.agent` → `../../.agent`）
   - `package.json` の `build:fa-subset` スクリプト（`build-fontawesome-subset.mjs`
     リネームに伴うパス更新）
-- **ORG-3 (ドキュメント)**: `AGENT.md` / `.agent/skills/*` / `README.md` /
+- **ORG-3 (ドキュメント)**: `AGENTS.md` / `.agent/skills/*` / `README.md` /
   `docs/task-list.md` / 計画書内のパス表記の整合
 - `docs/task-list.md` の ORG-1〜ORG-3 の状態・進捗・証拠更新
 
@@ -107,7 +107,7 @@
 
 次の場合は作業を停止し、変更せず報告する:
 
-- 仕様書 (計画書・AGENT.md・skills) 同士に矛盾がある
+- 仕様書 (計画書・AGENTS.md・skills) 同士に矛盾がある
 - task-list.md 記載の変更範囲を超える変更が必要
 - 破壊的変更 (既存データ・公開 API 互換性) が必要
 - ユーザー判断が必要な設計論点に到達した（例: `.test.` / `.spec.` の廃止、
@@ -128,7 +128,7 @@
 |---|---|---|---|
 | ORG-1 | ファイル命名規則統一（camelCase 化 + 意味のないドット排除） | リネーム 24 件 + import 参照更新 + 4 検証 | - |
 | ORG-2 | src/ 移行（7 ディレクトリ移動 + 設定更新） | `src/` 配下にコード・エイリアス/coverage/@source 整合・4 検証 | ORG-1 |
-| ORG-3 | ドキュメント更新（AGENT.md / skills / README / task-list） | パス表記の整合・4 検証 | ORG-2 |
+| ORG-3 | ドキュメント更新（AGENTS.md / skills / README / task-list） | パス表記の整合・4 検証 | ORG-2 |
 
 **実施順序の理由**: リネーム（ORG-1）を先に行い import 参照をすべて更新してから
 ディレクトリ移動（ORG-2）を行うと、移動は「設定変更 + 物理移動」のみになり、
@@ -242,7 +242,7 @@ types scripts __tests__ e2e` で残存 0 件を確認してから次のファイ
 - 分割後は本計画で移動したテスト
   `__tests__/features/profiles/components/NewProfileModal/FolderImport.test.tsx` が
   そのまま分割コンポーネントのテストとして機能する
-- 分割は「設計 → 基盤 → 機能 A → 機能 B」と段階的に行う（AGENT.md §1.2）
+- 分割は「設計 → 基盤 → 機能 A → 機能 B」と段階的に行う（AGENTS.md §1.2）
 
 → 2026-08-31 ユーザー Go により **ORG-4 として採番済み**（docs/task-list.md 参照）。
 
@@ -257,7 +257,7 @@ types scripts __tests__ e2e` で残存 0 件を確認してから次のファイ
 
 **移動対象**: `app` / `components` / `features` / `hooks` / `lib` / `types` / `styles`
 **ルート残置**: `__tests__` / `e2e` / `scripts` / `public` / `docs` / `.agent` /
-`.archive` / `AGENT.md` / `README.md` / 全設定ファイル / `.env.example`
+`.archive` / `AGENTS.md` / `README.md` / 全設定ファイル / `.env.example`
 
 **設定変更ポイント（調査済み）:**
 
@@ -294,7 +294,7 @@ DropMod/
 ├── docs/                 # ドキュメント
 ├── .agent/               # エージェント記憶
 ├── .archive/             # 旧 Vite 版アーカイブ（絶対不変）
-├── AGENT.md / README.md
+├── AGENTS.md / README.md
 ├── next.config.mjs / tsconfig.json / vitest.config.ts / playwright.config.ts / ...
 ```
 
@@ -338,7 +338,7 @@ DropMod/
   src/ 化が正しく機能し、数値が移動前と同一」であることの確認に留める。
 - **サンドボックス再構築に備える（2026-08-31 実体験）**: ORG-2 作業中に sandbox が
   再構築され、`git log` が起点 `57708ca` に戻り、push 済みコミットのファイルが
-  未追跡として混在する状態になった (AGENT.md §4.1.1 の典型症状)。
+  未追跡として混在する状態になった (AGENTS.md §4.1.1 の典型症状)。
   `git fetch origin <branch>` → `git reset --hard FETCH_HEAD` で復旧し、
   未コミットの src/ 移動は作業ツリーから消えた (記録済みのため再実行)。
   **重要な変更の前には checkpoint コミットを必ず push しておくこと** (§4.2 の
@@ -350,6 +350,6 @@ DropMod/
 |---|---|---|---|
 | ORG-1 | `67f03f2a` `5c4a7f40` `87762436` `b25fd0cf` `1e9cc622` `ee11a0cf` `6d4f8726` `9750e3c8` `097d3c3b` | 1244 passed | リネーム 25 件 + 付随移動 1 件・import/コメント参照 0 件残存。状態: 実環境検証待ち 95%（E2E spec の CI green 確認のみ残る） |
 | ORG-2 | `2d22083` | 1244 passed | src/ 移行 197 件 (rename 100% 類似度) + 設定 5 ファイル。build で Route (app) 全 20 認識・CSS 死クラス流出なし。coverage 総計 87.67/77.97/92.58/89.34 (移動前と同一)。**threshold 未達 2 件 (store.ts 76.47% / hooks 59.15%) は移動前から存在する既存問題 → ORG-5 に切り出し** |
-| ORG-3 | `37b303c` 追従（本コミット） | 1244 passed | 対象 15 ファイル: skills 11（バッククォート内コードパス 62 箇所へ `src/` 接頭辞 + ORG-1 リネーム追従 + store 実在パス化）・AGENT.md 4 箇所・README.md ルート構成表・docs/README.md 2 行（confirm.ts 行は削除済みファイルのため除去）・hooks 1 箇所・DEPLOY.md 2 箇所。時点記録（task-list の完了行・planning/complete/*）は置換対象外で据え置き |
+| ORG-3 | `37b303c` 追従（本コミット） | 1244 passed | 対象 15 ファイル: skills 11（バッククォート内コードパス 62 箇所へ `src/` 接頭辞 + ORG-1 リネーム追従 + store 実在パス化）・AGENTS.md 4 箇所・README.md ルート構成表・docs/README.md 2 行（confirm.ts 行は削除済みファイルのため除去）・hooks 1 箇所・DEPLOY.md 2 箇所。時点記録（task-list の完了行・planning/complete/*）は置換対象外で据え置き |
 | ORG-4 | `c08d583` 追従（本コミット） | 1244 passed | NewProfileModal.tsx (637) → `NewProfileModal/` フォルダ化: `index.tsx` (399) が状態管理 + フロー制御 + モーダル骨格・`AnalysisSection.tsx` (139)・`FolderImportSection.tsx` (72)・`ProfileFormFields.tsx` (133)。`@/features/profiles/components/NewProfileModal` import パス維持 (AppShell / 既存テスト 15 件 green) |
 | ORG-5 | `389130d` 追従（本コミット） | 1264 passed | `pnpm test:coverage` exit 0。テスト追加 21 件: `useModalA11y.test.tsx` 新規 14（Escape / portal 無視 / スタック / Tab・Shift+Tab トラップ / 自動フォーカス 3 種 / フォーカス復帰、jsdom の offsetParent を stub）・`profiles.test.ts` 追補 5（update/clear の profile 不在・空 mods・slug なし mod）・`devtools.test.ts` 新規 2（NODE_ENV=development/production の devtools 分岐）。結果: store.ts branches 76.47→84.31% (≥80)・src/hooks/** 59.15→87.32% (≥60)。未カバーは防御コードのみ (store.ts L137-139/157-158 の `!target`、useModalA11y の StrictMode 二重 push 分岐) |
